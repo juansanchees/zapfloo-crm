@@ -4582,6 +4582,31 @@ export const DICIONARIO: Traducoes = {
     es: "No pudo responder — y es mejor descubrir esto ahora que con un cliente de verdad.",
   },
   "Motivo:": { es: "Motivo:" },
+  "Próximo passo:": { es: "Siguiente paso:" },
+  "Esta versão não tem uma chave utilizável para a empresa de IA escolhida.": {
+    es: "Esta versión no tiene una clave utilizable para la empresa de IA elegida.",
+  },
+  "A chave e o modelo desta versão pertencem a empresas de IA diferentes.": {
+    es: "La clave y el modelo de esta versión pertenecen a empresas de IA diferentes.",
+  },
+  "A empresa de IA recusou a chave cadastrada.": {
+    es: "La empresa de IA rechazó la clave registrada.",
+  },
+  "A empresa de IA recusou a geração por limite de uso ou saldo.": {
+    es: "La empresa de IA rechazó la generación por límite de uso o saldo.",
+  },
+  "O modelo escolhido não está disponível ou não atende ao que este agente precisa.": {
+    es: "El modelo elegido no está disponible o no cumple con lo que este agente necesita.",
+  },
+  "A empresa de IA está indisponível ou demorou demais para responder.": {
+    es: "La empresa de IA no está disponible o tardó demasiado en responder.",
+  },
+  "Não foi possível identificar a causa desta falha.": {
+    es: "No fue posible identificar la causa de este fallo.",
+  },
+  "IA › Execuções": { es: "IA › Ejecuciones" },
+  "conta da empresa de IA": { es: "cuenta de la empresa de IA" },
+  "tentar novamente em alguns minutos": { es: "intentarlo de nuevo en unos minutos" },
   "As causas mais comuns são a chave da empresa de IA sem saldo ou o modelo indisponível. Dá para conferir em": {
     es: "Las causas más comunes son la clave de la empresa de IA sin saldo o el modelo no disponible. Se puede revisar en",
   },

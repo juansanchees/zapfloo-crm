@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { marcarTesteFeito, pularTeste } from "@/app/actions/onboarding/marcarTeste";
+import { diagnosticoDoEnsaio } from "@/lib/ai/agents/diagnostico-do-ensaio";
 
 interface Props {
   nome: string | null;
@@ -18,7 +19,7 @@ interface Props {
 /** O que o ensaio devolveu — ou por que ele não aconteceu. */
 type Desfecho =
   | { tipo: "resposta"; texto: string }
-  | { tipo: "erro"; mensagem: string };
+  | { tipo: "erro"; mensagem: string; codigo?: string };
 
 const EXEMPLO = "Oi! Vocês atendem hoje? Queria saber o preço.";
 
@@ -49,14 +50,15 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
       });
       const json = (await res.json()) as {
         data?: { final_text?: string; status?: string; error_code?: string; error_message?: string };
-        error?: { message?: string };
+        error?: { code?: string; message?: string };
       };
       if (!res.ok) {
-        // A causa crua importa: quem instalou numa VPS é quem vai consertar, e
-        // "não foi possível testar" não diz se falta chave, saldo ou modelo.
+        // O código estável importa: quem instalou numa VPS é quem vai consertar,
+        // e "não foi possível testar" não diz se falta chave, saldo ou modelo.
         setDesfecho({
           tipo: "erro",
           mensagem: json.error?.message ?? `${t("O ensaio falhou")} (HTTP ${res.status}).`,
+          codigo: json.error?.code,
         });
         return;
       }
@@ -70,6 +72,7 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
         setDesfecho({
           tipo: "erro",
           mensagem: d.error_message ?? d.error_code ?? `${t("o ensaio terminou como")} "${d.status}"`,
+          codigo: d.error_code,
         });
         return;
       }
@@ -85,6 +88,11 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
       setCarregando(false);
     }
   }
+
+  const diagnostico =
+    desfecho?.tipo === "erro"
+      ? diagnosticoDoEnsaio(desfecho.codigo, desfecho.mensagem)
+      : null;
 
   return (
     <div className="space-y-4">
@@ -158,13 +166,11 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
                 )}
               </p>
               <p className="text-xs text-muted-foreground">
-                {t("Motivo:")} <code className="break-all">{desfecho.mensagem}</code>
+                {t("Motivo:")} {t(diagnostico!.motivo)}
               </p>
               <p className="text-sm">
-                {t(
-                  "As causas mais comuns são a chave da empresa de IA sem saldo ou o modelo indisponível. Dá para conferir em",
-                )}{" "}
-                <strong>{t("IA › Credenciais")}</strong>{" "}
+                {t("Próximo passo:")}{" "}
+                <strong>{t(diagnostico!.destino)}</strong>{" "}
                 {t("e seguir daqui mesmo — o que você montou está salvo.")}
               </p>
             </div>

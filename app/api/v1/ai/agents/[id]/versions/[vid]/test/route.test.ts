@@ -14,14 +14,12 @@ import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_RANK, type AuthUser, type Role } from "@/lib/auth/types";
 
+const runAgentMock = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
-vi.mock("@/lib/ai/runtime/agent", () => ({
-  runAgent: vi.fn(async () => {
-    throw new Error("AI_GATEWAY_API_KEY ausente");
-  }),
-}));
+vi.mock("@/lib/ai/runtime/agent", () => ({ runAgent: runAgentMock }));
 
 const ORG = "22222222-2222-4222-8222-222222222222";
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -87,9 +85,11 @@ describe("POST .../versions/:vid/test — runtime real", () => {
         : ({ ok: false, response: null } as never),
     );
     vi.mocked(createAdminClient).mockReturnValue(stubAdmin() as never);
+    runAgentMock.mockReset();
+    runAgentMock.mockRejectedValue(new Error("falha inesperada no runtime"));
   });
 
-  it("falha do runtime vira mensagem legível, não 500 mudo", async () => {
+  async function executar() {
     const { POST } = await import("./route");
     const req = new NextRequest("http://localhost/x", {
       method: "POST",
@@ -97,11 +97,35 @@ describe("POST .../versions/:vid/test — runtime real", () => {
       body: JSON.stringify({ sample_message: "oi" }),
     });
 
-    const res = await POST(req, { params: Promise.resolve({ id: AGENT, vid: VERSION }) });
-    const body = (await res.json()) as { error?: { message?: string } };
+    return POST(req, { params: Promise.resolve({ id: AGENT, vid: VERSION }) });
+  }
 
-    expect(res.status).toBe(500);
-    expect(body.error?.message).toContain("Não consegui executar o agente");
-    expect(body.error?.message).toContain("AI_GATEWAY_API_KEY ausente");
+  it("falha inesperada não inventa que é credencial ou saldo", async () => {
+    const res = await executar();
+    const body = (await res.json()) as { error?: { code?: string; message?: string } };
+
+    expect(res.status).toBe(502);
+    expect(body.error?.code).toBe("erro_desconhecido");
+    expect(body.error?.message).toContain("falha inesperada no runtime");
+  });
+
+  it.each([
+    ["credential_invalid", "sem chave", "credential_invalid"],
+    ["credential_provider_mismatch", "credential provider mismatch", "credential_provider_mismatch"],
+    ["runtime_error", "Incorrect API key provided", "credencial_recusada"],
+    ["runtime_error", "insufficient credits", "limite_ou_saldo"],
+  ])("normaliza %s sem perder a causa acionável", async (codigo, mensagem, esperado) => {
+    runAgentMock.mockResolvedValue({
+      run_id: "run-1",
+      status: "failed",
+      error_code: codigo,
+      error_message: mensagem,
+    });
+
+    const res = await executar();
+    const body = (await res.json()) as { data?: { error_code?: string } };
+
+    expect(res.status).toBe(200);
+    expect(body.data?.error_code).toBe(esperado);
   });
 });

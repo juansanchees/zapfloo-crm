@@ -25,6 +25,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { testRunSchema } from "@/lib/ai/agents/validation";
 import { avaliarRespostaDeTeste } from "@/lib/ai/agents/avaliar-resposta-de-teste";
+import { normalizarErro } from "@/lib/agent-engine/edge/llm/run-model-call";
 import { traduzir } from "@/lib/i18n/dicionario";
 
 export const dynamic = "force-dynamic";
@@ -121,12 +122,22 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
         sampleMessage: parsed.data.sample_message,
         sampleContact: parsed.data.sample_contact,
       });
+      if (resultPayload.error_code === "runtime_error") {
+        // O runtime legado perdeu o status HTTP, mas ainda traz a mensagem do
+        // SDK. A régua canônica classifica e redige antes de chegar ao browser.
+        const falha = normalizarErro(new Error(String(resultPayload.error_message ?? "")));
+        resultPayload = {
+          ...resultPayload,
+          error_code: falha.error_code,
+          error_message: falha.error_message,
+        };
+      }
     } catch (err) {
-      const detalhe = err instanceof Error ? err.message : String(err);
+      const falha = normalizarErro(err);
       return fail(
-        "internal_error",
-        `Não consegui executar o agente: ${detalhe}. Confira as credenciais de IA da organização.`,
-        500,
+        falha.error_code,
+        falha.error_message,
+        502,
         { requestId },
       );
     }
