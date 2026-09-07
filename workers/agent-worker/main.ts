@@ -27,7 +27,11 @@
 // `isCommunityDsn` (issue #100), e os hooks de scrub de `lib/sentry/scrub.ts`.
 // O `@sentry/nextjs` funciona fora do Next — aqui é só `Sentry.init` puro,
 // sem `instrumentation.ts` porque o worker não é um processo Next.
-import * as Sentry from '@sentry/nextjs';
+// Na imagem do worker este arquivo roda como ESM (o renderer de PDF publica
+// subpaths só nessa condição). `@sentry/nextjs` mantém capture/flush no export
+// default nesse modo; o namespace expõe `init`, mas deixaria o erro de boot
+// gerar um segundo `captureException is not a function`.
+import Sentry from '@sentry/nextjs';
 import { resolveSentryDsn, isCommunityDsn, DEFAULT_SENTRY_DSN } from '@/lib/sentry/dsn';
 import { sentryScrubHooks } from '@/lib/sentry/scrub';
 

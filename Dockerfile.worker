@@ -20,6 +20,12 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+# O repo raiz é CommonJS por compatibilidade do Next, mas o renderer do PDF
+# publica subpaths apenas na condição ESM. `tsx` transforma `.ts` conforme o
+# package scope; sem este ajuste exclusivo da imagem worker ele tenta `require`
+# em `@react-pdf/hyphenate/en-us` e o dreno inteiro cai no startup.
+RUN node -e 'const fs=require("node:fs");const p=require("./package.json");p.type="module";fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
+
 # Healthz do worker (bind 0.0.0.0 dentro do container).
 EXPOSE 8787
 
