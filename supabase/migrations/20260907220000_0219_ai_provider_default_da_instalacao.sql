@@ -46,4 +46,3 @@ $$;
 
 revoke execute on function public.fn_seed_org_llm_defaults() from public, anon, authenticated;
 grant execute on function public.fn_seed_org_llm_defaults() to service_role;
-

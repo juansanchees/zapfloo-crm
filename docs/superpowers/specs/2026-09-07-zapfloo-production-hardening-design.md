@@ -1,9 +1,9 @@
 # Spec — Zapfloo: estabilização da instalação própria em produção
 
-**Data:** 2026-09-07  
-**Responsável:** Codex + Juan Sanches  
-**Status:** desenho aprovado em conversa; aguardando revisão deste documento  
-**Base validada:** `v1.16.1` (`c85f7d72eebe33649812fe5cae174b7dd80e0e9f`)  
+**Data:** 2026-09-07
+**Responsável:** Codex + Juan Sanches
+**Status:** desenho aprovado em conversa; aguardando revisão deste documento
+**Base validada:** `v1.16.1` (`c85f7d72eebe33649812fe5cae174b7dd80e0e9f`)
 **Repositório próprio:** `juansanchees/zapfloo-crm` (privado)
 
 ## 1. Objetivo
