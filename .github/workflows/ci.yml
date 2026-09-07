@@ -25,7 +25,11 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # O fork Zapfloo tem 695 arquivos unitários. No runner hospedado, a suíte
+    # continuava verde quando o teto anterior encerrou o job aos 15m17s, antes
+    # inclusive do gate shell. O limite de 30m permite concluir os gates sem
+    # transformar lentidão infinita em sucesso silencioso.
+    timeout-minutes: 30
     # O typecheck já ultrapassa o heap padrão de 2 GB do Node no runner. O
     # Dockerfile usa o mesmo teto para o build; deixá-lo implícito aqui torna o
     # check vermelho por infraestrutura antes de encontrar qualquer erro TS.
