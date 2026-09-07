@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { randomUUID } from "node:crypto";
+import { configuracaoInicialDeLlm } from "@/lib/ai/installation-default";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -201,7 +202,7 @@ export async function POST(req: NextRequest) {
       // A check constraint de organizations.status não tem 'onboarding' — o
       // marcador de onboarding é onboarded_at null (mesmo modelo do signup).
       status: "active",
-      settings: { plan },
+      settings: configuracaoInicialDeLlm({ plan }),
       created_by: adminCtx.user.id,
     })
     .select("id, slug, display_name")

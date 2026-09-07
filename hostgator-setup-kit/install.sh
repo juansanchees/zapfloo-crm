@@ -1574,7 +1574,7 @@ esac
   envq RESEND_FROM_EMAIL "${RESEND_FROM_EMAIL:-}"
   printf '# Qual provedor você escolheu na instalação. É o que faz a 2ª execução do\n'
   printf '# install.sh já vir com a sua escolha como padrão, em vez de re-adivinhar\n'
-  printf '# pelas chaves presentes. A app não lê esta variável.\n'
+  printf '# pelas chaves presentes. Organizações novas herdam esta escolha.\n'
   envq AI_PROVIDER "${AI_PROVIDER:-anthropic}"
   # `${ANTHROPIC_API_KEY:-}`, não `$ANTHROPIC_API_KEY`: quem escolhe OpenRouter
   # ou OpenAI nunca passa pelo campo da Anthropic, e sob `set -u` (linha 12) a
@@ -1852,8 +1852,11 @@ begin
     -- pelos convidados que ainda não existem. Quem entra sem preferência
     -- própria cai neste valor, então gravar só no dono entregaria o sistema em
     -- português para todo mundo que ele convidasse numa instalação em espanhol.
-    insert into public.organizations (slug, display_name, legal_name, locale, created_by)
-    values ('minha-empresa','Minha Empresa','Minha Empresa','${APP_LOCALE:-pt-BR}', v_uid)
+    insert into public.organizations (slug, display_name, legal_name, locale, settings, created_by)
+    values (
+      'minha-empresa','Minha Empresa','Minha Empresa','${APP_LOCALE:-pt-BR}',
+      jsonb_build_object('llm', jsonb_build_object('provider', '${AI_PROVIDER}')),
+      v_uid)
     returning id into v_org;
   else
     -- Re-execução do instalador com outra resposta: quem rodou de novo para
@@ -1864,23 +1867,24 @@ begin
        set locale = '${APP_LOCALE:-pt-BR}'
      where id = v_org and coalesce(locale, 'pt-BR') = 'pt-BR';
   end if;
-  -- O provedor que a pessoa ESCOLHEU passa a valer no banco. O trigger
-  -- fn_seed_org_llm_defaults semeia 'anthropic' fixo — o que estava certo
-  -- enquanto a Anthropic era a única chave que este script pedia. Desde que
-  -- ele pergunta qual IA vai atender, ignorar a resposta significava: quem
-  -- escolhe OpenRouter instala, cadastra a chave, e todo caminho que passa
-  -- pelo agent-engine resolve 'anthropic' — sem chave da Anthropic, erro de
-  -- "IA não configurada" em tudo, mandando cadastrar a chave que ele decidiu
-  -- não usar. Só o provider: o modelo padrão fica com o que o trigger semeou
-  -- até alguém escolher em Agente de IA -> Provedores, porque adivinhar um id
-  -- de modelo de outro provedor aqui seria inventar um valor não verificado.
-  if '${AI_PROVIDER}' not in ('', 'anthropic') then
-    update public.organizations
-       set settings = jsonb_set(
-             coalesce(settings, '{}'::jsonb), '{llm,provider}',
-             to_jsonb('${AI_PROVIDER}'::text), true)
-     where id = v_org;
-  end if;
+  -- Reexecução também alinha provider E modelo. Manter o modelo Anthropic ao
+  -- trocar só o provider produzia uma configuração internamente impossível.
+  update public.organizations o
+     set settings = jsonb_set(
+           coalesce(o.settings, '{}'::jsonb),
+           '{llm}',
+           (coalesce(o.settings->'llm', '{}'::jsonb) - 'default_model')
+             || jsonb_build_object('provider', '${AI_PROVIDER}')
+             || coalesce(
+                  (select jsonb_build_object('default_model', m.model_id)
+                     from public.ai_models m
+                    where m.provider = '${AI_PROVIDER}'
+                      and m.is_default_for_provider
+                      and m.deprecated_at is null
+                    limit 1),
+                  '{}'::jsonb),
+           true)
+   where o.id = v_org;
   insert into public.user_organizations (user_id, organization_id, role, accepted_at)
   values (v_uid, v_org, 'admin', now())
   on conflict (user_id, organization_id) do update set role='admin', revoked_at=null;

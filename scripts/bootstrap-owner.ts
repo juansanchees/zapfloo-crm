@@ -19,6 +19,10 @@
 import { createClient } from "@supabase/supabase-js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import {
+  configuracaoInicialDeLlm,
+  provedorPadraoDaInstalacao,
+} from "../lib/ai/installation-default";
 
 /** Lê env do processo; completa com .env / .env.local se rodando localmente. */
 function loadEnv(): Record<string, string> {
@@ -122,6 +126,7 @@ async function ensureOrg(ownerId: string): Promise<string> {
       display_name: ORG_NAME,
       legal_name: ORG_NAME,
       locale: APP_LOCALE,
+      settings: configuracaoInicialDeLlm({}, env.AI_PROVIDER),
       created_by: ownerId,
     } as never)
     .select("id")
@@ -145,13 +150,12 @@ async function ensureOrg(ownerId: string): Promise<string> {
  * Anthropic, `LlmNotConfiguredError` em tudo, com a mensagem mandando cadastrar
  * justamente a chave que ele decidiu não usar.
  *
- * Escreve só o `provider`: o `default_model` fica com o que o trigger semeou
- * até alguém escolher na tela de Provedores, porque adivinhar um id de modelo
- * de outro provedor aqui seria inventar um valor que ninguém verificou.
+ * Provider e modelo precisam andar juntos. O modelo vem do catálogo do banco,
+ * marcado como padrão daquela família; se não há padrão, o campo fica ausente
+ * em vez de conservar silenciosamente um modelo de outro provedor.
  */
 async function aplicarProvedorEscolhido(orgId: string): Promise<void> {
-  const escolhido = (process.env.AI_PROVIDER ?? "").trim().toLowerCase();
-  if (escolhido === "" || escolhido === "anthropic") return;
+  const escolhido = provedorPadraoDaInstalacao(env.AI_PROVIDER);
 
   const { data: org } = await admin
     .from("organizations")
@@ -164,9 +168,20 @@ async function aplicarProvedorEscolhido(orgId: string): Promise<void> {
   >;
   const llm = ((settings["llm"] as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>;
 
+  const { data: modelo } = await admin
+    .from("ai_models")
+    .select("model_id")
+    .eq("provider", escolhido)
+    .eq("is_default_for_provider", true)
+    .is("deprecated_at", null)
+    .maybeSingle();
+  const novoLlm: Record<string, unknown> = { ...llm, provider: escolhido };
+  if (modelo?.model_id) novoLlm.default_model = modelo.model_id;
+  else delete novoLlm.default_model;
+
   const { error } = await admin
     .from("organizations")
-    .update({ settings: { ...settings, llm: { ...llm, provider: escolhido } } } as never)
+    .update({ settings: { ...settings, llm: novoLlm } } as never)
     .eq("id", orgId);
   if (error) {
     // Não derruba a instalação: a org existe e o operador consegue trocar o
