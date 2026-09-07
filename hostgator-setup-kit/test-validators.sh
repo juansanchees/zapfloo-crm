@@ -1525,7 +1525,7 @@ STUB
   # sobrevive aos dois caminhos, com rede e sem.
   img_app="$(valor_no_env "$VPS_PROJ/.env" APP_IMAGE)"
   tag_app="${img_app##*:}"
-  for par in "WORKER_IMAGE:deskcomm-worker" "SCHEDULER_IMAGE:deskcomm-scheduler"; do
+  for par in "WORKER_IMAGE:zapfloo-worker" "SCHEDULER_IMAGE:zapfloo-scheduler"; do
     chave="${par%%:*}"; repo="${par##*:}"
     if [ "$(valor_no_env "$VPS_PROJ/.env" "$chave")" != "${IMG_NS}/${repo}:${tag_app}" ]; then
       printf '  ✗ %s não acompanha a versão do app (%s): %s\n' "$chave" "$tag_app" \
@@ -1709,7 +1709,7 @@ STUB
   rodar install.sh --yes >/dev/null
   unset REPO_URL
 
-  for par in "APP_IMAGE:deskcommcrm" "WORKER_IMAGE:deskcomm-worker" "SCHEDULER_IMAGE:deskcomm-scheduler"; do
+  for par in "APP_IMAGE:zapfloo-crm" "WORKER_IMAGE:zapfloo-worker" "SCHEDULER_IMAGE:zapfloo-scheduler"; do
     chave="${par%%:*}"; repo="${par##*:}"
     if [ "$(valor_no_env "$VPS_PROJ/.env" "$chave")" != "${IMG_NS}/${repo}:1.10.0" ]; then
       printf '  ✗ %s não foi pinado na versão resolvida (1.10.0): %s\n' "$chave" \

@@ -15,11 +15,11 @@ set -euo pipefail
 # de qualquer 'cd' (step 2 pode entrar num repo clonado à parte).
 KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-REPO_URL="${REPO_URL:-https://github.com/melgarafael/DeskcommCRM.git}"
+REPO_URL="${REPO_URL:-https://github.com/juansanchees/zapfloo-crm.git}"
 # Uma constante, dois usos (o fim feliz e o fim travado) — e o comecar.sh tem a
 # gêmea. Link repetido à mão vira link divergente na primeira troca.
 COMUNIDADE_URL="https://lp-comunidade.automatiklabs.com.br"
-REPO_DIR="${REPO_DIR:-deskcommcrm}"
+REPO_DIR="${REPO_DIR:-zapfloo-crm}"
 COMPOSE="docker-compose.prod.yml"
 COMPOSE_TRAEFIK="docker-compose.traefik.yml"
 NONINTERACTIVE=0
@@ -1054,7 +1054,7 @@ fi
 # colar. Sem o token, nada muda: seguem as perguntas de sempre.
 if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
   step "Criando o projeto Supabase automaticamente"
-  _sb_out="$(bash "$KIT_DIR/supabase-provision.sh" "${APP_NAME:-DeskcommCRM}" "${SUPABASE_REGION:-sa-east-1}")" \
+  _sb_out="$(bash "$KIT_DIR/supabase-provision.sh" "${APP_NAME:-Zapfloo}" "${SUPABASE_REGION:-sa-east-1}")" \
     || die "Não consegui criar o projeto Supabase. Crie no painel e rode de novo sem SUPABASE_ACCESS_TOKEN."
   # O script imprime `CHAVE='valor'` em stdout (o visual dele vai para stderr).
   # A leitura é por parse, não por `eval` — o porquê está em
@@ -1220,7 +1220,7 @@ FIELDS=(
   ${CAMPO_OPENAI_EXTRA:+"$CAMPO_OPENAI_EXTRA"}
   "OWNER_EMAIL|E-mail do primeiro admin (dono)||v_email||"
   "OWNER_PASSWORD|Senha do primeiro admin (mínimo 8 caracteres)||v_password|secret|"
-  "APP_NAME|Nome que aparece na interface (Enter para o padrão)|DeskcommCRM|||"
+  "APP_NAME|Nome que aparece na interface (Enter para o padrão)|Zapfloo|||"
   # Idioma da instalação. Fica JUNTO do nome do produto de propósito: as duas
   # perguntas são "como o sistema se apresenta", e separá-las faria a segunda
   # parecer configuração técnica.
