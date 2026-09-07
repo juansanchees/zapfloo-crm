@@ -388,7 +388,11 @@ load_env() {
         # quatro caracteres a mais, e o erro só aparece longe daqui (o psql
         # recusa a conexão, o login não bate) sem nada apontando para o .env.
         # Achado pelo teste de round-trip.
-        val="${val//"'\\''"/"'"}"
+        # O formato antigo tem quatro bytes: ' + \\ + ' + '. A barra é especial
+        # dentro do padrão de `${var//...}`, então a tentativa de montar o token
+        # numa variável continuava devolvendo a sequência crua. `sed` recebe o
+        # valor por stdin, como dado (nunca `eval`), e casa a barra literalmente.
+        val="$(printf '%s' "$val" | sed "s/'\\\\''/'/g")"
         ;;
     esac
     printf -v "$key" '%s' "$val"

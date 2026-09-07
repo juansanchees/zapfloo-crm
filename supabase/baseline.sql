@@ -18186,6 +18186,51 @@ create trigger trg_contacts_anonimizado_limpa_custom_fields
   when (new.is_anonymized = true and coalesce(old.is_anonymized, false) = false)
   execute function public.fn_contato_anonimizado_limpa_campos_personalizados();
 
+-- ---- provider padrão da instalação (migration 0219) ----
+-- Apêndice idempotente: o self-hoster aplica este arquivo, não a cadeia toda.
+-- Sem backfill: escolhas existentes permanecem intocadas.
+create or replace function public.fn_seed_org_llm_defaults()
+returns trigger
+language plpgsql
+set search_path to 'public', 'pg_temp'
+as $$
+declare
+  v_provider text;
+  v_default_model text;
+  v_llm jsonb;
+begin
+  v_provider := lower(coalesce(nullif(btrim(new.settings->'llm'->>'provider'), ''), 'anthropic'));
+  if v_provider not in ('anthropic', 'openai', 'openrouter', 'google') then
+    v_provider := 'anthropic';
+  end if;
+
+  v_llm := coalesce(new.settings->'llm', '{}'::jsonb)
+    || jsonb_build_object('provider', v_provider);
+
+  if coalesce(v_llm->>'default_model', '') = '' then
+    select m.model_id
+      into v_default_model
+      from public.ai_models m
+     where m.provider = v_provider
+       and m.is_default_for_provider
+       and m.deprecated_at is null
+     order by m.model_id
+     limit 1;
+
+    v_llm := v_llm - 'default_model';
+    if v_default_model is not null then
+      v_llm := v_llm || jsonb_build_object('default_model', v_default_model);
+    end if;
+  end if;
+
+  new.settings := jsonb_set(coalesce(new.settings, '{}'::jsonb), '{llm}', v_llm, true);
+  return new;
+end;
+$$;
+
+revoke execute on function public.fn_seed_org_llm_defaults() from public, anon, authenticated;
+grant execute on function public.fn_seed_org_llm_defaults() to service_role;
+
 
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
@@ -18420,47 +18465,3 @@ notify pgrst, 'reload schema';
 -- em produção (engolido, fire-and-forget), e o aviso ficava aberto pra sempre.
 alter table public.agent_inbox_items
   add column if not exists resolved_at timestamptz;
--- ---- provider padrão da instalação (migration 0219) ----
--- Apêndice idempotente: o self-hoster aplica este arquivo, não a cadeia toda.
--- Sem backfill: escolhas existentes permanecem intocadas.
-create or replace function public.fn_seed_org_llm_defaults()
-returns trigger
-language plpgsql
-set search_path to 'public', 'pg_temp'
-as $$
-declare
-  v_provider text;
-  v_default_model text;
-  v_llm jsonb;
-begin
-  v_provider := lower(coalesce(nullif(btrim(new.settings->'llm'->>'provider'), ''), 'anthropic'));
-  if v_provider not in ('anthropic', 'openai', 'openrouter', 'google') then
-    v_provider := 'anthropic';
-  end if;
-
-  v_llm := coalesce(new.settings->'llm', '{}'::jsonb)
-    || jsonb_build_object('provider', v_provider);
-
-  if coalesce(v_llm->>'default_model', '') = '' then
-    select m.model_id
-      into v_default_model
-      from public.ai_models m
-     where m.provider = v_provider
-       and m.is_default_for_provider
-       and m.deprecated_at is null
-     order by m.model_id
-     limit 1;
-
-    v_llm := v_llm - 'default_model';
-    if v_default_model is not null then
-      v_llm := v_llm || jsonb_build_object('default_model', v_default_model);
-    end if;
-  end if;
-
-  new.settings := jsonb_set(coalesce(new.settings, '{}'::jsonb), '{llm}', v_llm, true);
-  return new;
-end;
-$$;
-
-revoke execute on function public.fn_seed_org_llm_defaults() from public, anon, authenticated;
-grant execute on function public.fn_seed_org_llm_defaults() to service_role;
