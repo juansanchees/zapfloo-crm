@@ -484,6 +484,42 @@ else
   fi
 fi
 
+echo "bootstrap do admin: heredoc SQL não executa comentários como shell"
+# Este bloco é um heredoc NÃO citado porque precisa expandir os valores do dono.
+# Nesse formato, crase dentro de comentário SQL ainda é substituição de comando
+# para o shell. O caso positivo abaixo prova que estamos inspecionando o bloco
+# certo; o caso real impede que um comentário volte a executar um binário da VPS.
+sql_do_admin() {
+  awk '
+    /postgres:17-alpine psql .*<<SQL/ { dentro=1; next }
+    dentro && /^SQL$/ { exit }
+    dentro { print }
+  ' "$1"
+}
+CONTROLE_SQL="$SUITE_TMP/install-com-crase.sh"
+printf '%s\n' 'docker run postgres:17-alpine psql x <<SQL' '-- `comando-veneno`' 'SQL' >"$CONTROLE_SQL"
+if ! sql_do_admin "$CONTROLE_SQL" | grep -q '`'; then
+  printf '  ✗ sonda cega: o controle com crase não foi detectado\n'; fail=1
+elif sql_do_admin ./install.sh | grep -q '`'; then
+  printf '  ✗ o heredoc SQL do admin contém crase; o shell tentará executá-la\n'; fail=1
+else
+  printf '  ✓ nenhum comentário do SQL vira substituição de comando\n'
+fi
+
+echo "WAHA: imagem validada e engine escrita com o nome que o contêiner lê"
+if grep -q 'devlikeapro/waha:noweb-2026\.7\.2' ../docker-compose.prod.yml \
+  && grep -q 'envq WAHA_IMAGE .*devlikeapro/waha:noweb-2026\.7\.2' ./install.sh; then
+  printf '  ✓ compose e instalador usam a imagem NOWEB validada\n'
+else
+  printf '  ✗ compose e instalador ainda não usam devlikeapro/waha:noweb-2026.7.2\n'; fail=1
+fi
+if grep -q 'envq WHATSAPP_DEFAULT_ENGINE .*NOWEB' ./install.sh \
+  && ! grep -q 'envq WAHA_DEFAULT_ENGINE' ./install.sh; then
+  printf '  ✓ o instalador grava WHATSAPP_DEFAULT_ENGINE=NOWEB\n'
+else
+  printf '  ✗ o instalador grava o nome morto WAHA_DEFAULT_ENGINE ou não grava o nome correto\n'; fail=1
+fi
+
 echo "resposta afirmativa (resposta_sim)"
 # O gate do DNS comparava a resposta com a string "s" EXATA: quem digitava "S"
 # ou "sim" — a resposta certa, com a tecla errada — era morto por um `die` que

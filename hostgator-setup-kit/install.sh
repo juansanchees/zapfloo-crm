@@ -1624,9 +1624,9 @@ esac
   # no .env de todo cliente — por cima do default pinado do compose, que então
   # nunca chegava a ninguém. O `dc pull` de cada update entregava qualquer versão
   # que o upstream tivesse publicado, sem ninguém ter testado.
-  # `latest-2026.7.2` é o mesmo digest de `latest` hoje (65e593e30bb7…).
-  envq WAHA_IMAGE "${WAHA_IMAGE:-devlikeapro/waha:latest-2026.7.2}"
-  envq WAHA_DEFAULT_ENGINE "${WAHA_DEFAULT_ENGINE:-NOWEB}"
+  # A variante noweb-2026.7.2 é a que foi validada na instalação Zapfloo.
+  envq WAHA_IMAGE "${WAHA_IMAGE:-devlikeapro/waha:noweb-2026.7.2}"
+  envq WHATSAPP_DEFAULT_ENGINE "${WHATSAPP_DEFAULT_ENGINE:-NOWEB}"
   envq UPSTASH_REDIS_REST_URL "http://srh:80"
   envq UPSTASH_REDIS_REST_TOKEN "$UPSTASH_REDIS_REST_TOKEN"
   envq SRH_TOKEN "$SRH_TOKEN"
@@ -1843,7 +1843,7 @@ begin
   end if;
   select id into v_org from public.organizations where slug='minha-empresa';
   if v_org is null then
-    -- `locale` aqui, e não só no usuário dono: é a organização que responde
+    -- locale aqui, e não só no usuário dono: é a organização que responde
     -- pelos convidados que ainda não existem. Quem entra sem preferência
     -- própria cai neste valor, então gravar só no dono entregaria o sistema em
     -- português para todo mundo que ele convidasse numa instalação em espanhol.

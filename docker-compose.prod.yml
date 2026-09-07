@@ -126,10 +126,9 @@ services:
     # Tag PINADA: `devlikeapro/waha` sem tag é `:latest`, e o `dc pull` do
     # update.sh entregava ao cliente qualquer versão que o upstream tivesse
     # publicado — inclusive uma nunca testada por nós, no meio de uma
-    # atualização. `latest-2026.7.2` é o mesmo digest de `latest` hoje
-    # (65e593e30bb7…), então o pin não muda um bit; muda quem escolhe quando
-    # o WhatsApp do cliente troca de motor. Bumpar faz parte do release.
-    image: ${WAHA_IMAGE:-devlikeapro/waha:latest-2026.7.2}
+    # atualização. A variante `noweb-2026.7.2` é a imagem validada pela Zapfloo;
+    # bumpar esta referência faz parte do release.
+    image: ${WAHA_IMAGE:-devlikeapro/waha:noweb-2026.7.2}
     restart: unless-stopped
     environment:
       # Prefixo sha512: faz o WAHA HASHEAR o X-Api-Key recebido e comparar com este
