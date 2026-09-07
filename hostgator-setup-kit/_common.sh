@@ -239,6 +239,27 @@ resposta_sim() {
   case "$r" in s|sim|y|yes) return 0;; *) return 1;; esac
 }
 
+# O Session pooler do Supabase usa PgBouncer. O runtime da aplicação precisa
+# deste sinal para falar com ele no modo compatível com libpq; sem ele a mesma
+# URL que o psql aceita pode falhar dentro do app. Opera só sobre a string em
+# memória, nunca a imprime, preserva parâmetros existentes e é idempotente.
+normalizar_url_pooler() {
+  local url="${1-}" antes_fragmento fragmento="" separador
+  case "$url" in
+    postgres://*@*.pooler.supabase.com:*/*|postgresql://*@*.pooler.supabase.com:*/*) ;;
+    *) printf '%s' "$url"; return 0;;
+  esac
+  case "$url" in
+    *[?\&]uselibpqcompat=*) printf '%s' "$url"; return 0;;
+  esac
+  antes_fragmento="$url"
+  case "$url" in
+    *\#*) antes_fragmento="${url%%\#*}"; fragmento="#${url#*\#}";;
+  esac
+  case "$antes_fragmento" in *\?*) separador='&';; *) separador='?';; esac
+  printf '%s' "${antes_fragmento}${separador}uselibpqcompat=true${fragmento}"
+}
+
 # Saúde do app pela rota que ele responde de verdade, não pela porta. A porta
 # 3000 aceita conexão assim que o Node sobe — ANTES de o app saber se alcança
 # banco, Redis e WhatsApp. Era exatamente a diferença entre o install.sh, que

@@ -153,6 +153,25 @@ ok "rejeita Direct connection (IPv6)"    reject v_db_url "postgresql://postgres:
 ok "rejeita string de outro projeto"     reject v_db_url "postgresql://postgres.zzzzzzzzzzzzzzzz:senha@aws-1-us-west-2.pooler.supabase.com:5432/postgres"          "mesmo projeto"
 ok "rejeita o que não é URL de Postgres" reject v_db_url "aws-1-us-west-2.pooler.supabase.com"                                                                     "começa com postgresql"
 
+echo "connection string: compatibilidade do Session pooler"
+normaliza_ok() { # normaliza_ok <descrição> <entrada> <esperado>
+  local desc="$1" entrada="$2" esperado="$3" obtido
+  obtido="$(normalizar_url_pooler "$entrada" 2>/dev/null)"
+  if [ "$obtido" = "$esperado" ]; then printf '  ✓ %s\n' "$desc"
+  else printf '  ✗ %s\n     esperava: %s\n     obteve:   %s\n' "$desc" "$esperado" "$obtido"; fail=1; fi
+}
+POOLER_BASE='postgresql://postgres.ref:p%40ss@aws-1-sa-east-1.pooler.supabase.com:5432/postgres'
+normaliza_ok "sem query: acrescenta a opção" \
+  "$POOLER_BASE" "${POOLER_BASE}?uselibpqcompat=true"
+normaliza_ok "preserva parâmetros já existentes" \
+  "${POOLER_BASE}?sslmode=require" "${POOLER_BASE}?sslmode=require&uselibpqcompat=true"
+normaliza_ok "é idempotente" \
+  "${POOLER_BASE}?sslmode=require&uselibpqcompat=true" "${POOLER_BASE}?sslmode=require&uselibpqcompat=true"
+normaliza_ok "não altera Postgres fora do pooler Supabase" \
+  'postgresql://crm:senha@db.exemplo.com:5432/postgres?sslmode=require' \
+  'postgresql://crm:senha@db.exemplo.com:5432/postgres?sslmode=require'
+unset POOLER_BASE
+
 echo "connection string: Supabase PRÓPRIO não tem <ref> de projeto"
 # A comparação de projeto lê o `postgres.<ref>` do pooler DA NUVEM. Num Supabase
 # self-hosted não existe <ref> e a role pode ser qualquer uma, então a checagem
@@ -2148,7 +2167,7 @@ strings_de_schema() {
 }
 # Derivada do BASE_ENV, não copiada: duas cópias do mesmo literal desincronizam
 # no dia em que o cenário-base trocar de string, e aí o teste reprova por engano.
-URL_DO_APP="$(printf '%s\n' "$BASE_ENV" | sed -n "s/^SUPABASE_DB_URL='\(.*\)'$/\1/p")"
+URL_DO_APP="$(normalizar_url_pooler "$(printf '%s\n' "$BASE_ENV" | sed -n "s/^SUPABASE_DB_URL='\(.*\)'$/\1/p")")"
 URL_DO_DONO='postgresql://supabase_admin:senhadodono@db-proprio.exemplo.com.br:5432/postgres'
 
 TMP_DDL_A="$(mktemp -d)"

@@ -321,8 +321,9 @@ v_db_url() {
         return 1
       fi;;
   esac
-  local out
-  if out="$(docker run --rm postgres:17-alpine psql "$1" -tAc 'select 1' 2>&1)"; then
+  local out url_normalizada
+  url_normalizada="$(normalizar_url_pooler "$1")"
+  if out="$(docker run --rm postgres:17-alpine psql "$url_normalizada" -tAc 'select 1' 2>&1)"; then
     return 0
   fi
   echo "Não consegui conectar no banco. O Postgres respondeu:"
@@ -1378,6 +1379,10 @@ if [ -z "${SENTRY_DSN+x}" ]; then
     fi
   fi
 fi
+
+# Normaliza antes de persistir e antes de qualquer uso posterior. A função só
+# toca URLs do Session pooler oficial e nunca escreve a credencial na saída.
+SUPABASE_DB_URL="$(normalizar_url_pooler "$SUPABASE_DB_URL")"
 
 step "Escrevendo .env"
 umask 077
