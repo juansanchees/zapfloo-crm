@@ -4,7 +4,7 @@ import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
 import { useT } from "@/hooks/i18n/useT";
 
-import { format, isBefore } from "date-fns";
+import { format } from "date-fns";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -66,7 +66,8 @@ function separar(agendamentos: Agendamento[], agora: Date): Record<AbaDoHistoric
     // uma resposta errada com cara de certa.
     if (a.situacao === "cancelled") { vazio.cancelados.push(a); continue; }
     if (a.situacao === "pending") { vazio.aguardando.push(a); continue; }
-    (isBefore(new Date(a.comeca), agora) ? vazio.passados : vazio.proximos).push(a);
+    // Um atendimento em andamento continua visível até o fim do intervalo.
+    (new Date(a.termina).getTime() <= agora.getTime() ? vazio.passados : vazio.proximos).push(a);
   }
   return vazio;
 }
