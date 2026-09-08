@@ -104,6 +104,7 @@ describe("o canal `stable` move em bloco", () => {
     expect(needs?.split(",").map((s) => s.trim()).sort()).toEqual([
       "build-and-push",
       "imagem-do-app-sobe",
+      "imagens-auxiliares-sobem",
     ]);
   });
 

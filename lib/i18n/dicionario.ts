@@ -5212,8 +5212,8 @@ export const DICIONARIO: Traducoes = {
     es: "Consulta cómo solicitar la eliminación de tus datos.",
   },
   "7. Segurança": { es: "7. Seguridad" },
-  "O acesso é controlado por conta, senha e papel, com verificação em duas etapas obrigatória para administradores. Cada organização hospedada só enxerga os próprios dados, e as chaves de integração são guardadas cifradas.": {
-    es: "El acceso es controlado por cuenta, contraseña y rol, con verificación en dos pasos obligatoria para administradores. Cada organización alojada solo ve sus propios datos, y las claves de integración se guardan cifradas.",
+  "O acesso é controlado por conta, senha e papel, com verificação em duas etapas quando ativada. Cada organização hospedada só enxerga os próprios dados, e as chaves de integração são guardadas cifradas.": {
+    es: "El acceso es controlado por cuenta, contraseña y rol, con verificación en dos pasos cuando está activada. Cada organización alojada solo ve sus propios datos, y las claves de integración se guardan cifradas.",
   },
   "8. Encarregado e contato": { es: "8. Encargado y contacto" },
   "Para exercer seus direitos ou tirar dúvidas sobre privacidade, fale com o encarregado de dados:": {

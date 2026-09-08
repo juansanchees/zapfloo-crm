@@ -323,7 +323,7 @@ v_db_url() {
   esac
   local out url_normalizada
   url_normalizada="$(normalizar_url_pooler "$1")"
-  if out="$(docker run --rm postgres:17-alpine psql "$url_normalizada" -tAc 'select 1' 2>&1)"; then
+  if out="$(docker run --rm postgres:17-alpine psql "$(url_para_ferramenta_postgres "$url_normalizada")" -tAc 'select 1' 2>&1)"; then
     return 0
   fi
   echo "Não consegui conectar no banco. O Postgres respondeu:"
@@ -1181,13 +1181,20 @@ elif trio_publicado "stable"; then
   c_ylw "  Instalando pelo canal 'stable' (a última versão completa)."
   VERSAO_ALVO="stable"
 elif [ -n "$VERSAO_ALVO" ]; then
-  # Nem a versão nem o `stable` têm o trio. Segue assim mesmo — o compose tem
-  # `build:` ao lado do `image:` do worker e do scheduler, então eles são
-  # construídos aqui. É lento, mas instala. O que NÃO pode é isso acontecer
-  # calado: o dono precisa saber que duas peças dele saíram do fonte local.
-  c_ylw "⚠ As imagens do worker e do agendador ainda não estão publicadas."
-  c_ylw "  Elas serão construídas neste servidor — leva alguns minutos a mais."
-  c_ylw "  Rode 'bash hostgator-setup-kit/update.sh' quando a próxima versão sair."
+  case "$IMG_APP" in
+    "$IMG_NS"/*)
+      # A sonda HTTP é anônima e um pacote privado responde 403 mesmo quando o
+      # Docker desta VPS está autenticado. O `dc pull` abaixo é a prova real.
+      c_dim "Pacotes privados: a versão será validada pelo Docker autenticado."
+      ;;
+    *)
+      # Nem a versão nem o `stable` têm o trio. Em registry público/customizado
+      # mantém o escape de build local, sempre anunciado.
+      c_ylw "⚠ As imagens do worker e do agendador ainda não estão publicadas."
+      c_ylw "  Elas serão construídas neste servidor — leva alguns minutos a mais."
+      c_ylw "  Rode 'bash hostgator-setup-kit/update.sh' quando a próxima versão sair."
+      ;;
+  esac
 else
   # Falha ABERTA: sem rede ou sem tag no remoto, segue como antes. Travar a
   # instalação por não resolver um número seria trocar previsibilidade por
@@ -1299,6 +1306,10 @@ fi
 # Derivados
 NEXT_PUBLIC_APP_URL="https://${DOMAIN}"
 NEXT_PUBLIC_ADMIN_URL="https://${DOMAIN}"
+# A página pública exigida para pedidos LGPD/Meta nunca pode terminar em
+# "procure algum canal". Se o operador não publicou um contato específico,
+# usa o e-mail de suporte e, por último, o do próprio dono.
+LGPD_DPO_EMAIL="${LGPD_DPO_EMAIL:-${SUPPORT_EMAIL:-$OWNER_EMAIL}}"
 
 # ── 4. Geração de segredos (idempotente: só gera o que falta) ────────────────
 step "Gerando segredos"
@@ -1549,6 +1560,7 @@ esac
   printf '# Endereço de suporte que o CLIENTE FINAL vê (conta suspensa, cobrança).\n'
   printf '# Vazio = a tela não mostra endereço nenhum.\n'
   envq SUPPORT_EMAIL "${SUPPORT_EMAIL:-}"
+  envq LGPD_DPO_EMAIL "$LGPD_DPO_EMAIL"
   # AGENDA · GOOGLE CALENDAR — gravadas VAZIAS, e de propósito NÃO perguntadas.
   #
   # Sem as duas a Agenda funciona inteira: some o botão "Conectar Google" e a
@@ -1840,7 +1852,7 @@ docker run --rm -i postgres:17-alpine psql "$(url_do_schema)" -v ON_ERROR_STOP=1
      Este passo lê auth.users e escreve em public: num Supabase próprio ele precisa do dono do
      banco — declare SUPABASE_DB_ADMIN_URL e rode de novo."
 do \$\$
-declare v_org uuid; v_uid uuid;
+declare v_org uuid; v_uid uuid; v_org_criada boolean := false;
 begin
   select id into v_uid from auth.users where email = '${OWNER_EMAIL}';
   if v_uid is null then
@@ -1858,6 +1870,7 @@ begin
       jsonb_build_object('llm', jsonb_build_object('provider', '${AI_PROVIDER}')),
       v_uid)
     returning id into v_org;
+    v_org_criada := true;
   else
     -- Re-execução do instalador com outra resposta: quem rodou de novo para
     -- trocar o idioma esperaria que trocasse. Só mexe se a organização ainda
@@ -1867,8 +1880,9 @@ begin
        set locale = '${APP_LOCALE:-pt-BR}'
      where id = v_org and coalesce(locale, 'pt-BR') = 'pt-BR';
   end if;
-  -- Reexecução também alinha provider E modelo. Manter o modelo Anthropic ao
-  -- trocar só o provider produzia uma configuração internamente impossível.
+  -- O instalador semeia provider e modelo somente na organização recém-criada
+  -- ou ainda sem provider. Reexecutar para corrigir domínio, idioma ou outra
+  -- chave não pode apagar a escolha que o gestor já fez pela tela.
   update public.organizations o
      set settings = jsonb_set(
            coalesce(o.settings, '{}'::jsonb),
@@ -1884,7 +1898,8 @@ begin
                     limit 1),
                   '{}'::jsonb),
            true)
-   where o.id = v_org;
+   where o.id = v_org
+     and (v_org_criada or nullif(o.settings #>> '{llm,provider}', '') is null);
   insert into public.user_organizations (user_id, organization_id, role, accepted_at)
   values (v_uid, v_org, 'admin', now())
   on conflict (user_id, organization_id) do update set role='admin', revoked_at=null;
@@ -1939,8 +1954,26 @@ step "Puxando a imagem e subindo os serviços"
 # worker e o scheduler têm `build:` ao lado do `image:`, e o Compose os constrói
 # quando a imagem não existe (medido).
 if ! dc pull; then
-  c_ylw "⚠ Não consegui puxar todas as imagens do registro."
-  c_ylw "  Sigo assim mesmo: o que faltar é construído aqui (mais lento, mesmo resultado)."
+  case "${APP_IMAGE:-}" in
+    "$IMG_NS"/*)
+      c_red "✖ Não consegui baixar os pacotes privados da Zapfloo no GHCR."
+      printf '%s\n' "  Autentique esta VPS sem colar token em comando ou arquivo:" \
+        "" \
+        "       gh auth login" \
+        "       gh auth token | docker login ghcr.io -u juansanchees --password-stdin" \
+        "" \
+        "  Depois rode este instalador novamente. A configuração e o banco foram preservados."
+      # Este ponto já escreveu o .env e aplicou o banco. O trap genérico manda
+      # apagar ambos; aqui isso seria o rollback errado para uma credencial de
+      # registry ausente.
+      trap - EXIT
+      exit 1
+      ;;
+    *)
+      c_ylw "⚠ Não consegui puxar todas as imagens do registro."
+      c_ylw "  Sigo assim mesmo: o que faltar é construído aqui (mais lento, mesmo resultado)."
+      ;;
+  esac
 fi
 dc up -d
 c_grn "✓ containers no ar"
@@ -2029,9 +2062,9 @@ $(pendencia_dos_emails)
        antes de abrir a tela — o QR code vale só uns minutos. Se expirar,
        o próprio CRM tem o botão "Gerar novo QR Code".
 
-  4. Ao terminar o onboarding, o CRM pede a verificação em duas etapas:
-       tenha o Google Authenticator/Authy à mão e GUARDE os códigos de
-       recuperação que aparecem. Perdeu o celular? bash hostgator-setup-kit/reset-mfa.sh ${OWNER_EMAIL}
+  4. Para reforçar a conta, ative a verificação em duas etapas em Segurança:
+        tenha o Google Authenticator/Authy à mão e GUARDE os códigos de
+        recuperação. Perdeu o celular? bash hostgator-setup-kit/reset-mfa.sh ${OWNER_EMAIL}
 
 $(c_grn "  ─── A comunidade ──────────────────────────────────────")
 

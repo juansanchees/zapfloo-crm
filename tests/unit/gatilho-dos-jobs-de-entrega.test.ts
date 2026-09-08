@@ -99,6 +99,12 @@ const GATILHO_ESPERADO: Record<string, { condicao: string | null; efeito: string
       "devolve o defeito que derrubou a produção: imagem publicada que morre no " +
       "`docker compose up` da VPS.",
   },
+  "publish-image.yml::imagens-auxiliares-sobem": {
+    condicao: null,
+    efeito:
+      "Este job executa os entrypoints reais do worker e do scheduler. Desligá-lo " +
+      "permite publicar uma imagem auxiliar que constrói, mas morre ao iniciar.",
+  },
   // A promoção do canal `stable`, que o PR #498 tirou de dentro da matriz: lá,
   // cada uma das três imagens movia o canal sozinha ao terminar, e um `stable`
   // podia apontar para um app novo com worker velho. Desligá-lo aqui não deixa
