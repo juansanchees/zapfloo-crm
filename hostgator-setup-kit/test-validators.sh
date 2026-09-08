@@ -170,6 +170,23 @@ normaliza_ok "é idempotente" \
 normaliza_ok "não altera Postgres fora do pooler Supabase" \
   'postgresql://crm:senha@db.exemplo.com:5432/postgres?sslmode=require' \
   'postgresql://crm:senha@db.exemplo.com:5432/postgres?sslmode=require'
+
+echo "connection string: ferramentas PostgreSQL não recebem opção do runtime"
+schema_url_ok() { # schema_url_ok <descrição> <entrada> <esperado>
+  local desc="$1" entrada="$2" esperado="$3" obtido
+  SUPABASE_DB_URL="$entrada"; unset SUPABASE_DB_ADMIN_URL
+  obtido="$(url_do_schema 2>/dev/null)"
+  if [ "$obtido" = "$esperado" ]; then printf '  ✓ %s\n' "$desc"
+  else printf '  ✗ %s\n     esperava: %s\n     obteve:   %s\n' "$desc" "$esperado" "$obtido"; fail=1; fi
+}
+schema_url_ok "remove a única opção" \
+  "${POOLER_BASE}?uselibpqcompat=true" "$POOLER_BASE"
+schema_url_ok "remove no fim e preserva as demais" \
+  "${POOLER_BASE}?sslmode=require&uselibpqcompat=true" "${POOLER_BASE}?sslmode=require"
+schema_url_ok "remove no início e preserva as demais" \
+  "${POOLER_BASE}?uselibpqcompat=true&sslmode=require" "${POOLER_BASE}?sslmode=require"
+schema_url_ok "preserva fragmento da URL" \
+  "${POOLER_BASE}?uselibpqcompat=true#rota" "${POOLER_BASE}#rota"
 unset POOLER_BASE
 
 echo "connection string: Supabase PRÓPRIO não tem <ref> de projeto"
@@ -2186,6 +2203,7 @@ strings_de_schema() {
 # Derivada do BASE_ENV, não copiada: duas cópias do mesmo literal desincronizam
 # no dia em que o cenário-base trocar de string, e aí o teste reprova por engano.
 URL_DO_APP="$(normalizar_url_pooler "$(printf '%s\n' "$BASE_ENV" | sed -n "s/^SUPABASE_DB_URL='\(.*\)'$/\1/p")")"
+URL_DO_SCHEMA="$(url_para_ferramenta_postgres "$URL_DO_APP")"
 URL_DO_DONO='postgresql://supabase_admin:senhadodono@db-proprio.exemplo.com.br:5432/postgres'
 
 TMP_DDL_A="$(mktemp -d)"
@@ -2208,12 +2226,15 @@ STUB
     printf '  ✗ o install.sh falou %s vez(es) com o Postgres — teste inconclusivo, não verde\n' "${n:-0}"
     printf '     (esperadas: extensões, sonda de schema, baseline, contagem de tabelas, promoção do dono)\n'; exit 1
   fi
-  vistas="$(strings_de_banco)"
-  if [ "$vistas" != "$URL_DO_APP" ]; then
-    printf '  ✗ sem SUPABASE_DB_ADMIN_URL o kit deixou de usar a string de sempre — quem já instalou quebra:\n'
+  vistas="$(strings_de_schema)"
+  if [ "$vistas" != "$URL_DO_SCHEMA" ]; then
+    printf '  ✗ sem SUPABASE_DB_ADMIN_URL o schema não usou a string do app sem a opção de runtime:\n'
     printf '%s\n' "$vistas" | sed 's/^/       /'; exit 1
   fi
-  printf '  ✓ sem a variável nova: as %s conversas com o Postgres usam a string de sempre\n' "$n"
+  if ! grep -qF -- "psql $URL_DO_APP -tAc select 1" "$VPS_LOG"; then
+    printf '  ✗ a sonda do app deixou de usar a URL com compatibilidade do pooler\n'; exit 1
+  fi
+  printf '  ✓ sem a variável nova: schema usa a mesma conexão, sem a opção que psql/pg_dump recusam\n'
 ) || fail=1
 rm -rf "$TMP_DDL_A"
 
@@ -2325,6 +2346,25 @@ NEXT_PUBLIC_APP_URL='https://crm.exemplo.com.br'")"
   printf '  ✓ baseline (%s psql) e backup (%s pg_dump) pela conexão do dono\n' "$n_psql" "$n_dump"
 ) || fail=1
 rm -rf "$TMP_DDL_C"
+
+echo "backup: falha no pg_dump não deixa arquivo que parece restaurável"
+TMP_BACKUP_ATOMICO="$(mktemp -d)"
+(
+  montar_vps "$TMP_BACKUP_ATOMICO" "crmbackup" <<'STUB'
+#!/usr/bin/env bash
+case "$*" in *pg_dump*) exit 9 ;; esac
+exit 0
+STUB
+  saida="$(rodar backup.sh "")"
+  if find "$VPS_PROJ/backups" -type f \( -name 'db-*.sql.gz' -o -name '.db-*.tmp' \) | grep -q .; then
+    printf '  ✗ o pg_dump falhou, mas deixou um arquivo de banco que parece válido\n'; exit 1
+  fi
+  if printf '%s' "$saida" | grep -q 'backup concluído'; then
+    printf '  ✗ o pg_dump falhou, mas o script anunciou backup concluído\n'; exit 1
+  fi
+  printf '  ✓ falha fecha sem artefato parcial e sem anúncio de sucesso\n'
+) || fail=1
+rm -rf "$TMP_BACKUP_ATOMICO"
 
 echo "e-mails de acesso: quem JÁ instalou também é avisado — uma vez só"
 # A população realmente quebrada hoje é quem instalou ANTES de a entrevista pedir

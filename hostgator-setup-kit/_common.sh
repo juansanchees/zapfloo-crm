@@ -260,6 +260,34 @@ normalizar_url_pooler() {
   printf '%s' "${antes_fragmento}${separador}uselibpqcompat=true${fragmento}"
 }
 
+# `uselibpqcompat` é uma opção do driver PostgreSQL usado pela aplicação, não
+# um parâmetro reconhecido pelo libpq. `psql` e `pg_dump` recebem a mesma URL
+# por `url_do_schema`; se a opção chegar até eles, abortam antes de conectar.
+# Remove só essa chave em memória e preserva todas as demais e o fragmento.
+url_para_ferramenta_postgres() {
+  local url="${1-}" base query="" fragment="" parametro mantidos=""
+  local -a parametros=()
+  base="$url"
+  case "$base" in
+    *\#*) fragment="#${base#*\#}"; base="${base%%\#*}" ;;
+  esac
+  case "$base" in
+    *\?*) query="${base#*\?}"; base="${base%%\?*}" ;;
+    *) printf '%s' "${base}${fragment}"; return 0 ;;
+  esac
+  IFS='&' read -r -a parametros <<< "$query"
+  for parametro in "${parametros[@]}"; do
+    case "$parametro" in uselibpqcompat=*) continue ;; esac
+    [ -n "$parametro" ] || continue
+    if [ -n "$mantidos" ]; then mantidos="${mantidos}&${parametro}"
+    else mantidos="$parametro"
+    fi
+  done
+  if [ -n "$mantidos" ]; then printf '%s' "${base}?${mantidos}${fragment}"
+  else printf '%s' "${base}${fragment}"
+  fi
+}
+
 # Saúde do app pela rota que ele responde de verdade, não pela porta. A porta
 # 3000 aceita conexão assim que o Node sobe — ANTES de o app saber se alcança
 # banco, Redis e WhatsApp. Era exatamente a diferença entre o install.sh, que
@@ -440,7 +468,9 @@ enter_project() {
 # pai; o que a mensagem garante é que a causa apareça na tela antes do erro de
 # conexão que os chamadores já tratam.
 url_do_schema() {
-  printf '%s' "${SUPABASE_DB_ADMIN_URL:-${SUPABASE_DB_URL:?sem connection string de banco no .env — rode o install.sh}}"
+  local url
+  url="${SUPABASE_DB_ADMIN_URL:-${SUPABASE_DB_URL:?sem connection string de banco no .env — rode o install.sh}}"
+  url_para_ferramenta_postgres "$url"
 }
 
 # psql efêmero via container (não exige psql no host). Usa a conexão de schema:
