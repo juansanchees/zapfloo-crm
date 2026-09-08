@@ -852,10 +852,12 @@ jobs:
     if: always()
     needs: [e2e-parte]
     runs-on: ubuntu-latest
-    # Nenhuma permissão: este job só lê o resultado de `needs` e escreve o
-    # summary. Sem o bloco, o token herdaria o default do REPOSITÓRIO, que vive
-    # fora do repo e muda num clique.
-    permissions: {}
+    # O agregador lê o resultado de `needs`, mas também faz checkout para contar
+    # as specs diretamente no workflow. Em repositório privado, `permissions: {}`
+    # faz o checkout receber 404 ("Repository not found") mesmo depois de as três
+    # partes terem passado. Só leitura de conteúdo; nenhum escopo de escrita.
+    permissions:
+      contents: read
     steps:
       - name: Falhar se qualquer parte não passou
         run: |

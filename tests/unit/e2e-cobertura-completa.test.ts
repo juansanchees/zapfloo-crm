@@ -150,4 +150,17 @@ describe("cobertura do e2e no CI", () => {
     expect(yml).not.toMatch(/playwright test[^\n]*\$FORA_DO_CI/);
     expect(yml).not.toMatch(/LISTA="\$FORA_DO_CI"/);
   });
+
+  it("o agregador consegue ler o próprio workflow no repositório privado", () => {
+    const agregador = /\n  e2e:\n([\s\S]*)$/.exec(yml)?.[1] ?? "";
+
+    expect(agregador, "o job agregador e2e não foi encontrado").not.toBe("");
+    expect(
+      agregador,
+      "o agregador faz checkout para medir cobertura e precisa de contents: read no repo privado",
+    ).toMatch(/^    permissions:\n      contents: read$/m);
+    expect(agregador, "o controle só vale enquanto o agregador ainda fizer checkout").toMatch(
+      /^      - uses: actions\/checkout@v7$/m,
+    );
+  });
 });
