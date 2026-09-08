@@ -71,8 +71,11 @@ export const onboardingStateSchema = z.object({
   whatsapp: z
     .object({
       session_id: z.string().optional(),
+      /** UUID persistido do canal escolhido para o primeiro teste restrito. */
+      channel_session_id: z.string().uuid().optional(),
       session_name: z.string().optional(),
       status: z.string(),
+      activated_at: z.string().datetime().optional(),
       skipped: z.boolean().optional(),
     })
     .optional(),
@@ -86,8 +89,29 @@ export const onboardingStateSchema = z.object({
   ai: z
     .object({
       agent_id: z.string(),
-      prompt_template: z.string(),
+      /** Presente no estado legado; o fluxo revisado persiste a versão exata. */
+      prompt_template: z.string().optional(),
       skipped: z.boolean().optional(),
+      flow: z.literal("reviewed_draft_v2").optional(),
+      revision: z.number().int().positive().optional(),
+      version_id: z.string().uuid().optional(),
+      run_id: z.string().uuid().optional(),
+      review_confirmed_at: z.string().datetime().optional(),
+      restricted_activation: z
+        .object({
+          draft_revision: z.number().int().positive(),
+          run_id: z.string().uuid(),
+          call_id: z.string().uuid(),
+          agent_id: z.string().uuid(),
+          version_id: z.string().uuid(),
+          channel_session_id: z.string().uuid(),
+          snapshot_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+          access_mode: z.literal("pre_go_live"),
+          test_phone_count: z.number().int().positive(),
+          activated_at: z.string().datetime(),
+          actor_id: z.string().uuid(),
+        })
+        .optional(),
     })
     .optional(),
   /**

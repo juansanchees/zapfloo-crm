@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Conclusão restrita do agente no onboarding",
+    "subtitle": "Revisão confirmada não ativa; publicação exige ação explícita e canal pré-go-live fechado",
+    "output": "onboarding-ativacao-restrita.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "server", "label": "Servidor" },
+    { "id": "db", "label": "Banco" },
+    { "id": "runtime", "label": "Runtime preservado" }
+  ],
+  "mainPath": ["confirm_action", "confirm_rpc", "org_state", "activate_action", "activate_rpc", "version", "agent"],
+  "nodes": [
+    { "id": "confirm_action", "lane": "server", "col": 1, "type": "service", "label": "confirmarAgenteRevisado / guard, contexto e CAS" },
+    { "id": "activate_action", "lane": "server", "col": 4, "type": "service", "label": "ativarAgenteParaTeste / ação explícita, provider persistido" },
+    { "id": "key_resolver", "lane": "server", "col": 5, "type": "service", "label": "chaveDePlataforma / capacidade calculada somente no servidor" },
+    { "id": "confirm_rpc", "lane": "db", "col": 2, "type": "database", "label": "fn_confirmar_agente_revisado_onboarding / revisão corrente, sem ativação" },
+    { "id": "activate_rpc", "lane": "db", "col": 6, "type": "database", "label": "fn_ativar_agente_teste_onboarding / locks e validação atômica" },
+    { "id": "draft", "lane": "db", "col": 3, "type": "database", "label": "onboarding_drafts / snapshot, revisão, run e call atuais" },
+    { "id": "org_state", "lane": "db", "col": 3, "type": "database", "label": "organizations.onboarding_state / marcador e recibo histórico" },
+    { "id": "channel", "lane": "db", "col": 7, "type": "database", "label": "channel_sessions / WORKING + allowlist + pre_go_live + telefones" },
+    { "id": "version", "lane": "db", "col": 8, "type": "database", "label": "ai_agent_versions / a versão ensaiada vira published no canal escolhido" },
+    { "id": "agent", "lane": "db", "col": 9, "type": "database", "label": "ai_agents / o preparado vira ativo, nunca default" },
+    { "id": "audit", "lane": "db", "col": 7, "type": "database", "label": "api_audit_log / IDs, hash e contagem sem texto ou telefone" },
+    { "id": "dispatcher", "lane": "runtime", "col": 9, "type": "service", "label": "dispatcher existente / continua relendo o gate do canal a cada envio" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "confirm_action", "to": "confirm_rpc", "label": "org/ator vêm da sessão; browser fornece apenas prova CAS" },
+    { "id": "e2", "from": "confirm_rpc", "to": "draft", "label": "revalida snapshot e ensaio concluído/revisado" },
+    { "id": "e3", "from": "confirm_rpc", "to": "org_state", "label": "persiste reviewed_draft_v2 sem publicar, vincular ou ativar" },
+    { "id": "e4", "from": "org_state", "to": "activate_action", "label": "a próxima ação consome IDs do estado, sem confiar nele sozinho" },
+    { "id": "e5", "from": "activate_action", "to": "key_resolver", "label": "credential null consulta capacidade da chave para o provider persistido" },
+    { "id": "e6", "from": "key_resolver", "to": "activate_rpc", "label": "boolean nunca vem do browser; RPC é service-only" },
+    { "id": "e7", "from": "activate_action", "to": "activate_rpc", "label": "canal escolhido + CAS; sem sessionName, status ou metadata do cliente" },
+    { "id": "e8", "from": "draft", "to": "activate_rpc", "label": "revalida revisão, negócio, versão, modelo, prompt e credencial" },
+    { "id": "e9", "from": "channel", "to": "activate_rpc", "label": "somente mesma org, não arquivado, WORKING e lista não vazia" },
+    { "id": "e10", "from": "activate_rpc", "to": "version", "label": "publica exatamente a versão capturada" },
+    { "id": "e11", "from": "version", "to": "agent", "label": "vincula e ativa o mesmo agente preparado" },
+    { "id": "e12", "from": "activate_rpc", "to": "org_state", "label": "recibo permite retry pós-publicação sem relaxar o validator antigo" },
+    { "id": "e13", "from": "activate_rpc", "to": "audit", "label": "um audit idempotente, sem payload de mensagem" },
+    { "id": "e14", "from": "agent", "to": "dispatcher", "label": "runtime só pode atender pelo canal publicado" },
+    { "id": "e15", "from": "channel", "to": "dispatcher", "label": "allowlist pré-go-live segue sendo a trava canônica em tempo de envio" }
+  ],
+  "non_connections": [
+    "Salvar, preparar, ensaiar, revisar e confirmar não ativam o agente; somente ativarAgenteParaTeste chama a RPC de publicação.",
+    "A transação não executa modelo, ferramenta, HTTP, WAHA, mensagem nem cria event_log que possa iniciar contato.",
+    "O recibo não guarda telefone, resposta ensaiada, prompt, credencial ou chave da instalação.",
+    "Retry não restaura agente, versão ou canal alterado posteriormente pelo usuário."
+  ]
+}

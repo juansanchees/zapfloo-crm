@@ -263,6 +263,7 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260908183448` | `0222_onboarding_draft_prepare` | Preparação transacional de versão draft sem canal e agente inativo/não padrão; seleção explícita, CAS e snapshot contra edição externa. Somente local neste lote. |
 
 | `20260908191151` | `0223_onboarding_rehearsal` | Último ensaio de texto e revisão persistidos, CAS de snapshot antes/depois da rede, RPCs exclusivas do servidor e invalidação na edição. Sem ativação/canal/ferramentas. |
+| `20260908213253` | `0224_onboarding_concluir_restrito` | Confirma a revisão sem ativar e, em ação explícita separada, publica exatamente a versão ensaiada somente em canal WORKING com allowlist pré-go-live não vazia. Retry histórico idempotente, RPCs exclusivas de service role e nenhum envio/evento proativo. |
 
 ## Tables created (33 total, all RLS enabled)
 

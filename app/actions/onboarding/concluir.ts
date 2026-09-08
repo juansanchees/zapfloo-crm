@@ -1,0 +1,100 @@
+"use server";
+
+import { chaveDePlataforma } from "@/lib/ai/runtime/agent";
+import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
+import {
+  agenteRevisadoSchema,
+  ativacaoRestritaSchema,
+  ativarAgenteParaTesteSchema,
+  confirmarAgenteRevisadoSchema,
+  erroDaConclusao,
+  versaoParaAtivacaoSchema,
+  type ErroConclusao,
+  type ResultadoAtivacao,
+  type ResultadoConfirmacao,
+} from "@/lib/onboarding/concluir";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  OnboardingError,
+  requireOnboardingCtx,
+} from "./_shared";
+
+function erroDaBorda(error: unknown): ErroConclusao {
+  return error instanceof OnboardingError ? error.code : "db_error";
+}
+
+export async function confirmarAgenteRevisado(input: unknown): Promise<ResultadoConfirmacao> {
+  try {
+    const ctx = await requireOnboardingCtx();
+    const parsed = confirmarAgenteRevisadoSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "invalid_input" };
+    const p = parsed.data;
+    if (p.expected_context !== contextoDoRascunho(ctx.userId, ctx.orgId)) {
+      return { ok: false, error: "draft_context_changed" };
+    }
+
+    const { data, error } = await createAdminClient().rpc(
+      "fn_confirmar_agente_revisado_onboarding",
+      {
+        p_org_id: ctx.orgId,
+        p_actor_id: ctx.userId,
+        p_expected_revision: p.expected_revision,
+        p_expected_version_id: p.expected_version_id,
+        p_run_id: p.run_id,
+      },
+    );
+    if (error) return { ok: false, error: erroDaConclusao(error.message) };
+    const result = agenteRevisadoSchema.safeParse(data);
+    return result.success
+      ? { ok: true, ...result.data }
+      : { ok: false, error: "db_error" };
+  } catch (error) {
+    return { ok: false, error: erroDaBorda(error) };
+  }
+}
+
+export async function ativarAgenteParaTeste(input: unknown): Promise<ResultadoAtivacao> {
+  try {
+    const ctx = await requireOnboardingCtx();
+    const parsed = ativarAgenteParaTesteSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "invalid_input" };
+    const p = parsed.data;
+    if (p.expected_context !== contextoDoRascunho(ctx.userId, ctx.orgId)) {
+      return { ok: false, error: "draft_context_changed" };
+    }
+
+    const admin = createAdminClient();
+    const versionRead = await admin
+      .from("ai_agent_versions")
+      .select("provider,credential_id")
+      .eq("id", p.expected_version_id)
+      .eq("organization_id", ctx.orgId)
+      .maybeSingle();
+    if (versionRead.error || !versionRead.data) return { ok: false, error: "db_error" };
+    const version = versaoParaAtivacaoSchema.safeParse(versionRead.data);
+    if (!version.success) return { ok: false, error: "db_error" };
+
+    // Só o processo servidor consulta a chave. O browser não fornece provider,
+    // credential_id nem o boolean de capacidade aceito pela RPC service-only.
+    const installationKeyAvailable =
+      version.data.credential_id === null
+        ? Boolean(chaveDePlataforma(version.data.provider))
+        : false;
+    const { data, error } = await admin.rpc("fn_ativar_agente_teste_onboarding", {
+      p_org_id: ctx.orgId,
+      p_actor_id: ctx.userId,
+      p_expected_revision: p.expected_revision,
+      p_expected_version_id: p.expected_version_id,
+      p_run_id: p.run_id,
+      p_channel_session_id: p.channel_session_id,
+      p_installation_key_available: installationKeyAvailable,
+    });
+    if (error) return { ok: false, error: erroDaConclusao(error.message) };
+    const result = ativacaoRestritaSchema.safeParse(data);
+    return result.success
+      ? { ok: true, ...result.data }
+      : { ok: false, error: "db_error" };
+  } catch (error) {
+    return { ok: false, error: erroDaBorda(error) };
+  }
+}
