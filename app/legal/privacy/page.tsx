@@ -119,6 +119,11 @@ export default async function PrivacyPage() {
           )}{" "}
           <strong>{t("não pode ser desfeita")}</strong>.
         </p>
+        <p>
+          <a className="underline underline-offset-2" href="/legal/data-deletion">
+            {t("Veja como solicitar a exclusão dos seus dados.")}
+          </a>
+        </p>
       </section>
 
       <section className="space-y-2">
