@@ -30,7 +30,7 @@ O criador legado não é usado: ele continua com sua semântica anterior. Apenas
 - `pnpm test:db`: saída 0; **160 arquivos/1.285 aprovados e 1 ignorado**, baseline install/update, 233,83s. Os 24 casos de preparação passaram. Log `/tmp/zapfloo-prepare-db-final.log`; container efêmero removido pelo harness. O skip preexistente não foi tratado como aprovação.
 - `pnpm e2e:build`: saída 0; controle positivo confirmou host local 127.0.0.1:54321 no bundle. Log `/tmp/zapfloo-prepare-build.log`. Não houve publicação de imagem ou deploy.
 - `pnpm test:e2e tests/e2e/troca-de-organizacao-tem-volta.spec.ts`: saída 0; **3 aprovados**, 24,1s. Log `/tmp/zapfloo-prepare-e2e.log`. Regressão de salvamento/retomada, troca de organização e MFA do fluxo anterior, não prova visual da preparação nova ainda sem UI.
-- Capturas desktop e celular de `evidence/onboarding/rascunho-desktop.png` e `rascunho-salvo-celular.png` reinspecionadas: campos, salvamento e status legíveis; a spec mede ausência de overflow. Marca/tema são os do fixture sintético, não a produção.
+- Capturas desktop e celular de `evidence/onboarding/rascunho-desktop.png` e `evidence/onboarding/rascunho-salvo-celular.png` reinspecionadas: campos, salvamento e status legíveis; a spec mede ausência de overflow. Marca/tema são os do fixture sintético, não a produção.
 - O E2E emitiu avisos do SDK sobre uso de objeto de sessão e fallback de Redis para memória. Não foram convertidos em prova de falha de autorização nem descartados: merecem rastreio separado. O contrato novo usa o guard admin/MFA canônico e não confia em getSession.
 - `git diff --check`: saída 0. Comparação automática confirmou migration/apêndice idênticos e posicionamento antes da varredura de privilégios.
 

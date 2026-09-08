@@ -38,7 +38,7 @@ Executados sequencialmente; a revisão visual motivou uma repetição de build/E
 - `pnpm release:conferir`: **exit 0**, `/tmp/ensaio-release-conferir.log`; somente conferência, não cortou release nem consumiu fragmentos.
 - Revisão independente coordenada pelo agente pai: nenhuma falha acionável confirmada na revisão de código. Ajuste visual acima incorporado.
 
-Capturas do painel completo, inspecionadas em desktop e viewport 390×844: `.superpowers/evidence/ensaio/sem-chave-desktop.png`, `sem-chave-celular.png` (alerta honesto, retry, mensagem/configuração preservadas); `revisado-desktop.png`, `revisado-celular.png` (resposta sintética e revisão confirmada); `sintetico-desktop.png`, `sintetico-celular.png` registram estado stale após edição em outra aba. Sem overflow horizontal nos asserts E2E. A ajuda completa organização/instalação está visível e quebrável. Tema e marca existentes foram preservados.
+Capturas do painel completo, inspecionadas em desktop e viewport 390×844: `evidence/onboarding/ensaio-sem-chave-desktop.png`, `evidence/onboarding/ensaio-sem-chave-celular.png` (alerta honesto, retry, mensagem/configuração preservadas); `evidence/onboarding/ensaio-revisado-desktop.png`, `evidence/onboarding/ensaio-revisado-celular.png` (resposta sintética e revisão confirmada); `evidence/onboarding/ensaio-sintetico-desktop.png`, `evidence/onboarding/ensaio-sintetico-celular.png` registram estado stale após edição em outra aba. Sem overflow horizontal nos asserts E2E. A ajuda completa organização/instalação está visível e quebrável. Tema e marca existentes foram preservados. Capturas promovidas do diretório local para evidência versionada após reinspeção; não representam uma chamada real ao provedor.
 
 ## Ambiente e limites
 
