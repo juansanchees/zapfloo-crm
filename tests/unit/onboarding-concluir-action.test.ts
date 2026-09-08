@@ -40,16 +40,44 @@ const proof = {
   run_id: run,
 };
 
-function leituraDaVersao(data: unknown, error: unknown = null) {
+let versionQuery: ReturnType<typeof makeQuery>;
+let credentialQuery: ReturnType<typeof makeQuery>;
+
+function makeQuery(data: unknown, error: unknown = null) {
   const query = {
     select: vi.fn(),
     eq: vi.fn(),
+    not: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
     maybeSingle: vi.fn().mockResolvedValue({ data, error }),
   };
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
-  f.from.mockReturnValue(query);
+  query.not.mockReturnValue(query);
+  query.order.mockReturnValue(query);
+  query.limit.mockReturnValue(query);
   return query;
+}
+
+function instalarLeituras() {
+  f.from.mockImplementation((table: string) => {
+    if (table === "ai_agent_versions") return versionQuery;
+    if (table === "ai_provider_credentials") return credentialQuery;
+    throw new Error(`Tabela inesperada no teste: ${table}`);
+  });
+}
+
+function leituraDaVersao(data: unknown, error: unknown = null) {
+  versionQuery = makeQuery(data, error);
+  instalarLeituras();
+  return versionQuery;
+}
+
+function leituraDaCredencial(data: unknown, error: unknown = null) {
+  credentialQuery = makeQuery(data, error);
+  instalarLeituras();
+  return credentialQuery;
 }
 
 beforeEach(() => {
@@ -57,6 +85,7 @@ beforeEach(() => {
   f.ctx.mockResolvedValue({ orgId: org, userId: user });
   f.chave.mockReturnValue("chave-sintetica-nao-exposta");
   leituraDaVersao({ provider: "openai", credential_id: null });
+  leituraDaCredencial(null);
   f.rpc.mockImplementation(async (name: string) => ({
     data:
       name === "fn_confirmar_agente_revisado_onboarding"
@@ -131,6 +160,8 @@ describe("conclusão do onboarding: identidade e capacidade ficam no servidor", 
       { organization_id: org },
       { actor_id: user },
       { provider: "openai" },
+      { credential_id: agent },
+      { resolved_credential_id: agent },
       { installation_key_available: true },
       { session_name: "forjada" },
       { status: "WORKING" },
@@ -185,6 +216,30 @@ describe("conclusão do onboarding: identidade e capacidade ficam no servidor", 
   it("credencial da organização não depende nem consulta chave de instalação", async () => {
     leituraDaVersao({ provider: "openai", credential_id: agent });
     await ativarAgenteParaTeste({ ...proof, channel_session_id: channel });
+    expect(f.from).not.toHaveBeenCalledWith("ai_provider_credentials");
+    expect(f.chave).not.toHaveBeenCalled();
+    expect(f.rpc).toHaveBeenCalledWith(
+      "fn_ativar_agente_teste_onboarding",
+      expect.objectContaining({ p_installation_key_available: false }),
+    );
+  });
+
+  it("resolve no servidor a credencial padrão da organização antes da chave da instalação", async () => {
+    leituraDaVersao({ provider: "openai", credential_id: null });
+    const query = leituraDaCredencial({ id: agent });
+    f.chave.mockReturnValue(null);
+
+    await expect(
+      ativarAgenteParaTeste({ ...proof, channel_session_id: channel }),
+    ).resolves.toMatchObject({ ok: true, agent_id: agent, version_id: version });
+
+    expect(f.from).toHaveBeenCalledWith("ai_provider_credentials");
+    expect(query.eq).toHaveBeenCalledWith("organization_id", org);
+    expect(query.eq).toHaveBeenCalledWith("provider", "openai");
+    expect(query.eq).toHaveBeenCalledWith("is_active", true);
+    expect(query.not).toHaveBeenCalledWith("validated_at", "is", null);
+    expect(query.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(query.limit).toHaveBeenCalledWith(1);
     expect(f.chave).not.toHaveBeenCalled();
     expect(f.rpc).toHaveBeenCalledWith(
       "fn_ativar_agente_teste_onboarding",

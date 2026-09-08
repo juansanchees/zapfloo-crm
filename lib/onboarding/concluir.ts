@@ -32,6 +32,9 @@ export const versaoParaAtivacaoSchema = z
   })
   .strict();
 
+/** Projeção mínima: prova apenas que o resolvedor canônico encontrou BYOK válida. */
+export const credencialOrganizacaoParaAtivacaoSchema = z.object({ id: z.string().uuid() }).strict();
+
 export type ErroConclusao =
   | ErroEnsaio
   | "activation_conflict"

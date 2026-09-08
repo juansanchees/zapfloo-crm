@@ -7,6 +7,7 @@ import {
   ativacaoRestritaSchema,
   ativarAgenteParaTesteSchema,
   confirmarAgenteRevisadoSchema,
+  credencialOrganizacaoParaAtivacaoSchema,
   erroDaConclusao,
   versaoParaAtivacaoSchema,
   type ErroConclusao,
@@ -74,12 +75,31 @@ export async function ativarAgenteParaTeste(input: unknown): Promise<ResultadoAt
     const version = versaoParaAtivacaoSchema.safeParse(versionRead.data);
     if (!version.success) return { ok: false, error: "db_error" };
 
-    // Só o processo servidor consulta a chave. O browser não fornece provider,
-    // credential_id nem o boolean de capacidade aceito pela RPC service-only.
-    const installationKeyAvailable =
-      version.data.credential_id === null
-        ? Boolean(chaveDePlataforma(version.data.provider))
-        : false;
+    // Replica a precedência do resolvedor canônico: BYOK explícita, depois a
+    // credencial válida mais recente da organização e só então a instalação.
+    // O browser não fornece provider, credential_id, ID resolvido nem capacidade.
+    let installationKeyAvailable = false;
+    if (version.data.credential_id === null) {
+      const orgCredentialRead = await admin
+        .from("ai_provider_credentials")
+        .select("id")
+        .eq("organization_id", ctx.orgId)
+        .eq("provider", version.data.provider)
+        .eq("is_active", true)
+        .not("validated_at", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (orgCredentialRead.error) return { ok: false, error: "db_error" };
+      if (orgCredentialRead.data) {
+        const orgCredential = credencialOrganizacaoParaAtivacaoSchema.safeParse(
+          orgCredentialRead.data,
+        );
+        if (!orgCredential.success) return { ok: false, error: "db_error" };
+      } else {
+        installationKeyAvailable = Boolean(chaveDePlataforma(version.data.provider));
+      }
+    }
     const { data, error } = await admin.rpc("fn_ativar_agente_teste_onboarding", {
       p_org_id: ctx.orgId,
       p_actor_id: ctx.userId,

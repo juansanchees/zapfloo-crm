@@ -4,6 +4,26 @@
 
 `DONE` — contrato implementado, auto-revisado e verificado. Nenhuma UI foi alterada.
 
+## Delta após revisão independente
+
+- Metadata do canal agora falha fechada nos caminhos inicial e de retry quando qualquer chave está ausente, `null`, com tipo inválido, lista vazia ou telefone fora de E.164. A correção é a migration nova 0225; a 0224 aplicada não foi editada.
+- A action reproduz a precedência canônica: credencial explícita da versão, credencial ativa/validada mais recente da organização e só então chave da instalação. O banco revalida a disponibilidade; nenhum boolean ou ID aceito vem do browser, e `credential_id=null` permanece inalterado na versão.
+- Retry reconstrói o snapshot anterior à publicação, compara seu SHA-256 com o recibo e exige correspondência integral entre recibo e audit. Alteração de versão, recibo ou audit retorna `activation_conflict` sem sobrescrever evidência.
+
+| Prova do delta | Resultado | Log |
+| --- | --- | --- |
+| RED action focado | 1 falha esperada, 8 passes; credencial org não consultada | `/tmp/onboarding-roxo-review-unit-red.log` |
+| RED DB focado | 10 falhas esperadas, 22 passes; metadata ausente, fallback BYOK e integridade do retry | `/tmp/onboarding-roxo-review-db-red.log` |
+| GREEN action final | 9/9, exit 0 | `/tmp/onboarding-roxo-review-unit-final.log` |
+| GREEN DB final | baseline install/update + 32/32, exit 0 | `/tmp/onboarding-roxo-review-db-final.log` |
+| Migration 0225 no Supabase local autorizado | exit 0 | `/tmp/onboarding-roxo-review-migration-0225-final.log` |
+| Typecheck final | exit 0 | `/tmp/onboarding-roxo-review-typecheck-final.log` |
+| Lint focado final | exit 0 | `/tmp/onboarding-roxo-review-lint-final.log` |
+| Mapa de arquitetura | 100/100, exit 0 | `/tmp/onboarding-roxo-review-map.log` |
+| Migration 0225 contida textualmente no baseline uma vez | exit 0 | `/tmp/onboarding-roxo-review-baseline-exact-final.log` |
+
+A primeira tentativa GREEN do DB parou antes dos testes (exit 3) por um `+` literal na primeira linha do apêndice do baseline; a causa foi corrigida textualmente e a repetição final passou. Evidência: `/tmp/onboarding-roxo-review-db-green.log`. A assinatura da RPC não mudou, portanto os tipos gerados não exigiram nova geração. A evidência anterior não persistida em arquivo continua nas sessões `49631` (DB focado final) e `84257` (DB completo: 1.319 passes, 1 skip, 423,99 s, exit 0); nenhuma suíte antiga foi repetida para fabricar log.
+
 ## Contrato e decisões
 
 - `confirmarAgenteRevisado` revalida contexto, revisão, versão, run, snapshot, `llm_calls` e revisão corrente; grava `reviewed_draft_v2` e audit mínimo sem publicar, vincular ou ativar.
@@ -17,7 +37,7 @@
 ## Arquivos
 
 - Actions/contratos: `app/actions/onboarding/concluir.ts`, `lib/onboarding/concluir.ts`, `lib/schemas/onboarding.ts`.
-- Banco: `supabase/migrations/20260908213253_0224_onboarding_concluir_restrito.sql`, `supabase/baseline.sql`, `supabase/migrations/MANIFEST.md`, `lib/database.types.ts`.
+- Banco: migrations `0224_onboarding_concluir_restrito` e `0225_onboarding_concluir_fail_closed`, `supabase/baseline.sql`, `supabase/migrations/MANIFEST.md`, `lib/database.types.ts`.
 - Provas: `tests/unit/onboarding-concluir-action.test.ts`, `tests/invariants/onboarding-concluir.test.ts`.
 - Produto/arquitetura: `.changes/2026-09-08-onboarding-conclusao-restrita.md`, `docs/architecture/onboarding-ativacao-restrita.architecture.json`, `docs/architecture/README.md`.
 

@@ -13,7 +13,9 @@ afterAll(async () => {
 
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 
-async function fixture(options: { reviewed?: boolean; credential?: boolean } = {}) {
+async function fixture(
+  options: { reviewed?: boolean; credential?: boolean; useCredentialInVersion?: boolean } = {},
+) {
   const org = randomUUID();
   const user = randomUUID();
   const credential = options.credential ? randomUUID() : null;
@@ -49,7 +51,7 @@ async function fixture(options: { reviewed?: boolean; credential?: boolean } = {
         system_prompt: "Atenda com cuidado, clareza e sem descontos.",
         provider: "openai",
         model: "qa-concluir",
-        credential_id: credential,
+        credential_id: options.useCredentialInVersion === false ? null : credential,
         tool_ids: [],
       },
     ])
@@ -96,16 +98,23 @@ async function fixture(options: { reviewed?: boolean; credential?: boolean } = {
 
 async function channel(
   org: string,
-  options: { status?: string; archived?: boolean; mode?: "open" | "pre_go_live"; numbers?: string[] } = {},
+  options: {
+    status?: string;
+    archived?: boolean;
+    mode?: "open" | "pre_go_live";
+    numbers?: string[];
+    metadata?: Record<string, unknown>;
+  } = {},
 ) {
   const id = randomUUID();
   const mode = options.mode ?? "pre_go_live";
-  const metadata = {
-    ai_gate: mode === "pre_go_live" ? "allowlist" : "open",
-    ai_gate_mode: "pre_go_live",
-    ai_test_phone_numbers: options.numbers ?? ["+5511999998888"],
-    transport: { preserved: true },
-  };
+  const metadata = options.metadata ??
+    {
+      ai_gate: mode === "pre_go_live" ? "allowlist" : "open",
+      ai_gate_mode: "pre_go_live",
+      ai_test_phone_numbers: options.numbers ?? ["+5511999998888"],
+      transport: { preserved: true },
+    };
   await db.query(
     "insert into channel_sessions(id,organization_id,waha_session_name,status,webhook_secret_encrypted,metadata,archived_at) values($1,$2,$3,$4,'\\x00',$5,$6)",
     [id, org, id, options.status ?? "WORKING", metadata, options.archived ? new Date() : null],
@@ -286,6 +295,27 @@ describe("revisão confirmada e ativação restrita do onboarding", () => {
     expect(await auditCount(f, "onboarding.restricted_activation")).toBe(0);
   });
 
+  it.each([
+    ["metadata vazio", {}],
+    ["ai_gate ausente", { ai_gate_mode: "pre_go_live", ai_test_phone_numbers: ["+5511999998888"] }],
+    ["ai_gate nulo", { ai_gate: null, ai_gate_mode: "pre_go_live", ai_test_phone_numbers: ["+5511999998888"] }],
+    ["modo ausente", { ai_gate: "allowlist", ai_test_phone_numbers: ["+5511999998888"] }],
+    ["modo nulo", { ai_gate: "allowlist", ai_gate_mode: null, ai_test_phone_numbers: ["+5511999998888"] }],
+    ["lista ausente", { ai_gate: "allowlist", ai_gate_mode: "pre_go_live" }],
+    ["lista nula", { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: null }],
+    ["lista objeto", { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: {} }],
+    ["lista com null", { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: [null] }],
+    ["lista com número inválido", { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: ["11999998888"] }],
+  ])("canal com %s falha fechado sem ativação nem audit", async (_label, metadata) => {
+    const f = await fixture();
+    await confirm(f);
+    const selected = await channel(f.org, { metadata });
+
+    await expect(activate(f, selected)).rejects.toThrow("activation_channel_not_restricted");
+    await expectInactive(f);
+    expect(await auditCount(f, "onboarding.restricted_activation")).toBe(0);
+  });
+
   it.each(["revoked", "suspended", "completed"])(
     "%s depois da confirmação retira a autoridade sem mutação parcial",
     async (state) => {
@@ -352,6 +382,24 @@ describe("revisão confirmada e ativação restrita do onboarding", () => {
     await expectInactive(byok);
   });
 
+  it("usa credencial válida da organização sem gravá-la na versão nem exigir chave da instalação", async () => {
+    const f = await fixture({ credential: true, useCredentialInVersion: false });
+    await confirm(f);
+    const selected = await channel(f.org);
+
+    await expect(
+      activate(f, selected, { installationKey: false }),
+    ).resolves.toMatchObject({ agent_id: f.agent, version_id: f.version });
+    expect(
+      (
+        await db.query(
+          "select credential_id from ai_agent_versions where id=$1 and organization_id=$2",
+          [f.version, f.org],
+        )
+      ).rows[0].credential_id,
+    ).toBeNull();
+  });
+
   it("não substitui agente ativo já publicado no canal", async () => {
     const f = await fixture();
     await confirm(f);
@@ -378,8 +426,11 @@ describe("revisão confirmada e ativação restrita do onboarding", () => {
     await confirm(f);
     const selected = await channel(f.org);
     await activate(f, selected);
+    await db.query("update channel_sessions set metadata='{}'::jsonb where id=$1", [selected]);
+    await expect(activate(f, selected)).rejects.toThrow("activation_conflict");
+    expect(await auditCount(f, "onboarding.restricted_activation")).toBe(1);
     await db.query(
-      "update channel_sessions set metadata=jsonb_set(metadata,'{ai_test_phone_numbers}','{}'::jsonb) where id=$1",
+      "update channel_sessions set metadata=jsonb_build_object('ai_gate','allowlist','ai_gate_mode','pre_go_live','ai_test_phone_numbers','{}'::jsonb) where id=$1",
       [selected],
     );
     await expect(activate(f, selected)).rejects.toThrow("activation_conflict");
@@ -393,6 +444,47 @@ describe("revisão confirmada e ativação restrita do onboarding", () => {
     expect((await agentState(f)).is_active).toBe(false);
     expect(await auditCount(f, "onboarding.restricted_activation")).toBe(1);
   });
+
+  it.each(["version_snapshot", "receipt_snapshot", "audit_snapshot"])(
+    "retry detecta adulteração posterior em %s e não sobrescreve evidência",
+    async (kind) => {
+      const f = await fixture();
+      await confirm(f);
+      const selected = await channel(f.org);
+      await activate(f, selected);
+
+      if (kind === "version_snapshot") {
+        await db.query("alter table ai_agent_versions disable trigger trg_ai_agent_versions_content_immutable");
+        try {
+          await db.query(
+            "update ai_agent_versions set system_prompt='Prompt adulterado depois da publicação' where id=$1",
+            [f.version],
+          );
+        } finally {
+          await db.query("alter table ai_agent_versions enable trigger trg_ai_agent_versions_content_immutable");
+        }
+      } else if (kind === "receipt_snapshot") {
+        await db.query(
+          "update organizations set onboarding_state=jsonb_set(onboarding_state,'{ai,restricted_activation,snapshot_sha256}',to_jsonb($2::text)) where id=$1",
+          [f.org, "b".repeat(64)],
+        );
+      } else {
+        await db.query(
+          "update api_audit_log set metadata=jsonb_set(metadata,'{snapshot_sha256}',to_jsonb($2::text)) where organization_id=$1 and action='onboarding.restricted_activation'",
+          [f.org, "c".repeat(64)],
+        );
+      }
+
+      await expect(activate(f, selected)).rejects.toThrow("activation_conflict");
+      expect(await auditCount(f, "onboarding.restricted_activation")).toBe(1);
+      if (kind === "version_snapshot") {
+        expect(
+          (await db.query("select system_prompt from ai_agent_versions where id=$1", [f.version])).rows[0]
+            .system_prompt,
+        ).toBe("Prompt adulterado depois da publicação");
+      }
+    },
+  );
 
   it("duas ativações concorrentes convergem para o mesmo recibo e um audit", async () => {
     const f = await fixture();
