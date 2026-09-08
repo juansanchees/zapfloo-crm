@@ -8,6 +8,17 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.17.0] — 2026-09-08
+
+### Adicionado
+
+- **A instalação Zapfloo ganha uma página pública de exclusão de dados** O endereço público de exclusão de dados explica como uma pessoa pode solicitar a
+  remoção das informações da sua organização, requisito de preparação para a Meta.
+  Esta versão também corrige o envio pelo canal oficial quando as credenciais estão
+  salvas por organização, impede que uma falha no dump do Supabase deixe um arquivo
+  parcial com aparência de backup e deixa os testes de instalação e atualização
+  independentes das credenciais Git existentes na máquina.
+
 ## [1.16.1] — 2026-09-07
 
 ### Corrigido
@@ -3135,7 +3146,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.16.1...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.17.0...HEAD
+[1.17.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.16.1...v1.17.0
 [1.16.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.15.1...v1.16.0
 [1.15.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.15.0...v1.15.1
