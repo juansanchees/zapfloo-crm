@@ -338,6 +338,7 @@ jobs:
             docker run -d --name aux-smoke \
               -e SUPABASE_DB_URL=postgres://u:p@127.0.0.1:5432/postgres \
               -e NEXT_PUBLIC_SUPABASE_URL=https://exemplo.supabase.co \
+              -e NEXT_PUBLIC_SUPABASE_ANON_KEY=chave-de-mentira \
               -e SUPABASE_SERVICE_ROLE_KEY=chave-de-mentira \
               -e SENTRY_DSN=off \
               "$IMAGE"

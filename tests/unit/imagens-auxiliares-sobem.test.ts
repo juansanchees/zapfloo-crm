@@ -13,6 +13,7 @@ describe("gate executável das imagens auxiliares", () => {
     expect(workflow).toContain("imagens-auxiliares-sobem:");
     expect(workflow).toContain("zapfloo-worker-smoke:pr");
     expect(workflow).toContain("zapfloo-scheduler-smoke:pr");
+    expect(workflow).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY=chave-de-mentira");
     expect(workflow).toContain("ERR_PACKAGE_PATH_NOT_EXPORTED");
     expect(workflow).toContain("pgrep crond");
   });
