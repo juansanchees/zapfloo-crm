@@ -86,6 +86,13 @@ describe("a tag nasce no CI, e nunca do GITHUB_TOKEN", () => {
     expect(t).toMatch(/::error::/);
   });
 
+  it("o corte consegue conferir imagens privadas sem tornar o repositório público", () => {
+    const t = job(release, "cortar-tag");
+    expect(t).toMatch(/permissions:[\s\S]*packages:\s*read/);
+    expect(t).toContain("GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
+    expect(t).toMatch(/curl[^\n]*-u[^\n]*GITHUB_ACTOR[^\n]*GHCR_TOKEN/);
+  });
+
   it("a tag exige que o push tenha CONSUMIDO fragmentos, não só que haja versão nova no CHANGELOG", () => {
     // Só a condição "o CHANGELOG anuncia versão sem tag" deixaria QUALQUER PR
     // cortar a release: bastaria escrever `## [1.7.0]` à mão e a tag nasceria

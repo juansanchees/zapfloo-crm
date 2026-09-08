@@ -91,6 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     steps:
       - uses: actions/create-github-app-token@v3
         id: token
@@ -282,13 +283,14 @@ jobs:
       - name: As três imagens existem nesta versão?
         if: steps.pendente.outputs.cortar == 'sim'
         env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSAO: ${{ steps.pendente.outputs.versao }}
         run: |
           set -euo pipefail
-          # A mesma sonda do runbook (docs/runbooks/ativar-packaging.md): token
-          # anônimo de pull do próprio registro. Não usa o GITHUB_TOKEN de
-          # propósito — o que interessa provar é que a imagem está alcançável
-          # para QUEM INSTALA, e quem instala não tem credencial nossa.
+          # O repositório Zapfloo é privado por decisão do proprietário, então
+          # as imagens vinculadas a ele também nascem privadas. O GITHUB_TOKEN
+          # deste workflow tem somente `packages: read` e prova o artefato sem
+          # abrir o código nem o pacote para acesso anônimo.
           #
           # E ela lê DIGEST, não código de status. A sonda ingênua ("a tag
           # responde 200?") é satisfeita pelo canal `stable` desde a 1.11.0 — ele
@@ -298,9 +300,11 @@ jobs:
           # recebia um parque MISTURADO, e nenhum gate tinha opinião.
           ghcr_digest() {
             local t
-            t=$(curl -s "https://ghcr.io/token?scope=repository:${GITHUB_REPOSITORY_OWNER}/$1:pull&service=ghcr.io" \
+            t=$(curl -fsS -u "${GITHUB_ACTOR}:${GHCR_TOKEN}" \
+                "https://ghcr.io/token?scope=repository:${GITHUB_REPOSITORY_OWNER}/$1:pull&service=ghcr.io" \
                 | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
-            curl -sI -H "Authorization: Bearer $t" \
+            [ -n "${t}" ] || return 1
+            curl -fsSI -H "Authorization: Bearer $t" \
               -H 'Accept: application/vnd.oci.image.index.v1+json' \
               -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
               "https://ghcr.io/v2/${GITHUB_REPOSITORY_OWNER}/$1/manifests/$2" \
