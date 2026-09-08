@@ -150,4 +150,10 @@ describe("o corte da release confere o CANAL, não só a existência da versão"
     for (const img of IMAGENS) expect(t, `a conferência não cobre ${img}`).toContain(img);
     expect(t).toMatch(/::error::/);
   });
+
+  it("espera o canal aparecer sem abortar no primeiro 404 transitório", () => {
+    const t = corpo(release, "cortar-tag");
+    expect(t).toContain('d_versao=$(ghcr_digest "$img" "${VERSAO}" || true)');
+    expect(t).toContain('d_stable=$(ghcr_digest "$img" stable || true)');
+  });
 });
