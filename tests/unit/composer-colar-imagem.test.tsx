@@ -1,6 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+afterEach(async () => {
+  cleanup();
+  // O FocusScope do diálogo restaura foco num timer após desmontar. Aguarde
+  // esse evento no mesmo jsdom, antes que o runner descarte seu construtor
+  // Event; caso contrário a suíte pode terminar com uma exceção não tratada.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+});
 
 /**
  * Colar imagem no composer (Ctrl/Cmd+V), padrão WhatsApp.
