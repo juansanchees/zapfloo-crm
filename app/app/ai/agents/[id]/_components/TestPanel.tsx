@@ -186,8 +186,8 @@ export function TestPanel({ agent, draft, published, readOnly }: Props) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="flex flex-col gap-4">
+    <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t("Versão alvo")}
@@ -206,6 +206,9 @@ export function TestPanel({ agent, draft, published, readOnly }: Props) {
           </p>
           <p className="mt-1 text-muted-foreground">
             {t("Nenhuma mensagem é enviada via WhatsApp. O run é registrado como dry-run.")}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            {t("Ferramentas não são executadas neste teste. O resultado não comprova consultas, alterações ou transferências reais.")}
           </p>
         </div>
 
@@ -249,7 +252,7 @@ export function TestPanel({ agent, draft, published, readOnly }: Props) {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-3">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {t("Resultado")}
         </p>

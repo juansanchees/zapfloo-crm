@@ -76,6 +76,10 @@ interface Excecao {
  */
 const PROVA_PROPRIA: readonly Excecao[] = [
   {
+    tabela: "onboarding_drafts",
+    razao: "tests/invariants/onboarding-draft-save.test.ts usa SET LOCAL ROLE authenticated + JWT: admin da org A lê, admin de B e viewer de A não leem. RPC e escrita direta também têm grants verificados.",
+  },
+  {
     tabela: "webhook_lead_captures",
     razao:
       "tests/invariants/historico-de-captacao-rls.test.ts prova isolamento " +

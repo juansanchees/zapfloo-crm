@@ -39,6 +39,8 @@ export interface PickToolsInput {
   auth: McpAuthResult;
   toolIds: string[];
   handoffToolEnabled: boolean;
+  /** Vem da execução persistida, nunca dos argumentos gerados pelo modelo. */
+  isDryRun?: boolean;
   /**
    * Funis em que ESTE agente pode escrever (`ai_agent_versions.pipeline_ids`).
    *
@@ -68,6 +70,17 @@ function wrapMcpTool(
     description: def.description,
     inputSchema,
     execute: async (args: unknown) => {
+      // Isolamento na fronteira comum, inclusive leitura e handoff auto-injetado:
+      // a categoria não prova ausência de efeitos externos de um handler.
+      // Não fingir sucesso. A recusa entra no trace do run e volta ao modelo;
+      // nenhum handler, resolução de funil ou audit de operação é executado.
+      if (input.isDryRun) {
+        return {
+          error: "dry_run_tool_blocked",
+          executed: false,
+          message: "Modo de teste: ferramenta não executada. Não afirme que consultou ou alterou dados, enviou mensagens ou transferiu atendimento.",
+        };
+      }
       const startedAt = Date.now();
       // ── O UUID QUE O MODELO INVENTA PARA "NÃO SEI" ────────────────────────
       //

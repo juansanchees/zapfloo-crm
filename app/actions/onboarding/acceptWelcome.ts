@@ -14,14 +14,14 @@ import { requireOnboardingCtx, patchOnboardingState, OnboardingError } from "./_
 
 export type AcceptWelcomeResult =
   | { ok: true }
-  | { ok: false; error: "auth_required" | "no_active_org" | "invalid_input" | "db_error"; details?: unknown };
+  | { ok: false; error: OnboardingError["code"] | "invalid_input"; details?: unknown };
 
 export async function acceptWelcome(formData: FormData): Promise<AcceptWelcomeResult> {
   let ctx;
   try {
     ctx = await requireOnboardingCtx();
   } catch (err) {
-    if (err instanceof OnboardingError) return { ok: false, error: err.code as never };
+    if (err instanceof OnboardingError) return { ok: false, error: err.code };
     throw err;
   }
 

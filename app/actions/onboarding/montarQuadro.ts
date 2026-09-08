@@ -125,7 +125,8 @@ export interface DadosDoPasso {
  * passo com a proposta pronta na tela; pedir que ela clique em "gerar sugestão"
  * primeiro seria cobrar um passo a mais para chegar ao mesmo lugar.
  */
-export async function dadosDoPasso(orgId: string, negocio: string): Promise<DadosDoPasso> {
+export async function dadosDoPasso(): Promise<DadosDoPasso> {
+  const { orgId, orgName: negocio } = await requireOnboardingCtx();
   const admin = createAdminClient();
   const atual = await carregarQuadroAtual(admin, orgId);
 

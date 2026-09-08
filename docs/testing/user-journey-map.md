@@ -54,6 +54,7 @@ fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Ga
 | J1.23 | Convite expirado ou emitido para outro e-mail, no signup | falha FECHADA: não provisiona organização nenhuma e explica no login. Cair no provisionamento aqui devolveria o defeito de J1.22 para quem demorasse entre criar a conta e confirmar o e-mail · **PASS** (`lib/auth/convite-no-signup.test.ts`) |
 
 | J1.24 | Ver o funcionário atender antes de terminar | passo novo entre treinar e chamar o time: ensaio com o runtime real (`is_dry_run`), nada enviado pelo WhatsApp. Trata os três estados — sem agente, agente em rascunho, e o caso normal — e o erro aparece aqui, não com o primeiro cliente de verdade · **PASS** (`tests/e2e/vps-fresh-onboarding.spec.ts`, `lib/onboarding/passos.test.ts`) |
+| J1.24a | Entender o limite do teste legado | Todas as ferramentas retornam recusa antes dos handlers; eventos operacionais suprimidos, registro técnico mantido. `runtime-dry-run-isolado.test.ts` e `test-panel-isolamento.test.tsx`; prova HTTP sintética no caso de ensaio de `troca-de-organizacao-tem-volta.spec.ts` (opt-in local). Não comprova ferramentas nem transporte reais. |
 | J1.25 | O passo 1 mostra o que a instalação já trouxe | provedor contratado, WhatsApp pronto, funil criado — cada linha MEDIDA. E o campo de nome vem vazio quando a organização ainda está com o "Minha Empresa" do instalador, em vez de obrigar a pessoa a apagá-lo · **PASS** (`lib/instalacao/ambiente.test.ts`) |
 | J1.26 | O quadro de clientes deixa de nascer de e-commerce | passo novo entre treinar e ver ele atender. `trg_seed_default_pipeline_for_org` semeia "Carrinho abandonado / Em separação / Enviado" em TODA organização, e a clínica abria o quadro dela e lia isso. A sugestão sai do MESMO modelo que vai atender — se ela falha, o dono descobre agora e não com o primeiro cliente · **PASS** (`tests/e2e/wizard-do-funcionario.spec.ts`, `lib/onboarding/proposta-de-funil.test.ts`) |
 | J1.27 | O quadro **ensina o funcionário a percorrê-lo** | MEDIDO em 2026-08-13: **312 etapas em 43 funis, 4 com `agent_stage_hint`** — e as 4 de organizações de teste. Toda instalação real nascia com `coberturaDoFunil()` devolvendo `mudo: true`: o assistente tinha o funil no escopo (J1.20) e não sabia o que significava nenhuma coluna. Aqui uma coluna é NOME + DESTINO indissociáveis · **PASS** (`tests/invariants/quadro-do-onboarding.test.ts`, 7 casos contra o Postgres do baseline) |
@@ -77,6 +78,34 @@ fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Ga
 > O que travava a virada era o editor novo exigir `credential_id`, enquanto instalação pelo kit funciona com a chave de plataforma do `.env` e não tem nenhuma linha em `ai_provider_credentials` — o dono cairia numa tela onde não consegue salvar nada. Resolvido nas duas pontas: `versionShapeSchema` aceita `credential_id: null` (= a chave da instalação), o seletor oferece essa opção, e a rota de versões **recusa** o nulo quando o ambiente não tem chave daquele provedor (falha fechada — senão publicaria um agente que morre em toda mensagem).
 >
 > MEDIDO na tela, num tenant fresco: o funcionário criado no wizard abre no editor atual, com "Chave de acesso: A chave desta instalação (anthropic)", o pacote "Vender e mover o funil" ativo, e a contagem de capacidades que ele traz. (O número saiu daqui: já dizia 12 quando eram 16, e o teto foi de 20 para 25. Para o valor de hoje: `pnpm exec tsx -e 'import("@/lib/ai/agents/capacidades-padrao").then(m => console.log(m.capacidadesPadraoDoOnboarding().length))'`.)
+
+### J1.36 — Guardar a configuração antes de criar o agente
+
+Recorte local de 2026-09-08: etapa Treinar → **Salvar rascunho** → recarregar e retomar nome, jeito e regras. Sem chave de IA, criação de agente, versão, canal ou mudança de `onboarding_state`. Não equivale a ensaio nem revisão para publicação.
+
+- `tests/invariants/onboarding-draft-save.test.ts`: CAS concorrente, idempotência, RLS admin/tenant, grants e audit sem conteúdo.
+- `tests/unit/onboarding-rascunho-action.test.ts` e `onboarding-rascunho-form.test.tsx`: contexto confiável, formulário antigo após troca de org/usuário, erro sem perda de campos e falha de leitura explícita.
+- `tests/e2e/troca-de-organizacao-tem-volta.spec.ts`: percurso visível, recarga, duas abas e duas organizações com revisão igual, nenhuma ativação; desktop/celular.
+- Resultado da execução e limites: `docs/superpowers/reports/2026-09-08-salvar-rascunho-onboarding.md`.
+
+### J1.37 — Preparar uma versão inativa (contrato backend)
+
+Recorte local de 2026-09-08. `prepararRascunho` materializa configuração salva como agente inativo/não padrão e versão draft sem canal. Escolha explícita de provedor/modelo/credencial, sem chamada de IA. O painel `setup-ai/_ensaio.tsx` agora consome esse contrato. Preparação isolada continua sem equivaler a revisão ou ativação.
+
+### J1 — Ensaio de texto sem canal `[P0]`
+
+- Porta: `setup-ai` → salvar rascunho → escolher modelo → preparar → testar mensagem → revisar resposta. Teclado/Enter não submete o criador legado; revisão é uma ação separada.
+- Banco: `tests/invariants/onboarding-ensaio.test.ts` cobre snapshot antes/depois da rede, mudança de negócio/configuração/versão, revogação e organização concluída, CAS de execução, lease recuperável, prova real via `llm_calls`, revisão idempotente e controle de mutação SQL.
+- UI: caso `ensaio explícito retoma seleção...` em `troca-de-organizacao-tem-volta.spec.ts`; erro sem chave na execução padrão e integração SDK→HTTP sintético local→SQL→UI na execução opt-in `E2E_ONBOARDING_SYNTHETIC_PROVIDER=1`. A segunda não é chamada a um provedor real.
+- Limite da prova: texto apenas. Não usa RAG, ferramentas, contatos/canais, envio ou publicação. Não substitui QA de WAHA e instalação completa.
+- Limites técnicos: mensagem 4.000 caracteres, saída 1.200 tokens/12.000 caracteres, rede 30s via abort do SDK, lease 60s, seis tentativas/min por organização via contador compartilhado (fallback por processo). Não são plano comercial nem alteração do orçamento canônico.
+- Retorno e anti-morte: falha guarda mensagem/configuração para retry; lease vencida pode ser refeita; erro não gera revisão. Edição invalida prova, refresh retoma somente resultado válido e “Continuar depois” usa exploração existente.
+- Evidências e resultados desta rodada: `.superpowers/sdd/2026-09-08-ensaio-interface/task-1-report.md` e `.superpowers/evidence/ensaio/`. Não declarar wizard completo validado por este ensaio.
+
+- `tests/invariants/onboarding-draft-prepare.test.ts`: atomicidade, ausência de publicação, idempotência concorrente, snapshots, credenciais, RLS/grants e execução real sob service_role.
+- `tests/unit/onboarding-preparar-action.test.ts`: identidade confiável, contexto/revisão, seleção obrigatória, prompt somente do servidor e erros sem segredo.
+- `tests/unit/onboarding-prompt.test.ts`: texto legado preservado, regras isoladas e limite sem truncamento.
+- Mapa: `docs/architecture/onboarding-preparacao.architecture.json`. Relatório: `docs/superpowers/reports/2026-09-08-preparar-versao-inativa.md`.
 
 ## J2 — Conectar WhatsApp e Central de Conexões `[P0]`
 

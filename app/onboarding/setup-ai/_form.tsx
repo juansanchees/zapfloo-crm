@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createDefaultAgent, skipAi } from "@/app/actions/onboarding/createDefaultAgent";
+import { salvarRascunho } from "@/app/actions/onboarding/rascunho";
+import type { LeituraRascunho } from "@/lib/onboarding/rascunho";
+import type { LeituraEnsaio } from "@/lib/onboarding/ensaio";
+import { Ensaio } from "./_ensaio";
 import type { PromptTemplate } from "@/lib/schemas/onboarding";
 import { cn } from "@/lib/utils";
 import { PROVEDOR_POR_ID } from "@/lib/ai/pontos/provedores";
@@ -50,13 +54,26 @@ interface Props {
   capacidades: string[];
   /** O que ele nunca faz — as conferências antes de cada mensagem sair. */
   conferencias: string[];
+  rascunhoInicial?: LeituraRascunho;
+  ensaioInicial?: LeituraEnsaio;
 }
 
-export function SetupAiForm({ capacidades, conferencias }: Props) {
+export function SetupAiForm({ capacidades, conferencias, rascunhoInicial, ensaioInicial }: Props) {
   const t = useT();
-  const [name, setName] = useState("Atendente IA");
-  const [jeito, setJeito] = useState<PromptTemplate>("ecommerce_friendly");
-  const [regras, setRegras] = useState("");
+  const inicial = rascunhoInicial?.ok ? rascunhoInicial.draft : null;
+  const falhaDeLeitura = rascunhoInicial !== undefined && !rascunhoInicial.ok;
+  // Fixa o contexto junto dos campos: refresh em outra organização não reaproveita o formulário antigo.
+  const [contextoInicial] = useState(rascunhoInicial?.ok ? rascunhoInicial.context : "");
+  const [name, setName] = useState(inicial?.configuration.name ?? "Atendente IA");
+  const [jeito, setJeito] = useState<PromptTemplate>(inicial?.configuration.prompt_template ?? "ecommerce_friendly");
+  const [regras, setRegras] = useState(inicial?.configuration.regras_da_casa ?? "");
+  const [revision, setRevision] = useState(inicial?.revision ?? 0);
+  const [salvo, setSalvo] = useState(false);
+  const [erroRascunho, setErroRascunho] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
+  const [dirty, setDirty] = useState(!inicial);
+  const [epoch, setEpoch] = useState(0);
+  const [ensaioBusy, setEnsaioBusy] = useState(false);
   const [naoPublicado, setNaoPublicado] = useState<string | null>(null);
   const [causa, setCausa] = useState<"canal" | "modelo" | "chave" | null>(null);
   const [provedor, setProvedor] = useState<string | null>(null);
@@ -66,10 +83,10 @@ export function SetupAiForm({ capacidades, conferencias }: Props) {
   const [regrasNaoSalvas, setRegrasNaoSalvas] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  return (
-    <form
-      className="space-y-6"
-      action={(formData) => {
+  const criarPeloCaminhoLegado = () => {
+        const formData = new FormData();
+        formData.set("name", name); formData.set("prompt_template", jeito); formData.set("regras_da_casa", regras);
+        if (falhaDeLeitura || saving) return;
         startTransition(async () => {
           setNaoPublicado(null);
           setCausa(null);
@@ -103,9 +120,11 @@ export function SetupAiForm({ capacidades, conferencias }: Props) {
             toast.warning(t("Agente criado, mas ainda não publicado."));
           }
         });
-      }}
-    >
-      <div className="space-y-5 rounded-lg border bg-background p-6">
+      };
+  return (
+    <div className="space-y-6">
+      {falhaDeLeitura && <p role="alert" className="text-sm text-destructive">{t("Não foi possível carregar seu rascunho. Recarregue a página antes de continuar.")}</p>}
+      <fieldset disabled={pending || saving || ensaioBusy || falhaDeLeitura} onChange={() => { setSalvo(false); setDirty(true); setEpoch(e => e + 1); setErroRascunho(null); }} className="space-y-5 rounded-lg border bg-background p-6">
         <div className="space-y-2">
           <Label htmlFor="name">{t("Como ele vai se chamar")}</Label>
           <Input
@@ -171,7 +190,32 @@ export function SetupAiForm({ capacidades, conferencias }: Props) {
             )}
           </p>
         </div>
+      </fieldset>
+
+      <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <p className="text-sm">{t("Salve nome, jeito de falar e regras para continuar depois. Não precisa de chave de IA e não ativa atendimento.")}</p>
+        <Button type="button" variant="outline" disabled={pending || saving || ensaioBusy || falhaDeLeitura || !contextoInicial} onClick={() => startSaving(async () => {
+          setSalvo(false);
+          setErroRascunho(null);
+          try {
+            const res = await salvarRascunho({ expected_context: contextoInicial, expected_revision: revision, configuration: { name, prompt_template: jeito, regras_da_casa: regras } });
+            if (res.ok) { setRevision(res.revision); setName(name.trim()); setSalvo(true); setDirty(false); return; }
+            setErroRascunho(res.error === "draft_context_changed"
+              ? t("A organização ou a sessão mudou em outra aba. Copie suas alterações e recarregue a página antes de salvar.")
+              : res.error === "draft_conflict"
+              ? t("Este rascunho mudou em outra aba. Copie suas alterações e recarregue a página para conferir a versão salva.")
+              : res.error === "invalid_input"
+                ? t("Confira o nome (2 a 80 caracteres) e as regras (até 20.000 caracteres).")
+                : t("Não foi possível salvar. Seus campos continuam aqui; confira seu acesso antes de tentar novamente."));
+          } catch {
+            setErroRascunho(t("Não foi possível salvar. Seus campos continuam aqui; confira seu acesso antes de tentar novamente."));
+          }
+        })}>{saving ? t("Salvando...") : t("Salvar rascunho")}</Button>
+        {salvo && <p role="status" className="text-sm">{t("Rascunho salvo. Nenhum atendimento foi ativado.")}</p>}
+        {erroRascunho && <p role="alert" className="text-sm text-destructive">{erroRascunho}</p>}
       </div>
+
+      {ensaioInicial && <Ensaio initial={ensaioInicial} context={contextoInicial} revision={revision} dirty={dirty || saving || pending || falhaDeLeitura} epoch={epoch} onBusy={setEnsaioBusy} />}
 
       {/*
         Nada aqui pede configuração: é o que ele JÁ vem sabendo. O passo
@@ -332,19 +376,20 @@ export function SetupAiForm({ capacidades, conferencias }: Props) {
         </div>
       )}
 
+      <p className="text-sm text-muted-foreground">{t("Caminho anterior: criar o agente e tentar publicar nos canais existentes.")}</p>
       <div className="flex flex-wrap justify-between gap-2">
         <Button
           type="button"
           variant="ghost"
-          disabled={pending}
+          disabled={pending || saving}
           onClick={() => startTransition(() => void skipAi())}
         >
           {t("Pular")}
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="button" onClick={criarPeloCaminhoLegado} disabled={pending || saving || ensaioBusy || falhaDeLeitura}>
           {pending ? t("Criando...") : t("Criar e continuar")}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }

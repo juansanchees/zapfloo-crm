@@ -16,6 +16,10 @@ ser fonte sem ninguém decidir isso.
 
 | arquivo | escopo |
 |---|---|
+| `teste-legado-isolado.architecture.json` | flag persistida bloqueia handlers MCP e eventos operacionais; recusa no trace e limites visíveis no TestPanel |
+| `onboarding-rascunho.architecture.json` | salvamento preparatório e retomada; revisão concorrente, autorização, auditoria e ausência deliberada de criação/publicação |
+| `onboarding-preparacao.architecture.json` | versão inativa com CAS/snapshot, modelo explícito e auditoria; consumida pelo painel setup-ai |
+| `onboarding-ensaio.architecture.json` | ensaio de texto, orçamento canônico, revisão persistida, invalidação e retorno à configuração; sem tools/canal |
 | `pre-go-live-whatsapp.architecture.json` | modo de teste por canal (issue #573): configuração administrativa, gate compartilhado, releitura no envio e validação pelo Inbox |
 | `agent-turn.workflow.json` | os **dois** turnos do agente — Conversador (fala, 2 chamadas de modelo) e Operador (opera, sem canal). 24 peças, 33 arestas, 13 faixas. **É o único mapa que o archify renderiza** — ver o aviso abaixo |
 | `crm-vivo.architecture.json` | subsistema **CRM Vivo** — 24 peças, 44 arestas, 6 faixas |

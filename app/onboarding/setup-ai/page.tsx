@@ -9,6 +9,8 @@ import { capacidadesPadraoDoOnboarding } from "@/lib/ai/agents/capacidades-padra
 import { TOOL_CATALOG } from "@/lib/mcp/tools/catalog";
 import { CONFERENCIAS_DE_SAIDA } from "@/lib/ai/guardrails/lista-de-conferencia";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { lerRascunho } from "@/app/actions/onboarding/rascunho";
+import { lerEnsaio } from "@/app/actions/onboarding/ensaio";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +19,8 @@ export const dynamic = "force-dynamic";
  *
  * Ele é o coração da experiência: é aqui que a pessoa deixa de configurar um
  * sistema e passa a treinar alguém. Além do nome e do jeito de falar, agora
- * pergunta as REGRAS DA CASA — que vão para a memória da organização, valendo
- * para qualquer agente, e não para o prompt deste — e mostra, sem pedir
+ * pergunta as REGRAS DA CASA — no botão de criação legado vão para a memória
+ * da organização; no salvamento preparatório ficam só no rascunho — e mostra, sem pedir
  * configuração nenhuma, o que ele já vem sabendo fazer e o que nunca vai fazer.
  *
  * As duas listas saem das MESMAS fontes que o runtime usa: as capacidades do
@@ -42,6 +44,8 @@ export default async function SetupAiPage() {
     .map((r) => traduzir(r, idioma));
 
   const conferencias = CONFERENCIAS_DE_SAIDA.map((c) => traduzir(c.rotulo, idioma));
+  const rascunho = await lerRascunho();
+  const ensaio = rascunho.ok ? await lerEnsaio({ expected_context: rascunho.context }) : { ok: false as const, error: rascunho.error };
 
   return (
     <div className="space-y-6">
@@ -52,9 +56,8 @@ export default async function SetupAiPage() {
         </p>
       </header>
       {/*
-        O cérebro vem ANTES do resto do formulário: sem chave, nada do que a
-        pessoa preencher abaixo produz um funcionário que responde. E é aqui que
-        a chave passa a importar — um clique antes de ele ser criado com ela.
+        A chave é necessária para responder, não para salvar a configuração.
+        O formulário abaixo mantém essas duas ações separadas neste recorte.
       */}
       <InteligenciaDele
         inicial={{
@@ -65,7 +68,7 @@ export default async function SetupAiPage() {
         }}
       />
 
-      <SetupAiForm capacidades={capacidades} conferencias={conferencias} />
+      <SetupAiForm capacidades={capacidades} conferencias={conferencias} rascunhoInicial={rascunho} ensaioInicial={ensaio} />
     </div>
   );
 }

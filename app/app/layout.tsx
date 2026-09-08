@@ -22,12 +22,17 @@ import {
 import { ConexaoCaidaBanner } from "@/components/app/ConexaoCaidaBanner";
 import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
 import { listarConexoesCaidas, type ConexaoCaida } from "@/lib/channels/health";
+import { COOKIE_EXPLORACAO, exploracaoPertenceA } from "@/lib/onboarding/exploracao";
+import { OnboardingPendenteBanner } from "@/components/app/OnboardingPendenteBanner";
+import { requireRole } from "@/lib/auth/require-role";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
   if (!user) redirect("/login");
 
   let activeOrg = await resolveActiveOrg(user);
+  const store = await cookies();
+  let onboardingPendente = false;
 
   /**
    * A cor desta organização, serializada, ou `null` quando ela não tem uma.
@@ -48,8 +53,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .select("onboarded_at, status, settings")
       .eq("id", activeOrg.orgId)
       .maybeSingle();
-    if (orgRow && !orgRow.onboarded_at) redirect("/onboarding");
     if (orgRow?.status === "suspended") redirect("/account-suspended");
+    // A configuração é administrativa: membros convidados não podem concluí-la
+    // e não devem ficar presos entre o CRM e o wizard.
+    onboardingPendente = Boolean(orgRow && !orgRow.onboarded_at && activeOrg.role === "admin");
+    if (onboardingPendente && !exploracaoPertenceA(
+      store.get(COOKIE_EXPLORACAO)?.value, user.id, activeOrg.orgId,
+    )) redirect("/onboarding");
+    if (onboardingPendente) {
+      // A preferência pode sobreviver a uma nova sessão AAL1. A navegação
+      // alternativa mantém a MESMA autorização exigida pelo wizard.
+      const authz = await requireRole("admin", { resource: "onboarding" });
+      if (!authz.ok) {
+        const { error } = await authz.response.json();
+        redirect(error.code === "mfa_required" ? "/login/mfa" : "/login");
+      }
+    }
     // G4-02: expõe visibility_mode ao client (inbox decide visões visíveis).
     // Fonte confiável (admin client, org do cookie validado) — nunca do body.
     const mode = (orgRow?.settings as { visibility_mode?: VisibilityMode } | null)
@@ -118,7 +137,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : [];
 
   // Read sidebar collapsed state SSR to avoid flash.
-  const store = await cookies();
   const collapsed = store.get("sidebar_collapsed")?.value === "1";
 
   // Impersonate (S-11.07): verify cookie server-side and resolve tenant name.
@@ -154,7 +172,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     user.id,
     activeOrg?.orgId,
   );
-  const shell = <AppShell sidebarCollapsed={collapsed}>{children}</AppShell>;
+  const shell = <AppShell sidebarCollapsed={collapsed}>
+    {onboardingPendente ? <OnboardingPendenteBanner /> : null}
+    {children}
+  </AppShell>;
 
   return (
     // O idioma envolve a árvore inteira e recebe o código PRONTO — ele não

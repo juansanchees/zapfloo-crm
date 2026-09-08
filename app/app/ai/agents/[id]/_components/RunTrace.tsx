@@ -2,8 +2,8 @@
 /**
  * RunTrace — render passo-a-passo dos `tool_calls` de um run (S-13.12).
  *
- * Estrutura esperada (definida pelo runtime da S-13.08 e pelo stub do
- * endpoint `:test`): array de
+ * Aceita etapas agrupadas do runtime (`{ step, tool_calls: [...] }`) e o
+ * formato plano do stub/registros antigos: array de
  *   { step, tool_name, args, result, started_at, ended_at, latency_ms?, error? }.
  *
  * Renderização tolerante: campos faltando viram "—". Cada step é um
@@ -33,7 +33,16 @@ interface Props {
 
 function asArray(input: unknown): ToolCallStep[] {
   if (!Array.isArray(input)) return [];
-  return input.filter((x) => x && typeof x === "object") as ToolCallStep[];
+  return input.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    // Runtime real agrupa por etapa; stubs e registros antigos são planos.
+    if (Array.isArray(entry.tool_calls)) {
+      return entry.tool_calls
+        .filter((call: unknown) => call && typeof call === "object")
+        .map((call: ToolCallStep) => ({ ...call, step: entry.step }));
+    }
+    return [entry as ToolCallStep];
+  });
 }
 
 function fmtJson(value: unknown): string {
@@ -72,7 +81,7 @@ export function RunTrace({
         const errMsg = errMsgBruto ? t(errMsgBruto) : null;
         return (
           <details
-            key={`${stepNum}-${s.tool_name ?? idx}`}
+            key={`${stepNum}-${s.tool_name ?? "tool"}-${idx}`}
             className="group rounded-md border border-border/60 bg-background"
           >
             <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm">

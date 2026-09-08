@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": { "title": "Preparação inativa do onboarding", "subtitle": "Contrato backend: não equivale a ensaio ou ativação", "output": "onboarding-preparacao.html", "quality_profile": "standard" },
+  "lanes": [{ "id": "server", "label": "Servidor" }, { "id": "db", "label": "Banco" }],
+  "mainPath": ["action", "rpc", "version"],
+  "nodes": [
+    { "id": "action", "lane": "server", "col": 1, "type": "service", "label": "prepararRascunho / admin + MFA + contexto" },
+    { "id": "prompt", "lane": "server", "col": 2, "type": "service", "label": "promptDoRascunho / regras isoladas na versão" },
+    { "id": "legacy", "lane": "server", "col": 3, "type": "service", "label": "createDefaultAgent / promptDoOnboarding preservado" },
+    { "id": "rpc", "lane": "db", "col": 3, "type": "database", "label": "fn_prepare_onboarding_draft / lock + CAS + snapshot" },
+    { "id": "draft", "lane": "db", "col": 1, "type": "database", "label": "onboarding_drafts / configuração salva" },
+    { "id": "agent", "lane": "db", "col": 4, "type": "database", "label": "ai_agents / inativo, não padrão, sem publicação" },
+    { "id": "version", "lane": "db", "col": 5, "type": "database", "label": "ai_agent_versions / draft, sem canal" },
+    { "id": "audit", "lane": "db", "col": 4, "type": "database", "label": "api_audit_log / revisão e ID da versão" }
+  ],
+  "edges": [
+    { "id": "p1", "from": "draft", "to": "action", "label": "leitura com organização confiável" },
+    { "id": "p2", "from": "action", "to": "prompt", "label": "configuração e negócio lidos do servidor" },
+    { "id": "p3", "from": "prompt", "to": "legacy", "label": "construtor base compartilhado; sem mudar saída legada" },
+    { "id": "p4", "from": "action", "to": "rpc", "label": "seleção explícita e revisão/ponteiro esperados" },
+    { "id": "p5", "from": "rpc", "to": "agent", "label": "cria somente agente próprio; nome ocupado não é reaproveitado" },
+    { "id": "p6", "from": "rpc", "to": "version", "label": "materializa sem chamada de IA" },
+    { "id": "p7", "from": "version", "to": "draft", "label": "snapshot completo e vínculo com revisão salva" },
+    { "id": "p8", "from": "rpc", "to": "audit", "label": "mesma transação, sem conteúdo ou segredo" },
+    { "id": "p9", "from": "rpc", "to": "action", "label": "IDs/revisão ou conflito explícito, nunca atestado de teste" }
+  ],
+  "non_connections": [
+    "Consumido pelo painel app/onboarding/setup-ai/_ensaio.tsx; ensaio/revisão no mapa onboarding-ensaio. Não ativa atendimento.",
+    "Não chama runtime legado, IA, WAHA, memória compartilhada ou função de publicação.",
+    "credential_id null representa credencial disponível do provedor (organização/instalação), não prova de existência ou validade."
+  ]
+}

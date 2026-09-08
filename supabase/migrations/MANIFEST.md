@@ -254,6 +254,16 @@ Migrations were applied directly via the Supabase MCP `apply_migration` tool dur
 
 To re-apply on a fresh Supabase project, replay the migrations in version order via `supabase db push` (Supabase CLI) or via the MCP.
 
+## Apêndice de primeiro acesso
+
+| Versão | Nome | Mudança |
+| --- | --- | --- |
+| `20260908171945` | `0220_rascunho_sem_canal` | Versão draft/archived pode existir sem canal; CHECK mantém canal obrigatório em published/superseded. Sem backfill, mudança de RLS ou autorização de atendimento. Apêndice idempotente no baseline. |
+| `20260908175114` | `0221_onboarding_draft_save` | Rascunho preparatório por organização com revisão, RLS admin e RPC atômica exclusiva do servidor. Não cria agentes nem altera canais/modelos. |
+| `20260908183448` | `0222_onboarding_draft_prepare` | Preparação transacional de versão draft sem canal e agente inativo/não padrão; seleção explícita, CAS e snapshot contra edição externa. Somente local neste lote. |
+
+| `20260908191151` | `0223_onboarding_rehearsal` | Último ensaio de texto e revisão persistidos, CAS de snapshot antes/depois da rede, RPCs exclusivas do servidor e invalidação na edição. Sem ativação/canal/ferramentas. |
+
 ## Tables created (33 total, all RLS enabled)
 
 - **Platform**: organizations, user_organizations, platform_admins, api_tokens, api_audit_log, user_recovery_codes, idempotency_keys

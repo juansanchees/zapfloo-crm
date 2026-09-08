@@ -13,14 +13,14 @@ import { requireOnboardingCtx, OnboardingError } from "./_shared";
 
 export type FinishOnboardingResult =
   | { ok: true; alreadyOnboarded: boolean }
-  | { ok: false; error: "auth_required" | "no_active_org" | "db_error"; details?: unknown };
+  | { ok: false; error: OnboardingError["code"]; details?: unknown };
 
 export async function finishOnboarding(): Promise<FinishOnboardingResult> {
   let ctx;
   try {
     ctx = await requireOnboardingCtx();
   } catch (err) {
-    if (err instanceof OnboardingError) return { ok: false, error: err.code as never };
+    if (err instanceof OnboardingError) return { ok: false, error: err.code };
     throw err;
   }
 

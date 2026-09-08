@@ -31,7 +31,7 @@ export type SendInvitesResult =
        * de aceite é devolvido para o admin enviar manualmente. */
       undelivered?: { email: string; accept_url: string }[];
     }
-  | { ok: false; error: "auth_required" | "no_active_org" | "invalid_input"; details?: unknown };
+  | { ok: false; error: OnboardingError["code"] | "invalid_input"; details?: unknown };
 
 interface InvitePayload {
   // Convite é para PESSOA: só papel humano. `ai_operator` não entra aqui de
@@ -45,7 +45,7 @@ export async function sendOnboardingInvites(payload: InvitePayload): Promise<Sen
   try {
     ctx = await requireOnboardingCtx();
   } catch (err) {
-    if (err instanceof OnboardingError) return { ok: false, error: err.code as never };
+    if (err instanceof OnboardingError) return { ok: false, error: err.code };
     throw err;
   }
 
