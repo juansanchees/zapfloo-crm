@@ -93,23 +93,24 @@ describe("adapter meta_cloud — endereçamento", () => {
 });
 
 describe("adapter meta_cloud — configuração", () => {
-  it("sem credencial NÃO está configurado", () => {
+  it("isConfigured é SEMPRE true — a credencial pode viver na sessão", () => {
     vi.stubEnv("META_PHONE_NUMBER_ID", "");
     vi.stubEnv("META_SYSTEM_USER_TOKEN", "");
-    expect(a().isConfigured()).toBe(false);
-  });
-
-  it("com credencial está configurado", () => {
+    expect(a().isConfigured()).toBe(true);
     configurar();
     expect(a().isConfigured()).toBe(true);
   });
 
-  it("não configurado é NOOP no envio, nunca exceção", async () => {
-    // Mesmo contrato do outro canal: a UI mostra banner, o handler grava `queued`.
+  it("sem credencial LANÇA — um `sent` sem id diria enviado para o que nunca saiu", async () => {
     vi.stubEnv("META_PHONE_NUMBER_ID", "");
     vi.stubEnv("META_SYSTEM_USER_TOKEN", "");
-    const r = await a().send({ organizationId: ORG, sessionRef: "x", to: "5531999", kind: "text", body: "oi" });
-    expect(r).toEqual({ externalId: null });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      a().send({ organizationId: ORG, sessionRef: "x", to: "5531999", kind: "text", body: "oi" }),
+    ).rejects.toThrow(/meta_not_configured/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("os códigos carregam o nome do provider — por isso vivem no adapter", () => {
