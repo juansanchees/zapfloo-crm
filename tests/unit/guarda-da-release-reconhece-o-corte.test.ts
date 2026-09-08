@@ -46,7 +46,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  */
 
 const RAIZ = process.cwd();
-const BOT = "deskcomm-release[bot]";
+const BOT = "zapfloo-release[bot]";
 
 /** O bloco `run:` do passo que decide se este push foi um corte. */
 function bashDaGuarda(): string {

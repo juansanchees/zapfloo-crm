@@ -116,17 +116,19 @@ describe("o worker de mídia obedece ao painel", () => {
 });
 
 describe("o instalador grava o provedor escolhido no banco", () => {
-  it("o install.sh atualiza settings.llm.provider quando não é anthropic", () => {
-    // `fn_seed_org_llm_defaults` semeia 'anthropic' fixo. Sem esta atualização,
-    // a pergunta "qual IA vai atender" não muda nada para o agent-engine.
+  it("o install.sh grava provider e resolve o modelo da mesma família", () => {
     const fonte = readFileSync("hostgator-setup-kit/install.sh", "utf8");
-    expect(fonte).toMatch(/jsonb_set\(\s*\n?\s*coalesce\(settings, '\{\}'::jsonb\), '\{llm,provider\}'/);
+    expect(fonte).toContain("jsonb_build_object('llm', jsonb_build_object('provider', '${AI_PROVIDER}'))");
+    expect(fonte).toMatch(/m\.provider = '\$\{AI_PROVIDER\}'[\s\S]*m\.is_default_for_provider/);
     expect(fonte).toContain("${AI_PROVIDER}");
   });
 
-  it("o bootstrap-owner faz o mesmo (é o caminho do e2e e da doc)", () => {
+  it("os três caminhos TypeScript usam a configuração inicial única", () => {
     const fonte = readFileSync("scripts/bootstrap-owner.ts", "utf8");
-    expect(fonte).toContain("aplicarProvedorEscolhido");
-    expect(fonte).toMatch(/process\.env\.AI_PROVIDER/);
+    expect(fonte).toContain("configuracaoInicialDeLlm({}, env.AI_PROVIDER)");
+    expect(readFileSync("lib/auth/provision.ts", "utf8")).toContain("configuracaoInicialDeLlm()");
+    expect(readFileSync("app/api/v1/admin/tenants/route.ts", "utf8")).toContain(
+      "configuracaoInicialDeLlm({ plan })",
+    );
   });
 });

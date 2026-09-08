@@ -239,6 +239,55 @@ resposta_sim() {
   case "$r" in s|sim|y|yes) return 0;; *) return 1;; esac
 }
 
+# O Session pooler do Supabase usa PgBouncer. O runtime da aplicação precisa
+# deste sinal para falar com ele no modo compatível com libpq; sem ele a mesma
+# URL que o psql aceita pode falhar dentro do app. Opera só sobre a string em
+# memória, nunca a imprime, preserva parâmetros existentes e é idempotente.
+normalizar_url_pooler() {
+  local url="${1-}" antes_fragmento fragmento="" separador
+  case "$url" in
+    postgres://*@*.pooler.supabase.com:*/*|postgresql://*@*.pooler.supabase.com:*/*) ;;
+    *) printf '%s' "$url"; return 0;;
+  esac
+  case "$url" in
+    *[?\&]uselibpqcompat=*) printf '%s' "$url"; return 0;;
+  esac
+  antes_fragmento="$url"
+  case "$url" in
+    *\#*) antes_fragmento="${url%%\#*}"; fragmento="#${url#*\#}";;
+  esac
+  case "$antes_fragmento" in *\?*) separador='&';; *) separador='?';; esac
+  printf '%s' "${antes_fragmento}${separador}uselibpqcompat=true${fragmento}"
+}
+
+# `uselibpqcompat` é uma opção do driver PostgreSQL usado pela aplicação, não
+# um parâmetro reconhecido pelo libpq. `psql` e `pg_dump` recebem a mesma URL
+# por `url_do_schema`; se a opção chegar até eles, abortam antes de conectar.
+# Remove só essa chave em memória e preserva todas as demais e o fragmento.
+url_para_ferramenta_postgres() {
+  local url="${1-}" base query="" fragment="" parametro mantidos=""
+  local -a parametros=()
+  base="$url"
+  case "$base" in
+    *\#*) fragment="#${base#*\#}"; base="${base%%\#*}" ;;
+  esac
+  case "$base" in
+    *\?*) query="${base#*\?}"; base="${base%%\?*}" ;;
+    *) printf '%s' "${base}${fragment}"; return 0 ;;
+  esac
+  IFS='&' read -r -a parametros <<< "$query"
+  for parametro in "${parametros[@]}"; do
+    case "$parametro" in uselibpqcompat=*) continue ;; esac
+    [ -n "$parametro" ] || continue
+    if [ -n "$mantidos" ]; then mantidos="${mantidos}&${parametro}"
+    else mantidos="$parametro"
+    fi
+  done
+  if [ -n "$mantidos" ]; then printf '%s' "${base}?${mantidos}${fragment}"
+  else printf '%s' "${base}${fragment}"
+  fi
+}
+
 # Saúde do app pela rota que ele responde de verdade, não pela porta. A porta
 # 3000 aceita conexão assim que o Node sobe — ANTES de o app saber se alcança
 # banco, Redis e WhatsApp. Era exatamente a diferença entre o install.sh, que
@@ -367,7 +416,11 @@ load_env() {
         # quatro caracteres a mais, e o erro só aparece longe daqui (o psql
         # recusa a conexão, o login não bate) sem nada apontando para o .env.
         # Achado pelo teste de round-trip.
-        val="${val//"'\\''"/"'"}"
+        # O formato antigo tem quatro bytes: ' + \\ + ' + '. A barra é especial
+        # dentro do padrão de `${var//...}`, então a tentativa de montar o token
+        # numa variável continuava devolvendo a sequência crua. `sed` recebe o
+        # valor por stdin, como dado (nunca `eval`), e casa a barra literalmente.
+        val="$(printf '%s' "$val" | sed "s/'\\\\''/'/g")"
         ;;
     esac
     printf -v "$key" '%s' "$val"
@@ -378,7 +431,8 @@ load_env() {
 # Vai pro diretório do projeto (onde está o compose) e carrega o .env.
 enter_project() {
   if [ -f "$COMPOSE" ]; then :;
-  elif [ -f "deskcommcrm/$COMPOSE" ]; then cd deskcommcrm;
+  elif [ -f "zapfloo-crm/$COMPOSE" ]; then cd zapfloo-crm;
+  elif [ -f "deskcommcrm/$COMPOSE" ]; then cd deskcommcrm; # compatibilidade com instalações anteriores
   else die "Não achei $COMPOSE. Rode a partir da pasta do projeto."; fi
   [ -f .env ] || die "Falta o .env (rode install.sh primeiro)."
   load_env .env
@@ -414,7 +468,9 @@ enter_project() {
 # pai; o que a mensagem garante é que a causa apareça na tela antes do erro de
 # conexão que os chamadores já tratam.
 url_do_schema() {
-  printf '%s' "${SUPABASE_DB_ADMIN_URL:-${SUPABASE_DB_URL:?sem connection string de banco no .env — rode o install.sh}}"
+  local url
+  url="${SUPABASE_DB_ADMIN_URL:-${SUPABASE_DB_URL:?sem connection string de banco no .env — rode o install.sh}}"
+  url_para_ferramenta_postgres "$url"
 }
 
 # psql efêmero via container (não exige psql no host). Usa a conexão de schema:
@@ -433,10 +489,10 @@ psql_run() { docker run --rm -i postgres:17-alpine psql "$(url_do_schema)" -v ON
 # `docker-compose.prod.yml`, `.env.hostgator.example` e a matriz de
 # `publish-image.yml` digam o mesmo. Se você é um fork, é lá que está a lista do
 # que trocar junto.
-IMG_NS="ghcr.io/melgarafael"
-IMG_APP="${IMG_NS}/deskcommcrm"
-IMG_WORKER="${IMG_NS}/deskcomm-worker"
-IMG_SCHEDULER="${IMG_NS}/deskcomm-scheduler"
+IMG_NS="ghcr.io/juansanchees"
+IMG_APP="${IMG_NS}/zapfloo-crm"
+IMG_WORKER="${IMG_NS}/zapfloo-worker"
+IMG_SCHEDULER="${IMG_NS}/zapfloo-scheduler"
 
 # A última versão publicada (ex.: "1.2.1"), ou vazio se não deu para saber.
 #
@@ -450,7 +506,7 @@ IMG_SCHEDULER="${IMG_NS}/deskcomm-scheduler"
 # alguém porque não deu para resolver um número de versão seria trocar um
 # problema de previsibilidade por um de disponibilidade.
 ultima_versao_publicada() {
-  local url="${1:-https://github.com/melgarafael/DeskcommCRM.git}" ref
+  local url="${1:-https://github.com/juansanchees/zapfloo-crm.git}" ref
   command -v git >/dev/null 2>&1 || return 0
   # `grep -v -- -` descarta PRERELEASE (v1.11.0-rc1, v1.1.1-jmpo.1 — esta última
   # existe de verdade neste repo). O `--sort=-v:refname` do git põe o prerelease
@@ -505,7 +561,7 @@ ghcr_status() {
 # versões que a doutrina existe para proibir, no caminho de primeira impressão.
 trio_publicado() {
   local tag="$1" i
-  for i in deskcommcrm deskcomm-worker deskcomm-scheduler; do
+  for i in zapfloo-crm zapfloo-worker zapfloo-scheduler; do
     [ "$(ghcr_status "$i" "$tag")" = "200" ] || return 1
   done
   return 0
@@ -587,7 +643,7 @@ completar_pin_ausente() {  # completar_pin_ausente [envfile]
   # e o `.env` original chega intacto do outro lado, com as customizações.
   [ -w "$envfile" ] || return 0
 
-  for par in "WORKER_IMAGE:worker:deskcomm-worker" "SCHEDULER_IMAGE:scheduler:deskcomm-scheduler"; do
+  for par in "WORKER_IMAGE:worker:zapfloo-worker" "SCHEDULER_IMAGE:scheduler:zapfloo-scheduler"; do
     chave="${par%%:*}"; svc="$(printf '%s' "$par" | cut -d: -f2)"; repo="${par##*:}"
 
     # LACUNA apenas. Valor explícito (mesmo em canal móvel) é intocável.

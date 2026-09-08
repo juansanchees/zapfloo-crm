@@ -54,9 +54,9 @@ export const PUBLIC_PATHS: RegExp[] = [
   // Documentos legais. O checkbox obrigatório de `/onboarding/welcome` linka os
   // dois, e o aceite acontece antes de a pessoa ter qualquer coisa no sistema —
   // exigir sessão para LER o que se está aceitando inverte a ordem. Âncorado nos
-  // dois nomes de propósito: `/^\/legal/` deixaria qualquer sub-path futuro
+  // três nomes de propósito: `/^\/legal/` deixaria qualquer sub-path futuro
   // nascer público de carona.
-  /^\/legal\/(terms|privacy)$/,
+  /^\/legal\/(terms|privacy|data-deletion)$/,
 ];
 
 export function isPublicPath(pathname: string): boolean {

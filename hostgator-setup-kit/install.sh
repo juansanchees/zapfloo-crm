@@ -15,11 +15,11 @@ set -euo pipefail
 # de qualquer 'cd' (step 2 pode entrar num repo clonado à parte).
 KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-REPO_URL="${REPO_URL:-https://github.com/melgarafael/DeskcommCRM.git}"
+REPO_URL="${REPO_URL:-https://github.com/juansanchees/zapfloo-crm.git}"
 # Uma constante, dois usos (o fim feliz e o fim travado) — e o comecar.sh tem a
 # gêmea. Link repetido à mão vira link divergente na primeira troca.
 COMUNIDADE_URL="https://lp-comunidade.automatiklabs.com.br"
-REPO_DIR="${REPO_DIR:-deskcommcrm}"
+REPO_DIR="${REPO_DIR:-zapfloo-crm}"
 COMPOSE="docker-compose.prod.yml"
 COMPOSE_TRAEFIK="docker-compose.traefik.yml"
 NONINTERACTIVE=0
@@ -321,8 +321,9 @@ v_db_url() {
         return 1
       fi;;
   esac
-  local out
-  if out="$(docker run --rm postgres:17-alpine psql "$1" -tAc 'select 1' 2>&1)"; then
+  local out url_normalizada
+  url_normalizada="$(normalizar_url_pooler "$1")"
+  if out="$(docker run --rm postgres:17-alpine psql "$(url_para_ferramenta_postgres "$url_normalizada")" -tAc 'select 1' 2>&1)"; then
     return 0
   fi
   echo "Não consegui conectar no banco. O Postgres respondeu:"
@@ -1054,7 +1055,7 @@ fi
 # colar. Sem o token, nada muda: seguem as perguntas de sempre.
 if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
   step "Criando o projeto Supabase automaticamente"
-  _sb_out="$(bash "$KIT_DIR/supabase-provision.sh" "${APP_NAME:-DeskcommCRM}" "${SUPABASE_REGION:-sa-east-1}")" \
+  _sb_out="$(bash "$KIT_DIR/supabase-provision.sh" "${APP_NAME:-Zapfloo}" "${SUPABASE_REGION:-sa-east-1}")" \
     || die "Não consegui criar o projeto Supabase. Crie no painel e rode de novo sem SUPABASE_ACCESS_TOKEN."
   # O script imprime `CHAVE='valor'` em stdout (o visual dele vai para stderr).
   # A leitura é por parse, não por `eval` — o porquê está em
@@ -1180,13 +1181,20 @@ elif trio_publicado "stable"; then
   c_ylw "  Instalando pelo canal 'stable' (a última versão completa)."
   VERSAO_ALVO="stable"
 elif [ -n "$VERSAO_ALVO" ]; then
-  # Nem a versão nem o `stable` têm o trio. Segue assim mesmo — o compose tem
-  # `build:` ao lado do `image:` do worker e do scheduler, então eles são
-  # construídos aqui. É lento, mas instala. O que NÃO pode é isso acontecer
-  # calado: o dono precisa saber que duas peças dele saíram do fonte local.
-  c_ylw "⚠ As imagens do worker e do agendador ainda não estão publicadas."
-  c_ylw "  Elas serão construídas neste servidor — leva alguns minutos a mais."
-  c_ylw "  Rode 'bash hostgator-setup-kit/update.sh' quando a próxima versão sair."
+  case "$IMG_APP" in
+    "$IMG_NS"/*)
+      # A sonda HTTP é anônima e um pacote privado responde 403 mesmo quando o
+      # Docker desta VPS está autenticado. O `dc pull` abaixo é a prova real.
+      c_dim "Pacotes privados: a versão será validada pelo Docker autenticado."
+      ;;
+    *)
+      # Nem a versão nem o `stable` têm o trio. Em registry público/customizado
+      # mantém o escape de build local, sempre anunciado.
+      c_ylw "⚠ As imagens do worker e do agendador ainda não estão publicadas."
+      c_ylw "  Elas serão construídas neste servidor — leva alguns minutos a mais."
+      c_ylw "  Rode 'bash hostgator-setup-kit/update.sh' quando a próxima versão sair."
+      ;;
+  esac
 else
   # Falha ABERTA: sem rede ou sem tag no remoto, segue como antes. Travar a
   # instalação por não resolver um número seria trocar previsibilidade por
@@ -1220,7 +1228,7 @@ FIELDS=(
   ${CAMPO_OPENAI_EXTRA:+"$CAMPO_OPENAI_EXTRA"}
   "OWNER_EMAIL|E-mail do primeiro admin (dono)||v_email||"
   "OWNER_PASSWORD|Senha do primeiro admin (mínimo 8 caracteres)||v_password|secret|"
-  "APP_NAME|Nome que aparece na interface (Enter para o padrão)|DeskcommCRM|||"
+  "APP_NAME|Nome que aparece na interface (Enter para o padrão)|Zapfloo|||"
   # Idioma da instalação. Fica JUNTO do nome do produto de propósito: as duas
   # perguntas são "como o sistema se apresenta", e separá-las faria a segunda
   # parecer configuração técnica.
@@ -1298,6 +1306,10 @@ fi
 # Derivados
 NEXT_PUBLIC_APP_URL="https://${DOMAIN}"
 NEXT_PUBLIC_ADMIN_URL="https://${DOMAIN}"
+# A página pública exigida para pedidos LGPD/Meta nunca pode terminar em
+# "procure algum canal". Se o operador não publicou um contato específico,
+# usa o e-mail de suporte e, por último, o do próprio dono.
+LGPD_DPO_EMAIL="${LGPD_DPO_EMAIL:-${SUPPORT_EMAIL:-$OWNER_EMAIL}}"
 
 # ── 4. Geração de segredos (idempotente: só gera o que falta) ────────────────
 step "Gerando segredos"
@@ -1378,6 +1390,10 @@ if [ -z "${SENTRY_DSN+x}" ]; then
     fi
   fi
 fi
+
+# Normaliza antes de persistir e antes de qualquer uso posterior. A função só
+# toca URLs do Session pooler oficial e nunca escreve a credencial na saída.
+SUPABASE_DB_URL="$(normalizar_url_pooler "$SUPABASE_DB_URL")"
 
 step "Escrevendo .env"
 umask 077
@@ -1544,6 +1560,7 @@ esac
   printf '# Endereço de suporte que o CLIENTE FINAL vê (conta suspensa, cobrança).\n'
   printf '# Vazio = a tela não mostra endereço nenhum.\n'
   envq SUPPORT_EMAIL "${SUPPORT_EMAIL:-}"
+  envq LGPD_DPO_EMAIL "$LGPD_DPO_EMAIL"
   # AGENDA · GOOGLE CALENDAR — gravadas VAZIAS, e de propósito NÃO perguntadas.
   #
   # Sem as duas a Agenda funciona inteira: some o botão "Conectar Google" e a
@@ -1569,7 +1586,7 @@ esac
   envq RESEND_FROM_EMAIL "${RESEND_FROM_EMAIL:-}"
   printf '# Qual provedor você escolheu na instalação. É o que faz a 2ª execução do\n'
   printf '# install.sh já vir com a sua escolha como padrão, em vez de re-adivinhar\n'
-  printf '# pelas chaves presentes. A app não lê esta variável.\n'
+  printf '# pelas chaves presentes. Organizações novas herdam esta escolha.\n'
   envq AI_PROVIDER "${AI_PROVIDER:-anthropic}"
   # `${ANTHROPIC_API_KEY:-}`, não `$ANTHROPIC_API_KEY`: quem escolhe OpenRouter
   # ou OpenAI nunca passa pelo campo da Anthropic, e sob `set -u` (linha 12) a
@@ -1624,9 +1641,9 @@ esac
   # no .env de todo cliente — por cima do default pinado do compose, que então
   # nunca chegava a ninguém. O `dc pull` de cada update entregava qualquer versão
   # que o upstream tivesse publicado, sem ninguém ter testado.
-  # `latest-2026.7.2` é o mesmo digest de `latest` hoje (65e593e30bb7…).
-  envq WAHA_IMAGE "${WAHA_IMAGE:-devlikeapro/waha:latest-2026.7.2}"
-  envq WAHA_DEFAULT_ENGINE "${WAHA_DEFAULT_ENGINE:-NOWEB}"
+  # A variante noweb-2026.7.2 é a que foi validada na instalação Zapfloo.
+  envq WAHA_IMAGE "${WAHA_IMAGE:-devlikeapro/waha:noweb-2026.7.2}"
+  envq WHATSAPP_DEFAULT_ENGINE "${WHATSAPP_DEFAULT_ENGINE:-NOWEB}"
   envq UPSTASH_REDIS_REST_URL "http://srh:80"
   envq UPSTASH_REDIS_REST_TOKEN "$UPSTASH_REDIS_REST_TOKEN"
   envq SRH_TOKEN "$SRH_TOKEN"
@@ -1835,7 +1852,7 @@ docker run --rm -i postgres:17-alpine psql "$(url_do_schema)" -v ON_ERROR_STOP=1
      Este passo lê auth.users e escreve em public: num Supabase próprio ele precisa do dono do
      banco — declare SUPABASE_DB_ADMIN_URL e rode de novo."
 do \$\$
-declare v_org uuid; v_uid uuid;
+declare v_org uuid; v_uid uuid; v_org_criada boolean := false;
 begin
   select id into v_uid from auth.users where email = '${OWNER_EMAIL}';
   if v_uid is null then
@@ -1843,13 +1860,17 @@ begin
   end if;
   select id into v_org from public.organizations where slug='minha-empresa';
   if v_org is null then
-    -- `locale` aqui, e não só no usuário dono: é a organização que responde
+    -- locale aqui, e não só no usuário dono: é a organização que responde
     -- pelos convidados que ainda não existem. Quem entra sem preferência
     -- própria cai neste valor, então gravar só no dono entregaria o sistema em
     -- português para todo mundo que ele convidasse numa instalação em espanhol.
-    insert into public.organizations (slug, display_name, legal_name, locale, created_by)
-    values ('minha-empresa','Minha Empresa','Minha Empresa','${APP_LOCALE:-pt-BR}', v_uid)
+    insert into public.organizations (slug, display_name, legal_name, locale, settings, created_by)
+    values (
+      'minha-empresa','Minha Empresa','Minha Empresa','${APP_LOCALE:-pt-BR}',
+      jsonb_build_object('llm', jsonb_build_object('provider', '${AI_PROVIDER}')),
+      v_uid)
     returning id into v_org;
+    v_org_criada := true;
   else
     -- Re-execução do instalador com outra resposta: quem rodou de novo para
     -- trocar o idioma esperaria que trocasse. Só mexe se a organização ainda
@@ -1859,23 +1880,26 @@ begin
        set locale = '${APP_LOCALE:-pt-BR}'
      where id = v_org and coalesce(locale, 'pt-BR') = 'pt-BR';
   end if;
-  -- O provedor que a pessoa ESCOLHEU passa a valer no banco. O trigger
-  -- fn_seed_org_llm_defaults semeia 'anthropic' fixo — o que estava certo
-  -- enquanto a Anthropic era a única chave que este script pedia. Desde que
-  -- ele pergunta qual IA vai atender, ignorar a resposta significava: quem
-  -- escolhe OpenRouter instala, cadastra a chave, e todo caminho que passa
-  -- pelo agent-engine resolve 'anthropic' — sem chave da Anthropic, erro de
-  -- "IA não configurada" em tudo, mandando cadastrar a chave que ele decidiu
-  -- não usar. Só o provider: o modelo padrão fica com o que o trigger semeou
-  -- até alguém escolher em Agente de IA -> Provedores, porque adivinhar um id
-  -- de modelo de outro provedor aqui seria inventar um valor não verificado.
-  if '${AI_PROVIDER}' not in ('', 'anthropic') then
-    update public.organizations
-       set settings = jsonb_set(
-             coalesce(settings, '{}'::jsonb), '{llm,provider}',
-             to_jsonb('${AI_PROVIDER}'::text), true)
-     where id = v_org;
-  end if;
+  -- O instalador semeia provider e modelo somente na organização recém-criada
+  -- ou ainda sem provider. Reexecutar para corrigir domínio, idioma ou outra
+  -- chave não pode apagar a escolha que o gestor já fez pela tela.
+  update public.organizations o
+     set settings = jsonb_set(
+           coalesce(o.settings, '{}'::jsonb),
+           '{llm}',
+           (coalesce(o.settings->'llm', '{}'::jsonb) - 'default_model')
+             || jsonb_build_object('provider', '${AI_PROVIDER}')
+             || coalesce(
+                  (select jsonb_build_object('default_model', m.model_id)
+                     from public.ai_models m
+                    where m.provider = '${AI_PROVIDER}'
+                      and m.is_default_for_provider
+                      and m.deprecated_at is null
+                    limit 1),
+                  '{}'::jsonb),
+           true)
+   where o.id = v_org
+     and (v_org_criada or nullif(o.settings #>> '{llm,provider}', '') is null);
   insert into public.user_organizations (user_id, organization_id, role, accepted_at)
   values (v_uid, v_org, 'admin', now())
   on conflict (user_id, organization_id) do update set role='admin', revoked_at=null;
@@ -1930,8 +1954,26 @@ step "Puxando a imagem e subindo os serviços"
 # worker e o scheduler têm `build:` ao lado do `image:`, e o Compose os constrói
 # quando a imagem não existe (medido).
 if ! dc pull; then
-  c_ylw "⚠ Não consegui puxar todas as imagens do registro."
-  c_ylw "  Sigo assim mesmo: o que faltar é construído aqui (mais lento, mesmo resultado)."
+  case "${APP_IMAGE:-}" in
+    "$IMG_NS"/*)
+      c_red "✖ Não consegui baixar os pacotes privados da Zapfloo no GHCR."
+      printf '%s\n' "  Autentique esta VPS sem colar token em comando ou arquivo:" \
+        "" \
+        "       gh auth login" \
+        "       gh auth token | docker login ghcr.io -u juansanchees --password-stdin" \
+        "" \
+        "  Depois rode este instalador novamente. A configuração e o banco foram preservados."
+      # Este ponto já escreveu o .env e aplicou o banco. O trap genérico manda
+      # apagar ambos; aqui isso seria o rollback errado para uma credencial de
+      # registry ausente.
+      trap - EXIT
+      exit 1
+      ;;
+    *)
+      c_ylw "⚠ Não consegui puxar todas as imagens do registro."
+      c_ylw "  Sigo assim mesmo: o que faltar é construído aqui (mais lento, mesmo resultado)."
+      ;;
+  esac
 fi
 dc up -d
 c_grn "✓ containers no ar"
@@ -2020,9 +2062,9 @@ $(pendencia_dos_emails)
        antes de abrir a tela — o QR code vale só uns minutos. Se expirar,
        o próprio CRM tem o botão "Gerar novo QR Code".
 
-  4. Ao terminar o onboarding, o CRM pede a verificação em duas etapas:
-       tenha o Google Authenticator/Authy à mão e GUARDE os códigos de
-       recuperação que aparecem. Perdeu o celular? bash hostgator-setup-kit/reset-mfa.sh ${OWNER_EMAIL}
+  4. Para reforçar a conta, ative a verificação em duas etapas em Segurança:
+        tenha o Google Authenticator/Authy à mão e GUARDE os códigos de
+        recuperação. Perdeu o celular? bash hostgator-setup-kit/reset-mfa.sh ${OWNER_EMAIL}
 
 $(c_grn "  ─── A comunidade ──────────────────────────────────────")
 

@@ -49,8 +49,9 @@ const ACTION = join(process.cwd(), ".github/actions/preparar-node/action.yml");
  */
 const TETOS: Record<string, { minutos: number; razao: string }> = {
   "ci.yml::verify": {
-    minutos: 15,
-    razao: "trabalho real medido: p90 594s, máximo 609s em 51 verdes — folga de ~4m45",
+    minutos: 30,
+    razao:
+      "no fork Zapfloo, 695 arquivos unitários seguiram verdes até o runner encerrar o job aos 15m17s; 30m preserva falhas reais sem cancelar a suíte no meio",
   },
   "ci.yml::invariants": {
     minutos: 20,

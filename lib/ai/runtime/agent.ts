@@ -305,6 +305,14 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     if (version.credential_id) {
       try {
         const credential = await loadCredential(version.credential_id, run.organization_id);
+        if (credential.provider !== version.provider) {
+          return await failRun(
+            run,
+            "credential_provider_mismatch",
+            "credential provider mismatch",
+            startedAt,
+          );
+        }
         credentialApiKey = credential.apiKey;
       } catch (err) {
         const reason = err instanceof CredentialUnavailableError ? err.reason : "decrypt_failed";

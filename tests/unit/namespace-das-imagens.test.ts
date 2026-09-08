@@ -53,7 +53,8 @@ const PUBLICA = fs.readFileSync(path.join(RAIZ, ".github/workflows/publish-image
 const ENV_EXEMPLO = fs.readFileSync(path.join(RAIZ, ".env.hostgator.example"), "utf8");
 
 /** O valor literal que este repositório publica. A âncora. */
-const NAMESPACE_DESTE_REPO = "ghcr.io/melgarafael";
+const NAMESPACE_DESTE_REPO = "ghcr.io/juansanchees";
+const REPOS_DESTE_REPO = ["zapfloo-crm", "zapfloo-worker", "zapfloo-scheduler"];
 
 /**
  * Um fork que publica as próprias imagens muda `IMG_NS` — e precisa mudar junto
@@ -120,6 +121,10 @@ describe("o namespace das imagens tem uma âncora, e uma só", () => {
     // sintoma chega só no `docker compose pull` da VPS do cliente.
     expect(imgNs().split("/")).toHaveLength(2);
   });
+
+  it("as três imagens pertencem à distribuição Zapfloo", () => {
+    expect(reposDoKit()).toEqual(REPOS_DESTE_REPO);
+  });
 });
 
 describe("o default do compose diz o mesmo que o kit", () => {
@@ -160,7 +165,7 @@ describe("o default do compose diz o mesmo que o kit", () => {
 
 describe("o kit aponta para o que o CI realmente publica", () => {
   it("os defaults de código e os labels de origem apontam para este repositório", () => {
-    const repo = "https://github.com/melgarafael/DeskcommCRM";
+    const repo = "https://github.com/juansanchees/zapfloo-crm";
     for (const script of ["install.sh", "comecar.sh"]) {
       const texto = fs.readFileSync(path.join(RAIZ, "hostgator-setup-kit", script), "utf8");
       expect(texto).toContain(`REPO_URL="\${REPO_URL:-${repo}.git}"`);
@@ -198,19 +203,20 @@ describe("o kit aponta para o que o CI realmente publica", () => {
         log=$(mktemp)
         trap 'rm -f "$log"' EXIT
         # O dublê registra em arquivo porque a função captura stdout do curl.
-        ghcr_status deskcommcrm 1.2.3
+        ghcr_status "$2" 1.2.3
         printf '\\n'
         cat "$log"
       `,
           "teste",
           namespace ?? "",
+          reposDoKit()[0]!,
         ],
         { cwd: RAIZ, encoding: "utf8" },
       );
       expect(saida.trim().split("\n")).toEqual([
         "200",
-        `https://${registry}/token?scope=repository:${owner}/deskcommcrm:pull&service=${registry}`,
-        `https://${registry}/v2/${owner}/deskcommcrm/manifests/1.2.3`,
+        `https://${registry}/token?scope=repository:${owner}/${reposDoKit()[0]}:pull&service=${registry}`,
+        `https://${registry}/v2/${owner}/${reposDoKit()[0]}/manifests/1.2.3`,
       ]);
     },
   );

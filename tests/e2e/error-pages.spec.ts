@@ -30,9 +30,9 @@ test.describe("error pages", () => {
  * workflow — spec nova sem entrada em `.github/workflows/e2e.yml` reprova
  * `tests/unit/e2e-cobertura-completa.test.ts` no check obrigatório.
  *
- * O que se prova: o checkbox de aceite da PRIMEIRA tela do produto linka estes
- * dois endereços, e eles respondiam 404. Um aceite obrigatório apontando para o
- * vazio é o pior defeito de confiança que uma instalação nova pode ter.
+ * O que se prova: os documentos exigidos para aceite e exercício dos direitos
+ * respondem sem sessão. Um aceite obrigatório ou uma instrução de exclusão
+ * apontando para o vazio é um defeito grave de confiança numa instalação nova.
  */
 test.describe("documentos legais", () => {
   test("/legal/terms abre SEM sessão — é o que o aceite do onboarding linka", async ({ page }) => {
@@ -53,7 +53,15 @@ test.describe("documentos legais", () => {
     await expect(page.getByText(/operador desta instalação/i).first()).toBeVisible();
   });
 
-  test("o vizinho de /legal continua fechado — a liberação é dos dois, não do prefixo", async ({
+  test("/legal/data-deletion abre SEM sessão e explica como pedir exclusão", async ({ page }) => {
+    const res = await page.goto("/legal/data-deletion");
+    expect(res?.status()).toBe(200);
+    expect(new URL(page.url()).pathname).toBe("/legal/data-deletion");
+    await expect(page.getByRole("heading", { name: /exclusão de dados/i })).toBeVisible();
+    await expect(page.getByText(/como fazer o pedido/i)).toBeVisible();
+  });
+
+  test("o vizinho de /legal continua fechado — a liberação é nominal, não do prefixo", async ({
     page,
   }) => {
     await page.goto("/legal/qualquer-outra");

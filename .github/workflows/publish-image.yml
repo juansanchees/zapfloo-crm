@@ -108,15 +108,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: deskcommcrm
+          - name: zapfloo-crm
             dockerfile: Dockerfile
-            title: DeskcommCRM
-          - name: deskcomm-worker
+            title: Zapfloo
+          - name: zapfloo-worker
             dockerfile: Dockerfile.worker
-            title: DeskcommCRM worker
-          - name: deskcomm-scheduler
+            title: Zapfloo worker
+          - name: zapfloo-scheduler
             dockerfile: Dockerfile.scheduler
-            title: DeskcommCRM scheduler
+            title: Zapfloo scheduler
 
     steps:
       - uses: actions/checkout@v7
@@ -241,7 +241,7 @@ jobs:
             APP_VERSION=smoke
           # Mesmo escopo de cache do build-and-push: as camadas são idênticas,
           # então na prática este job reaproveita aquele build em vez de repeti-lo.
-          cache-from: type=gha,scope=deskcommcrm
+          cache-from: type=gha,scope=zapfloo-crm
 
       - name: O container chega a servir?
         run: |
@@ -290,6 +290,84 @@ jobs:
         if: always()
         run: docker rm -f smoke 2>/dev/null || true
 
+  # Worker e scheduler também são produto instalado. O build sozinho não pega
+  # módulo ausente no entrypoint do worker nem crond que morre no scheduler.
+  imagens-auxiliares-sobem:
+    needs: [a-tag-veio-da-main]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: worker
+            dockerfile: Dockerfile.worker
+            tag: zapfloo-worker-smoke:pr
+            cache: zapfloo-worker
+          - kind: scheduler
+            dockerfile: Dockerfile.scheduler
+            tag: zapfloo-scheduler-smoke:pr
+            cache: zapfloo-scheduler
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build local da imagem auxiliar
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ matrix.tag }}
+          build-args: |
+            APP_VERSION=smoke
+          cache-from: type=gha,scope=${{ matrix.cache }}
+
+      - name: Executar o entrypoint real
+        env:
+          KIND: ${{ matrix.kind }}
+          IMAGE: ${{ matrix.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$KIND" = worker ]; then
+            docker run -d --name aux-smoke \
+              -e SUPABASE_DB_URL=postgres://u:p@127.0.0.1:5432/postgres \
+              -e NEXT_PUBLIC_SUPABASE_URL=https://exemplo.supabase.co \
+              -e NEXT_PUBLIC_SUPABASE_ANON_KEY=chave-de-mentira \
+              -e SUPABASE_SERVICE_ROLE_KEY=chave-de-mentira \
+              -e SENTRY_DSN=off \
+              "$IMAGE"
+
+            # Sem banco, o desfecho esperado é chegar ao primeiro query e sair.
+            # O que este gate barra é morrer ANTES disso por pacote ausente.
+            for _ in $(seq 1 30); do
+              [ "$(docker inspect -f '{{.State.Running}}' aux-smoke)" = false ] && break
+              sleep 1
+            done
+            logs="$(docker logs aux-smoke 2>&1)"
+            printf '%s\n' "$logs"
+            if printf '%s' "$logs" | grep -qE 'MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND|ERR_PACKAGE_PATH_NOT_EXPORTED'; then
+              echo "::error::o worker morreu antes do banco por módulo ausente"
+              exit 1
+            fi
+            printf '%s' "$logs" | grep -q 'boot falhou:'
+            printf '%s' "$logs" | grep -qE 'ECONNREFUSED|connect'
+          else
+            docker run -d --name aux-smoke -e INTERNAL_SECRET=segredo-de-smoke "$IMAGE"
+            sleep 3
+            docker ps --filter name=aux-smoke --filter status=running -q | grep -q .
+            docker exec aux-smoke pgrep crond
+          fi
+
+      - name: Encerrar
+        if: always()
+        run: docker rm -f aux-smoke 2>/dev/null || true
+
   # O CANAL `stable` MOVE AQUI, E SÓ AQUI — depois que o conjunto está completo.
   #
   # Antes, `stable` era mais um `type=raw` na lista de tags da matriz, e por isso
@@ -315,10 +393,10 @@ jobs:
   # NÚMERO sempre (cada imagem, independente — ninguém instala por um número que
   # o instalador não escreveu) e mover o CANAL num job final.
   promover-stable:
-    # Sem `always()`, e isso é o ponto: `needs` só libera quando as DUAS entradas
+    # Sem `always()`, e isso é o ponto: `needs` só libera quando as três entradas
     # deram `success`. Com `always()` o canal andaria por cima de uma irmã que
     # falhou, que é exatamente o defeito de volta com outra roupa.
-    needs: [build-and-push, imagem-do-app-sobe]
+    needs: [build-and-push, imagem-do-app-sobe, imagens-auxiliares-sobem]
     # As três condições, e cada uma barra um caminho medido. Sem `push`, um
     # dispatch numa release ANTIGA faria `stable` REGREDIR, e todo self-hoster no
     # default do compose sofreria downgrade silencioso no próximo `up -d` — app
@@ -351,7 +429,7 @@ jobs:
           # canal deixaria de ser o mesmo manifesto que a versão.
           dono=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
           numero="${VERSAO#v}"
-          for img in deskcommcrm deskcomm-worker deskcomm-scheduler; do
+          for img in zapfloo-crm zapfloo-worker zapfloo-scheduler; do
             echo "::group::${img}"
             docker buildx imagetools create \
               --tag "${REGISTRY}/${dono}/${img}:stable" \
@@ -377,11 +455,13 @@ jobs:
     # justificativa do teste antecipa — "um job novo nasce sem bloco e herda o
     # default de novo".
     permissions: {}
-    needs: [build-and-push, imagem-do-app-sobe]
+    needs: [build-and-push, imagem-do-app-sobe, imagens-auxiliares-sobem]
     steps:
       - name: Falhar se qualquer imagem não construiu — ou se o app não sobe
         run: |
           echo "build-and-push:     ${{ needs.build-and-push.result }}"
           echo "imagem-do-app-sobe: ${{ needs.imagem-do-app-sobe.result }}"
+          echo "auxiliares-sobem:   ${{ needs.imagens-auxiliares-sobem.result }}"
           [ "${{ needs.build-and-push.result }}" = "success" ]
           [ "${{ needs.imagem-do-app-sobe.result }}" = "success" ]
+          [ "${{ needs.imagens-auxiliares-sobem.result }}" = "success" ]

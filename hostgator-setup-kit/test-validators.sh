@@ -153,6 +153,42 @@ ok "rejeita Direct connection (IPv6)"    reject v_db_url "postgresql://postgres:
 ok "rejeita string de outro projeto"     reject v_db_url "postgresql://postgres.zzzzzzzzzzzzzzzz:senha@aws-1-us-west-2.pooler.supabase.com:5432/postgres"          "mesmo projeto"
 ok "rejeita o que não é URL de Postgres" reject v_db_url "aws-1-us-west-2.pooler.supabase.com"                                                                     "começa com postgresql"
 
+echo "connection string: compatibilidade do Session pooler"
+normaliza_ok() { # normaliza_ok <descrição> <entrada> <esperado>
+  local desc="$1" entrada="$2" esperado="$3" obtido
+  obtido="$(normalizar_url_pooler "$entrada" 2>/dev/null)"
+  if [ "$obtido" = "$esperado" ]; then printf '  ✓ %s\n' "$desc"
+  else printf '  ✗ %s\n     esperava: %s\n     obteve:   %s\n' "$desc" "$esperado" "$obtido"; fail=1; fi
+}
+POOLER_BASE='postgresql://postgres.ref:p%40ss@aws-1-sa-east-1.pooler.supabase.com:5432/postgres'
+normaliza_ok "sem query: acrescenta a opção" \
+  "$POOLER_BASE" "${POOLER_BASE}?uselibpqcompat=true"
+normaliza_ok "preserva parâmetros já existentes" \
+  "${POOLER_BASE}?sslmode=require" "${POOLER_BASE}?sslmode=require&uselibpqcompat=true"
+normaliza_ok "é idempotente" \
+  "${POOLER_BASE}?sslmode=require&uselibpqcompat=true" "${POOLER_BASE}?sslmode=require&uselibpqcompat=true"
+normaliza_ok "não altera Postgres fora do pooler Supabase" \
+  'postgresql://crm:senha@db.exemplo.com:5432/postgres?sslmode=require' \
+  'postgresql://crm:senha@db.exemplo.com:5432/postgres?sslmode=require'
+
+echo "connection string: ferramentas PostgreSQL não recebem opção do runtime"
+schema_url_ok() { # schema_url_ok <descrição> <entrada> <esperado>
+  local desc="$1" entrada="$2" esperado="$3" obtido
+  SUPABASE_DB_URL="$entrada"; unset SUPABASE_DB_ADMIN_URL
+  obtido="$(url_do_schema 2>/dev/null)"
+  if [ "$obtido" = "$esperado" ]; then printf '  ✓ %s\n' "$desc"
+  else printf '  ✗ %s\n     esperava: %s\n     obteve:   %s\n' "$desc" "$esperado" "$obtido"; fail=1; fi
+}
+schema_url_ok "remove a única opção" \
+  "${POOLER_BASE}?uselibpqcompat=true" "$POOLER_BASE"
+schema_url_ok "remove no fim e preserva as demais" \
+  "${POOLER_BASE}?sslmode=require&uselibpqcompat=true" "${POOLER_BASE}?sslmode=require"
+schema_url_ok "remove no início e preserva as demais" \
+  "${POOLER_BASE}?uselibpqcompat=true&sslmode=require" "${POOLER_BASE}?sslmode=require"
+schema_url_ok "preserva fragmento da URL" \
+  "${POOLER_BASE}?uselibpqcompat=true#rota" "${POOLER_BASE}#rota"
+unset POOLER_BASE
+
 echo "connection string: Supabase PRÓPRIO não tem <ref> de projeto"
 # A comparação de projeto lê o `postgres.<ref>` do pooler DA NUVEM. Num Supabase
 # self-hosted não existe <ref> e a role pode ser qualquer uma, então a checagem
@@ -178,6 +214,7 @@ db_ok() {  # db_ok <descrição> <pass|reject> <NEXT_PUBLIC_SUPABASE_URL> <strin
   printf '#!/usr/bin/env bash\ntouch "%s/tocou-no-banco"\nprintf 1\n' "$dir" > "$dir/bin/docker"
   chmod +x "$dir/bin/docker"
   out="$(env PATH="$dir/bin:$PATH" NEXT_PUBLIC_SUPABASE_URL="$sburl" bash -c '
+      . ./_common.sh
       INSTALL_SH_LIB=1 . ./install.sh
       set +e
       v_db_url "$1"' _ "$conn" 2>&1)"; rc=$?
@@ -216,6 +253,36 @@ db_ok "NUVEM: projeto cruzado continua barrado antes do banco" reject \
 db_ok "NUVEM: mesmo projeto passa"                        pass \
   "https://abcdefghijklmnop.supabase.co" \
   "postgresql://postgres.abcdefghijklmnop:senha@aws-1-us-west-2.pooler.supabase.com:5432/postgres"
+
+# O app precisa de `uselibpqcompat`, mas o `psql` que valida a mesma URL não
+# reconhece essa opção. Esta prova olha o argumento entregue ao processo, não
+# apenas o exit code do dublê — um mock que aceita qualquer coisa esconderia
+# exatamente a falha que derruba a instalação real antes de conectar.
+TMP_DB_VALIDATOR="$(mktemp -d)"
+mkdir -p "$TMP_DB_VALIDATOR/bin"
+cat > "$TMP_DB_VALIDATOR/bin/docker" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" > "$DOCKER_ARGS"
+printf 1
+STUB
+chmod +x "$TMP_DB_VALIDATOR/bin/docker"
+DB_VALIDATOR_ARGS="$TMP_DB_VALIDATOR/args"
+env PATH="$TMP_DB_VALIDATOR/bin:$PATH" DOCKER_ARGS="$DB_VALIDATOR_ARGS" \
+  NEXT_PUBLIC_SUPABASE_URL="https://abcdefghijklmnop.supabase.co" bash -c '
+    . ./_common.sh
+    INSTALL_SH_LIB=1 . ./install.sh
+    v_db_url "$1"' _ \
+  "postgresql://postgres.abcdefghijklmnop:senha@aws-1-sa-east-1.pooler.supabase.com:5432/postgres" \
+  >/dev/null 2>&1 || true
+if grep -q 'uselibpqcompat' "$DB_VALIDATOR_ARGS" 2>/dev/null; then
+  printf '  ✗ o validador enviou uselibpqcompat ao psql (libpq não reconhece)\n'; fail=1
+elif [ ! -s "$DB_VALIDATOR_ARGS" ]; then
+  printf '  ✗ o teste do validador não observou a chamada ao psql\n'; fail=1
+else
+  printf '  ✓ o validador remove opção exclusiva do runtime antes do psql\n'
+fi
+rm -rf "$TMP_DB_VALIDATOR"
+unset TMP_DB_VALIDATOR DB_VALIDATOR_ARGS
 # A URL da nuvem NÃO chega sempre terminando em '.supabase.co'. O address bar do
 # navegador entrega barra final; quem copia da documentação traz caminho; quem
 # cola com o mouse traz espaço. Decidir "é nuvem?" pela string inteira desliga a
@@ -482,6 +549,42 @@ else
   else
     printf '  ✓ dívida ainda condiz (%s chaves conhecidas, só pode encolher)\n' "$(printf '%s' "$DIVIDA" | wc -w | tr -d ' ')"
   fi
+fi
+
+echo "bootstrap do admin: heredoc SQL não executa comentários como shell"
+# Este bloco é um heredoc NÃO citado porque precisa expandir os valores do dono.
+# Nesse formato, crase dentro de comentário SQL ainda é substituição de comando
+# para o shell. O caso positivo abaixo prova que estamos inspecionando o bloco
+# certo; o caso real impede que um comentário volte a executar um binário da VPS.
+sql_do_admin() {
+  awk '
+    /postgres:17-alpine psql .*<<SQL/ { dentro=1; next }
+    dentro && /^SQL$/ { exit }
+    dentro { print }
+  ' "$1"
+}
+CONTROLE_SQL="$SUITE_TMP/install-com-crase.sh"
+printf '%s\n' 'docker run postgres:17-alpine psql x <<SQL' '-- `comando-veneno`' 'SQL' >"$CONTROLE_SQL"
+if ! sql_do_admin "$CONTROLE_SQL" | grep -q '`'; then
+  printf '  ✗ sonda cega: o controle com crase não foi detectado\n'; fail=1
+elif sql_do_admin ./install.sh | grep -q '`'; then
+  printf '  ✗ o heredoc SQL do admin contém crase; o shell tentará executá-la\n'; fail=1
+else
+  printf '  ✓ nenhum comentário do SQL vira substituição de comando\n'
+fi
+
+echo "WAHA: imagem validada e engine escrita com o nome que o contêiner lê"
+if grep -q 'devlikeapro/waha:noweb-2026\.7\.2' ../docker-compose.prod.yml \
+  && grep -q 'envq WAHA_IMAGE .*devlikeapro/waha:noweb-2026\.7\.2' ./install.sh; then
+  printf '  ✓ compose e instalador usam a imagem NOWEB validada\n'
+else
+  printf '  ✗ compose e instalador ainda não usam devlikeapro/waha:noweb-2026.7.2\n'; fail=1
+fi
+if grep -q 'envq WHATSAPP_DEFAULT_ENGINE .*NOWEB' ./install.sh \
+  && ! grep -q 'envq WAHA_DEFAULT_ENGINE' ./install.sh; then
+  printf '  ✓ o instalador grava WHATSAPP_DEFAULT_ENGINE=NOWEB\n'
+else
+  printf '  ✗ o instalador grava o nome morto WAHA_DEFAULT_ENGINE ou não grava o nome correto\n'; fail=1
 fi
 
 echo "resposta afirmativa (resposta_sim)"
@@ -1467,7 +1570,10 @@ TMP3B="$(mktemp -d)"
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$DOCKER_LOG"
 case "$1" in
-  compose) case "$*" in *" exec "*) printf 'healthy\n{"data":{"status":"healthy"}}\n' ;; esac; exit 0 ;;
+  compose) case "$*" in
+    *" pull"*) [ "${DUBLE_GHCR:-}" = 403 ] && exit 1 ;;
+    *" exec "*) printf 'healthy\n{"data":{"status":"healthy"}}\n' ;;
+  esac; exit 0 ;;
 esac
 # VPS crua: o bind de teste PASSA (ninguém nas portas) e não há contêiner nenhum.
 exit 0
@@ -1525,7 +1631,7 @@ STUB
   # sobrevive aos dois caminhos, com rede e sem.
   img_app="$(valor_no_env "$VPS_PROJ/.env" APP_IMAGE)"
   tag_app="${img_app##*:}"
-  for par in "WORKER_IMAGE:deskcomm-worker" "SCHEDULER_IMAGE:deskcomm-scheduler"; do
+  for par in "WORKER_IMAGE:zapfloo-worker" "SCHEDULER_IMAGE:zapfloo-scheduler"; do
     chave="${par%%:*}"; repo="${par##*:}"
     if [ "$(valor_no_env "$VPS_PROJ/.env" "$chave")" != "${IMG_NS}/${repo}:${tag_app}" ]; then
       printf '  ✗ %s não acompanha a versão do app (%s): %s\n' "$chave" "$tag_app" \
@@ -1709,7 +1815,7 @@ STUB
   rodar install.sh --yes >/dev/null
   unset REPO_URL
 
-  for par in "APP_IMAGE:deskcommcrm" "WORKER_IMAGE:deskcomm-worker" "SCHEDULER_IMAGE:deskcomm-scheduler"; do
+  for par in "APP_IMAGE:zapfloo-crm" "WORKER_IMAGE:zapfloo-worker" "SCHEDULER_IMAGE:zapfloo-scheduler"; do
     chave="${par%%:*}"; repo="${par##*:}"
     if [ "$(valor_no_env "$VPS_PROJ/.env" "$chave")" != "${IMG_NS}/${repo}:1.10.0" ]; then
       printf '  ✗ %s não foi pinado na versão resolvida (1.10.0): %s\n' "$chave" \
@@ -1732,34 +1838,55 @@ echo "packaging: a tag do git não basta — as imagens têm de existir"
 # cliente receberia referências impossíveis e o kit as construiria aqui EM
 # SILÊNCIO, do topo da main — app de uma release, worker de outro código.
 #
-# 403 é o caso que trava na estreia de uma imagem nova: pacote recém-criado no
-# GHCR nasce privado, e repositório público não muda isso.
+# 403 é o caso normal quando o repositório e os pacotes são privados e o
+# operador ainda não autenticou o Docker no GHCR. Construir localmente nesse
+# caso esconderia a credencial ausente e quebraria o próximo update.
 TMP_PRIV="$(mktemp -d)"
 (
+  # O comportamento sob teste é o registry recusando uma VERSÃO conhecida.
+  # A URL padrão pode ser privada (como no fork Zapfloo) e o runner não herda
+  # credencial do checkout para um `git ls-remote` novo. Sem um remoto local,
+  # o caso cai no ramo "não descobri versão" e mede outra coisa.
+  origem="$TMP_PRIV/origem.git"
+  git init --quiet --bare "$origem"
+  (
+    cd "$TMP_PRIV" || exit 1
+    git clone --quiet "$origem" w 2>/dev/null
+    cd w || exit 1
+    git config user.email t@t; git config user.name t
+    echo x > a; git add -A; git commit --quiet -m init
+    git tag v1.10.0
+    git push --quiet origin HEAD --tags 2>/dev/null
+  )
+
   montar_vps "$TMP_PRIV/vps" "crmpriv" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$DOCKER_LOG"
 case "$1" in
-  compose) case "$*" in *" exec "*) printf 'healthy\n{"data":{"status":"healthy"}}\n' ;; esac; exit 0 ;;
+  compose) case "$*" in
+    *" pull"*) [ "${DUBLE_GHCR:-}" = 403 ] && exit 1 ;;
+    *" exec "*) printf 'healthy\n{"data":{"status":"healthy"}}\n' ;;
+  esac; exit 0 ;;
 esac
 exit 0
 STUB
+  export REPO_URL="$origem"
   export DUBLE_GHCR=403          # pacote existe mas está PRIVADO
   saida="$(rodar install.sh --yes)"
   unset DUBLE_GHCR
+  unset REPO_URL
 
-  if ! printf '%s' "$saida" | grep -q "construídas neste servidor"; then
-    printf '  ✗ com as imagens inalcançáveis, o instalador não avisou que ia construir aqui\n'
-    printf '     silêncio aqui é o defeito: o dono não descobre que duas peças saíram do fonte local.\n'
-    exit 1
+  if ! printf '%s' "$saida" | grep -q "gh auth login" \
+     || ! printf '%s' "$saida" | grep -q "docker login ghcr.io"; then
+    printf '  ✗ 403 do GHCR não entregou o caminho seguro de autenticação\n'; exit 1
   fi
-  printf '  ✓ imagens inalcançáveis (403): avisa que vai construir no servidor, em vez de calar\n'
-
-  # E ainda assim a instalação COMPLETA — construir é lento, não é impedimento.
-  if ! grep -qE "^APP_IMAGE=" "$VPS_PROJ/.env"; then
-    printf '  ✗ a instalação não chegou a escrever o .env\n'; exit 1
+  if printf '%s' "$saida" | grep -q "Instalação concluída"; then
+    printf '  ✗ o instalador declarou sucesso sem conseguir puxar os pacotes privados\n'; exit 1
   fi
-  printf '  ✓ e mesmo assim conclui a instalação (constrói é lento, não é impedimento)\n'
+  if printf '%s' "$saida" | grep -q "construídas neste servidor"; then
+    printf '  ✗ credencial ausente virou build local silenciosamente divergente\n'; exit 1
+  fi
+  printf '  ✓ imagens privadas sem login: para com instruções de autenticação, sem falso sucesso\n'
 ) || fail=1
 rm -rf "$TMP_PRIV"
 
@@ -2102,17 +2229,17 @@ echo "DDL: a conexão do schema é separada da que vai para os contêineres (iss
 
 # As connection strings que chegaram ao psql/pg_dump no cenário, sem repetir.
 strings_de_banco() { grep -oE '(psql|pg_dump) [^ ]+' "$VPS_LOG" | awk '{print $2}' | sort -u; }
-# Idem, tirando a sonda do validador (`psql <url> -tAc select 1`): ela existe
-# justamente para testar a conexão DO APP, então usar a string do app ali é o
-# comportamento certo — é o que a pessoa acabou de responder. Sem esta distinção
-# o caso mediria "trocaram tudo", que é outra coisa (e um defeito).
+# Idem, tirando a sonda do validador (`psql <url> -tAc select 1`). A sonda testa
+# o mesmo host/usuário/senha do app, mas precisa remover a opção exclusiva do
+# driver JS porque libpq a recusa antes de tentar a conexão.
 strings_de_schema() {
   grep -E '(psql|pg_dump) ' "$VPS_LOG" | grep -v -- '-tAc select 1$' \
     | grep -oE '(psql|pg_dump) [^ ]+' | awk '{print $2}' | sort -u
 }
 # Derivada do BASE_ENV, não copiada: duas cópias do mesmo literal desincronizam
 # no dia em que o cenário-base trocar de string, e aí o teste reprova por engano.
-URL_DO_APP="$(printf '%s\n' "$BASE_ENV" | sed -n "s/^SUPABASE_DB_URL='\(.*\)'$/\1/p")"
+URL_DO_APP="$(normalizar_url_pooler "$(printf '%s\n' "$BASE_ENV" | sed -n "s/^SUPABASE_DB_URL='\(.*\)'$/\1/p")")"
+URL_DO_SCHEMA="$(url_para_ferramenta_postgres "$URL_DO_APP")"
 URL_DO_DONO='postgresql://supabase_admin:senhadodono@db-proprio.exemplo.com.br:5432/postgres'
 
 TMP_DDL_A="$(mktemp -d)"
@@ -2135,12 +2262,15 @@ STUB
     printf '  ✗ o install.sh falou %s vez(es) com o Postgres — teste inconclusivo, não verde\n' "${n:-0}"
     printf '     (esperadas: extensões, sonda de schema, baseline, contagem de tabelas, promoção do dono)\n'; exit 1
   fi
-  vistas="$(strings_de_banco)"
-  if [ "$vistas" != "$URL_DO_APP" ]; then
-    printf '  ✗ sem SUPABASE_DB_ADMIN_URL o kit deixou de usar a string de sempre — quem já instalou quebra:\n'
+  vistas="$(strings_de_schema)"
+  if [ "$vistas" != "$URL_DO_SCHEMA" ]; then
+    printf '  ✗ sem SUPABASE_DB_ADMIN_URL o schema não usou a string do app sem a opção de runtime:\n'
     printf '%s\n' "$vistas" | sed 's/^/       /'; exit 1
   fi
-  printf '  ✓ sem a variável nova: as %s conversas com o Postgres usam a string de sempre\n' "$n"
+  if ! grep -qF -- "psql $URL_DO_SCHEMA -tAc select 1" "$VPS_LOG"; then
+    printf '  ✗ a sonda não validou as credenciais do app pela URL aceita pelo psql\n'; exit 1
+  fi
+  printf '  ✓ sem a variável nova: schema usa a mesma conexão, sem a opção que psql/pg_dump recusam\n'
 ) || fail=1
 rm -rf "$TMP_DDL_A"
 
@@ -2178,14 +2308,15 @@ STUB
 
   # O outro lado, e é ele que distingue a correção de um "trocaram tudo": na
   # MESMA execução, a sonda que confere a connection string do app tem de
-  # continuar usando a do app. Um patch que substituísse a variável em bloco
-  # deixaria a asserção de cima verde e esta vermelha.
-  if ! grep -qF -- "psql $URL_DO_APP -tAc select 1" "$VPS_LOG"; then
-    printf '  ✗ a sonda que valida a conexão do APP deixou de usar a string do app\n'
+  # continuar usando host/usuário/senha do app (só sem a opção do driver JS).
+  # Um patch que usasse a credencial do dono deixaria a asserção de cima verde
+  # e esta vermelha.
+  if ! grep -qF -- "psql $URL_DO_SCHEMA -tAc select 1" "$VPS_LOG"; then
+    printf '  ✗ a sonda que valida a conexão do APP deixou de usar suas credenciais\n'
     printf '     — ela passaria a aprovar uma credencial que o app nunca vai usar.\n'
     grep -nE 'psql .* -tAc select 1$' "$VPS_LOG" | sed 's/^/       /'; exit 1
   fi
-  printf '  ✓ e a conferência da conexão do app continua sendo feita com a do app\n'
+  printf '  ✓ e a conferência usa as credenciais do app sem opção incompatível com psql\n'
 
   gravada="$(valor_no_env "$VPS_PROJ/.env" SUPABASE_DB_URL)"
   if [ "$gravada" != "$URL_DO_APP" ]; then
@@ -2252,6 +2383,33 @@ NEXT_PUBLIC_APP_URL='https://crm.exemplo.com.br'")"
   printf '  ✓ baseline (%s psql) e backup (%s pg_dump) pela conexão do dono\n' "$n_psql" "$n_dump"
 ) || fail=1
 rm -rf "$TMP_DDL_C"
+
+echo "backup: falha no pg_dump não deixa arquivo que parece restaurável"
+TMP_BACKUP_ATOMICO="$(mktemp -d)"
+(
+  montar_vps "$TMP_BACKUP_ATOMICO" "crmbackup" <<'STUB'
+#!/usr/bin/env bash
+case "$*" in *pg_dump*) exit 9 ;; esac
+exit 0
+STUB
+  saida="$(rodar backup.sh "")"
+  if find "$VPS_PROJ/backups" -type f \( -name 'db-*.sql.gz' -o -name '.db-*.tmp' \) | grep -q .; then
+    printf '  ✗ o pg_dump falhou, mas deixou um arquivo de banco que parece válido\n'; exit 1
+  fi
+  if printf '%s' "$saida" | grep -q 'backup concluído'; then
+    printf '  ✗ o pg_dump falhou, mas o script anunciou backup concluído\n'; exit 1
+  fi
+  printf '  ✓ falha fecha sem artefato parcial e sem anúncio de sucesso\n'
+) || fail=1
+rm -rf "$TMP_BACKUP_ATOMICO"
+
+echo "restore: qualquer erro SQL interrompe e impede falso sucesso"
+if grep -A2 'postgres:17-alpine psql' restore.sh | grep -q 'ON_ERROR_STOP=1'; then
+  printf '  ✓ psql aborta no primeiro erro do dump\n'
+else
+  printf '  ✗ restore.sh pode anunciar sucesso depois de erro SQL (falta ON_ERROR_STOP)\n'
+  fail=1
+fi
 
 echo "e-mails de acesso: quem JÁ instalou também é avisado — uma vez só"
 # A população realmente quebrada hoje é quem instalou ANTES de a entrevista pedir

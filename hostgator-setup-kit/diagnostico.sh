@@ -43,7 +43,7 @@ item()   { printf '  %s\n' "$*"; }
 # — em profundidade limitada, para não passear pelo disco inteiro.
 achar_projeto() {
   local c
-  for c in . ./deskcommcrm /root/DeskcommCRM /root/deskcommcrm /opt/deskcommcrm /var/www/crm; do
+  for c in . ./zapfloo-crm /opt/zapfloo /root/zapfloo-crm ./deskcommcrm /root/DeskcommCRM /root/deskcommcrm /opt/deskcommcrm /var/www/crm; do
     [ -f "$c/$COMPOSE_FILE" ] && { (cd "$c" && pwd); return 0; }
   done
   c="$(find /root /opt /home /var/www -maxdepth 4 -name "$COMPOSE_FILE" 2>/dev/null | head -1)"

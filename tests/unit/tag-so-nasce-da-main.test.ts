@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 const RAIZ = process.cwd();
 const publish = fs.readFileSync(path.join(RAIZ, ".github/workflows/publish-image.yml"), "utf8");
 const release = fs.readFileSync(path.join(RAIZ, ".github/workflows/release.yml"), "utf8");
+const corte = fs.readFileSync(path.join(RAIZ, "scripts/cortar-release.ts"), "utf8");
 
 /** As linhas de um job, até o próximo job na mesma indentação. */
 function job(yml: string, nome: string): string {
@@ -79,10 +80,17 @@ describe("a tag nasce no CI, e nunca do GITHUB_TOKEN", () => {
     // não o nome da função — que já mudou uma vez, quando a conferência passou a
     // comparar digest em vez de código de status (issue #488).
     expect(t, "o corte não consulta mais o registro").toMatch(/ghcr\.io\/v2\//);
-    for (const img of ["deskcommcrm", "deskcomm-worker", "deskcomm-scheduler"]) {
+    for (const img of ["zapfloo-crm", "zapfloo-worker", "zapfloo-scheduler"]) {
       expect(t, `a conferência não cobre ${img}`).toContain(img);
     }
     expect(t).toMatch(/::error::/);
+  });
+
+  it("o corte consegue conferir imagens privadas sem tornar o repositório público", () => {
+    const t = job(release, "cortar-tag");
+    expect(t).toMatch(/permissions:[\s\S]*packages:\s*read/);
+    expect(t).toContain("GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
+    expect(t).toMatch(/curl[^\n]*-u[^\n]*GITHUB_ACTOR[^\n]*GHCR_TOKEN/);
   });
 
   it("a tag exige que o push tenha CONSUMIDO fragmentos, não só que haja versão nova no CHANGELOG", () => {
@@ -102,11 +110,23 @@ describe("a tag nasce no CI, e nunca do GITHUB_TOKEN", () => {
     // O ramo que RECUSA precisa existir: zero removidos não é corte.
     expect(t).toMatch(/removidos[^\n]*-eq 0/);
     // E a condição que a guarda antiga NÃO tinha: só o App da release corta.
-    expect(t).toMatch(/deskcomm-release\[bot\]/);
+    expect(t).toMatch(/zapfloo-release\[bot\]/);
   });
 
   it("a tag só é criada em push na main, nunca num dispatch de branch qualquer", () => {
     expect(job(release, "cortar-tag")).toMatch(/if:\s*github\.event_name == 'push'/);
     expect(release).toMatch(/push:\s*\n\s*branches:\s*\[main\]/);
+  });
+});
+
+describe("a release pertence ao repositório Zapfloo", () => {
+  it("gera links de comparação no repositório privado da distribuição", () => {
+    expect(corte).toContain('const REPO = "juansanchees/zapfloo-crm"');
+    expect(corte).not.toContain("melgarafael/DeskcommCRM");
+  });
+
+  it("reconhece somente o GitHub App da Zapfloo como autor do corte", () => {
+    expect(release).toContain("zapfloo-release[bot]");
+    expect(release).not.toContain("deskcomm-release[bot]");
   });
 });

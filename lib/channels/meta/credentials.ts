@@ -68,10 +68,13 @@ function graphVersion(): string {
  * Credencial do ambiente. `null` quando não configurada — o chamador trata como
  * canal não conectado (noop), nunca como erro.
  */
-export function metaCredsFromEnv(): MetaCredentials | null {
+export function metaCredsFromEnv(expectedPhoneNumberId?: string): MetaCredentials | null {
   const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
   const token = process.env.META_SYSTEM_USER_TOKEN;
   if (!phoneNumberId || !token) return null;
+  // O fallback representa UM número da instalação. Usá-lo para um identificador
+  // diferente enviaria a mensagem pela conta global de outra organização.
+  if (expectedPhoneNumberId && phoneNumberId !== expectedPhoneNumberId) return null;
   return { phoneNumberId, token, graphVersion: graphVersion(), source: "env" };
 }
 
@@ -120,10 +123,9 @@ export async function metaCredsForPhoneNumberId(
   if (!data || !cifrado) return null;
 
   const token = await decryptWebhookSecret(admin, cifrado as unknown as string);
-  // Decifra que falha devolve null: a chave (GUC) pode não estar configurada nesta
-  // instalação. Cair no env é melhor que derrubar o envio — e o `source` no retorno
-  // deixa a diferença visível para quem depura.
-  if (!token) return null;
+  // Existe uma credencial cifrada para ESTA sessão. Se ela não abre, cair no env
+  // pode mandar pela conta de outra organização; falha de isolamento fecha.
+  if (!token) throw new Error("meta_creds_decrypt_failed");
 
   return {
     phoneNumberId: data.meta_phone_number_id as string,
@@ -143,5 +145,5 @@ export async function resolveMetaCreds(
   admin: SupabaseClient,
   lookup: MetaCredsLookup,
 ): Promise<MetaCredentials | null> {
-  return (await metaCredsForPhoneNumberId(admin, lookup)) ?? metaCredsFromEnv();
+  return (await metaCredsForPhoneNumberId(admin, lookup)) ?? metaCredsFromEnv(lookup.phoneNumberId);
 }

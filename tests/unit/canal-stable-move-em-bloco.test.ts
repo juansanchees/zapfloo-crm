@@ -75,7 +75,7 @@ function corpo(yml: string, nome: string): string {
     .join("\n");
 }
 
-const IMAGENS = ["deskcommcrm", "deskcomm-worker", "deskcomm-scheduler"];
+const IMAGENS = ["zapfloo-crm", "zapfloo-worker", "zapfloo-scheduler"];
 
 describe("o canal `stable` move em bloco", () => {
   it("o instrumento está vivo: enxerga os jobs de publish-image.yml", () => {
@@ -104,6 +104,7 @@ describe("o canal `stable` move em bloco", () => {
     expect(needs?.split(",").map((s) => s.trim()).sort()).toEqual([
       "build-and-push",
       "imagem-do-app-sobe",
+      "imagens-auxiliares-sobem",
     ]);
   });
 

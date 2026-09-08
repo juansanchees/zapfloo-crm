@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# DeskcommCRM — a porta de entrada.
+# Zapfloo — a porta de entrada privada.
 #
 # Diferente do install.sh, este script roda no SEU computador (macOS, Linux ou
 # WSL), antes de existir servidor. Ele responde a única pergunta que trava quem
@@ -9,11 +9,11 @@
 #
 # Uso:
 #   bash comecar.sh
-#   curl -fsSL https://raw.githubusercontent.com/melgarafael/DeskcommCRM/main/hostgator-setup-kit/comecar.sh | bash
+#   gh repo clone juansanchees/zapfloo-crm && bash zapfloo-crm/hostgator-setup-kit/comecar.sh
 #
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/melgarafael/DeskcommCRM.git}"
+REPO_URL="${REPO_URL:-https://github.com/juansanchees/zapfloo-crm.git}"
 # Link de parceria com a HostGator. Mesma URL e mesmo rótulo do README: uma
 # promessa só, num lugar só — duas redações da mesma oferta viram duas ofertas.
 VPS_URL="https://www.hostgator.com.br/52708-141-3-52.html"
@@ -41,7 +41,7 @@ banner() {
   case "$cols" in ''|*[!0-9]*) cols=80;; esac
   printf '\n'
   if [ "$COLOR" != 1 ] || [ "$cols" -lt $((LOGO_COLS + 2)) ]; then
-    paint 1 "  DESKCOMM"
+    paint 1 "  ZAPFLOO"
   else
     [ -t 1 ] && printf '\033[2J\033[H'
     while IFS= read -r linha; do
@@ -143,13 +143,18 @@ REQ
 comando_de_instalacao() {
   cat <<CMD
 
-  Já dentro do servidor, cole isto:
+  Já dentro do servidor, autentique sua conta autorizada e clone o projeto:
 
-       git clone ${REPO_URL} deskcommcrm
-       cd deskcommcrm
+       apt-get update && apt-get install -y gh
+       gh auth login
+       gh auth setup-git
+       gh repo clone juansanchees/zapfloo-crm zapfloo-crm
+       gh auth token | docker login ghcr.io -u juansanchees --password-stdin
+       cd zapfloo-crm
        bash hostgator-setup-kit/install.sh
 
-  O instalador cuida do resto: instala o Docker se faltar, cria o banco,
+  O login é necessário porque código e imagens são privados. O token passa
+  direto ao Docker e não aparece na tela. O instalador cuida do resto: instala o Docker se faltar, cria o banco,
   configura o domínio com HTTPS e sobe o CRM. Ele pergunta o que só você sabe
   (o domínio, as chaves, a senha do primeiro acesso) e valida cada resposta na
   hora — nada de descobrir um dado errado dez minutos depois.

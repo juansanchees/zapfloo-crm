@@ -4582,6 +4582,31 @@ export const DICIONARIO: Traducoes = {
     es: "No pudo responder — y es mejor descubrir esto ahora que con un cliente de verdad.",
   },
   "Motivo:": { es: "Motivo:" },
+  "Próximo passo:": { es: "Siguiente paso:" },
+  "Esta versão não tem uma chave utilizável para a empresa de IA escolhida.": {
+    es: "Esta versión no tiene una clave utilizable para la empresa de IA elegida.",
+  },
+  "A chave e o modelo desta versão pertencem a empresas de IA diferentes.": {
+    es: "La clave y el modelo de esta versión pertenecen a empresas de IA diferentes.",
+  },
+  "A empresa de IA recusou a chave cadastrada.": {
+    es: "La empresa de IA rechazó la clave registrada.",
+  },
+  "A empresa de IA recusou a geração por limite de uso ou saldo.": {
+    es: "La empresa de IA rechazó la generación por límite de uso o saldo.",
+  },
+  "O modelo escolhido não está disponível ou não atende ao que este agente precisa.": {
+    es: "El modelo elegido no está disponible o no cumple con lo que este agente necesita.",
+  },
+  "A empresa de IA está indisponível ou demorou demais para responder.": {
+    es: "La empresa de IA no está disponible o tardó demasiado en responder.",
+  },
+  "Não foi possível identificar a causa desta falha.": {
+    es: "No fue posible identificar la causa de este fallo.",
+  },
+  "IA › Execuções": { es: "IA › Ejecuciones" },
+  "conta da empresa de IA": { es: "cuenta de la empresa de IA" },
+  "tentar novamente em alguns minutos": { es: "intentarlo de nuevo en unos minutos" },
   "As causas mais comuns são a chave da empresa de IA sem saldo ou o modelo indisponível. Dá para conferir em": {
     es: "Las causas más comunes son la clave de la empresa de IA sin saldo o el modelo no disponible. Se puede revisar en",
   },
@@ -5183,9 +5208,12 @@ export const DICIONARIO: Traducoes = {
     es: "El sistema atiende esos pedidos por un flujo propio: la exportación reúne lo que existe sobre la persona, y la anonimización elimina la identificación preservando el historial de atención — por eso ella",
   },
   "não pode ser desfeita": { es: "no se puede deshacer" },
+  "Veja como solicitar a exclusão dos seus dados.": {
+    es: "Consulta cómo solicitar la eliminación de tus datos.",
+  },
   "7. Segurança": { es: "7. Seguridad" },
-  "O acesso é controlado por conta, senha e papel, com verificação em duas etapas obrigatória para administradores. Cada organização hospedada só enxerga os próprios dados, e as chaves de integração são guardadas cifradas.": {
-    es: "El acceso es controlado por cuenta, contraseña y rol, con verificación en dos pasos obligatoria para administradores. Cada organización alojada solo ve sus propios datos, y las claves de integración se guardan cifradas.",
+  "O acesso é controlado por conta, senha e papel, com verificação em duas etapas quando ativada. Cada organização hospedada só enxerga os próprios dados, e as chaves de integração são guardadas cifradas.": {
+    es: "El acceso es controlado por cuenta, contraseña y rol, con verificación en dos pasos cuando está activada. Cada organización alojada solo ve sus propios datos, y las claves de integración se guardan cifradas.",
   },
   "8. Encarregado e contato": { es: "8. Encargado y contacto" },
   "Para exercer seus direitos ou tirar dúvidas sobre privacidade, fale com o encarregado de dados:": {
@@ -5193,6 +5221,45 @@ export const DICIONARIO: Traducoes = {
   },
   "O operador ainda não publicou um endereço de contato do encarregado de dados nesta instalação. Os pedidos devem ser feitos pelos canais de atendimento da própria organização.": {
     es: "El operador aún no ha publicado una dirección de contacto del encargado de datos en esta instalación. Los pedidos deben hacerse por los canales de atención de la propia organización.",
+  },
+
+  "Exclusão de dados": { es: "Eliminación de datos" },
+  "Como pedir acesso, anonimização ou exclusão dos dados tratados nesta instalação.": {
+    es: "Cómo solicitar acceso, anonimización o eliminación de los datos tratados en esta instalación.",
+  },
+  "1. Quem atende o pedido": { es: "1. Quién atiende la solicitud" },
+  "O responsável por analisar e atender o pedido é": {
+    es: "El responsable de analizar y atender la solicitud es",
+  },
+  "O software não envia esse pedido a terceiros.": {
+    es: "El software no envía esta solicitud a terceros.",
+  },
+  "2. Como fazer o pedido": { es: "2. Cómo hacer la solicitud" },
+  "Informe que deseja exercer seus direitos sobre dados pessoais e indique o telefone ou e-mail usado no atendimento, para que o operador consiga localizar os registros corretos.": {
+    es: "Indica que deseas ejercer tus derechos sobre datos personales y proporciona el teléfono o correo electrónico usado en la atención, para que el operador pueda localizar los registros correctos.",
+  },
+  "Envie o pedido ao encarregado de dados:": {
+    es: "Envía la solicitud al encargado de datos:",
+  },
+  "Envie o pedido pelos canais de atendimento publicados pela organização que opera esta instalação.": {
+    es: "Envía la solicitud por los canales de atención publicados por la organización que opera esta instalación.",
+  },
+  "Não envie senha, token de acesso ou documento de identidade nesta primeira mensagem. O operador poderá pedir uma confirmação segura de identidade antes de agir.": {
+    es: "No envíes contraseñas, tokens de acceso ni documentos de identidad en este primer mensaje. El operador podrá solicitar una confirmación segura de identidad antes de actuar.",
+  },
+  "3. O que acontece depois": { es: "3. Qué sucede después" },
+  "O operador confirma a identidade, localiza os dados e avalia o pedido conforme a LGPD. Quando aplicável, o sistema pode exportar os dados ou anonimizar a identificação de forma irreversível.": {
+    es: "El operador confirma la identidad, localiza los datos y evalúa la solicitud conforme a la LGPD. Cuando corresponda, el sistema puede exportar los datos o anonimizar la identificación de forma irreversible.",
+  },
+  "Registros que precisem ser mantidos por obrigação legal, prevenção a fraude, segurança ou exercício de direitos podem ser preservados pelo período necessário, com acesso restrito.": {
+    es: "Los registros que deban conservarse por obligación legal, prevención del fraude, seguridad o ejercicio de derechos pueden mantenerse durante el período necesario, con acceso restringido.",
+  },
+  "4. Resposta": { es: "4. Respuesta" },
+  "O operador responderá pelo canal informado, indicando o que foi atendido ou a razão legal para eventual retenção.": {
+    es: "El operador responderá por el canal informado, indicando qué se atendió o el fundamento legal de una eventual conservación.",
+  },
+  "Leia também a Política de Privacidade.": {
+    es: "Lee también la Política de Privacidad.",
   },
 
   "As regras de uso desta instalação do": { es: "Las reglas de uso de esta instalación de" },

@@ -40,9 +40,10 @@ describe("isPublicPath", () => {
   it("libera os documentos legais — o aceite acontece antes de existir conta", () => {
     expect(isPublicPath("/legal/terms")).toBe(true);
     expect(isPublicPath("/legal/privacy")).toBe(true);
+    expect(isPublicPath("/legal/data-deletion")).toBe(true);
   });
 
-  it("e só esses dois: /legal não é um portão aberto", () => {
+  it("e só esses três: /legal não é um portão aberto", () => {
     // Entrada larga aqui é furo de auth em toda a aplicação, não só nesta tela.
     expect(isPublicPath("/legal")).toBe(false);
     expect(isPublicPath("/legal/terms/interno")).toBe(false);

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
+import { configuracaoInicialDeLlm } from "@/lib/ai/installation-default";
 
 /** Normaliza o nome da empresa para um slug candidato (citext unique no DB). */
 function slugify(name: string): string {
@@ -75,6 +76,7 @@ export async function ensureTenantForUser(
         display_name: orgName,
         legal_name: orgName,
         status: "active",
+        settings: configuracaoInicialDeLlm(),
         created_by: user.id,
       })
       .select("id, slug")

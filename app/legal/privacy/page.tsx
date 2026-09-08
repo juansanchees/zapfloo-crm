@@ -119,13 +119,18 @@ export default async function PrivacyPage() {
           )}{" "}
           <strong>{t("não pode ser desfeita")}</strong>.
         </p>
+        <p>
+          <a className="underline underline-offset-2" href="/legal/data-deletion">
+            {t("Veja como solicitar a exclusão dos seus dados.")}
+          </a>
+        </p>
       </section>
 
       <section className="space-y-2">
         <h2 className="text-base font-semibold">{t("7. Segurança")}</h2>
         <p>
           {t(
-            "O acesso é controlado por conta, senha e papel, com verificação em duas etapas obrigatória para administradores. Cada organização hospedada só enxerga os próprios dados, e as chaves de integração são guardadas cifradas.",
+            "O acesso é controlado por conta, senha e papel, com verificação em duas etapas quando ativada. Cada organização hospedada só enxerga os próprios dados, e as chaves de integração são guardadas cifradas.",
           )}
         </p>
       </section>
