@@ -39,7 +39,7 @@
     { "id": "e9", "from": "channel", "to": "activate_rpc", "label": "somente mesma org, não arquivado, WORKING e lista não vazia" },
     { "id": "e10", "from": "activate_rpc", "to": "version", "label": "publica exatamente a versão capturada" },
     { "id": "e11", "from": "version", "to": "agent", "label": "vincula e ativa o mesmo agente preparado" },
-    { "id": "e12", "from": "activate_rpc", "to": "org_state", "label": "retry exige hash da versão e identidade integral entre recibo e audit" },
+    { "id": "e12", "from": "activate_rpc", "to": "org_state", "label": "retry verifica hash da versão e campos canônicos de recibo e audit" },
     { "id": "e13", "from": "activate_rpc", "to": "audit", "label": "um audit idempotente, sem payload de mensagem" },
     { "id": "e14", "from": "agent", "to": "dispatcher", "label": "runtime só pode atender pelo canal publicado" },
     { "id": "e15", "from": "channel", "to": "dispatcher", "label": "allowlist pré-go-live segue sendo a trava canônica em tempo de envio" }

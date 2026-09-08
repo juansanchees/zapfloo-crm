@@ -8,7 +8,7 @@
 
 - Metadata do canal agora falha fechada nos caminhos inicial e de retry quando qualquer chave está ausente, `null`, com tipo inválido, lista vazia ou telefone fora de E.164. A correção é a migration nova 0225; a 0224 aplicada não foi editada.
 - A action reproduz a precedência canônica: credencial explícita da versão, credencial ativa/validada mais recente da organização e só então chave da instalação. O banco revalida a disponibilidade; nenhum boolean ou ID aceito vem do browser, e `credential_id=null` permanece inalterado na versão.
-- Retry reconstrói o snapshot anterior à publicação, compara seu SHA-256 com o recibo e exige correspondência integral entre recibo e audit. Alteração de versão, recibo ou audit retorna `activation_conflict` sem sobrescrever evidência.
+- Retry reconstrói o snapshot anterior à publicação, compara seu SHA-256 com o recibo e verifica os campos canônicos do recibo e do audit. Alteração de versão, recibo ou audit retorna `activation_conflict` sem sobrescrever evidência.
 
 | Prova do delta | Resultado | Log |
 | --- | --- | --- |
