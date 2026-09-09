@@ -16,6 +16,19 @@ A cor segue o resolvedor canônico de marca. A configuração operacional da ins
 
 ## Publicação e recuperação
 
-Pendente de execução neste registro inicial. Será atualizada apenas a imagem do app; worker/agendador permanecem em `90456dec`. Preservar override dessa release ao adicionar o override visual. Sem GitHub/Actions, build nativo amd64 na própria VPS pela exceção já autorizada.
+Executada às 03:32 UTC de 2026-09-09: app `582ea60f31c32b141b3e9bc76d56facba59bf9da`, imagem amd64 `sha256:bc63c204c8d3f59fd5886040af279b0d7f4c07c07cafb22363c49397e045cd90`. Build remoto exit 0; endpoint HTTPS de saúde confirmou versão `582ea60f`, Supabase/Redis/WAHA ok. Isso prova conectividade do serviço WAHA, não pareamento do número.
 
-Antes da configuração visual, guardar a linha `platform_branding` em arquivo restrito. Rollback: imagem `zapfloo-app:90456dec` e valores anteriores da marca; não restaurar o banco inteiro nem remover volumes. A inspeção prévia confirmou duas organizações sem overrides de cor/logo, nome da plataforma Zapfloo e cor/logo ausentes.
+Worker/agendador permanecem em `90456dec`. Comparação dos IDs antes/depois confirmou mudança somente do app. Sem GitHub/Actions, build nativo na própria VPS pela exceção autorizada. Transporte SHA256 `96ff95c0f72eb12d4efd775782a71dca6299bba999376dafffc83b56ca28cbd1` conferido nas duas pontas.
+
+Linha anterior guardada com permissão 600 em `/opt/zapfloo/releases/582ea60f/brand-before.json`. Aplicados somente cor, URL de logo e indicador de configuração explícita, com comparação dos valores anteriores para impedir sobrescrita concorrente. Nome Zapfloo preservado. A inspeção prévia confirmou duas organizações sem overrides de cor/logo.
+
+Conferência final no Chrome autenticado em `/app/inbox`: logo visível, superfícies grafite, seleção roxa e navegação existente preservada. Página pública de login entrega a nova logo. O aviso preexistente de WhatsApp desconectado continua visível; não houve reconexão, envio ou liberação de atendimento. Captura de produção não foi adicionada ao repositório por conter dados reais.
+
+Comando operacional desta instalação (Caddy):
+
+```sh
+cd /opt/zapfloo
+docker compose -p zapfloo --env-file .env -f docker-compose.prod.yml -f releases/90456dec/docker-compose.release.yml -f releases/582ea60f/docker-compose.redesign.yml up -d --no-deps app
+```
+
+Rollback visual: executar o mesmo comando sem o último override e restaurar os campos de marca pelo script `configure-brand.cjs rollback` (cópia operacional no worker, exige o backup JSON). O script recusa sobrescrever uma marca alterada posteriormente. Não restaurar o banco inteiro nem remover volumes. Manter os artefatos em `/opt/zapfloo/releases/582ea60f/`; nenhum segredo está neste relatório.

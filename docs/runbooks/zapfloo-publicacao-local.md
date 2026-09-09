@@ -32,6 +32,8 @@ Usar tag local derivada do SHA, não `latest`/`stable` e não inventar uma relea
 
 O Docker do Mac instalado não expõe `buildx`, mas o Docker da VM Colima já tem esse comando. Em 2026-09-08, `colima ssh -- docker buildx ls` confirmou suporte a `linux/amd64` e `linux/arm64`. A build deve selecionar `--platform linux/amd64 --load` explicitamente; não assumir que uma imagem ARM do Mac serve à VPS. O arquivo de transporte pode ser gerado por `docker image save` e importado por `docker image load`, sem registry. A documentação oficial descreve o [exportador Docker e o carregamento local](https://docs.docker.com/build/exporters/).
 
+Contingência usada nesta execução: o app esgotou a memória em emulação. Sua imagem é construída nativamente na VPS a partir do mesmo `git archive` sem segredos, com limites explícitos de CPU/RAM/swap, sem alterar serviços ativos. Continua sendo exceção para esta instalação própria, não publicação oficial de upstream. Worker/agendador mantêm os artefatos amd64 construídos localmente. Registrar separadamente o resultado de cada build; não esconder a falha anterior.
+
 ## Aplicação na VPS
 
 Transportar somente artefatos com checksum conferido. Criar um override dedicado, sem segredos, que fixe as três referências locais e `pull_policy: never`. Não editar `.env` para trocar imagens. Guardar a configuração anterior e usar o compose/proxy realmente encontrados na instalação; se for Traefik, preservar obrigatoriamente os dois arquivos descritos em `docs/runbooks/deploy.md`, além do override.
