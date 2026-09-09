@@ -143,6 +143,14 @@ export const GRUPO_NO_RODAPE: NavGroupId = "organizacao";
  * fechada e por isso não vira `minRole`.
  */
 export const NAV_DESTINATIONS: NavDestination[] = [
+  {
+    href: "/app",
+    label: "Visão geral",
+    description: "Conversas, tarefas e oportunidades: o próximo passo do seu negócio.",
+    icon: Gauge,
+    group: "atendimento",
+    // Entrada transversal, desenhada antes dos grupos pelo Sidebar.
+  },
   // ---- Atendimento — onde o operador passa o dia ----
   {
     href: "/app/inbox",

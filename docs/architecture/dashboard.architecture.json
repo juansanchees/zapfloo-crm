@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Dashboard de operação",
+    "subtitle": "Visão geral com dados reais e ações canônicas",
+    "output": "dashboard.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    {
+      "id": "ui",
+      "label": "Interface"
+    },
+    {
+      "id": "api",
+      "label": "APIs existentes"
+    }
+  ],
+  "mainPath": [
+    "nav",
+    "dashboard",
+    "reads",
+    "dashboard",
+    "destinations"
+  ],
+  "nodes": [
+    {
+      "id": "nav",
+      "lane": "ui",
+      "col": 1,
+      "type": "service",
+      "label": "Registro de navegação / Sidebar / busca global"
+    },
+    {
+      "id": "dashboard",
+      "lane": "ui",
+      "col": 2,
+      "type": "service",
+      "label": "/app / Dashboard + useDashboard / cache por identidade e tenant"
+    },
+    {
+      "id": "reads",
+      "lane": "api",
+      "col": 3,
+      "type": "api",
+      "label": "counts, conversations, metrics/attendants, tasks, ai/agents; guards e escopo existentes"
+    },
+    {
+      "id": "destinations",
+      "lane": "ui",
+      "col": 4,
+      "type": "service",
+      "label": "Inbox, tarefas, agentes, funis, agenda e radar"
+    },
+    {
+      "id": "complete",
+      "lane": "api",
+      "col": 4,
+      "type": "api",
+      "label": "PATCH tasks/:id / guard + atualização + audit existentes"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "nav",
+      "to": "dashboard",
+      "label": "Visão geral acessível sem remover menus"
+    },
+    {
+      "id": "e2",
+      "from": "dashboard",
+      "to": "reads",
+      "label": "GET com permissões; consulta periódica a cada 30s enquanto visível"
+    },
+    {
+      "id": "e3",
+      "from": "reads",
+      "to": "dashboard",
+      "label": "Dados reais ou erro independente com tentativa manual"
+    },
+    {
+      "id": "e4",
+      "from": "dashboard",
+      "to": "destinations",
+      "label": "Próximo passo explícito e deep link da conversa"
+    },
+    {
+      "id": "e5",
+      "from": "dashboard",
+      "to": "complete",
+      "label": "Checkbox de conclusão somente para agent ou superior"
+    },
+    {
+      "id": "e6",
+      "from": "complete",
+      "to": "dashboard",
+      "label": "Sucesso invalida cache; falha preserva tarefa e mostra erro"
+    }
+  ],
+  "non_connections": [
+    "Não envia mensagens nem chama modelos de IA.",
+    "Não cria APIs, migrations ou privilégios; não altera login ou onboarding.",
+    "Não estima receita, conversão ou tempo médio sem fonte. Oportunidades ganhas usa janela existente de 30 dias."
+  ]
+}

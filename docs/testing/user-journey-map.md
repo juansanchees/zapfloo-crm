@@ -1827,3 +1827,6 @@ COLUMN`, `UPDATE`, `ALTER COLUMN`, um bloco `DO` com `pg_constraint`), e
 `scripts/test-db.sh` já sobe `pgvector/pgvector:pg15` — os `pnpm test:db`
 anteriores desta sessão já corriam contra o piso certo, mesmo antes deste
 achado.
+# Visão geral — redesign de 2026-09-09
+
+Prova local: `tests/e2e/navegacao.spec.ts`, caso “visão geral usa dados locais reais e preserva navegação no desktop e celular”. Entrar → Visão geral → conferir contagem contra API autenticada → abrir fila → voltar → abrir tarefas em celular. Menu em 1280×900 e gaveta em 390 px também aprovados. Evidências e limites em `docs/testing/dashboard-redesign.md`. Nenhum envio WhatsApp ou publicação.

@@ -82,6 +82,35 @@ async function expectSemOverflowHorizontal(page: Page, contexto: string): Promis
 test.describe.configure({ timeout: 120_000 });
 
 test.describe("navegação agrupada", () => {
+  test("visão geral usa dados locais reais e preserva navegação no desktop e celular", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await loginAdmin(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await sidebar(page).getByRole("link", { name: "Visão geral", exact: true }).click();
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();
+    const counts = await page.request.get("/api/v1/conversations/counts");
+    expect(counts.ok()).toBe(true);
+    const { data } = await counts.json();
+    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(String(data.all));
+    await expect(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Visão geral" })).toHaveAttribute("aria-current", "page");
+    await expectSemOverflowHorizontal(page, "dashboard desktop");
+    await expect(page.getByRole("status")).toHaveCount(0);
+    await page.screenshot({ path: path.join(EVIDENCE, "dashboard-desktop.png"), fullPage: true });
+    await page.getByRole("link", { name: "Abrir fila", exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/inbox\?filter=unassigned$/);
+    await expect(sidebar(page).getByRole("link", { name: "Visão geral" })).not.toHaveAttribute("aria-current");
+    await page.goto("/app");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();
+    await expectSemOverflowHorizontal(page, "dashboard mobile");
+    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(String(data.all));
+    await expect(page.getByRole("status")).toHaveCount(0);
+    await page.screenshot({ path: path.join(EVIDENCE, "dashboard-mobile.png"), fullPage: true });
+    await page.getByRole("link", { name: "Ver tarefas", exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/tasks$/);
+  });
+
   test("o sidebar tem hierarquia: grupos na ordem de uso", async ({ page }) => {
     await loginAdmin(page);
 

@@ -16,6 +16,7 @@ ser fonte sem ninguém decidir isso.
 
 | arquivo | escopo |
 |---|---|
+| `dashboard.architecture.json` | Visão geral: consultas autenticadas por escopo, próximos passos e conclusão canônica de tarefas; sem envios ou IA |
 | `teste-legado-isolado.architecture.json` | flag persistida bloqueia handlers MCP e eventos operacionais; recusa no trace e limites visíveis no TestPanel |
 | `onboarding-rascunho.architecture.json` | salvamento preparatório e retomada; revisão concorrente, autorização, auditoria e ausência deliberada de criação/publicação |
 | `onboarding-preparacao.architecture.json` | versão inativa com CAS/snapshot, modelo explícito e auditoria; consumida pelo painel setup-ai |
