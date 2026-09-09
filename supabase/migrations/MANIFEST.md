@@ -266,6 +266,7 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260908213253` | `0224_onboarding_concluir_restrito` | Confirma a revisão sem ativar e, em ação explícita separada, publica exatamente a versão ensaiada somente em canal WORKING com allowlist pré-go-live não vazia. Retry histórico idempotente, RPCs exclusivas de service role e nenhum envio/evento proativo. |
 | `20260908222232` | `0225_onboarding_concluir_fail_closed` | Forward-fix da conclusão restrita: chaves JSON ausentes falham fechadas; credencial válida mais recente da organização precede a chave da instalação sem alterar a versão selecionada; retry mantém campos canônicos e hash verificados entre recibo e audit. Mesma RPC service-only, sem ampliar ativação ou publicar para canal aberto. |
 | `20260908224839` | `0226_onboarding_business_goal` | Objetivo opcional no rascunho e segmento no snapshot de negócio; mudanças exigem novo ensaio. Sem backfill, preservando configuração antiga e assinaturas service-only. |
+| `20260909130000` | `0227_user_dashboard_preferences` | Layout pessoal versionado do dashboard, com ordem, visibilidade e tamanho; RLS limita cada linha ao próprio usuário dentro de organização ativa. |
 
 ## Tables created (33 total, all RLS enabled)
 

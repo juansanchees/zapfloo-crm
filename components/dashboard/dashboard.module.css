@@ -23,6 +23,12 @@
   gap: 24px;
   margin-bottom: 28px;
 }
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
 .eyebrow {
   font-size: 0.65rem;
   font-weight: 600;
@@ -43,7 +49,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
-  margin-bottom: 24px;
+  margin: 0;
 }
 .stat,
 .panel {
@@ -82,14 +88,46 @@
 }
 .columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: 22px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+.columns > .error,
+.columns > .muted {
+  grid-column: 1 / -1;
+}
+.preferenceError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-error-fg);
+  background: var(--color-error-bg);
+  border: 1px solid color-mix(in srgb, var(--color-error-fg) 20%, transparent);
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 0.8rem;
 }
 .stack {
-  display: grid;
-  gap: 22px;
-  align-content: start;
+  display: contents;
+}
+.widgetSlot {
   min-width: 0;
+}
+.widgetSlot > * {
+  height: 100%;
+}
+.size_small {
+  grid-column: span 3;
+}
+.size_medium {
+  grid-column: span 4;
+}
+.size_wide {
+  grid-column: span 8;
+}
+.size_full {
+  grid-column: 1 / -1;
 }
 .panel {
   padding: 22px;
@@ -289,6 +327,25 @@
 .total strong {
   color: var(--color-text);
 }
+.conversionMetric {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 8px 0 24px;
+}
+.conversionMetric strong {
+  color: var(--color-accent);
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 650;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+}
+.conversionMetric span {
+  max-width: 15rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
 .empty {
   color: var(--color-text-muted);
   font-size: 0.8rem;
@@ -322,8 +379,12 @@
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .columns {
-    grid-template-columns: 1fr;
+  .size_small,
+  .size_medium {
+    grid-column: span 6;
+  }
+  .size_wide {
+    grid-column: 1 / -1;
   }
 }
 @media (max-width: 600px) {
@@ -334,6 +395,20 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 18px;
+  }
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .columns {
+    grid-template-columns: 1fr;
+  }
+  .size_small,
+  .size_medium,
+  .size_wide,
+  .size_full {
+    grid-column: 1;
   }
   .stats {
     gap: 10px;

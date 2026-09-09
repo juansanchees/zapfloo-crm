@@ -12,6 +12,17 @@ A cor segue o resolvedor canônico de marca. A configuração operacional da ins
 - Typecheck: exit 0. Lint dos arquivos afetados: zero erros; aviso preexistente no Sidebar permanece.
 - 103 testes focados em sete arquivos: aprovados. Incluem contraste, régua gerada, marca dinâmica e tema claro escopável. Novo teste de textos secundários falhava na paleta anterior e passa na atual, com piso 4,5:1.
 - Jornada local PT/ES: aprovada, sem chamadas reais de IA nem envio WhatsApp. Evidência visual em `evidence/onboarding-jornada/`; testes de largura verificam ausência de rolagem horizontal no fluxo mobile.
+- Tema claro/escuro e idioma foram conferidos nas capturas
+  `evidence/onboarding-jornada/login-pt-BR-light.png`,
+  `evidence/onboarding-jornada/login-pt-BR-dark.png`,
+  `evidence/onboarding-jornada/login-es-light.png`,
+  `evidence/onboarding-jornada/login-es-dark.png`,
+  `evidence/onboarding-jornada/inbox-pt-BR-light.png`,
+  `evidence/onboarding-jornada/inbox-pt-BR-dark.png`,
+  `evidence/onboarding-jornada/inbox-es-light.png`,
+  `evidence/onboarding-jornada/inbox-es-dark.png`,
+  `evidence/onboarding-jornada/agente-pt-BR-celular-dark.png` e
+  `evidence/onboarding-jornada/agente-es-celular-dark.png`.
 - Suítes globais não repetidas, conforme escopo essencial autorizado. Não se afirma ausência de todos os bugs.
 
 ## Publicação e recuperação

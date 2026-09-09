@@ -19,6 +19,11 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  lerModoDeAcessoDaIa,
+  lerNumerosDeTeste,
+  type AiAccessMode,
+} from "@/lib/ai/elegibilidade/pre-go-live";
 import { nomeDoCanal } from "@/lib/channels/estado";
 
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "./archived";
@@ -29,9 +34,12 @@ export interface SelectableChannel {
   display_name: string;
   status: string;
   phone_number: string | null;
+  /** Projeção segura: o metadata bruto nunca atravessa a fronteira server/client. */
+  ai_access_mode: AiAccessMode;
+  ai_test_phone_count: number;
 }
 
-const COLUNAS = "id, display_name, status, phone_number, waha_session_name";
+const COLUNAS = "id, display_name, status, phone_number, waha_session_name, metadata";
 
 interface LinhaCanal {
   id: string;
@@ -39,6 +47,7 @@ interface LinhaCanal {
   status: string;
   phone_number: string | null;
   waha_session_name: string | null;
+  metadata?: unknown;
 }
 
 /**
@@ -72,5 +81,7 @@ export async function listSelectableChannels(
     display_name: nomeDoCanal(c),
     status: c.status,
     phone_number: c.phone_number ?? null,
+    ai_access_mode: lerModoDeAcessoDaIa(c.metadata),
+    ai_test_phone_count: lerNumerosDeTeste(c.metadata).length,
   }));
 }

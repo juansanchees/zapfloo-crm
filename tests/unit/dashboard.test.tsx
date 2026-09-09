@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Dashboard } from "@/components/dashboard/Dashboard";
@@ -13,6 +13,8 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({ useAuth: () => auth }));
 
 let failCounts = false;
 let failPatch = false;
+let failPreferences = false;
+let failPreferenceSave = false;
 let taskDone = false;
 let taskLimitReached = false;
 let requests: string[] = [];
@@ -35,6 +37,8 @@ beforeEach(() => {
   auth.activeOrg.role = "admin";
   failCounts = false;
   failPatch = false;
+  failPreferences = false;
+  failPreferenceSave = false;
   taskDone = false;
   taskLimitReached = false;
   requests = [];
@@ -73,7 +77,16 @@ beforeEach(() => {
             },
           ],
         });
-      if (url.includes("/tasks")) return Response.json({ data: { tasks: taskDone ? [] : taskLimitReached ? Array.from({ length: 500 }, (_, i) => ({ ...task, id: `task-${i}` })) : [task] } });
+      if (url.includes("/tasks"))
+        return Response.json({
+          data: {
+            tasks: taskDone
+              ? []
+              : taskLimitReached
+                ? Array.from({ length: 500 }, (_, i) => ({ ...task, id: `task-${i}` }))
+                : [task],
+          },
+        });
       if (url.includes("/metrics/attendants"))
         return Response.json({
           data: {
@@ -105,6 +118,19 @@ beforeEach(() => {
             },
           ],
         });
+      if (url.includes("/dashboard/preferences")) {
+        if (failPreferences && (init?.method ?? "GET") === "GET")
+          return new Response(
+            JSON.stringify({ error: { code: "internal_error", message: "Falha de leitura" } }),
+            { status: 500 },
+          );
+        if (failPreferenceSave && init?.method === "PUT")
+          return new Response(
+            JSON.stringify({ error: { code: "internal_error", message: "Falha ao salvar" } }),
+            { status: 500 },
+          );
+        return Response.json({ data: { layout: null, source: "default" } });
+      }
       throw new Error(`Requisição inesperada no teste: ${url}`);
     }),
   );
@@ -179,5 +205,33 @@ describe("Dashboard operacional", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("checkbox")).not.toBeChecked();
     expect(screen.getByText("Revisar proposta")).toBeInTheDocument();
+  });
+  it("oferece personalização do painel sem esconder os dados reais", async () => {
+    mount();
+    await screen.findByText("Contato teste");
+
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    expect(dialog).toBeVisible();
+    expect(within(dialog).getByText("Resumo de conversas")).toBeVisible();
+    expect(within(dialog).getByText("Clientes que precisam de atenção")).toBeVisible();
+  });
+  it("mantém o padrão visível e informa quando a preferência não carrega", async () => {
+    failPreferences = true;
+    mount();
+    expect(await screen.findByText("Contato teste")).toBeVisible();
+    expect(screen.getByText("Não foi possível carregar sua personalização.")).toBeVisible();
+  });
+  it("mantém o personalizador aberto e informa quando salvar falha", async () => {
+    failPreferenceSave = true;
+    mount();
+    await screen.findByText("Contato teste");
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Salvar painel" }));
+    await waitFor(() => expect(requests).toContain("PUT /api/v1/dashboard/preferences"));
+    expect(await within(dialog).findByText("Não foi possível salvar o painel.")).toBeVisible();
+    expect(dialog).toBeVisible();
   });
 });

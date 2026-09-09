@@ -404,7 +404,7 @@ jobs:
       SPECS_PARTE_3: >-
         agente-novo-e-uso.spec.ts capacidades-do-agente.spec.ts
         followup-builder.spec.ts i18n-espanhol-na-tela.spec.ts
-        marca-logo.spec.ts navegacao.spec.ts prova-painel-provedores.spec.ts
+        marca-logo.spec.ts navegacao.spec.ts prova-painel-provedores.spec.ts redesign-operacional.spec.ts
         icone-da-marca.spec.ts reset-password-mfa.spec.ts signup-journey.spec.ts
         smoke.spec.ts
       # `moeda-da-organizacao` entrou na PARTE_2 em 2026-09-04, ao lado de

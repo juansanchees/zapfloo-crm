@@ -40,9 +40,13 @@ describe("configuração de acesso da IA", () => {
     expect(requireRole).toHaveBeenCalledWith("admin", expect.objectContaining({ allowPlatformAdmin: true }));
     expect(createAdminClient).not.toHaveBeenCalled();
   });
-  it("retorna somente modo e telefones, com escopo de organização e canal ativo", async () => {
+  it("retorna somente acesso e sua revisão, com escopo de organização e canal ativo", async () => {
     const response = await GET(req(), context());
-    expect((await response.json()).data).toEqual({ mode: "pre_go_live", test_phone_numbers: [telefone] });
+    expect((await response.json()).data).toEqual({
+      mode: "pre_go_live",
+      test_phone_numbers: [telefone],
+      access_revision: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
     expect(filters).toEqual({ organization_id: org, id: canal, archived_at: null });
     expect((await GET(req(), context(org))).status).toBe(404);
   });

@@ -11,7 +11,17 @@ export default defineConfig([
   // `node_modules/` próprios) — nunca fonte deste repo; lintá-los explode o eslint
   // com dezenas de milhares de falsos positivos em JS gerado. (Na CI, checkout
   // limpo, o diretório nem existe.)
-  globalIgnores([".next/", "node_modules/", "dist/", "supabase/", "next-env.d.ts", ".claude/worktrees/"]),
+  globalIgnores([
+    ".next/",
+    "node_modules/",
+    "dist/",
+    "supabase/",
+    "next-env.d.ts",
+    ".claude/worktrees/",
+    // Evidências e helpers descartáveis do fluxo local; não pertencem ao
+    // código versionado e podem conter scripts CommonJS gerados por uma sessão.
+    ".superpowers/",
+  ]),
   nextPlugin.configs["core-web-vitals"],
   reactHooks.configs.flat.recommended,
   ...tseslint.configs.recommended,

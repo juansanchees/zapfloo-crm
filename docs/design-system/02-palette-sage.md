@@ -1,8 +1,28 @@
-# 02 — Paleta Sage
+# 02 — Papéis de cor e fallback Sage
 
 > **Source of truth:** `app/design/lib/tokens.ts` → `PALETTES.sage`
 
-## Filosofia da paleta
+## Regra principal
+
+A interface não pertence a uma marca fixa. O accent é resolvido em runtime pela
+instalação/organização; Sage é o fallback seguro quando nenhuma personalização
+válida está disponível. Nunca codifique o roxo de uma instalação ou o Sage como
+identidade obrigatória.
+
+Os quatro papéis estruturais são:
+
+| Token | Light | Dark | Responsabilidade |
+|---|---|---|---|
+| `--color-shell` | `#12131a` | `#090a0f` | moldura de navegação, não conteúdo |
+| `--color-workspace` | `#f5f7fb` | `#111114` | fundo das telas de trabalho |
+| `--color-panel` | `#ffffff` | `#19191e` | cards, tabelas e toolbars |
+| `--color-panel-muted` | `#f0f2f7` | `#24242b` | grupos, linhas alternadas e filtros |
+
+O shell grafite é neutro e estável. `--color-accent` entra apenas em ação
+primária, foco, seleção e pequenos indicadores. Essa separação permite que cada
+instalação tenha identidade própria sem perder contraste e legibilidade.
+
+## Filosofia do fallback Sage
 
 Sage é verde-erva desaturado: o suficiente pra ter personalidade vegetal, longe o suficiente pra não evocar o cliché "wellness/saúde mental". O DeskcommCRM é uma ferramenta de **trabalho operacional**, e Sage projeta:
 
@@ -138,17 +158,17 @@ Validações realizadas pela paleta:
 - Componentes não-textuais (borders, ícones): AA UI mínimo (3:1).
 - Nunca usar `text-muted` para texto em prosa longa (apenas labels, helpers, timestamps).
 
-## Anti-padrões — como NÃO usar Sage
+## Anti-padrões — como NÃO usar cor de marca
 
 ❌ **Saturar accent além de 600.** Stops 700–950 só pra texto em fundo claro accent, nunca como bg de área grande.
 
-❌ **Accent como bg de toda a sidebar.** Sidebar é greige (`surface` ou `surface-elevated`). Accent na sidebar fica como hover-state e active-state apenas.
+❌ **Accent como bg de toda a sidebar.** A sidebar usa `--color-shell`. Accent fica no item ativo, foco e ação global.
 
 ❌ **Accent em texto de longa leitura.** Body de e-mail, descrição de pedido, prosa de doc — tudo `text` (`#1c1a16`). Accent só em link, label de status, ações.
 
 ❌ **`#000` ou `#fff` puro.** Texto preto puro contra bg warm-offwhite cria vibração; use `#1c1a16` e `#faf9f6`.
 
-❌ **Misturar Sage com cores fora dos estados.** Não importe roxo, azul-bandeira, ciano — não fazem parte do sistema. Se precisa diferenciar tags do usuário, use stops do greige + 1 acento; se precisa de cores categóricas (gráfico), abrir RFC.
+❌ **Fixar a cor de um cliente no produto.** Roxo, azul ou Sage só podem aparecer como accent resolvido ou estado semântico documentado. Cores categóricas de gráfico exigem contraste e legenda textual.
 
 ❌ **Gradients accent → accent.** Sage não usa gradients; use solid + shadow se precisar profundidade.
 

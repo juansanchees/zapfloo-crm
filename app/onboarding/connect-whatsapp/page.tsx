@@ -7,7 +7,7 @@ import { traduzir } from "@/lib/i18n/dicionario";
 import Link from "next/link";
 import { lerJornada } from "@/lib/onboarding/jornada";
 import { createClient } from "@/lib/supabase/server";
-import { lerModoDeAcessoDaIa, lerNumerosDeTeste } from "@/lib/ai/elegibilidade/pre-go-live";
+import { listSelectableChannels } from "@/lib/channels/selectable";
 import { confirmarAgenteRevisadoSchema } from "@/lib/onboarding/concluir";
 import { AutorizacaoRestrita } from "./_autorizacao";
 import { ExplorarCrm } from "../_components/ExplorarCrm";
@@ -33,7 +33,13 @@ export default async function ConnectWhatsappPage() {
   const reference = confirmarAgenteRevisadoSchema.safeParse({ expected_context: context, expected_revision: state.ai.revision, expected_version_id: state.ai.version_id, run_id: state.ai.run_id });
   if (!reference.success) return <section className="space-y-4"><h2>{traduzir("Seu agente já foi configurado", idioma)}</h2><p>{traduzir("Continue pelo CRM para gerenciar os canais existentes.", idioma)}</p><ExplorarCrm /></section>;
   const supabase = await createClient();
-  const { data: channels, error } = await supabase.from("channel_sessions").select("id,display_name,status,metadata").eq("organization_id", activeOrg.orgId).is("archived_at", null).order("created_at");
+  let channels: Awaited<ReturnType<typeof listSelectableChannels>> = [];
+  let channelsError = false;
+  try {
+    channels = await listSelectableChannels(supabase, activeOrg.orgId);
+  } catch {
+    channelsError = true;
+  }
 
   const wahaConfigured = getWahaClient() !== null;
 
@@ -62,7 +68,7 @@ export default async function ConnectWhatsappPage() {
         sessionName={`org_${activeOrg.orgId.slice(0, 8)}`}
         oficialPodeReceber={oficialPodeReceber}
       />
-      {error ? <p role="alert">{traduzir("Não foi possível carregar os canais. Recarregue a página.", idioma)}</p> : <AutorizacaoRestrita key={activeOrg.orgId} reference={reference.data} channels={(channels ?? []).map((c, index) => ({ id: c.id, name: c.display_name ?? `${traduzir("Canal", idioma)} ${index + 1}`, status: c.status, mode: lerModoDeAcessoDaIa(c.metadata), count: lerNumerosDeTeste(c.metadata).length }))} />}
+      {channelsError ? <p role="alert">{traduzir("Não foi possível carregar os canais. Recarregue a página.", idioma)}</p> : <AutorizacaoRestrita key={activeOrg.orgId} reference={reference.data} channels={channels.map((c, index) => ({ id: c.id, name: c.display_name || `${traduzir("Canal", idioma)} ${index + 1}`, status: c.status, mode: c.ai_access_mode, count: c.ai_test_phone_count }))} />}
     </div>
   );
 }

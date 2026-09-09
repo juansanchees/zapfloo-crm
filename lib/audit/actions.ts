@@ -446,6 +446,12 @@ export const AUDIT_ACTIONS = [
   "crm_task.created",
   "crm_task.updated",
   "crm_task.deleted",
+
+  // Preferência pessoal de apresentação. O audit guarda apenas versão e
+  // quantidade de widgets — nunca o conteúdo visual recebido do cliente.
+  "dashboard.preferences_updated",
+  "dashboard.preferences_reset",
+  "copilot.tool_consulted",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

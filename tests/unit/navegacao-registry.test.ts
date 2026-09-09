@@ -4,6 +4,8 @@ import {
   NAV_DESTINATIONS,
   NAV_GROUPS,
   canSee,
+  compactAreaForPath,
+  compactAreas,
   hubSections,
   searchable,
   sidebarGroups,
@@ -141,6 +143,64 @@ describe("sidebarGroups", () => {
   });
 });
 
+describe("compactAreas", () => {
+  it("reduz o menu de admin às oito portas aprovadas", () => {
+    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+
+    expect(areas.map((area) => [area.position, area.label, area.href])).toEqual([
+      ["main", "Início", "/app"],
+      ["main", "Conversas", "/app/inbox"],
+      ["main", "Funis", "/app/kanban"],
+      ["main", "Contatos", "/app/contacts"],
+      ["main", "Agentes de IA", "/app/ai"],
+      ["main", "Relatórios", "/app/analise"],
+      ["footer", "Agenda", "/app/agenda"],
+      ["footer", "Configurações", "/app/settings"],
+    ]);
+  });
+
+  it("expõe as telas retiradas do sidebar como abas contextuais", () => {
+    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+    const abas = (rotulo: string) =>
+      areas.find((area) => area.label === rotulo)?.tabs.map((tab) => [tab.label, tab.href]);
+
+    expect(abas("Conversas")).toEqual([
+      ["Conversas", "/app/inbox"],
+      ["Precisam de atenção", "/app/radar"],
+      ["Respostas rápidas", "/app/templates"],
+    ]);
+    expect(abas("Funis")).toEqual([
+      ["Meus funis", "/app/kanban"],
+      ["Produtos", "/app/products"],
+      ["Etapas do funil", "/app/settings/tenant/pipelines"],
+    ]);
+    expect(abas("Agenda")).toEqual([
+      ["Compromissos", "/app/agenda"],
+      ["Tarefas", "/app/tasks"],
+    ]);
+  });
+
+  it("mantém o mesmo filtro de permissão do registro", () => {
+    const viewer = compactAreas(VIEWER.platform, VIEWER.role);
+
+    expect(viewer.map((area) => area.label)).not.toContain("Agentes de IA");
+    expect(
+      viewer.find((area) => area.label === "Configurações")?.tabs.map((tab) => tab.href),
+    ).not.toContain("/app/connections");
+    expect(viewer.find((area) => area.label === "Configurações")?.healthDot).toBe(false);
+    expect(
+      compactAreas(ADMIN.platform, ADMIN.role).find(
+        (area) => area.label === "Configurações",
+      )?.healthDot,
+    ).toBe(true);
+  });
+
+  it("mantém Contatos ativo também no detalhe de uma pessoa", () => {
+    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+    expect(compactAreaForPath("/app/contacts/contato-1", areas)?.id).toBe("contatos");
+  });
+});
+
 describe("hubSections", () => {
   it("o hub do CRM é inventário: as cinco telas do grupo, nas duas seções", () => {
     // As seções são a régua do sidebar escrita por extenso — o que se abre todo
@@ -157,9 +217,14 @@ describe("hubSections", () => {
     ]);
   });
 
-  it("agrupa a IA nas três etapas da jornada, na ordem", () => {
+  it("separa o copiloto das três etapas de configuração do agente", () => {
     const secoes = hubSections("ia", true, null).map((s) => s.section);
-    expect(secoes).toEqual(["Montar o agente", "Ensinar o agente", "Acompanhar o agente"]);
+    expect(secoes).toEqual([
+      "Trabalhar com a IA",
+      "Montar o agente",
+      "Ensinar o agente",
+      "Acompanhar o agente",
+    ]);
   });
 
   it("o hub mostra também o que já está no sidebar — é inventário, não sobra", () => {

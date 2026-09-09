@@ -35,6 +35,10 @@
   --color-bg: #faf9fc;
   --color-surface: #ffffff;
   --color-surface-elevated: #f3f1f7;
+  --color-shell: #12131a;
+  --color-workspace: #f5f7fb;
+  --color-panel: #ffffff;
+  --color-panel-muted: #f0f2f7;
   --color-overlay: rgba(28, 26, 22, 0.42);
 
   /* Text (light) */
@@ -253,6 +257,10 @@
   --color-bg: #faf9fc;
   --color-surface: #ffffff;
   --color-surface-elevated: #f3f1f7;
+  --color-shell: #12131a;
+  --color-workspace: #f5f7fb;
+  --color-panel: #ffffff;
+  --color-panel-muted: #f0f2f7;
   --color-overlay: rgba(28, 26, 22, 0.42);
   --color-text: #24212c;
   --color-text-muted: #575161;
@@ -331,6 +339,10 @@
   --color-bg: #111114;
   --color-surface: #19191e;
   --color-surface-elevated: #24242b;
+  --color-shell: #090a0f;
+  --color-workspace: #111114;
+  --color-panel: #19191e;
+  --color-panel-muted: #24242b;
   --color-overlay: rgba(0, 0, 0, 0.55);
 
   /* Text (dark) */
@@ -458,6 +470,10 @@
   --color-surface: var(--color-surface);
   --color-surface-elevated: var(--color-surface-elevated);
   --color-overlay: var(--color-overlay);
+  --color-shell: var(--color-shell);
+  --color-workspace: var(--color-workspace);
+  --color-panel: var(--color-panel);
+  --color-panel-muted: var(--color-panel-muted);
 
   --color-text: var(--color-text);
   --color-text-muted: var(--color-text-muted);

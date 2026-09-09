@@ -1366,6 +1366,10 @@ helper numa spec nova: `test.describe.configure({ timeout: 120_000 })`.
 
 ## O menu inteiro cabe na dobra de um notebook? (2026-09-04)
 
+> **Histórico substituído em 2026-09-09:** os grupos expansíveis abaixo eram a
+> etapa anterior. A navegação atual usa oito portas e uma barra contextual;
+> a prova vigente está na seção seguinte.
+
 Origem: PR #546 pôs a tela de **Tarefas** no grupo CRM e o menu passou a rolar.
 Medido pela tela, 1280×900, logado como admin: `nav.scrollHeight` **776** contra
 **763** de altura útil — **13px** de excesso, 19 links, 5 grupos. Nenhum título
@@ -1389,6 +1393,23 @@ grupo IA já usava.
 grampeado no `clientHeight`, então "excesso 0" e "sobra 200px" dão o MESMO número.
 Quem quiser saber quanta folga restou tem de medir o `bottom` do último filho
 contra a caixa de conteúdo da `<nav>` — foi assim que os 19px saíram.
+
+## O menu compacto preserva todas as portas? (2026-09-09)
+
+Origem: aprovação visual do proprietário para reduzir a barra lateral a Início,
+Conversas, Funis, Contatos, Agentes de IA, Relatórios, Agenda e Configurações.
+As telas secundárias continuam no registro canônico e aparecem na barra da área,
+nos hubs completos ou no ⌘K.
+
+| caso | prioridade | estado |
+|---|---|---|
+| Admin vê exatamente seis portas principais e duas no rodapé | `[P1]` | **COBERTO em unitário** por `tests/unit/sidebar-grupos.test.tsx`; prova visual E2E pendente nesta execução |
+| Radar e Respostas rápidas ficam dentro de Conversas | `[P1]` | **COBERTO em unitário** por `tests/unit/area-navigation.test.tsx`; jornada visual em `tests/e2e/navegacao.spec.ts` |
+| Produtos e Etapas do funil continuam alcançáveis por Funis | `[P1]` | **COBERTO em unitário e E2E**; as rotas e permissões não mudam |
+| Conexões e Integrações ficam dentro de Configurações e respeitam o papel | `[P1]` | **COBERTO em unitário e E2E**; viewer não recebe os atalhos de admin/manager |
+| A área pai continua destacada numa rota secundária | `[P1]` | **COBERTO em unitário** para Radar e Tarefas |
+| Desktop e mobile não alargam a página | `[P1]` | **JORNADA ATUALIZADA**, medição pela interface pendente nesta execução |
+
 
 ## O inbox em tempo real — o defeito que veio de fora (2026-08-24)
 
@@ -1830,3 +1851,19 @@ achado.
 # Visão geral — redesign de 2026-09-09
 
 Prova local: `tests/e2e/navegacao.spec.ts`, caso “visão geral usa dados locais reais e preserva navegação no desktop e celular”. Entrar → Visão geral → conferir contagem contra API autenticada → abrir fila → voltar → abrir tarefas em celular. Menu em 1280×900 e gaveta em 390 px também aprovados. Evidências e limites em `docs/testing/dashboard-redesign.md`. Nenhum envio WhatsApp ou publicação.
+
+## Dashboard personalizável e copiloto — lote operacional de 2026-09-09
+
+| Caso | Expectativa | Prova |
+|---|---|---|
+| Personalizar o dashboard | ocultar, reordenar e redimensionar; salvar; recarregar e manter | `tests/e2e/redesign-operacional.spec.ts` |
+| Restaurar o padrão | remove somente a preferência da pessoa e volta ao catálogo canônico | `tests/e2e/redesign-operacional.spec.ts` + invariante de banco |
+| Falha ao carregar preferência | dashboard continua com default e oferece nova tentativa | `tests/unit/dashboard.test.tsx` |
+| Perguntar ao copiloto | página alcançável, resposta e fontes consultadas visíveis | `tests/e2e/redesign-operacional.spec.ts` |
+| Copiloto somente leitura | nenhuma ação de escrita aparece; allowlist recusa ferramentas fora do contrato | `tests/unit/copilot-page.test.tsx` + `lib/ai/copilot/tools.test.ts` |
+| Isolamento | usuário e organização não leem nem alteram layout alheio | `tests/invariants/user-dashboard-preferences.test.ts` |
+
+O Playwright intercepta apenas a chamada do modelo para produzir uma resposta
+determinística, sem consumir crédito nem expor dado real; autenticação, rota,
+navegação, persistência do dashboard e renderização continuam reais. A suíte não
+prova qualidade semântica de um provedor externo nem autoriza ações de escrita.

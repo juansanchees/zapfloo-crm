@@ -37,6 +37,12 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "RELACIONAMENTO": { es: "RELACIÓN CON CLIENTES" },
+  "OPERAÇÃO COMERCIAL": { es: "OPERACIÓN COMERCIAL" },
+  "AUTOMAÇÃO INTELIGENTE": { es: "AUTOMATIZACIÓN INTELIGENTE" },
+  "Acompanhe oportunidades e organize cada etapa da venda.": {
+    es: "Sigue las oportunidades y organiza cada etapa de la venta.",
+  },
   "Configurar chave de IA": { es: "Configurar clave de IA" },
   "Autorizar teste restrito": { es: "Autorizar prueba restringida" },
   "Conectar não ativa o agente. O último botão habilita respostas reais apenas para os números autorizados; ele não envia nenhuma mensagem.": { es: "Conectar no activa el agente. El último botón habilita respuestas reales solo para los números autorizados; no envía ningún mensaje." },
@@ -162,6 +168,18 @@ export const DICIONARIO: Traducoes = {
   Organização: { es: "Organización" },
 
   // ─── Navegação (a barra lateral, presente em toda tela) ───
+  "Agentes de IA": { es: "Agentes de IA" },
+  Conhecimento: { es: "Conocimiento" },
+  Relatórios: { es: "Informes" },
+  "Opções da área": { es: "Opciones del área" },
+  "Precisam de atenção": { es: "Necesitan atención" },
+  "Meus funis": { es: "Mis embudos" },
+  "Retomadas automáticas": { es: "Seguimientos automáticos" },
+  Distribuição: { es: "Distribución" },
+  Avançado: { es: "Avanzado" },
+  Compromissos: { es: "Citas" },
+  "Empresa e equipe": { es: "Empresa y equipo" },
+  "Conta e segurança": { es: "Cuenta y seguridad" },
   Inbox: { es: "Inbox" },
   Agenda: { es: "Agenda" },
   Radar: { es: "Radar" },
@@ -4840,7 +4858,6 @@ export const DICIONARIO: Traducoes = {
   },
 
   // ─── Onboarding: invite-team — ROTULO_DO_PAPEL (lib/auth/types.ts) ───
-  "Somente leitura": { es: "Solo lectura" },
   "Gerente": { es: "Gerente" },
   "Administrador": { es: "Administrador" },
 
@@ -7988,6 +8005,91 @@ export const DICIONARIO: Traducoes = {
   "Consultar radar": { es: "Consultar radar" },
   "Informações conforme suas permissões. Atualização automática a cada 30 segundos.": { es: "Información según tus permisos. Actualización automática cada 30 segundos." },
   "Conversas, tarefas e oportunidades: o próximo passo do seu negócio.": { es: "Conversaciones, tareas y oportunidades: el próximo paso de tu negocio." },
+
+  // ─── Painel personalizável e copiloto operacional ───
+  "Não foi possível analisar o CRM agora. Tente novamente.": { es: "No se pudo analizar el CRM ahora. Inténtalo de nuevo." },
+  "COPILOTO DA OPERAÇÃO": { es: "COPILOTO DE LA OPERACIÓN" },
+  "Pergunte à IA": { es: "Pregúntale a la IA" },
+  "Transforme os dados do seu CRM em prioridades claras para o time.": {
+    es: "Convierte los datos de tu CRM en prioridades claras para el equipo.",
+  },
+  "O que você quer entender hoje?": { es: "¿Qué quieres entender hoy?" },
+  "Eu consulto conversas, funis, agenda e clientes em risco sem alterar nenhum registro.": {
+    es: "Consulto conversaciones, embudos, agenda y clientes en riesgo sin modificar ningún registro.",
+  },
+  Copiloto: { es: "Copiloto" },
+  "Fontes consultadas": { es: "Fuentes consultadas" },
+  "Analisando as fontes do CRM…": { es: "Analizando las fuentes del CRM…" },
+  "Pergunta sobre o CRM": { es: "Pregunta sobre el CRM" },
+  "Ex.: quais oportunidades correm risco de esfriar esta semana?": {
+    es: "Ej.: ¿qué oportunidades corren riesgo de enfriarse esta semana?",
+  },
+  "Enviar pergunta": { es: "Enviar pregunta" },
+  "Quais clientes precisam de atenção hoje?": { es: "¿Qué clientes necesitan atención hoy?" },
+  "Resuma as oportunidades abertas por etapa.": { es: "Resume las oportunidades abiertas por etapa." },
+  "O que minha equipe deve priorizar agora?": { es: "¿Qué debe priorizar mi equipo ahora?" },
+  "Somente leitura": { es: "Solo lectura" },
+  "Personalizar painel": { es: "Personalizar panel" },
+  "Conversão do período": { es: "Conversión del período" },
+  "oportunidades ganhas entre as decisões registradas": {
+    es: "oportunidades ganadas entre las decisiones registradas",
+  },
+  "Abrir relatório completo": { es: "Abrir informe completo" },
+  "Clientes que precisam de atenção": { es: "Clientes que necesitan atención" },
+  "Consulte conversas sem resposta e oportunidades que podem esfriar.": {
+    es: "Consulta conversaciones sin respuesta y oportunidades que pueden enfriarse.",
+  },
+  "Escolha o que aparece, o tamanho dos blocos e a ordem do seu painel.": {
+    es: "Elige qué aparece, el tamaño de los bloques y el orden de tu panel.",
+  },
+  Exibir: { es: "Mostrar" },
+  "Tamanho de": { es: "Tamaño de" },
+  "Mover para cima": { es: "Mover hacia arriba" },
+  "Mover para baixo": { es: "Mover hacia abajo" },
+  "Restaurar padrão": { es: "Restaurar valores predeterminados" },
+  "Salvar painel": { es: "Guardar panel" },
+  Pequeno: { es: "Pequeño" },
+  Médio: { es: "Mediano" },
+  Largo: { es: "Grande" },
+  "Linha inteira": { es: "Fila completa" },
+  "Resumo de conversas": { es: "Resumen de conversaciones" },
+  "Volume registrado, fila e conversas atribuídas.": { es: "Volumen registrado, cola y conversaciones asignadas." },
+  "Fila de atendimento": { es: "Cola de atención" },
+  "Conversas esperando pelo próximo atendimento.": { es: "Conversaciones esperando la próxima atención." },
+  "Oportunidades por etapa": { es: "Oportunidades por etapa" },
+  "Distribuição atual das oportunidades no funil.": { es: "Distribución actual de las oportunidades en el embudo." },
+  "Proporção de oportunidades ganhas no intervalo.": { es: "Proporción de oportunidades ganadas en el intervalo." },
+  "Próximos compromissos": { es: "Próximas citas" },
+  "Tarefas e compromissos que pedem ação.": { es: "Tareas y citas que requieren acción." },
+  "Atalhos para os atendimentos mais recentes.": { es: "Accesos directos a las atenciones más recientes." },
+  "Agentes ativos": { es: "Agentes activos" },
+  "Agentes de IA disponíveis na organização.": { es: "Agentes de IA disponibles en la organización." },
+  "Atendimentos e oportunidades com risco de esfriar.": { es: "Atenciones y oportunidades con riesgo de enfriarse." },
+  "Muitas perguntas em pouco tempo. Aguarde um minuto e tente novamente.": {
+    es: "Demasiadas preguntas en poco tiempo. Espera un minuto e inténtalo de nuevo.",
+  },
+  "Configure uma credencial e um modelo de IA antes de usar o copiloto.": {
+    es: "Configura una credencial y un modelo de IA antes de usar el copiloto.",
+  },
+  "O orçamento de IA desta organização foi atingido.": { es: "Se alcanzó el presupuesto de IA de esta organización." },
+  "A IA não conseguiu formar uma resposta.": { es: "La IA no pudo formular una respuesta." },
+  "O provedor de IA recusou a credencial. Revise a configuração de IA.": {
+    es: "El proveedor de IA rechazó la credencial. Revisa la configuración de IA.",
+  },
+  "O provedor de IA informou limite ou saldo insuficiente.": {
+    es: "El proveedor de IA informó un límite o saldo insuficiente.",
+  },
+  "A análise demorou mais que o esperado. Tente uma pergunta mais curta.": {
+    es: "El análisis tardó más de lo esperado. Prueba con una pregunta más corta.",
+  },
+  "O provedor de IA está indisponível. Tente novamente em instantes.": {
+    es: "El proveedor de IA no está disponible. Inténtalo de nuevo en unos instantes.",
+  },
+  "Não foi possível concluir a análise.": { es: "No se pudo completar el análisis." },
+  "Não foi possível carregar sua personalização.": { es: "No se pudo cargar tu personalización." },
+  "Não foi possível salvar o painel.": { es: "No se pudo guardar el panel." },
+  "Não foi possível restaurar o painel.": { es: "No se pudo restaurar el panel." },
+  Oportunidades: { es: "Oportunidades" },
 };
 
 /**

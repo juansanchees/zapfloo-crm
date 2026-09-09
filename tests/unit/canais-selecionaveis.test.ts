@@ -161,6 +161,34 @@ describe("listSelectableChannels", () => {
     ]);
     expect((await listSelectableChannels(db, "org-1"))[0]?.display_name).toBe("Vendas");
   });
+
+  it("deriva a política de IA no servidor sem devolver metadata bruto ao navegador", async () => {
+    const { db } = fakeDb([
+      {
+        data: [
+          {
+            ...LINHA,
+            metadata: {
+              ai_gate: "allowlist",
+              ai_gate_mode: "pre_go_live",
+              ai_test_phone_numbers: ["+5511999998888"],
+              provider_secret: "nunca-pode-sair-do-servidor",
+            },
+          },
+        ],
+        error: null,
+      },
+    ]);
+
+    const canal = (await listSelectableChannels(db, "org-1"))[0];
+
+    expect(canal).toMatchObject({
+      ai_access_mode: "pre_go_live",
+      ai_test_phone_count: 1,
+    });
+    expect(canal).not.toHaveProperty("metadata");
+    expect(JSON.stringify(canal)).not.toContain("provider_secret");
+  });
 });
 
 /** Telas: onde um seletor de canal pode nascer. A API tem regras próprias. */

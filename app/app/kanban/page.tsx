@@ -6,6 +6,7 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { FunisClient, type FunilDaLista } from "./_client";
+import { OperationalPage } from "@/components/ui/operational-page";
 
 export const dynamic = "force-dynamic";
 
@@ -50,20 +51,21 @@ export default async function KanbanPickerPage() {
   const t = (texto: string) => traduzir(texto, idioma);
 
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <header className="flex items-center gap-3">
-        <Kanban size={28} className="text-muted-foreground" weight="duotone" />
-        {/* Era "Pipelines" — nome de quem construiu o sistema, não de quem
+    <OperationalPage
+      className="p-6"
+      eyebrow={t("OPERAÇÃO COMERCIAL")}
+      title={t("Funis")}
+      description={t("Acompanhe oportunidades e organize cada etapa da venda.")}
+      actions={<Kanban size={24} className="text-accent" weight="duotone" aria-hidden />}
+    >
+      {/* Era "Pipelines" — nome de quem construiu o sistema, não de quem
             vende. O comentário anterior aqui listava o preço de trocá-lo
             (`rbac-roles.spec.ts` e `invite-lifecycle.spec.ts`) e dizia que
             uniformizar era decisão do dono do produto. Ela foi tomada, e o preço
             era maior do que o comentário contava: são QUATRO assertions em TRÊS
             specs, e `pipelines-gestao.spec.ts` — a spec da própria feature que
             gerou o comentário — é uma delas. Todas atualizadas junto. */}
-        <h1 className="text-2xl font-semibold tracking-tight">{t("Funis")}</h1>
-      </header>
-
       <FunisClient funis={funis} podeGerenciar={podeGerenciar} podeImportar={podeImportar} />
-    </div>
+    </OperationalPage>
   );
 }

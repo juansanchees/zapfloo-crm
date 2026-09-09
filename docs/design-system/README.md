@@ -1,11 +1,11 @@
-# Design System DeskcommCRM — Documentação Canônica
+# Design System do produto — Documentação Canônica
 
-> **Versão:** v1.0 (lockada em 2026-04-28)
+> **Versão:** v2.0 (operacional, 2026-09-09)
 > **Status:** Ativa
-> **Direção:** Soft-tech / calmo, anti-genérico
-> **Stack visual:** Sage + Atkinson Hyperlegible + IBM Plex Mono + Aerada + Phosphor (duotone)
+> **Direção:** moldura grafite, workspace claro e marca configurável em runtime
+> **Stack visual:** cores semânticas + Atkinson Hyperlegible + IBM Plex Mono + densidade operacional + Phosphor
 
-Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda decisão de UI deve consultar estes documentos antes de implementação. Quando houver conflito entre código e doc, **a doc vence** — ajuste o código.
+Esta pasta é a **fonte canônica** da linguagem visual do produto white-label. Toda decisão de UI deve consultar estes documentos antes da implementação. O nome e o accent visíveis vêm do resolvedor de marca; nenhum cliente deve herdar uma marca fixa do código.
 
 ## Índice
 
@@ -13,7 +13,7 @@ Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda dec
 |---|-----------|-------------|
 | 00 | [Overview](./00-overview.md) | Filosofia, princípios, referências |
 | 01 | [Foundation Tokens](./01-foundation-tokens.md) | Spacing, radius, shadow, motion, z-index |
-| 02 | [Paleta Sage](./02-palette-sage.md) | 22 stops com hex (light + dark), estados, contraste |
+| 02 | [Papéis de cor e fallback Sage](./02-palette-sage.md) | shell, workspace, painéis, marca em runtime, estados e contraste |
 | 03 | [Tipografia](./03-typography.md) | Atkinson Hyperlegible, escala, IBM Plex Mono |
 | 04 | [Densidade Aerada](./04-density-aerada.md) | Row 56 / gap 24, quando overrider |
 | 05 | [Iconografia Phosphor](./05-iconography-phosphor.md) | Duotone, mapeamento por feature |
@@ -26,7 +26,9 @@ Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda dec
 
 | Decisão | Onde está canonizada | Quando consultar |
 |---------|----------------------|------------------|
-| Cor (hex, stop, estado) | `02-palette-sage.md` + `app/design/lib/tokens.ts` | Sempre que precisar referenciar uma cor |
+| Papel de cor, marca e estado | `02-palette-sage.md` + `app/globals.css` | Sempre que precisar referenciar uma cor |
+| Hierarquia das telas de trabalho | `components/ui/operational-page.tsx` | Cabeçalho, ações, filtros e conteúdo |
+| Métrica compacta | `components/ui/metric-card.tsx` | Dashboard e resumos operacionais |
 | Spacing / radius / shadow | `01-foundation-tokens.md` + `app/design/lib/tokens.ts` | Toda vez que escrever CSS de layout |
 | Tamanho/peso de texto | `03-typography.md` | Ao criar headers, body, dados, captions |
 | Altura de linha de inbox / kanban / tabela | `04-density-aerada.md` | Ao desenhar listas e grids |
@@ -45,5 +47,6 @@ Esta pasta é a **fonte canônica** da linguagem visual do DeskcommCRM. Toda dec
 
 ## Versionamento
 
-- **v1.0** (2026-04-28) — paleta Sage, tipografia Atkinson, densidade Aerada, iconografia Phosphor lockados.
+- **v1.0** (2026-04-28) — fallback Sage, tipografia Atkinson, densidade Aerada e iconografia Phosphor.
+- **v2.0** (2026-09-09) — separa moldura, workspace e painéis; torna o accent configurável em runtime; padroniza páginas operacionais.
 - Mudanças de versão maior exigem PR + revisão do design owner. Patches (ajuste de hex em ±2 luminosidade, novos ícones, novos exemplos de microcopy) podem ir direto.

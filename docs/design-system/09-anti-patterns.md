@@ -2,7 +2,7 @@
 
 > **Quando em dúvida, consulte aqui antes de implementar.** Cada item tem o "por quê" curto.
 
-Lista canônica do que **não fazer** no DeskcommCRM. Anti-patterns ficam aqui pra preservar identidade visual e evitar convergência ao padrão SaaS genérico.
+Lista canônica do que **não fazer** no produto white-label. Anti-patterns preservam clareza operacional sem impor a identidade de uma instalação às demais.
 
 ---
 
@@ -20,17 +20,17 @@ Lista canônica do que **não fazer** no DeskcommCRM. Anti-patterns ficam aqui p
 
 ---
 
-## 3. ❌ Gradient roxo/azul/rosa em hero ou primary button
+## 3. ❌ Gradient decorativo em primary button
 
 **Por quê:** símbolo do "AI SaaS 2024". Datado e clichê. Não combina com soft-tech calmo.
-**✅ Sim:** solid `accent-500` (Sage `#67885d`). Profundidade vem de border + shadow neutro, não gradient.
+**✅ Sim:** cor sólida de `--color-accent`, resolvida em runtime. Profundidade vem de borda e sombra neutra.
 
 ---
 
-## 4. ❌ `bg-zinc-900` ou `bg-slate-900` em dark mode
+## 4. ❌ Cinza arbitrário fora dos papéis semânticos
 
-**Por quê:** zinc/slate são cool-gray geométricos. A paleta é warm (greige). Misturar quebra coerência.
-**✅ Sim:** `bg: #161510` (warm dark canônico). Ver `02-palette-sage.md`.
+**Por quê:** misturar escalas utilitárias cria diferenças invisíveis no claro e gritantes no escuro.
+**✅ Sim:** `shell`, `workspace`, `panel`, `panel-muted`, `surface` e os tokens de texto/borda.
 
 ---
 
@@ -55,10 +55,10 @@ Lista canônica do que **não fazer** no DeskcommCRM. Anti-patterns ficam aqui p
 
 ---
 
-## 8. ❌ Sage accent como bg de toda a sidebar
+## 8. ❌ Accent como bg de toda a sidebar
 
-**Por quê:** a sidebar é greige (`surface` ou `surface-elevated`). Accent na sidebar fica saturado e cansa em 8h.
-**✅ Sim:** sidebar `surface`, com hover `accent-soft` em items de nav, active `accent-soft` + text `accent`.
+**Por quê:** a marca deixa de destacar ações e a navegação cansa em uso prolongado.
+**✅ Sim:** sidebar `shell` grafite, texto legível e accent apenas no item ativo, foco e ação global.
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * Navegação agrupada — prova pela TELA (DoD item 12).
+ * Navegação compacta — prova pela TELA (DoD item 12).
  *
  * Os testes unitários provam que o registro e os componentes fazem o que
  * dizem. Isto prova o que o usuário reclamou: que dá para *achar* as coisas.
@@ -22,7 +22,7 @@ const EVIDENCE = path.join(process.cwd(), ".superpowers", "evidence");
 mkdirSync(EVIDENCE, { recursive: true });
 
 // ── Precondição de identidade ────────────────────────────────────────────────
-// O menu é `sidebarGroups(isPlatformAdmin, role)` (`registry.ts:510-519`), então
+// O menu é `compactAreas(isPlatformAdmin, role)`, então
 // a suspeita natural é que promover o `e2e-admin` a dono do servidor inflasse o
 // sidebar que esta spec mede item a item.
 //
@@ -81,25 +81,30 @@ async function expectSemOverflowHorizontal(page: Page, contexto: string): Promis
 // testes que já estavam verdes passaram a estourar 30 s.
 test.describe.configure({ timeout: 120_000 });
 
-test.describe("navegação agrupada", () => {
+test.describe("navegação compacta", () => {
   test("visão geral usa dados locais reais e preserva navegação no desktop e celular", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await loginAdmin(page);
     await page.setViewportSize({ width: 1280, height: 900 });
-    await sidebar(page).getByRole("link", { name: "Visão geral", exact: true }).click();
-    await expect(page).toHaveURL(/\/app$/);
-    await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();
+    await sidebar(page).getByRole("link", { name: "Início", exact: true }).click();
+    // Esta rota é um Server Component que consulta o banco. O timeout padrão
+    // de 5 s do `expect` media a latência do ambiente, não a navegação: o trace
+    // mostrou o GET de `/app` correto ainda pendente quando a asserção morreu.
+    await page.waitForURL(/\/app$/, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible({
+      timeout: 30_000,
+    });
     const counts = await page.request.get("/api/v1/conversations/counts");
     expect(counts.ok()).toBe(true);
     const { data } = await counts.json();
     await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(String(data.all));
-    await expect(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Visão geral" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Início" })).toHaveAttribute("aria-current", "page");
     await expectSemOverflowHorizontal(page, "dashboard desktop");
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.screenshot({ path: path.join(EVIDENCE, "dashboard-desktop.png"), fullPage: true });
     await page.getByRole("link", { name: "Abrir fila", exact: true }).click();
     await expect(page).toHaveURL(/\/app\/inbox\?filter=unassigned$/);
-    await expect(sidebar(page).getByRole("link", { name: "Visão geral" })).not.toHaveAttribute("aria-current");
+    await expect(sidebar(page).getByRole("link", { name: "Início" })).not.toHaveAttribute("aria-current");
     await page.goto("/app");
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();
@@ -107,26 +112,30 @@ test.describe("navegação agrupada", () => {
     await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(String(data.all));
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.screenshot({ path: path.join(EVIDENCE, "dashboard-mobile.png"), fullPage: true });
-    await page.getByRole("link", { name: "Ver tarefas", exact: true }).click();
+    await page
+      .getByRole("region", { name: "Seu próximo passo" })
+      .getByRole("link", { name: "Ver tarefas", exact: true })
+      .click();
     await expect(page).toHaveURL(/\/app\/tasks$/);
   });
 
-  test("o sidebar tem hierarquia: grupos na ordem de uso", async ({ page }) => {
+  test("o sidebar mostra somente as oito portas aprovadas", async ({ page }) => {
     await loginAdmin(page);
 
-    // Organização não aparece como título aqui: seu hub (Configurações) vive no
-    // rodapé fixo — ver o teste de dobra abaixo.
-    const titulos = sidebar(page).getByRole("heading");
-    await expect(titulos).toHaveText([
-      "Atendimento",
-      "CRM",
-      "Agente de IA",
-      "Canais",
-      "Análise",
+    await expect(sidebar(page).getByRole("link")).toHaveText([
+      "Início",
+      "Conversas",
+      "Funis",
+      "Contatos",
+      "Agentes de IA",
+      "Relatórios",
     ]);
+    await expect(sidebar(page).getByRole("heading")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Agenda" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Configurações" })).toBeVisible();
 
     await page.screenshot({
-      path: path.join(EVIDENCE, "nav-sidebar-agrupado.png"),
+      path: path.join(EVIDENCE, "nav-sidebar-compacto.png"),
       fullPage: true,
     });
   });
@@ -142,20 +151,16 @@ test.describe("navegação agrupada", () => {
     // abaixo é específica (`settings/tenant/pipelines`) e não o antigo
     // /pipelines/, que casa com as duas.
     //
-    // ⚠️ E O CAMINHO MUDOU: com Tarefas (PR #546), o CRM chegou a cinco telas e
-    // o menu passou a rolar em 900px. A resposta foi o hub do grupo, como o
-    // comentário de densidade do `Sidebar.tsx` já mandava — então esta tela
-    // agora mora atrás de "Ver tudo em CRM". Este teste percorre o caminho
-    // INTEIRO em vez de checar um link: hub → tela. Que a porta existe no grupo
-    // certo do sidebar é o unitário `sidebar-grupos` que prende.
-    await sidebar(page).getByRole("link", { name: "Ver tudo em CRM" }).click();
-    await page.waitForURL(/\/app\/crm$/);
-    await expect(page.getByRole("heading", { name: "O dia a dia da venda" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Preparar a venda" })).toBeVisible();
-
-    await page.screenshot({ path: path.join(EVIDENCE, "nav-hub-crm.png"), fullPage: true });
-
-    await page.getByRole("link", { name: /Etapas do funil/ }).click();
+    await sidebar(page).getByRole("link", { name: "Funis" }).click();
+    await page.waitForURL(/\/app\/kanban/);
+    const opcoes = page.getByRole("navigation", { name: /Funis.*Opções da área/ });
+    await expect(opcoes.getByRole("link")).toHaveText([
+      "Meus funis",
+      "Produtos",
+      "Etapas do funil",
+    ]);
+    await page.screenshot({ path: path.join(EVIDENCE, "nav-area-funis.png"), fullPage: true });
+    await opcoes.getByRole("link", { name: "Etapas do funil" }).click();
     await page.waitForURL(/settings\/tenant\/pipelines/);
     await expect(page.getByRole("heading", { name: "Etapas do funil", level: 1 })).toBeVisible();
   });
@@ -168,9 +173,12 @@ test.describe("navegação agrupada", () => {
 
     await expect(sidebar(page).getByRole("link", { name: "Produtos" })).toHaveCount(0);
 
-    await sidebar(page).getByRole("link", { name: "Ver tudo em CRM" }).click();
-    await page.waitForURL(/\/app\/crm$/);
-    await page.getByRole("link", { name: /Produtos/ }).click();
+    await sidebar(page).getByRole("link", { name: "Funis" }).click();
+    await page.waitForURL(/\/app\/kanban/);
+    await page
+      .getByRole("navigation", { name: /Funis.*Opções da área/ })
+      .getByRole("link", { name: "Produtos" })
+      .click();
     await page.waitForURL(/\/app\/products/);
   });
 
@@ -178,13 +186,15 @@ test.describe("navegação agrupada", () => {
     await loginAdmin(page);
     await sidebar(page).getByRole("link", { name: "Funis", exact: true }).click();
     await page.waitForURL(/\/app\/kanban/);
-    await expect(page.getByRole("heading", { name: "Funis", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Funis", level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   test("chega em Conhecimento, que só existia atrás das abas de IA", async ({ page }) => {
     await loginAdmin(page);
 
-    await sidebar(page).getByRole("link", { name: "Ver tudo em IA" }).click();
+    await sidebar(page).getByRole("link", { name: "Agentes de IA" }).click();
     await page.waitForURL(/\/app\/ai$/);
 
     // O hub organiza por jornada, não numa grade solta.
@@ -194,21 +204,29 @@ test.describe("navegação agrupada", () => {
 
     await page.screenshot({ path: path.join(EVIDENCE, "nav-hub-ia.png"), fullPage: true });
 
-    await page.getByRole("link", { name: /Conhecimento/ }).click();
+    await page
+      .getByRole("navigation", { name: /Agentes de IA.*Opções da área/ })
+      .getByRole("link", { name: "Conhecimento" })
+      .click();
     await page.waitForURL(/knowledge\/sources/);
   });
 
   /**
    * O canal oficial saiu de Configurações no PR #105 e virou aba de Conexões.
-   * A porta, portanto, é Conexões — que agora vive no grupo CANAIS do sidebar,
-   * e não mais como um card perdido em Configurações.
+   * A porta, portanto, é Conexões — agora uma opção contextual de
+   * Configurações, em vez de um item primário concorrendo com a rotina.
    */
-  test("chega ao canal oficial pelo grupo Canais, não por Configurações", async ({ page }) => {
+  test("chega ao canal oficial por Configurações → Conexões", async ({ page }) => {
     await loginAdmin(page);
 
-    await sidebar(page).getByRole("link", { name: "Conexões" }).click();
+    await page.getByRole("link", { name: "Configurações" }).click();
+    await page.waitForURL(/\/app\/settings$/);
+    await page
+      .getByRole("navigation", { name: /Configurações.*Opções da área/ })
+      .getByRole("link", { name: "Conexões" })
+      .click();
     await page.waitForURL(/\/app\/connections/);
-    await expect(page.getByRole("tab", { name: /oficial/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /oficial/i })).toBeVisible({ timeout: 30_000 });
   });
 
   test("o ⌘K acha o canal oficial por nome, mesmo sem tela própria", async ({ page }) => {
@@ -238,15 +256,12 @@ test.describe("navegação agrupada", () => {
   });
 
   /**
-   * Agrupar cria um risco que a lista plana não tinha: o menu cresce e passa a
-   * exigir scroll. Na primeira versão desta mudança, medido em 1280×768, o
-   * conteúdo dava 1019px contra 663px visíveis — SETE links e os grupos Análise
-   * e Organização ficavam fora da dobra. Trocar "17 itens sem hierarquia" por
-   * "20 itens que não cabem" seria recriar o problema em outra forma.
+   * A barra compacta precisa caber inteira: uma porta abaixo da dobra é uma
+   * capacidade que o usuário não descobre.
    *
    * Medido por ferramenta, nunca a olho.
    */
-  test("nenhum grupo fica fora da dobra, e em 900px o menu não rola", async ({ page }) => {
+  test("as seis portas principais cabem sem scroll em 900px", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
@@ -255,13 +270,11 @@ test.describe("navegação agrupada", () => {
       const r = nav.getBoundingClientRect();
       return {
         rola: nav.scrollHeight > Math.round(r.height) + 1,
-        titulosFora: [...nav.querySelectorAll("h2")].filter(
-          (h) => h.getBoundingClientRect().bottom > r.bottom,
-        ).length,
+        links: nav.querySelectorAll("a").length,
       };
     });
 
-    expect(m.titulosFora, "grupo inteiro invisível é o problema que viemos resolver").toBe(0);
+    expect(m.links).toBe(6);
     expect(m.rola, "em 900px o menu inteiro tem de caber sem scroll").toBe(false);
   });
 
@@ -311,11 +324,10 @@ test.describe("navegação agrupada", () => {
     expect(dentroDaNav, "Configurações não pode depender de scroll para aparecer").toBe(false);
   });
 
-  test("um agent não vê o cabeçalho de um grupo que a permissão esvaziou", async ({ page }) => {
+  test("um agent não vê a porta de IA acima de seu papel", async ({ page }) => {
     await login(page, creds.users.agent!.email);
 
-    // CANAIS é todo manager+/admin: o título não pode sobrar sozinho.
-    await expect(sidebar(page).getByRole("heading", { name: "Canais" })).toHaveCount(0);
-    await expect(sidebar(page).getByRole("heading", { name: "Atendimento" })).toBeVisible();
+    await expect(sidebar(page).getByRole("link", { name: "Agentes de IA" })).toHaveCount(0);
+    await expect(sidebar(page).getByRole("link", { name: "Conversas" })).toBeVisible();
   });
 });
