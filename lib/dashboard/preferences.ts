@@ -177,3 +177,43 @@ export function moveDashboardWidget(
   widgets[destination] = current;
   return { ...layout, widgets };
 }
+
+/** Reordenação por ponteiro: insere o arrastado imediatamente antes do alvo. */
+export function reorderDashboardWidget(
+  layout: DashboardLayout,
+  sourceId: string,
+  targetId: string,
+): DashboardLayout {
+  if (sourceId === targetId) return layout;
+  const sourceIndex = layout.widgets.findIndex((widget) => widget.id === sourceId);
+  const targetIndex = layout.widgets.findIndex((widget) => widget.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0) return layout;
+
+  const widgets = [...layout.widgets];
+  const [source] = widgets.splice(sourceIndex, 1);
+  if (!source) return layout;
+  const insertionIndex = widgets.findIndex((widget) => widget.id === targetId);
+  widgets.splice(insertionIndex < 0 ? widgets.length : insertionIndex, 0, source);
+  return { ...layout, widgets };
+}
+
+/**
+ * Converte a posição do slider no tamanho permitido pelo catálogo. O índice é
+ * limitado nas duas pontas para que evento de ponteiro impreciso nunca grave
+ * um tamanho inexistente.
+ */
+export function resizeDashboardWidget(
+  layout: DashboardLayout,
+  id: string,
+  requestedIndex: number,
+): DashboardLayout {
+  if (!(id in WIDGET_CATALOG)) return layout;
+  const definition = WIDGET_CATALOG[id as DashboardWidgetId];
+  const boundedIndex = Math.max(0, Math.min(definition.allowedSizes.length - 1, requestedIndex));
+  const size = definition.allowedSizes[boundedIndex];
+  if (!size) return layout;
+  return {
+    ...layout,
+    widgets: layout.widgets.map((widget) => (widget.id === id ? { ...widget, size } : widget)),
+  };
+}

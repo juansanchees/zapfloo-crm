@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Dashboard } from "@/components/dashboard/Dashboard";
@@ -18,6 +18,7 @@ let failPreferenceSave = false;
 let taskDone = false;
 let taskLimitReached = false;
 let requests: string[] = [];
+let savedPreferenceBody: unknown = null;
 const task = {
   id: "task-1",
   organization_id: "org-1",
@@ -42,6 +43,7 @@ beforeEach(() => {
   taskDone = false;
   taskLimitReached = false;
   requests = [];
+  savedPreferenceBody = null;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string, init?: RequestInit) => {
@@ -129,6 +131,7 @@ beforeEach(() => {
             JSON.stringify({ error: { code: "internal_error", message: "Falha ao salvar" } }),
             { status: 500 },
           );
+        if (init?.method === "PUT") savedPreferenceBody = JSON.parse(String(init.body));
         return Response.json({ data: { layout: null, source: "default" } });
       }
       throw new Error(`Requisição inesperada no teste: ${url}`);
@@ -216,6 +219,47 @@ describe("Dashboard operacional", () => {
     expect(dialog).toBeVisible();
     expect(within(dialog).getByText("Resumo de conversas")).toBeVisible();
     expect(within(dialog).getByText("Clientes que precisam de atenção")).toBeVisible();
+    expect(
+      within(dialog).getByRole("slider", { name: "Redimensionar Fila de atendimento" }),
+    ).toBeVisible();
+  });
+
+  it("aceita redimensionamento pelo ponteiro e salva um tamanho permitido", async () => {
+    mount();
+    await screen.findByText("Contato teste");
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    fireEvent.change(
+      within(dialog).getByRole("slider", { name: "Redimensionar Fila de atendimento" }),
+      { target: { value: "0" } },
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Salvar painel" }));
+
+    await waitFor(() => expect(savedPreferenceBody).not.toBeNull());
+    expect(
+      (savedPreferenceBody as { widgets: Array<{ id: string; size: string }> }).widgets.find(
+        (widget) => widget.id === "service_queue",
+      )?.size,
+    ).toBe("medium");
+  });
+
+  it("reordena blocos com arrastar e soltar antes de salvar", async () => {
+    mount();
+    await screen.findByText("Contato teste");
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    const source = within(dialog).getByTestId("dashboard-editor-recent_conversations");
+    const target = within(dialog).getByTestId("dashboard-editor-service_queue");
+    fireEvent.dragStart(source);
+    fireEvent.dragOver(target);
+    fireEvent.drop(target);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Salvar painel" }));
+
+    await waitFor(() => expect(savedPreferenceBody).not.toBeNull());
+    const ids = (savedPreferenceBody as { widgets: Array<{ id: string }> }).widgets.map(
+      (widget) => widget.id,
+    );
+    expect(ids.indexOf("recent_conversations")).toBeLessThan(ids.indexOf("service_queue"));
   });
   it("mantém o padrão visível e informa quando a preferência não carrega", async () => {
     failPreferences = true;

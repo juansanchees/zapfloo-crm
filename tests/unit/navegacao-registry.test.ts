@@ -144,17 +144,18 @@ describe("sidebarGroups", () => {
 });
 
 describe("compactAreas", () => {
-  it("reduz o menu de admin às oito portas aprovadas", () => {
+  it("organiza o menu compacto em operação e crescimento", () => {
     const areas = compactAreas(ADMIN.platform, ADMIN.role);
 
     expect(areas.map((area) => [area.position, area.label, area.href])).toEqual([
-      ["main", "Início", "/app"],
+      ["main", "Painel de controle", "/app"],
       ["main", "Conversas", "/app/inbox"],
-      ["main", "Funis", "/app/kanban"],
+      ["main", "Calendário", "/app/agenda"],
       ["main", "Contatos", "/app/contacts"],
+      ["main", "Leads", "/app/kanban"],
       ["main", "Agentes de IA", "/app/ai"],
+      ["main", "Automações", "/app/ai/followups"],
       ["main", "Relatórios", "/app/analise"],
-      ["footer", "Agenda", "/app/agenda"],
       ["footer", "Configurações", "/app/settings"],
     ]);
   });
@@ -169,12 +170,12 @@ describe("compactAreas", () => {
       ["Precisam de atenção", "/app/radar"],
       ["Respostas rápidas", "/app/templates"],
     ]);
-    expect(abas("Funis")).toEqual([
+    expect(abas("Leads")).toEqual([
       ["Meus funis", "/app/kanban"],
       ["Produtos", "/app/products"],
       ["Etapas do funil", "/app/settings/tenant/pipelines"],
     ]);
-    expect(abas("Agenda")).toEqual([
+    expect(abas("Calendário")).toEqual([
       ["Compromissos", "/app/agenda"],
       ["Tarefas", "/app/tasks"],
     ]);

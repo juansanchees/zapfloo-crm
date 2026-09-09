@@ -17,7 +17,7 @@ fs.mkdirSync(EVIDENCE, { recursive: true });
 
 test("as duas formas de conectar vivem lado a lado, na mesma tela", async ({ page }) => {
   await page.goto("/app/connections");
-  await expect(page.getByRole("tab", { name: /Números por QR/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Canais conectados/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /API Oficial/i })).toBeVisible();
   await page.screenshot({ path: `${EVIDENCE}/01-abas.png`, fullPage: true });
 });

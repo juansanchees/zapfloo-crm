@@ -37,6 +37,7 @@ import {
   Warning,
 } from "@/lib/ui/icons";
 import { lerEstadoDoCanal } from "@/lib/channels/estado";
+import { rotuloDoTipoDeConexao } from "@/lib/channels/apresentacao";
 import { useT } from "@/hooks/i18n/useT";
 
 type Variant = "success" | "warning" | "error" | "neutral";
@@ -239,7 +240,7 @@ export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean 
             ) : (
               <Plus size={14} aria-hidden />
             )}
-            {t("Conectar novo WhatsApp")}
+            {t("Conectar por QR")}
           </Button>
         </div>
       </div>
@@ -323,6 +324,9 @@ export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean 
                       <Phone size={16} className="text-muted-foreground" aria-hidden />
                       <span className="truncate text-sm font-medium">{channelLabel(c, t)}</span>
                     </div>
+                    <Badge variant="outline" className="mt-2 text-[10px]">
+                      {t(rotuloDoTipoDeConexao(c.provider))}
+                    </Badge>
                     {c.phone_number && c.display_name && (
                       <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                         {c.phone_number}

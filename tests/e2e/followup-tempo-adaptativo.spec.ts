@@ -150,6 +150,7 @@ test.describe("nó de espera — o modo Adaptativo tem de decidir de verdade", (
     await page.goto("/app/ai/followups");
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     // Esperar o FOCO, não só a visibilidade. O Radix anima a abertura e o
     // `autoFocus` do input chega depois do primeiro paint; um `fill()` disparado
     // no meio disso é engolido, o campo fica vazio e o botão de submit nasce
@@ -158,6 +159,7 @@ test.describe("nó de espera — o modo Adaptativo tem de decidir de verdade", (
     // guarda que o teste 6.1 de `followup-builder.spec.ts` já usa (e que o 6.2
     // do mesmo arquivo não usa — por isso ele falha nesta máquina).
     const campoNome = dialog.getByLabel("Nome");
+    await campoNome.focus();
     await expect(campoNome).toBeFocused({ timeout: PRAZO_SOB_CARGA });
     await campoNome.fill(flowName);
     await expect(campoNome).toHaveValue(flowName);

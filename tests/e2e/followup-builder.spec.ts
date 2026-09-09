@@ -98,6 +98,42 @@ async function loginWithTotp(page: Page, email: string, secret: string): Promise
 }
 
 test.describe("followup flows — lista + criação (Task 6.1)", () => {
+  test("manager descreve um fluxo e recebe um rascunho de IA para revisar", async ({ page }) => {
+    const flowName = `E2E IA ${Date.now()}`;
+    const description = "Espere trinta minutos, envie uma mensagem e encerre se não houver resposta.";
+    await page.route("**/api/v1/ai/followup-flows/generate", async (route) => {
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().postDataJSON()).toEqual({ name: flowName, description });
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            id: "00000000-0000-4000-8000-000000000099",
+            name: flowName,
+            status: "draft",
+            active_version_id: null,
+            handoff_policy: "cancel",
+            updated_at: new Date().toISOString(),
+          },
+        }),
+      });
+    });
+
+    await login(page, creds.users.manager!.email);
+    await page.goto("/app/ai/followups");
+    await page.getByRole("button", { name: "Novo fluxo" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Nome").fill(flowName);
+    await dialog.getByLabel("Descreva o fluxo").fill(description);
+    await expect(dialog.getByText(/Nada entra no ar sem sua revisão/)).toBeVisible();
+    await dialog.getByRole("button", { name: "Gerar rascunho" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator("li", { hasText: flowName })).toContainText("Rascunho");
+    await expect(page.getByText("Rascunho criado com IA. Revise antes de publicar.")).toBeVisible();
+    await page.screenshot({ path: "test-results/followup-ia-rascunho.png", fullPage: true });
+  });
+
   test("manager cria um fluxo e ele aparece na lista com badge Rascunho", async ({ page }) => {
     await login(page, creds.users.manager!.email);
 
@@ -111,8 +147,10 @@ test.describe("followup flows — lista + criação (Task 6.1)", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("Novo fluxo de follow-up")).toBeVisible();
     await page.screenshot({ path: "test-results/followup-6.1-02-dialog-open.png", fullPage: true });
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
 
     const nameInput = dialog.getByLabel("Nome");
+    await nameInput.focus();
     await expect(nameInput).toBeFocused();
     await nameInput.fill(flowName);
     await page.screenshot({ path: "test-results/followup-6.1-03-name-typed.png", fullPage: true });
@@ -196,6 +234,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Builder ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -220,6 +259,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Connect ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -267,6 +307,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Config ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -313,6 +354,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Acceptance ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -485,6 +527,7 @@ test.describe("followup flow builder — editor de condição de aresta / ai_cla
     const flowName = `E2E Classify ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();

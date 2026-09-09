@@ -62,3 +62,22 @@ export function useCreateFollowupFlow() {
     },
   });
 }
+
+export function useGenerateFollowupFlow() {
+  const t = useT();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: ["followup", "flows", "generate"],
+    mutationFn: async (input: { name: string; description: string }) => {
+      const res = await apiClient.post<SingleResponse>("/api/v1/ai/followup-flows/generate", input);
+      return res.data;
+    },
+    onSuccess: (created) => {
+      qc.setQueryData<FollowupFlowPointerRow[]>(followupFlowsListQueryKey, (prev) =>
+        prev ? [created, ...prev] : [created],
+      );
+      toast.success(t("Rascunho criado com IA. Revise antes de publicar."));
+    },
+    onError: (err) => showApiError(err),
+  });
+}

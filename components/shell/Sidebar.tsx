@@ -7,6 +7,7 @@ import { useTransition } from "react";
 import { toggleSidebar } from "@/app/actions/shell/toggleSidebar";
 import { ConnectionHealthDot } from "@/components/connections/ConnectionHealthDot";
 import { VersionFooter } from "@/components/shell/VersionFooter";
+import { SearchTrigger } from "@/components/shell/SearchTrigger";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import { useMarcaDaInstalacao } from "@/lib/branding/contexto";
@@ -40,11 +41,14 @@ export function SidebarContent({
   const areas = compactAreas(user.is_platform_admin, activeOrg?.role ?? null);
   const areaAtiva = compactAreaForPath(pathname, areas);
   const principais = areas.filter((area) => area.position === "main");
+  const operacao = principais.filter((area) => area.section === "operacao");
+  const crescimento = principais.filter((area) => area.section === "crescimento");
   const rodape = areas.filter((area) => area.position === "footer");
   const canAsk = user.is_platform_admin || (!!activeOrg && roleAtLeast(activeOrg.role, "agent"));
 
   const brand = useMarcaDaInstalacao();
-  const nome = activeOrg?.marca?.nome ?? brand.name;
+  const nomeDaMarca = activeOrg?.marca?.nome ?? brand.name;
+  const nomeDaEmpresa = activeOrg?.name ?? t("Sua empresa");
   // Vazio é ausência de logo: desce para a marca da instalação.
   const logo = activeOrg?.marca?.logoUrl || brand.logoUrl;
 
@@ -91,18 +95,41 @@ export function SidebarContent({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logo}
-            alt={nome}
-            className="h-9 w-auto max-w-[10rem] rounded-lg bg-white/95 p-1 object-contain"
+            alt={nomeDaMarca}
+            className="h-9 w-auto max-w-[10rem] object-contain"
           />
         ) : (
-          <span className={cn("font-semibold tracking-tight", collapsed && "sr-only")}>{nome}</span>
+          <span className={cn("font-semibold tracking-tight", collapsed && "sr-only")}>{nomeDaMarca}</span>
         )}
         {collapsed && (
           <span aria-hidden className="text-lg font-bold text-white">
-            {[...nome][0]?.toUpperCase() ?? brand.initial}
+            {[...nomeDaMarca][0]?.toUpperCase() ?? brand.initial}
           </span>
         )}
       </div>
+
+      {activeOrg && !collapsed && (
+        <div className="px-3 pt-3">
+          <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/8 bg-white/7 p-3">
+            <span
+              aria-hidden
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent/20 text-sm font-bold text-accent"
+            >
+              {[...nomeDaEmpresa][0]?.toUpperCase()}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-white">{nomeDaEmpresa}</span>
+              <span className="block text-[11px] text-white/50">{t("Sua empresa")}</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {!collapsed && (
+        <div className="px-3 pt-2">
+          <SearchTrigger sidebar />
+        </div>
+      )}
 
       {canAsk && (
         <div className="px-3 pt-3">
@@ -122,8 +149,18 @@ export function SidebarContent({
         </div>
       )}
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label={t("Navegação principal")}>
-        {principais.map(linkDaArea)}
+      <nav className="flex-1 overflow-y-auto p-3" aria-label={t("Navegação principal")}>
+        <div className="space-y-1">{operacao.map(linkDaArea)}</div>
+        {crescimento.length > 0 && (
+          <div className="mt-4 space-y-1">
+            {!collapsed && (
+              <h2 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                {t("Crescimento")}
+              </h2>
+            )}
+            {crescimento.map(linkDaArea)}
+          </div>
+        )}
       </nav>
 
       <div className="border-t border-white/10 p-3">

@@ -1,4 +1,5 @@
 .dashboard {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   padding: 10px 8px 24px;
@@ -57,6 +58,7 @@
   border: 1px solid var(--color-border);
   border-radius: 20px;
   min-width: 0;
+  overflow: hidden;
 }
 .stat {
   padding: 20px;
@@ -69,6 +71,7 @@
   gap: 8px;
   font-size: 0.75rem;
   color: var(--color-text-muted);
+  overflow-wrap: anywhere;
 }
 .statTitle svg {
   color: var(--color-accent);
@@ -80,6 +83,8 @@
   letter-spacing: -0.04em;
   margin: 12px 0 6px;
   font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .stat p {
   font-size: 0.68rem;
@@ -113,6 +118,10 @@
 }
 .widgetSlot {
   min-width: 0;
+  max-width: 100%;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
 }
 .widgetSlot > * {
   height: 100%;
@@ -138,6 +147,11 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  min-width: 0;
+}
+.panelHead h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .panelHead > svg {
   color: var(--color-accent);
@@ -176,6 +190,10 @@
     color-mix(in srgb, var(--color-surface) 80%, var(--color-accent) 20%),
     var(--color-surface)
   );
+  min-width: 0;
+}
+.attention > div {
+  min-width: 0;
 }
 .attention h2 {
   font-size: 1.15rem;
@@ -298,6 +316,7 @@
   font-size: 0.75rem;
 }
 .funnel li > span {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 .funnel strong {
@@ -332,6 +351,8 @@
   align-items: flex-end;
   gap: 12px;
   margin: 8px 0 24px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .conversionMetric strong {
   color: var(--color-accent);
@@ -345,6 +366,8 @@
   color: var(--color-text-muted);
   font-size: 0.72rem;
   line-height: 1.5;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .empty {
   color: var(--color-text-muted);
@@ -411,6 +434,7 @@
     grid-column: 1;
   }
   .stats {
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
   }
   .stat {
@@ -436,5 +460,10 @@
   }
   .panelHead {
     flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .widgetSlot {
+    transition: none;
   }
 }

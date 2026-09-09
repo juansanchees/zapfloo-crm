@@ -87,7 +87,17 @@ export interface NavDestination {
 }
 
 export type CompactAreaId =
-  "home" | "conversas" | "funis" | "contatos" | "ia" | "relatorios" | "agenda" | "configuracoes";
+  | "home"
+  | "conversas"
+  | "funis"
+  | "contatos"
+  | "ia"
+  | "automacoes"
+  | "relatorios"
+  | "agenda"
+  | "configuracoes";
+
+export type CompactAreaSection = "operacao" | "crescimento";
 
 export interface CompactAreaTab {
   href: string;
@@ -100,6 +110,7 @@ export interface CompactArea {
   href: string;
   icon: PhosphorIcon;
   position: "main" | "footer";
+  section: CompactAreaSection;
   tabs: CompactAreaTab[];
   /** Propaga a saúde de um destino secundário crítico para a porta compacta. */
   healthDot?: boolean;
@@ -165,10 +176,11 @@ interface CompactAreaSpec extends Omit<CompactArea, "tabs"> {
 const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
   {
     id: "home",
-    label: "Início",
+    label: "Painel de controle",
     href: "/app",
     icon: Gauge,
     position: "main",
+    section: "operacao",
     tabs: [],
   },
   {
@@ -177,6 +189,7 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     href: "/app/inbox",
     icon: Inbox,
     position: "main",
+    section: "operacao",
     tabs: [
       { href: "/app/inbox", label: "Conversas" },
       { href: "/app/radar", label: "Precisam de atenção" },
@@ -184,16 +197,13 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     ],
   },
   {
-    id: "funis",
-    label: "Funis",
-    href: "/app/kanban",
-    icon: Kanban,
+    id: "agenda",
+    label: "Calendário",
+    href: "/app/agenda",
+    icon: CalendarBlank,
     position: "main",
-    tabs: [
-      { href: "/app/kanban", label: "Meus funis" },
-      { href: "/app/products" },
-      { href: "/app/settings/tenant/pipelines" },
-    ],
+    section: "operacao",
+    tabs: [{ href: "/app/agenda", label: "Compromissos" }, { href: "/app/tasks" }],
   },
   {
     id: "contatos",
@@ -201,7 +211,21 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     href: "/app/contacts",
     icon: Users,
     position: "main",
+    section: "operacao",
     tabs: [],
+  },
+  {
+    id: "funis",
+    label: "Leads",
+    href: "/app/kanban",
+    icon: Kanban,
+    position: "main",
+    section: "operacao",
+    tabs: [
+      { href: "/app/kanban", label: "Meus funis" },
+      { href: "/app/products" },
+      { href: "/app/settings/tenant/pipelines" },
+    ],
   },
   {
     id: "ia",
@@ -209,14 +233,27 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     href: "/app/ai",
     icon: Robot,
     position: "main",
+    section: "operacao",
     minRole: "manager",
     tabs: [
       { href: "/app/ai", label: "Visão geral" },
       { href: "/app/ai/agents" },
       { href: "/app/ai/knowledge/sources" },
-      { href: "/app/ai/followups", label: "Retomadas automáticas" },
       { href: "/app/ai/routers", label: "Distribuição" },
       { href: "/app/ai/providers", label: "Avançado" },
+    ],
+  },
+  {
+    id: "automacoes",
+    label: "Automações",
+    href: "/app/ai/followups",
+    icon: FlowArrow,
+    position: "main",
+    section: "crescimento",
+    minRole: "manager",
+    tabs: [
+      { href: "/app/ai/followups", label: "Fluxos e follow-ups" },
+      { href: "/app/webhooks", label: "Entradas e webhooks" },
     ],
   },
   {
@@ -225,6 +262,7 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     href: "/app/analise",
     icon: ChartBar,
     position: "main",
+    section: "crescimento",
     tabs: [
       { href: "/app/analise", label: "Visão geral" },
       { href: "/app/metrics" },
@@ -234,19 +272,12 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     ],
   },
   {
-    id: "agenda",
-    label: "Agenda",
-    href: "/app/agenda",
-    icon: CalendarBlank,
-    position: "footer",
-    tabs: [{ href: "/app/agenda", label: "Compromissos" }, { href: "/app/tasks" }],
-  },
-  {
     id: "configuracoes",
     label: "Configurações",
     href: "/app/settings",
     icon: Gear,
     position: "footer",
+    section: "operacao",
     tabs: [
       { href: "/app/settings", label: "Visão geral" },
       { href: "/app/team", label: "Empresa e equipe" },
@@ -926,6 +957,7 @@ export function compactAreas(isPlatformAdmin: boolean, role: Role | null): Compa
         href: area.href,
         icon: area.icon,
         position: area.position,
+        section: area.section,
         healthDot: tabs.some(
           (tab) => NAV_DESTINATIONS.find((item) => item.href === tab.href)?.healthDot,
         ),
@@ -939,7 +971,7 @@ const AREA_PADRAO_POR_GRUPO: Record<NavGroupId, CompactAreaId> = {
   atendimento: "conversas",
   crm: "funis",
   ia: "ia",
-  canais: "configuracoes",
+  canais: "automacoes",
   analise: "relatorios",
   organizacao: "configuracoes",
 };

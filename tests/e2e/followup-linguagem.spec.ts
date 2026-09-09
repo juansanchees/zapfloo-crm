@@ -115,8 +115,10 @@ test.describe("construtor de follow-up — a tela não fala em código (W2-LINGU
     const nomeDoFluxo = `E2E Linguagem ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialogo = page.getByRole("dialog");
+    await dialogo.getByRole("button", { name: "Criar manualmente" }).click();
     const campoNome = dialogo.getByLabel("Nome");
     // O Radix anima a abertura; um fill() antes do foco é engolido.
+    await campoNome.focus();
     await expect(campoNome).toBeFocused({ timeout: PRAZO_SOB_CARGA });
     await campoNome.fill(nomeDoFluxo);
     await expect(campoNome).toHaveValue(nomeDoFluxo);

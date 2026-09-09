@@ -163,6 +163,18 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
       "A tela Pergunte à IA informa que não conseguiu analisar a operação e orienta a revisar a configuração do provedor.",
     registraEm: "llm_calls",
   },
+  {
+    id: "followup_generate_draft",
+    rotulo: "Montar um fluxo de follow-up",
+    oQueFaz:
+      "Transforma uma descrição do usuário em um rascunho visual de follow-up, sempre sujeito a revisão antes de publicar.",
+    papel: "entender",
+    exige: {},
+    emissor: "lib/followup/ai-draft.ts",
+    sintomaDeFalha:
+      "O rascunho não é criado e o texto original permanece na tela para o usuário corrigir ou tentar novamente.",
+    registraEm: "llm_calls",
+  },
   // ─────────────────────────── Atender o cliente ───────────────────────────
   {
     id: "agent_turn",

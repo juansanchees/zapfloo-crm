@@ -38,35 +38,39 @@ afterEach(() => {
 });
 
 describe("Sidebar compacto", () => {
-  it("mostra somente as oito portas aprovadas para admin", () => {
+  it("organiza as portas reais em operação e crescimento", () => {
     comoPapel("admin");
     render(<Sidebar collapsed={false} />);
 
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
     expect(Array.from(nav.querySelectorAll("a")).map((link) => link.textContent?.trim())).toEqual([
-      "Início",
+      "Painel de controle",
       "Conversas",
-      "Funis",
+      "Calendário",
       "Contatos",
+      "Leads",
       "Agentes de IA",
+      "Automações",
       "Relatórios",
     ]);
-    expect(screen.getByRole("link", { name: "Agenda" })).toHaveAttribute("href", "/app/agenda");
+    expect(screen.getByText("Crescimento")).toBeVisible();
     expect(screen.getByRole("link", { name: "Configurações" })).toHaveAttribute(
       "href",
       "/app/settings",
     );
   });
 
-  it("remove cabeçalhos e atalhos secundários do menu, sem renomear Funis", () => {
+  it("remove atalhos secundários e usa Leads para a operação do funil", () => {
     comoPapel("admin");
     render(<Sidebar collapsed={false} />);
 
-    expect(screen.queryAllByRole("heading")).toHaveLength(0);
     expect(screen.queryByRole("link", { name: "Radar" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Tarefas" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Webhooks" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Funis" })).toHaveAttribute("href", "/app/kanban");
+    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute("href", "/app/kanban");
+    expect(screen.getByRole("link", { name: "Automações" })).toHaveAttribute(
+      "href",
+      "/app/ai/followups",
+    );
   });
 
   it("destaca Pergunte à IA como ação global, sem criar uma nona porta", () => {
@@ -86,7 +90,7 @@ describe("Sidebar compacto", () => {
     render(<Sidebar collapsed={false} />);
 
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
-    expect(nav.contains(screen.getByRole("link", { name: "Agenda" }))).toBe(false);
+    expect(nav.contains(screen.getByRole("link", { name: "Calendário" }))).toBe(true);
     expect(nav.contains(screen.getByRole("link", { name: "Configurações" }))).toBe(false);
   });
 
@@ -96,7 +100,9 @@ describe("Sidebar compacto", () => {
     render(<Sidebar collapsed={false} />);
 
     expect(screen.getByRole("link", { name: "Conversas" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Início" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Painel de controle" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("move Tarefas para a área Agenda", () => {
@@ -104,8 +110,11 @@ describe("Sidebar compacto", () => {
     pathRef.current = "/app/tasks";
     render(<Sidebar collapsed={false} />);
 
-    expect(screen.getByRole("link", { name: "Agenda" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Funis" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Calendário" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Leads" })).not.toHaveAttribute("aria-current");
   });
 
   it("não mostra Agentes de IA abaixo de manager", () => {
@@ -120,8 +129,15 @@ describe("Sidebar compacto", () => {
     comoPapel("admin");
     render(<Sidebar collapsed />);
 
-    expect(screen.queryAllByRole("heading")).toHaveLength(0);
     expect(screen.getByRole("link", { name: "Conversas" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Configurações" })).toBeVisible();
+  });
+
+  it("mantém a casca presa à viewport durante o scroll", () => {
+    comoPapel("admin");
+    const { container } = render(<Sidebar collapsed={false} />);
+
+    const aside = container.querySelector("aside");
+    expect(aside).toHaveClass("sticky", "top-0", "h-screen");
   });
 });

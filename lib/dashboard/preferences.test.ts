@@ -6,6 +6,8 @@ import {
   WIDGET_CATALOG,
   dashboardLayoutSchema,
   moveDashboardWidget,
+  reorderDashboardWidget,
+  resizeDashboardWidget,
   sanitizeDashboardLayout,
 } from "./preferences";
 
@@ -96,5 +98,32 @@ describe("preferências do dashboard", () => {
 
     expect(after).toBe(before - 1);
     expect(moved.widgets[after]).toEqual(DEFAULT_DASHBOARD_LAYOUT.widgets[before]);
+  });
+
+  it("reordena um widget arrastado até outro sem alterar o restante", () => {
+    const moved = reorderDashboardWidget(
+      DEFAULT_DASHBOARD_LAYOUT,
+      "recent_conversations",
+      "service_queue",
+    );
+    expect(moved.widgets.map((widget) => widget.id).slice(0, 3)).toEqual([
+      "conversation_summary",
+      "recent_conversations",
+      "service_queue",
+    ]);
+    expect(moved.widgets.find((widget) => widget.id === "recent_conversations")?.size).toBe(
+      "wide",
+    );
+  });
+
+  it("redimensiona somente entre tamanhos aceitos pelo catálogo", () => {
+    expect(resizeDashboardWidget(DEFAULT_DASHBOARD_LAYOUT, "service_queue", 0).widgets[1]).toMatchObject({
+      id: "service_queue",
+      size: "medium",
+    });
+    expect(resizeDashboardWidget(DEFAULT_DASHBOARD_LAYOUT, "service_queue", 99).widgets[1]).toMatchObject({
+      id: "service_queue",
+      size: "wide",
+    });
   });
 });

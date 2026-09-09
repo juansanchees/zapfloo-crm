@@ -96,6 +96,26 @@ export function CanalOficialClient() {
       ) : null}
       {estado?.channel_session_id && <ChannelAiAccess channelId={estado.channel_session_id} />}
 
+      <Card className="space-y-3 p-4">
+        <div>
+          <h2 className="font-medium">{t("Como ativar a API Oficial")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("A conexão é sua: a plataforma valida e guarda os dados do seu próprio app da Meta.")}
+          </p>
+        </div>
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+          <li>{t("Crie ou escolha sua empresa no Meta Business e conclua as verificações solicitadas.")}</li>
+          <li>{t("Crie um app no Meta for Developers e adicione o produto WhatsApp.")}</li>
+          <li>{t("Adicione o número, obtenha a WABA, o ID do número e um token de acesso permanente.")}</li>
+          <li>{t("Valide os três dados abaixo. Depois copie o webhook mostrado nesta tela para a Meta.")}</li>
+        </ol>
+        <Button asChild variant="outline" size="sm" className="w-fit">
+          <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer">
+            {t("Abrir Meta for Developers")}
+          </a>
+        </Button>
+      </Card>
+
       {estado?.webhook ? (
         <Card className="flex flex-col gap-3 p-4">
           <div>

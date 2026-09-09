@@ -15,6 +15,11 @@ export const createFollowupFlowSchema = z.strictObject({
   name: z.string().trim().min(1).max(80),
 });
 
+export const generateFollowupFlowSchema = z.strictObject({
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().min(20).max(2_000),
+});
+
 // `cancel_on_reply` (Task 5.2 — reatividade): se true, um enrollment `waiting_reply`
 // desse fluxo cancela (outcome='replied') na 1ª resposta do contato em vez de
 // acordar o classify. Sibling de `kind` (não dentro de `params`) porque é uma

@@ -69,11 +69,32 @@ test("o painel salva, reaplica e restaura a personalização", async ({ page }) 
 
   await page.getByRole("button", { name: "Personalizar painel" }).click();
   const dialog = page.getByRole("dialog", { name: "Personalizar painel" });
+  const fila = dialog.getByTestId("dashboard-editor-service_queue");
+  const conversas = dialog.getByTestId("dashboard-editor-recent_conversations");
+
+  await conversas.dragTo(fila);
+  await dialog
+    .getByRole("slider", { name: "Redimensionar Oportunidades por etapa" })
+    .fill("2");
   await dialog
     .getByRole("switch", { name: "Exibir Clientes que precisam de atenção" })
     .click();
   await dialog.getByRole("button", { name: "Salvar painel" }).click();
   await expect(dialog).toBeHidden();
+
+  const preferenceResponse = await page.request.get("/api/v1/dashboard/preferences");
+  expect(preferenceResponse.ok()).toBe(true);
+  const preference = (await preferenceResponse.json()) as {
+    data: { layout: { widgets: Array<{ id: string; size: string }> } };
+  };
+  expect(preference.data.layout.widgets.slice(0, 3).map((widget) => widget.id)).toEqual([
+    "conversation_summary",
+    "recent_conversations",
+    "service_queue",
+  ]);
+  expect(
+    preference.data.layout.widgets.find((widget) => widget.id === "opportunities_by_stage")?.size,
+  ).toBe("full");
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();

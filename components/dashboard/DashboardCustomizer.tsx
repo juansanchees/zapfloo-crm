@@ -11,13 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useT } from "@/hooks/i18n/useT";
 import {
@@ -26,8 +19,10 @@ import {
   type DashboardWidgetSize,
   WIDGET_CATALOG,
   moveDashboardWidget,
+  reorderDashboardWidget,
+  resizeDashboardWidget,
 } from "@/lib/dashboard/preferences";
-import { CaretDown, CaretUp } from "@/lib/ui/icons";
+import { CaretDown, CaretUp, DotsThree } from "@/lib/ui/icons";
 
 const SIZE_LABEL: Record<DashboardWidgetSize, string> = {
   small: "Pequeno",
@@ -57,6 +52,7 @@ export function DashboardCustomizer({
 }: DashboardCustomizerProps) {
   const t = useT();
   const [draft, setDraft] = useState(layout);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
 
   function patchWidget(id: string, patch: Partial<DashboardLayout["widgets"][number]>) {
@@ -84,7 +80,30 @@ export function DashboardCustomizer({
             const definition = WIDGET_CATALOG[id];
             if (!definition) return null;
             return (
-              <div key={id} className="grid gap-3 p-4 sm:grid-cols-[1fr_9rem_auto] sm:items-center">
+              <div
+                key={id}
+                data-testid={`dashboard-editor-${id}`}
+                draggable
+                onDragStart={(event) => {
+                  if (event.dataTransfer) {
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", id);
+                  }
+                  setDraggingId(id);
+                }}
+                onDragEnd={() => setDraggingId(null)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const sourceId = event.dataTransfer?.getData("text/plain") || draggingId;
+                  if (sourceId) setDraft((current) => reorderDashboardWidget(current, sourceId, id));
+                  setDraggingId(null);
+                }}
+                className="grid cursor-grab gap-3 p-4 transition-colors hover:bg-muted/40 active:cursor-grabbing sm:grid-cols-[auto_1fr_10rem_auto] sm:items-center"
+              >
+                <span className="hidden text-muted-foreground sm:block" aria-hidden>
+                  <DotsThree size={22} weight="bold" />
+                </span>
                 <label className="flex min-w-0 items-start gap-3">
                   <Switch
                     checked={widget.visible}
@@ -98,21 +117,24 @@ export function DashboardCustomizer({
                     </span>
                   </span>
                 </label>
-                <Select
-                  value={widget.size}
-                  onValueChange={(size) => patchWidget(id, { size: size as DashboardWidgetSize })}
-                >
-                  <SelectTrigger aria-label={`${t("Tamanho de")} ${t(definition.label)}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {definition.allowedSizes.map((size) => (
-                      <SelectItem key={size} value={size}>
-                        {t(SIZE_LABEL[size])}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                    <span>{t("Tamanho")}</span>
+                    <span>{t(SIZE_LABEL[widget.size as DashboardWidgetSize])}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={definition.allowedSizes.length - 1}
+                    step={1}
+                    value={Math.max(0, definition.allowedSizes.indexOf(widget.size as never))}
+                    onChange={(event) =>
+                      setDraft((current) => resizeDashboardWidget(current, id, Number(event.target.value)))
+                    }
+                    aria-label={`${t("Redimensionar")} ${t(definition.label)}`}
+                    className="h-2 w-full cursor-ew-resize accent-[var(--color-accent)]"
+                  />
+                </div>
                 <div className="flex justify-end gap-1">
                   <Button
                     type="button"

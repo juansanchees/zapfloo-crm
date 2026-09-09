@@ -126,9 +126,11 @@ test.describe("condição com várias regras — uma bolinha por regra", () => {
     await page.goto("/app/ai/followups");
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialogo = page.getByRole("dialog");
+    await dialogo.getByRole("button", { name: "Criar manualmente" }).click();
     const campoNome = dialogo.getByLabel("Nome");
     // O Radix anima a abertura e o autoFocus chega DEPOIS do primeiro paint: um
     // fill no meio disso é engolido e o botão nasce desabilitado.
+    await campoNome.focus();
     await expect(campoNome).toBeFocused({ timeout: PRAZO });
     await campoNome.fill(nomeDoFluxo);
     await expect(campoNome).toHaveValue(nomeDoFluxo);

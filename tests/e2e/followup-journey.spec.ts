@@ -244,6 +244,7 @@ test.describe("followup — jornada completa (Task 8.3)", () => {
     await page.goto("/app/ai/followups");
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();

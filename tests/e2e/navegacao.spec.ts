@@ -86,7 +86,7 @@ test.describe("navegação compacta", () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await loginAdmin(page);
     await page.setViewportSize({ width: 1280, height: 900 });
-    await sidebar(page).getByRole("link", { name: "Início", exact: true }).click();
+    await sidebar(page).getByRole("link", { name: "Painel de controle", exact: true }).click();
     // Esta rota é um Server Component que consulta o banco. O timeout padrão
     // de 5 s do `expect` media a latência do ambiente, não a navegação: o trace
     // mostrou o GET de `/app` correto ainda pendente quando a asserção morreu.
@@ -98,13 +98,13 @@ test.describe("navegação compacta", () => {
     expect(counts.ok()).toBe(true);
     const { data } = await counts.json();
     await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(String(data.all));
-    await expect(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Início" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Painel de controle" })).toHaveAttribute("aria-current", "page");
     await expectSemOverflowHorizontal(page, "dashboard desktop");
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.screenshot({ path: path.join(EVIDENCE, "dashboard-desktop.png"), fullPage: true });
     await page.getByRole("link", { name: "Abrir fila", exact: true }).click();
     await expect(page).toHaveURL(/\/app\/inbox\?filter=unassigned$/);
-    await expect(sidebar(page).getByRole("link", { name: "Início" })).not.toHaveAttribute("aria-current");
+    await expect(sidebar(page).getByRole("link", { name: "Painel de controle" })).not.toHaveAttribute("aria-current");
     await page.goto("/app");
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();
@@ -119,19 +119,21 @@ test.describe("navegação compacta", () => {
     await expect(page).toHaveURL(/\/app\/tasks$/);
   });
 
-  test("o sidebar mostra somente as oito portas aprovadas", async ({ page }) => {
+  test("o sidebar mostra somente as oito portas operacionais aprovadas", async ({ page }) => {
     await loginAdmin(page);
 
     await expect(sidebar(page).getByRole("link")).toHaveText([
-      "Início",
+      "Painel de controle",
       "Conversas",
-      "Funis",
+      "Calendário",
       "Contatos",
+      "Leads",
       "Agentes de IA",
+      "Automações",
       "Relatórios",
     ]);
-    await expect(sidebar(page).getByRole("heading")).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Agenda" })).toBeVisible();
+    await expect(sidebar(page).getByRole("heading", { name: "Crescimento" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Calendário" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Configurações" })).toBeVisible();
 
     await page.screenshot({
@@ -151,9 +153,9 @@ test.describe("navegação compacta", () => {
     // abaixo é específica (`settings/tenant/pipelines`) e não o antigo
     // /pipelines/, que casa com as duas.
     //
-    await sidebar(page).getByRole("link", { name: "Funis" }).click();
+    await sidebar(page).getByRole("link", { name: "Leads" }).click();
     await page.waitForURL(/\/app\/kanban/);
-    const opcoes = page.getByRole("navigation", { name: /Funis.*Opções da área/ });
+    const opcoes = page.getByRole("navigation", { name: /Leads.*Opções da área/ });
     await expect(opcoes.getByRole("link")).toHaveText([
       "Meus funis",
       "Produtos",
@@ -173,10 +175,10 @@ test.describe("navegação compacta", () => {
 
     await expect(sidebar(page).getByRole("link", { name: "Produtos" })).toHaveCount(0);
 
-    await sidebar(page).getByRole("link", { name: "Funis" }).click();
+    await sidebar(page).getByRole("link", { name: "Leads" }).click();
     await page.waitForURL(/\/app\/kanban/);
     await page
-      .getByRole("navigation", { name: /Funis.*Opções da área/ })
+      .getByRole("navigation", { name: /Leads.*Opções da área/ })
       .getByRole("link", { name: "Produtos" })
       .click();
     await page.waitForURL(/\/app\/products/);
@@ -184,7 +186,7 @@ test.describe("navegação compacta", () => {
 
   test("e a lista de funis é o item vizinho, com nome próprio", async ({ page }) => {
     await loginAdmin(page);
-    await sidebar(page).getByRole("link", { name: "Funis", exact: true }).click();
+    await sidebar(page).getByRole("link", { name: "Leads", exact: true }).click();
     await page.waitForURL(/\/app\/kanban/);
     await expect(page.getByRole("heading", { name: "Funis", level: 1 })).toBeVisible({
       timeout: 30_000,
@@ -226,6 +228,10 @@ test.describe("navegação compacta", () => {
       .getByRole("link", { name: "Conexões" })
       .click();
     await page.waitForURL(/\/app\/connections/);
+    await expect(page.getByRole("heading", { name: "Escolha sabendo a diferença" })).toBeVisible();
+    await expect(page.getByText("API Oficial da Meta", { exact: true })).toBeVisible();
+    await expect(page.getByText("Conexão por QR", { exact: true })).toBeVisible();
+    await expect(page.getByText(/não promete impedir banimento/i)).toBeVisible();
     await expect(page.getByRole("tab", { name: /oficial/i })).toBeVisible({ timeout: 30_000 });
   });
 
@@ -261,7 +267,7 @@ test.describe("navegação compacta", () => {
    *
    * Medido por ferramenta, nunca a olho.
    */
-  test("as seis portas principais cabem sem scroll em 900px", async ({ page }) => {
+  test("as oito portas principais cabem sem scroll em 900px", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
@@ -274,7 +280,7 @@ test.describe("navegação compacta", () => {
       };
     });
 
-    expect(m.links).toBe(6);
+    expect(m.links).toBe(8);
     expect(m.rola, "em 900px o menu inteiro tem de caber sem scroll").toBe(false);
   });
 
@@ -295,7 +301,7 @@ test.describe("navegação compacta", () => {
         fullPage: true,
       });
 
-      await sidebar(page).getByRole("link", { name: "Funis", exact: true }).click();
+      await sidebar(page).getByRole("link", { name: "Leads", exact: true }).click();
       await page.waitForURL(/\/app\/kanban/);
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expectSemOverflowHorizontal(page, "shell mobile após navegar pelo drawer");
