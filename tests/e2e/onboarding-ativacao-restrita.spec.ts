@@ -40,6 +40,12 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     const modelWrite = await svc.from("ai_models").upsert({ provider: "openai", model_id: "qa-jornada-text", display_name: "QA jornada local", supports_tools: true }, { onConflict: "provider,model_id" });
     if (modelWrite.error) throw modelWrite.error;
     await page.goto("/login");
+    mkdirSync("evidence/onboarding-jornada", { recursive: true });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(t => document.documentElement.setAttribute("data-theme", t), theme);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await page.screenshot({ path: `evidence/onboarding-jornada/login-${locale}-${theme}.png`, fullPage: true });
+    }
     await page.getByLabel(/e-?mail/i).fill(email);
     await page.getByLabel(/senha/i).fill(password);
     await page.getByRole("button", { name: /entrar/i }).click();
@@ -98,6 +104,9 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `evidence/onboarding-jornada/agente-${locale}-celular.png`, fullPage: true });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    await page.screenshot({ path: `evidence/onboarding-jornada/agente-${locale}-celular-dark.png`, fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await continuar.focus(); await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
     await assertInactive();
@@ -163,5 +172,14 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     const viewer = await svc.from("user_organizations").update({ role: "viewer" }).eq("user_id", user).eq("organization_id", org);
     if (viewer.error) throw viewer.error;
     await page.goto("/onboarding"); await expect(page).toHaveURL(/\/app\/inbox/);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(t => localStorage.setItem("deskcomm-theme", t), theme);
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await expect(page.getByText(translated("Selecione uma conversa", "Selecciona una conversación"), { exact: true })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await page.screenshot({ path: `evidence/onboarding-jornada/inbox-${locale}-${theme}.png`, fullPage: true });
+    }
   } finally { await new Promise<void>((resolve, reject) => receiver.close(error => error ? reject(error) : resolve())); }
 });

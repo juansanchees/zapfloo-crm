@@ -229,8 +229,8 @@ export function SidebarContent({
                         className={cn(
                           "relative flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
                           isActive
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                            ? "bg-accent-soft text-foreground shadow-[inset_3px_0_0_var(--color-accent)]"
+                            : "text-muted-foreground hover:bg-surface-elevated hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
                       >
