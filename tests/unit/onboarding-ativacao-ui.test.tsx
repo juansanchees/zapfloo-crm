@@ -1,0 +1,33 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, expect, it, vi } from "vitest";
+const f = vi.hoisted(() => ({ activate: vi.fn(), refresh: vi.fn(), push: vi.fn(), get: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: f.refresh, push: f.push }) }));
+vi.mock("@/app/actions/onboarding/concluir", () => ({ ativarAgenteParaTeste: f.activate }));
+vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
+vi.mock("@/lib/api/client", () => ({ apiClient: { get: f.get } }));
+import { AutorizacaoRestrita } from "@/app/onboarding/connect-whatsapp/_autorizacao";
+const id = "11111111-1111-4111-8111-111111111111";
+const reference = { expected_context: "a".repeat(64), expected_revision: 1, expected_version_id: id, run_id: id };
+afterEach(() => { cleanup(); vi.clearAllMocks(); });
+it("conexão e seleção não ativam; último botão confirma mesma referência e erro não avança", async () => {
+  f.get.mockResolvedValue({ data: { mode: "pre_go_live", test_phone_numbers: ["+5511999998888"] } });
+  f.activate.mockResolvedValue({ ok: false, error: "draft_conflict" });
+  render(<QueryClientProvider client={new QueryClient()}><AutorizacaoRestrita reference={reference} channels={[{ id, name: "Canal QA", status: "WORKING", mode: "pre_go_live", count: 1 }]} /></QueryClientProvider>);
+  const ativar = screen.getByRole("button", { name: "Ativar para estes números de teste" });
+  expect(ativar).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Canal para o teste restrito"), { target: { value: id } });
+  expect(ativar).toBeEnabled();
+  expect(f.activate).not.toHaveBeenCalled();
+  fireEvent.click(ativar);
+  await waitFor(() => expect(f.activate).toHaveBeenCalledWith({ ...reference, channel_session_id: id }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Revise novamente");
+  expect(f.push).not.toHaveBeenCalled();
+  expect(ativar).toBeDisabled();
+});
+it("canal público não oferece reconfiguração ou ativação no wizard", () => {
+  render(<AutorizacaoRestrita reference={reference} channels={[{ id, name: "Canal público", status: "WORKING", mode: "open", count: 1 }]} />);
+  fireEvent.change(screen.getByLabelText("Canal para o teste restrito"), { target: { value: id } });
+  expect(screen.getByRole("button", { name: "Ativar para estes números de teste" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "Configurar acesso da IA" })).toBeNull();
+});

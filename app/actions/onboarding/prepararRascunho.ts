@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { segmentoDoNegocioSchema } from "@/lib/schemas/onboarding";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { capacidadesPadraoDoOnboarding } from "@/lib/ai/agents/capacidades-padrao";
 import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
@@ -28,11 +29,12 @@ export async function prepararRascunho(input: unknown): Promise<ResultadoPrepara
     const draft = rascunhoSchema.safeParse(draftRead.data);
     if (!draft.success) return { ok: false, error: "db_error" };
     if (draft.data.revision !== parsed.data.expected_revision) return { ok: false, error: "draft_conflict" };
-    const welcome = z.object({ welcome: z.object({ o_que_faz: z.string().optional() }).optional() })
+    const welcome = z.object({ welcome: z.object({ o_que_faz: z.string().optional(), segmento: segmentoDoNegocioSchema.optional() }).optional() })
       .safeParse(orgRead.data.onboarding_state);
     const business = {
       display_name: orgRead.data.display_name ?? orgRead.data.legal_name,
       o_que_faz: welcome.success ? welcome.data.welcome?.o_que_faz ?? null : null,
+      ...(welcome.success && welcome.data.welcome?.segmento ? { segmento: welcome.data.welcome.segmento } : {}),
     };
     const systemPrompt = promptDoRascunho(draft.data.configuration, business);
     const { data, error } = await admin.rpc("fn_prepare_onboarding_draft", {

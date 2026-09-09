@@ -13,6 +13,7 @@ import {
   proximoPasso,
   resumoDoOnboarding,
   type ContextoDoPasso,
+  progressoRevisado,
 } from "@/lib/onboarding/passos";
 import type { OnboardingState } from "@/lib/schemas/onboarding";
 
@@ -35,22 +36,29 @@ describe("passos visíveis", () => {
   it("a ordem é a mesma nos dois casos, menos o passo que não existe", () => {
     expect(passosVisiveis(SEM_LOJA).map((p) => p.segmento)).toEqual([
       "welcome",
-      "connect-whatsapp",
       "setup-ai",
+      "connect-whatsapp",
       // O quadro de clientes vem DEPOIS de treinar: a sugestão sai da chave que
       // a pessoa acabou de confirmar funcionando, e é o mesmo modelo que vai
       // atender. Pedi-lo antes obrigaria a montá-lo no escuro.
       "funil",
-      // Ver o funcionário atender vem DEPOIS de treiná-lo e ANTES de chamar o
-      // time: é a prova de que ele funciona, e ela precisa acontecer enquanto a
-      // pessoa ainda está no wizard.
-      "testar",
       "invite-team",
     ]);
   });
 });
 
 describe("próximo passo", () => {
+  it("confirmação antiga volta ao agente sem apagar estado persistido; recibo é histórico", () => {
+    const state: OnboardingState = { welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" }, ai: { agent_id: "a", flow: "reviewed_draft_v2", revision: 1, version_id: "v", run_id: "r" }, whatsapp: { status: "WORKING" } };
+    expect(proximoPasso(progressoRevisado(state, null), SEM_LOJA)?.segmento).toBe("setup-ai");
+    expect(state.ai?.flow).toBe("reviewed_draft_v2");
+    expect(proximoPasso(state, SEM_LOJA)?.segmento).toBe("connect-whatsapp");
+  });
+  it("primeiro acesso ensaia antes de conectar e não repete teste que exige publicação", () => {
+    const state: OnboardingState = { welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" } };
+    expect(proximoPasso(state, COM_LOJA)?.segmento).toBe("setup-ai");
+    expect(passosVisiveis(COM_LOJA).map(p => p.segmento)).not.toContain("testar");
+  });
   it("começa no primeiro", () => {
     expect(proximoPasso(VAZIO, SEM_LOJA)?.segmento).toBe("welcome");
   });
@@ -63,7 +71,7 @@ describe("próximo passo", () => {
       whatsapp: { status: "WORKING" },
     };
     expect(proximoPasso(s, SEM_LOJA)?.segmento).toBe("setup-ai");
-    expect(proximoPasso(s, COM_LOJA)?.segmento).toBe("connect-nuvemshop");
+    expect(proximoPasso(s, COM_LOJA)?.segmento).toBe("setup-ai");
   });
 
   it("passo PULADO conta como resolvido — senão o wizard entra em laço", () => {

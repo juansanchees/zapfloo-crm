@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { lerRetratoDaInstalacao } from "@/lib/instalacao/retrato";
 import { JaEstaPronto } from "../_components/JaEstaPronto";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
+import { ExplorarCrm } from "../_components/ExplorarCrm";
+import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +20,7 @@ export default async function WelcomePage() {
 
   const supabase = await createClient();
   const retrato = await lerRetratoDaInstalacao({ supabase, orgId: activeOrg.orgId });
+  const { state } = await loadOnboardingState(activeOrg.orgId);
 
   return (
     <div className="space-y-6">
@@ -28,6 +32,10 @@ export default async function WelcomePage() {
           {traduzir("Vamos montar quem vai atender seus clientes — e onde ele vai trabalhar.", idioma)}
         </p>
       </header>
+      <div className="flex flex-wrap items-center gap-3">
+        <a href="#seu-negocio" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{traduzir("Criar meu agente", idioma)}</a>
+        <ExplorarCrm />
+      </div>
 
       <JaEstaPronto retrato={retrato} idioma={idioma} />
 
@@ -37,7 +45,7 @@ export default async function WelcomePage() {
         pessoa ter de apagá-lo antes de escrever o nome dela — e quem não
         percebia seguia com o placeholder no cabeçalho do sistema para sempre.
       */}
-      <WelcomeForm defaultOrgName={retrato.empresa.aindaSemNomeProprio ? "" : activeOrg.name} />
+      <WelcomeForm key={activeOrg.orgId} context={contextoDoRascunho(user.id, activeOrg.orgId)} initial={state.welcome} defaultOrgName={retrato.empresa.aindaSemNomeProprio ? "" : activeOrg.name} />
     </div>
   );
 }

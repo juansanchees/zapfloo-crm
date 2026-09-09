@@ -20,7 +20,8 @@ export const agenteRevisadoSchema = z
 export const ativacaoRestritaSchema = agenteRevisadoSchema
   .extend({
     channel_session_id: z.string().uuid(),
-    activated_at: z.string().datetime(),
+    // jsonb_build_object(timestamptz) retorna +00:00, não necessariamente Z.
+    activated_at: z.string().datetime({ offset: true }),
   })
   .strict();
 

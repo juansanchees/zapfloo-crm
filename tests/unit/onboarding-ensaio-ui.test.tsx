@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const f = vi.hoisted(() => ({ prepare: vi.fn(), start: vi.fn(), review: vi.fn(), read: vi.fn(), save: vi.fn(), legacy: vi.fn() }));
+const f = vi.hoisted(() => ({ prepare: vi.fn(), start: vi.fn(), review: vi.fn(), read: vi.fn(), save: vi.fn(), legacy: vi.fn(), confirm: vi.fn(), push: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: f.push, refresh: f.refresh }) }));
+vi.mock("@/app/actions/onboarding/concluir", () => ({ confirmarAgenteRevisado: f.confirm }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 vi.mock("@/app/actions/onboarding/prepararRascunho", () => ({ prepararRascunho: f.prepare }));
 vi.mock("@/app/actions/onboarding/ensaio", () => ({ iniciarEnsaio: f.start, revisarEnsaio: f.review, lerEnsaio: f.read }));
@@ -16,6 +18,27 @@ function setup(prepared = false) { return render(<SetupAiForm capacidades={[]} c
 afterEach(cleanup);
 beforeEach(() => { vi.clearAllMocks(); f.prepare.mockResolvedValue({ ok: true, ...selection }); f.read.mockResolvedValue({ ok: true, panel: { selection, proof: null, models, credentials: [] } }); f.start.mockResolvedValue({ ok: true, proof }); f.review.mockResolvedValue({ ok: true, proof: { ...proof, reviewed: true } }); });
 describe("ensaio integrado na tela", () => {
+  it("continuação separada exige revisão corrente e sucesso confirmado sem criar agente legado", async () => {
+    setup(true);
+    const continuar = screen.getByRole("button", { name: "Continuar para conexão" });
+    expect(continuar).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Revisar resposta" }));
+    await waitFor(() => expect(continuar).toBeEnabled());
+    f.confirm.mockResolvedValueOnce({ ok: false, error: "draft_conflict" });
+    fireEvent.click(continuar);
+    expect(await screen.findByRole("alert")).toHaveTextContent("A configuração ou organização mudou");
+    expect(f.push).not.toHaveBeenCalled();
+    expect(continuar).toBeDisabled();
+    expect(f.legacy).not.toHaveBeenCalled();
+  });
+  it("objetivo editado invalida revisão e resumo acompanha o formulário", async () => {
+    setup(true);
+    fireEvent.click(screen.getByRole("button", { name: "Revisar resposta" }));
+    await screen.findByText("Resposta revisada. Nenhum atendimento foi ativado.");
+    fireEvent.change(screen.getByLabelText("Objetivo do agente"), { target: { value: "Qualificar orçamentos" } });
+    expect(screen.getByRole("button", { name: "Continuar para conexão" })).toBeDisabled();
+    expect(screen.getByRole("complementary", { name: "Resumo do agente" })).toHaveTextContent("Qualificar orçamentos");
+  });
   it("sem escolha automática, prepara explicitamente e exige revisão separada", async () => {
     setup(); expect(screen.getByLabelText("Modelo do ensaio")).toHaveValue("");
     expect(screen.getByLabelText("Credencial do ensaio")).toHaveAccessibleDescription("Credencial disponível deste provedor (organização/instalação)");

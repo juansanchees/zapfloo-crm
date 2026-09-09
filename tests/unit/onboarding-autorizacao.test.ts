@@ -23,6 +23,8 @@ import { acceptWelcome } from "@/app/actions/onboarding/acceptWelcome";
 import { requireOnboardingCtx } from "@/app/actions/onboarding/_shared";
 import { sendOnboardingInvites } from "@/app/actions/onboarding/sendOnboardingInvites";
 import { dadosDoPasso } from "@/app/actions/onboarding/montarQuadro";
+import { POST } from "@/app/api/v1/onboarding/whatsapp/session/route";
+vi.mock("@/lib/waha/client", () => ({ getWahaClient: () => null }));
 
 beforeEach(() => {
   estado.role = "admin";
@@ -33,6 +35,16 @@ beforeEach(() => {
 });
 
 describe("autorização das mutações do onboarding", () => {
+  it.each(["viewer", "manager"])("%s não inicia WhatsApp diretamente", async role => {
+    estado.role = role;
+    expect((await POST(new Request("http://localhost/api/v1/onboarding/whatsapp/session", { method: "POST" }))).status).toBe(403);
+  });
+  it("MFA em dívida impede pareamento direto", async () => {
+    estado.mfa = true;
+    const result = await POST(new Request("http://localhost/api/v1/onboarding/whatsapp/session", { method: "POST" }));
+    expect(result.status).toBe(403);
+    expect(await result.json()).toMatchObject({ error: { code: "mfa_required" } });
+  });
   it.each(["viewer", "agent", "manager", null])("%s não alcança service role pela action", async (role) => {
     estado.role = role;
     const form = new FormData();

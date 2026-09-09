@@ -17,6 +17,15 @@
  * aparece em lugar nenhum — nem como pendência, nem como culpa.
  */
 import type { OnboardingState } from "@/lib/schemas/onboarding";
+import type { ProvaEnsaio } from "./ensaio";
+
+/** A marca de navegação não substitui a prova corrente relida no servidor. */
+export function progressoRevisado(state: OnboardingState, proof: ProvaEnsaio | null): OnboardingState {
+  const ai = state.ai;
+  if (ai?.flow !== "reviewed_draft_v2" || ai.restricted_activation) return state;
+  if (proof?.reviewed && proof.status === "completed" && proof.revision === ai.revision && proof.version_id === ai.version_id && proof.run_id === ai.run_id) return state;
+  return { ...state, ai: undefined };
+}
 
 export interface PassoDoOnboarding {
   /** Segmento da rota em `app/onboarding/<segmento>`. */
@@ -57,12 +66,19 @@ export const PASSOS: readonly PassoDoOnboarding[] = [
     pulado: () => false,
   },
   {
+    segmento: "setup-ai",
+    rotulo: "Treinar",
+    existe: () => true,
+    cumprido: (s) => marcado(s.ai),
+    pulado: (s) => foiPulado(s.ai),
+  },
+  {
     segmento: "connect-whatsapp",
     // O telefone é a primeira peça concreta do funcionário, e é o passo que
     // pede o celular na mão — o instalador já avisa para deixá-lo aberto.
     rotulo: "O telefone dele",
     existe: () => true,
-    cumprido: (s) => marcado(s.whatsapp),
+    cumprido: (s) => s.ai?.flow === "reviewed_draft_v2" ? Boolean(s.ai.restricted_activation) : marcado(s.whatsapp),
     pulado: (s) => foiPulado(s.whatsapp),
   },
   {
@@ -73,13 +89,6 @@ export const PASSOS: readonly PassoDoOnboarding[] = [
     pulado: (s) => foiPulado(s.nuvemshop),
   },
   {
-    segmento: "setup-ai",
-    rotulo: "Treinar",
-    existe: () => true,
-    cumprido: (s) => marcado(s.ai),
-    pulado: (s) => foiPulado(s.ai),
-  },
-  {
     segmento: "funil",
     // O quadro vem DEPOIS de treinar de propósito: a sugestão sai da chave que a
     // pessoa acabou de confirmar funcionando, e é o mesmo cérebro que vai
@@ -88,17 +97,6 @@ export const PASSOS: readonly PassoDoOnboarding[] = [
     existe: () => true,
     cumprido: (s) => marcado(s.funil),
     pulado: (s) => foiPulado(s.funil),
-  },
-  {
-    segmento: "testar",
-    // O wizard terminava entregando a pessoa num inbox vazio. Ver o
-    // funcionário responder ANTES de acabar é o que transforma "configurei um
-    // sistema" em "contratei alguém" — e é onde o erro aparece antes do
-    // primeiro cliente real, não depois.
-    rotulo: "Ver ele atender",
-    existe: () => true,
-    cumprido: (s) => marcado(s.teste),
-    pulado: (s) => foiPulado(s.teste),
   },
   {
     segmento: "invite-team",

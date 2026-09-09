@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { promptDoOnboarding, promptDoRascunho } from "@/lib/onboarding/prompt";
+import { configuracaoRascunhoSchema } from "@/lib/onboarding/rascunho";
+import { welcomeSchema } from "@/lib/schemas/onboarding";
 
 describe("prompt do onboarding", () => {
+  it("inclui objetivo e segmento sem confundir objetivo com regras e preserva leitura antiga", () => {
+    const configuration = configuracaoRascunhoSchema.parse({ name: "Lia", prompt_template: "support_minimal", regras_da_casa: "Confirme o horário.", objetivo: "Qualificar pedidos de orçamento." });
+    const business = welcomeSchema.parse({ display_name: "Negócio QA", segmento: "servicos" });
+    const prompt = promptDoRascunho(configuration, { ...business, o_que_faz: null });
+    expect(prompt).toContain("Segmento do negócio: Serviços, agência ou obra");
+    expect(prompt).toContain("Objetivo do agente:\nQualificar pedidos de orçamento.");
+    expect(prompt).toContain("Regras deste rascunho:\nConfirme o horário.");
+    expect(configuracaoRascunhoSchema.safeParse({ name: "Lia", prompt_template: "support_minimal", regras_da_casa: "" }).success).toBe(true);
+    expect(welcomeSchema.safeParse({ display_name: "QA", segmento: "inventado" }).success).toBe(false);
+  });
+  it("não trunca objetivo para caber no teto total do prompt", () => {
+    expect(() => promptDoRascunho({ name: "Lia", prompt_template: "support_minimal", regras_da_casa: "", objetivo: "x".repeat(20000) }, { display_name: "QA", o_que_faz: null })).toThrow("draft_prompt_too_long");
+  });
   it("preserva negócio/ramo e o tom do caminho legado sem inventar nicho", () => {
     expect(promptDoOnboarding("support_minimal", "Clínica QA", "odontologia"))
       .toBe("Você atende os clientes de Clínica QA, que é: odontologia. Responda em frases curtas, peça apenas o que for necessário e chame uma pessoa do time assim que a dúvida sair do seu alcance.");

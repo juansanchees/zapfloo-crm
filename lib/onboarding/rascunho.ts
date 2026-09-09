@@ -5,6 +5,7 @@ import { aiAgentDefaultSchema } from "@/lib/schemas/onboarding";
 export const configuracaoRascunhoSchema = aiAgentDefaultSchema.extend({
   name: z.string().trim().min(2).max(80),
   regras_da_casa: z.string().max(20000),
+  objetivo: z.string().optional(),
 }).strict();
 export const rascunhoInputSchema = z.object({
   expected_context: z.string().regex(/^[a-f0-9]{64}$/),

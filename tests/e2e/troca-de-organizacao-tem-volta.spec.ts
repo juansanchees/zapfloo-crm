@@ -223,10 +223,6 @@ test("rascunho retoma os campos e protege contra outra aba sem ativar atendiment
   await expect(page).toHaveURL(/\/onboarding\/welcome/);
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
-  await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
-  await page.getByRole("button", { name: "Pular por enquanto" }).click();
-  await expect(page).toHaveURL(/\/onboarding\/(setup-ai|connect-nuvemshop)/);
-  if (page.url().includes("connect-nuvemshop")) await page.getByRole("button", { name: "Pular por enquanto" }).click();
   await expect(page).toHaveURL(/\/onboarding\/setup-ai/);
   const { data: before, error: beforeError } = await svc.from("organizations").select("onboarded_at,onboarding_state").eq("id", orgId).single();
   if (beforeError) throw beforeError;
@@ -367,7 +363,7 @@ test("admin pendente mantém a saída do wizard para outra organização", async
     .select("onboarded_at, onboarding_state").eq("id", semOnboarding).single();
   if (erroAntes) throw erroAntes;
   expect(antes.onboarded_at).toBeNull();
-  await page.getByRole("button", { name: "Explorar o CRM" }).click({ timeout: 5_000 });
+  await page.getByRole("banner").getByRole("button", { name: "Explorar o CRM" }).click({ timeout: 5_000 });
   await expect(page).toHaveURL(/\/app\/inbox/, { timeout: 30_000 });
   await expect(page.getByRole("link", { name: "Retomar configuração" })).toBeVisible();
   await page.reload();

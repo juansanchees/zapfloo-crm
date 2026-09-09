@@ -101,6 +101,11 @@ beforeEach(() => {
 });
 
 describe("conclusão do onboarding: identidade e capacidade ficam no servidor", () => {
+  it("aceita o timestamp com offset retornado pelo jsonb PostgreSQL após ativação", async () => {
+    const receipt = { agent_id: agent, version_id: version, channel_session_id: channel, activated_at: "2026-09-08T23:13:40.467071+00:00" };
+    f.rpc.mockResolvedValue({ data: receipt, error: null });
+    expect(await ativarAgenteParaTeste({ ...proof, channel_session_id: channel })).toEqual({ ok: true, ...receipt });
+  });
   it("mantém o estado legado parseável e aceita o recibo aditivo do novo fluxo", () => {
     expect(
       onboardingStateSchema.safeParse({
@@ -116,7 +121,7 @@ describe("conclusão do onboarding: identidade e capacidade ficam no servidor", 
           revision: 3,
           version_id: version,
           run_id: run,
-          review_confirmed_at: "2026-09-08T20:00:00.000Z",
+          review_confirmed_at: "2026-09-08T23:13:40.467071+00:00",
           restricted_activation: {
             draft_revision: 3,
             run_id: run,
@@ -127,14 +132,14 @@ describe("conclusão do onboarding: identidade e capacidade ficam no servidor", 
             snapshot_sha256: "a".repeat(64),
             access_mode: "pre_go_live",
             test_phone_count: 1,
-            activated_at: "2026-09-08T20:01:00.000Z",
+            activated_at: "2026-09-08T23:13:40.467071+00:00",
             actor_id: user,
           },
         },
         whatsapp: {
           channel_session_id: channel,
           status: "restricted_active",
-          activated_at: "2026-09-08T20:01:00.000Z",
+          activated_at: "2026-09-08T23:13:40.467071+00:00",
         },
       }).success,
     ).toBe(true);

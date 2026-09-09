@@ -1,5 +1,6 @@
 import type { PromptTemplate } from "@/lib/schemas/onboarding";
 import type { Rascunho } from "./rascunho";
+import { PACOTES } from "./pacotes-de-funil";
 
 const PROMPT_BODIES: Record<PromptTemplate, (onde: string) => string> = {
   ecommerce_friendly: (n) =>
@@ -16,10 +17,14 @@ export function promptDoOnboarding(template: PromptTemplate, negocio: string, oQ
 }
 
 /** Regras em ensaio pertencem à versão, não à memória compartilhada ativa. */
-export function promptDoRascunho(configuration: Rascunho["configuration"], business: { display_name: string; o_que_faz: string | null }): string {
+export function promptDoRascunho(configuration: Rascunho["configuration"], business: { display_name: string; o_que_faz: string | null; segmento?: string }): string {
   const base = promptDoOnboarding(configuration.prompt_template, business.display_name, business.o_que_faz ?? undefined);
-  const prompt = configuration.regras_da_casa.trim()
-    ? `${base}\n\nRegras deste rascunho:\n${configuration.regras_da_casa}` : base;
+  const segmento = PACOTES.find(p => p.id === business.segmento);
+  const prompt = [base,
+    segmento ? `Segmento do negócio: ${segmento.comoSeApresenta}` : null,
+    configuration.objetivo?.trim() ? `Objetivo do agente:\n${configuration.objetivo}` : null,
+    configuration.regras_da_casa.trim() ? `Regras deste rascunho:\n${configuration.regras_da_casa}` : null,
+  ].filter(Boolean).join("\n\n");
   if (prompt.length > 20000) throw new Error("draft_prompt_too_long");
   return prompt;
 }

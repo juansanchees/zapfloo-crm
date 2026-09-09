@@ -60,4 +60,30 @@ describe("pré-go-live no banco que o self-host instala", () => {
     await pool.query("update channel_sessions set archived_at=now() where id=$1", [canal]);
     expect((await configurar("open", [])).rows[0].n).toBe(0);
   });
+  it("CAS de metadata reavalia a precondição após esperar atualização concorrente", async () => {
+    await pool.query("update channel_sessions set archived_at=null where id=$1", [canal]);
+    await configurar("pre_go_live", []);
+    const original = (await pool.query("select metadata from channel_sessions where id=$1", [canal])).rows[0].metadata;
+    const other = await pool.connect();
+    let pending: Promise<pg.QueryResult> | undefined;
+    try {
+      await other.query("begin");
+      await other.query("update channel_sessions set metadata=metadata || '{\"ai_gate\":\"open\"}'::jsonb where id=$1", [canal]);
+      pending = pool.query("/* onboarding_access_cas_test */ update channel_sessions set metadata=$1::jsonb where organization_id=$2 and id=$3 and archived_at is null and metadata=$4::jsonb returning id",
+        [JSON.stringify({ ...original, ai_test_phone_numbers: [telefone] }), org, canal, JSON.stringify(original)]);
+      let blocked = false;
+      for (let i = 0; i < 50 && !blocked; i++) {
+        blocked = (await pool.query("select exists(select 1 from pg_stat_activity where wait_event_type='Lock' and query like '/* onboarding_access_cas_test */%') as blocked")).rows[0].blocked;
+        if (!blocked) await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      expect(blocked).toBe(true);
+      await other.query("commit");
+      expect((await pending).rowCount).toBe(0);
+      expect((await pool.query("select metadata from channel_sessions where id=$1", [canal])).rows[0].metadata).toEqual({ ...original, ai_gate: "open" });
+    } finally {
+      await other.query("rollback");
+      await pending;
+      other.release();
+    }
+  });
 });

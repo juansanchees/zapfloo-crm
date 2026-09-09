@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { requireRole } from "@/lib/auth/require-role";
-import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
+import { lerJornada } from "@/lib/onboarding/jornada";
 import { OnboardingFrame } from "./_components/OnboardingFrame";
 import { OutrasOrganizacoes } from "./_components/OutrasOrganizacoes";
 import { SkipToEnd } from "./_components/SkipToEnd";
@@ -27,7 +27,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
     redirect("/login");
   }
 
-  const { state, onboardedAt } = await loadOnboardingState(activeOrg.orgId);
+  const { state, onboardedAt } = await lerJornada(user.id, activeOrg.orgId);
   if (onboardedAt) redirect("/app/inbox");
 
   // Os passos que ESTA instalação oferece, com o que já foi resolvido. O

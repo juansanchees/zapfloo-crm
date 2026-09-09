@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.admin }));
 vi.mock("@/lib/env", () => ({ env: { NEXT_PUBLIC_APP_URL: "https://crm.example.test" } }));
 
-import { explorarCrm } from "@/app/actions/onboarding/explorar";
+import { explorarCrm, configurarChaveDoOnboarding, gerenciarAgenteDoOnboarding } from "@/app/actions/onboarding/explorar";
 import { exploracaoPertenceA } from "@/lib/onboarding/exploracao";
 import { env } from "@/lib/env";
 
@@ -22,6 +22,15 @@ beforeEach(() => {
 });
 
 describe("explorar não conclui nem ativa a organização", () => {
+  it.each([[configurarChaveDoOnboarding, "/app/ai/credentials"], [gerenciarAgenteDoOnboarding, "/app/ai/agents"]] as const)("gestão específica usa a mesma exploração e guard", async (action, destination) => {
+    await expect(action()).rejects.toThrow("REDIRECT:" + destination);
+    expect(mocks.set).toHaveBeenCalledOnce();
+    expect(mocks.admin).not.toHaveBeenCalled();
+    mocks.set.mockClear(); mocks.redirect.mockClear();
+    mocks.ctx.mockRejectedValue(new Error("forbidden"));
+    await expect(action()).rejects.toThrow("forbidden");
+    expect(mocks.set).not.toHaveBeenCalled(); expect(mocks.redirect).not.toHaveBeenCalled();
+  });
   it("não descarta a preferência em instalação HTTP", async () => {
     env.NEXT_PUBLIC_APP_URL = "http://crm.example.test";
     await expect(explorarCrm()).rejects.toThrow("REDIRECT:/app/inbox");

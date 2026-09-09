@@ -8,7 +8,7 @@ vi.mock("@/app/actions/onboarding/createDefaultAgent", () => ({ createDefaultAge
 import { SetupAiForm } from "@/app/onboarding/setup-ai/_form";
 
 const context = "a".repeat(64);
-const configuration = { name: "Atendente QA", prompt_template: "support_minimal" as const, regras_da_casa: "Não oferecer descontos." };
+const configuration = { name: "Atendente QA", prompt_template: "support_minimal" as const, regras_da_casa: "Não oferecer descontos.", objetivo: "" };
 afterEach(cleanup);
 beforeEach(() => { vi.clearAllMocks(); mocks.salvar.mockResolvedValue({ ok: true, revision: 4 }); });
 
@@ -26,7 +26,7 @@ describe("rascunho preparatório na tela", () => {
     render(<SetupAiForm capacidades={[]} conferencias={[]} rascunhoInicial={{ ok: true, context, draft: null }} />);
     fireEvent.click(screen.getByRole("button", { name: "Salvar rascunho" }));
     await waitFor(() => expect(screen.getByLabelText("Como ele vai se chamar")).toBeDisabled());
-    expect(screen.getByRole("button", { name: "Criar e continuar" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Criar e continuar" })).toBeNull();
     await act(async () => finish({ ok: true, revision: 1 }));
     expect(screen.getByLabelText("Como ele vai se chamar")).toBeEnabled();
   });
@@ -60,6 +60,6 @@ describe("rascunho preparatório na tela", () => {
     render(<SetupAiForm capacidades={[]} conferencias={[]} rascunhoInicial={{ ok: false, error: "db_error" }} />);
     expect(screen.getByRole("alert")).toHaveTextContent("carregar");
     expect(screen.getByRole("button", { name: "Salvar rascunho" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Criar e continuar" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Criar e continuar" })).toBeNull();
   });
 });

@@ -10,7 +10,9 @@ import { z } from "zod";
 
 import { audit } from "@/lib/audit";
 import { welcomeSchema } from "@/lib/schemas/onboarding";
-import { requireOnboardingCtx, patchOnboardingState, OnboardingError } from "./_shared";
+import { requireOnboardingCtx, loadOnboardingState, OnboardingError } from "./_shared";
+import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AcceptWelcomeResult =
   | { ok: true }
@@ -25,8 +27,10 @@ export async function acceptWelcome(formData: FormData): Promise<AcceptWelcomeRe
     throw err;
   }
 
+  if (formData.get("expected_context") !== contextoDoRascunho(ctx.userId, ctx.orgId)) return { ok: false, error: "forbidden" };
   const raw = {
     display_name: String(formData.get("display_name") ?? "").trim(),
+    segmento: String(formData.get("segmento") ?? "").trim() || undefined,
     o_que_faz: String(formData.get("o_que_faz") ?? "").trim() || undefined,
     timezone: String(formData.get("timezone") ?? "America/Sao_Paulo"),
     accepted_terms_at: new Date().toISOString(),
@@ -43,18 +47,23 @@ export async function acceptWelcome(formData: FormData): Promise<AcceptWelcomeRe
   }
 
   try {
-    await patchOnboardingState(
-      ctx.orgId,
-      {
+    const { state, onboardedAt } = await loadOnboardingState(ctx.orgId);
+    if (onboardedAt) return { ok: false, error: "forbidden" };
+    const nextState = {
+        ...state,
         welcome: {
-          accepted_at: input.accepted_terms_at ?? new Date().toISOString(),
+          accepted_at: state.welcome?.accepted_at ?? input.accepted_terms_at ?? new Date().toISOString(),
           timezone: input.timezone,
           display_name: input.display_name,
+          ...(input.segmento ? { segmento: input.segmento } : {}),
           ...(input.o_que_faz ? { o_que_faz: input.o_que_faz } : {}),
         },
-      },
-      { display_name: input.display_name, timezone: input.timezone },
-    );
+    };
+    const { data, error } = await createAdminClient().from("organizations")
+      .update({ onboarding_state: nextState, display_name: input.display_name, timezone: input.timezone })
+      .eq("id", ctx.orgId).eq("onboarding_state", JSON.stringify(state)).eq("status", "active")
+      .is("onboarded_at", null).is("suspended_at", null).is("redacted_at", null).select("id").maybeSingle();
+    if (error || !data) return { ok: false, error: "db_error" };
   } catch (err) {
     if (err instanceof OnboardingError) return { ok: false, error: "db_error", details: err.message };
     throw err;

@@ -1,16 +1,15 @@
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { createClient } from "@/lib/supabase/server";
-import { lerRetratoDaInstalacao } from "@/lib/instalacao/retrato";
 import { SetupAiForm } from "./_form";
-import { InteligenciaDele } from "./_inteligencia";
 import { capacidadesPadraoDoOnboarding } from "@/lib/ai/agents/capacidades-padrao";
 import { TOOL_CATALOG } from "@/lib/mcp/tools/catalog";
 import { CONFERENCIAS_DE_SAIDA } from "@/lib/ai/guardrails/lista-de-conferencia";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { lerRascunho } from "@/app/actions/onboarding/rascunho";
 import { lerEnsaio } from "@/app/actions/onboarding/ensaio";
+import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
+import { configurarChaveDoOnboarding, gerenciarAgenteDoOnboarding } from "@/app/actions/onboarding/explorar";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +32,13 @@ export default async function SetupAiPage() {
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/login");
   const idioma = user.idioma;
-
-  const supabase = await createClient();
-  const retrato = await lerRetratoDaInstalacao({ supabase, orgId: activeOrg.orgId });
+  const { state } = await loadOnboardingState(activeOrg.orgId);
+  if (!state.welcome) redirect("/onboarding/welcome");
+  if (state.ai?.restricted_activation || (state.ai && state.ai.flow !== "reviewed_draft_v2" && !state.ai.skipped)) return (
+    <section className="space-y-4"><h2 className="text-2xl font-semibold">{traduzir("Seu agente já foi configurado", idioma)}</h2>
+      <form action={gerenciarAgenteDoOnboarding}><button className="rounded-md bg-primary px-4 py-2 text-primary-foreground">{traduzir("Gerenciar agente existente", idioma)}</button></form>
+    </section>
+  );
 
   const porNome = new Map(TOOL_CATALOG.map((c) => [c.name, c]));
   const capacidades = capacidadesPadraoDoOnboarding()
@@ -55,20 +58,12 @@ export default async function SetupAiPage() {
           {traduzir("Quem ele é, como fala e o que pode prometer. Dá para mudar tudo depois.", idioma)}
         </p>
       </header>
-      {/*
-        A chave é necessária para responder, não para salvar a configuração.
-        O formulário abaixo mantém essas duas ações separadas neste recorte.
-      */}
-      <InteligenciaDele
-        inicial={{
-          origem: retrato.inteligencia.origemDaChave,
-          provedor: retrato.inteligencia.provedor,
-          rotulo: retrato.inteligencia.rotulo,
-          final: retrato.inteligencia.chaveDaOrg?.final ?? null,
-        }}
-      />
-
-      <SetupAiForm capacidades={capacidades} conferencias={conferencias} rascunhoInicial={rascunho} ensaioInicial={ensaio} />
+      {/* O ensaio seleciona provider/credencial explicitamente; não diagnosticar
+          o default da organização nem disparar a prova automática do card legado. */}
+      <form action={configurarChaveDoOnboarding}>
+        <button className="text-sm underline underline-offset-4">{traduzir("Configurar chave de IA", idioma)}</button>
+      </form>
+      <SetupAiForm key={activeOrg.orgId} negocio={state.welcome.display_name} capacidades={capacidades} conferencias={conferencias} rascunhoInicial={rascunho} ensaioInicial={ensaio} />
     </div>
   );
 }

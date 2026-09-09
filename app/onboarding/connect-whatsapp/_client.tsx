@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/hooks/i18n/useT";
 
 import { Button } from "@/components/ui/button";
-import { skipWhatsapp, markWhatsappConfigured } from "@/app/actions/onboarding/skipWhatsapp";
+import { ExplorarCrm } from "../_components/ExplorarCrm";
+import { useRouter } from "next/navigation";
 import { CanalOficialClient } from "@/components/connections/CanalOficialClient";
 import { CanalParceiroClient } from "@/components/connections/CanalParceiroClient";
 
@@ -51,21 +52,6 @@ interface SessionInfo {
 }
 
 /**
- * Server actions throw a sentinel `NEXT_REDIRECT` when calling `redirect()`.
- * The Next runtime catches it at the boundary, but inside a try/catch we
- * must re-throw so navigation actually happens.
- */
-function isRedirectError(err: unknown): boolean {
-  return Boolean(
-    err &&
-      typeof err === "object" &&
-      "digest" in err &&
-      typeof (err as { digest?: unknown }).digest === "string" &&
-      (err as { digest: string }).digest.startsWith("NEXT_REDIRECT"),
-  );
-}
-
-/**
  * O estado do pareamento em palavras — nunca o enum do transporte.
  * Cada linha responde "e agora?", que é a pergunta de quem está olhando.
  */
@@ -93,7 +79,7 @@ function explicacaoDoEstado(s: Status, t: (texto: string) => string): string {
     case "INIT":
       return t("Isso leva alguns segundos. O código aparece aqui sozinho.");
     case "WORKING":
-      return t("O número está no ar. Seguindo para o próximo passo.");
+      return t("Conexão pronta. Autorize os números de teste e confirme a ativação abaixo.");
     case "FAILED":
       return t("É normal — ele vale poucos minutos. Dá para gerar outro.");
     default:
@@ -169,49 +155,9 @@ function VoltarParaEscolha({ onVoltar }: { onVoltar: () => void }) {
  * sem chave ficava preso numa tela com o diagnóstico certo e nenhum caminho.
  * Aqui, nenhuma escolha — nem a pergunta em si — deixa a pessoa sem saída.
  */
-function Saidas({ status, sessionName }: { status: Status; sessionName: string }) {
-  const t = useT();
-  const [pending, startTransition] = useTransition();
-  return (
-    <div className="flex flex-wrap gap-2 pt-2">
-      <Button
-        type="button"
-        variant="outline"
-        disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            try {
-              await skipWhatsapp();
-            } catch (err) {
-              if (isRedirectError(err)) throw err;
-              toast.error(`${t("Falha ao pular:")} ${String(err)}`);
-            }
-          })
-        }
-      >
-        {t("Pular por enquanto")}
-      </Button>
-      <Button
-        type="button"
-        disabled={pending || status === "WORKING"}
-        onClick={() =>
-          startTransition(async () => {
-            try {
-              await markWhatsappConfigured(
-                sessionName,
-                status === "WORKING" ? "WORKING" : "configured",
-              );
-            } catch (err) {
-              if (isRedirectError(err)) throw err;
-              toast.error(`${t("Falha ao marcar passo:")} ${String(err)}`);
-            }
-          })
-        }
-      >
-        {t("Conectei em outro lugar")}
-      </Button>
-    </div>
-  );
+function Saidas() {
+  const t = useT(); const router = useRouter();
+  return <div className="flex flex-wrap items-center gap-2 pt-2"><ExplorarCrm /><Button variant="outline" onClick={() => router.refresh()}>{t("Conferir canais conectados")}</Button></div>;
 }
 
 export function ConnectWhatsappClient({
@@ -220,7 +166,6 @@ export function ConnectWhatsappClient({
   oficialPodeReceber,
 }: Props) {
   const t = useT();
-  const [pending, startTransition] = useTransition();
   const [forma, setForma] = useState<Forma | null>(null);
   const [info, setInfo] = useState<SessionInfo>({ status: "INIT", session: sessionName });
   const [qrTick, setQrTick] = useState(0);
@@ -309,19 +254,6 @@ export function ConnectWhatsappClient({
     return () => clearInterval(id);
   }, [forma, wahaConfigured, status, sessionName, t]);
 
-  // 3) When status → WORKING, auto-advance.
-  useEffect(() => {
-    if (status !== "WORKING") return;
-    startTransition(async () => {
-      try {
-        await markWhatsappConfigured(sessionName, "WORKING");
-      } catch (err) {
-        if (isRedirectError(err)) throw err;
-        toast.error("Falha ao avançar: " + String(err));
-      }
-    });
-  }, [status, sessionName, t]);
-
   // Derruba a sessão morta e sobe outra. O polling volta sozinho porque `status`
   // sai de FAILED e o efeito que o observa roda de novo.
   async function restartSession() {
@@ -378,7 +310,7 @@ export function ConnectWhatsappClient({
             />
           </div>
         </fieldset>
-        <Saidas status={status} sessionName={sessionName} />
+        <Saidas />
       </div>
     );
   }
@@ -406,7 +338,7 @@ export function ConnectWhatsappClient({
             contra o outro lado ANTES de gravar — e duas cópias divergem. */}
         {forma === "oficial" ? <CanalOficialClient /> : <CanalParceiroClient />}
 
-        <Saidas status={status} sessionName={sessionName} />
+        <Saidas />
       </div>
     );
   }
@@ -516,7 +448,7 @@ export function ConnectWhatsappClient({
         </div>
       )}
 
-      <Saidas status={status} sessionName={sessionName} />
+      <Saidas />
     </div>
   );
 }

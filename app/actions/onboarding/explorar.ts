@@ -8,6 +8,18 @@ import { cookieSecure } from "@/lib/supabase/cookie-secure";
 
 /** Só muda a preferência deste navegador; não conclui a organização. */
 export async function explorarCrm(): Promise<void> {
+  return entrarNoCrm("/app/inbox");
+}
+
+export async function gerenciarAgenteDoOnboarding(): Promise<void> {
+  return entrarNoCrm("/app/ai/agents");
+}
+
+export async function configurarChaveDoOnboarding(): Promise<void> {
+  return entrarNoCrm("/app/ai/credentials");
+}
+
+async function entrarNoCrm(destination: "/app/inbox" | "/app/ai/agents" | "/app/ai/credentials"): Promise<void> {
   const ctx = await requireOnboardingCtx();
   const store = await cookies();
   store.set(COOKIE_EXPLORACAO, valorDaExploracao(ctx.userId, ctx.orgId), {
@@ -16,5 +28,5 @@ export async function explorarCrm(): Promise<void> {
     secure: cookieSecure(),
     path: "/",
   });
-  redirect("/app/inbox");
+  redirect(destination);
 }

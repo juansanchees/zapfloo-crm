@@ -10,6 +10,9 @@ import { redirect } from "next/navigation";
 import { audit } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOnboardingCtx, OnboardingError } from "./_shared";
+import { onboardingStateSchema } from "@/lib/schemas/onboarding";
+import { proximoPasso } from "@/lib/onboarding/passos";
+import { env } from "@/lib/env";
 
 export type FinishOnboardingResult =
   | { ok: true; alreadyOnboarded: boolean }
@@ -26,21 +29,27 @@ export async function finishOnboarding(): Promise<FinishOnboardingResult> {
 
   const admin = createAdminClient();
 
-  const { data: existing } = await admin
+  const { data: existing, error: readError } = await admin
     .from("organizations")
-    .select("onboarded_at")
+    .select("onboarded_at,onboarding_state")
     .eq("id", ctx.orgId)
     .maybeSingle();
 
   const alreadyOnboarded = Boolean(existing?.onboarded_at);
+  if (readError || !existing) return { ok: false, error: "db_error" };
 
   if (!alreadyOnboarded) {
-    const { error } = await admin
+    const state = onboardingStateSchema.safeParse(existing.onboarding_state);
+    if (!state.success || proximoPasso(state.data, { lojaLigada: env.NUVEMSHOP_ENABLED })) return { ok: false, error: "forbidden" };
+    const { data: changed, error } = await admin
       .from("organizations")
       .update({ onboarded_at: new Date().toISOString() })
       .eq("id", ctx.orgId)
-      .is("onboarded_at", null);
+      .eq("onboarding_state", JSON.stringify(existing.onboarding_state))
+      .is("onboarded_at", null)
+      .select("id").maybeSingle();
     if (error) return { ok: false, error: "db_error", details: error.message };
+    if (!changed) return { ok: false, error: "forbidden" };
 
     await admin.from("event_log").insert({
       organization_id: ctx.orgId,

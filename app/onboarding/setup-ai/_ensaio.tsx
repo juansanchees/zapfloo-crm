@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { confirmarAgenteRevisado } from "@/app/actions/onboarding/concluir";
 import { useT } from "@/hooks/i18n/useT";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,6 +16,7 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
   initial: LeituraEnsaio; context: string; revision: number; dirty: boolean; epoch: number; onBusy: (busy: boolean) => void;
 }) {
   const t = useT();
+  const router = useRouter();
   // Fixado junto ao formulário, inclusive numa navegação RSC em outra organização.
   const [panel, setPanel] = useState(initial.ok ? initial.panel : null);
   const [selection, setSelection] = useState(panel?.selection ?? null);
@@ -109,6 +112,12 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
       if (r.ok) setProof(r.proof); else { setProof(null); setError(failure(r.error)); }
     })}>{t("Revisar resposta")}</Button>
     {current?.reviewed && <p role="status" className="text-sm">{t("Resposta revisada. Nenhum atendimento foi ativado.")}</p>}
+    <Button type="button" disabled={blocked || !ready || !current?.reviewed || Boolean(error)} onClick={() => void perform(async () => {
+      if (!selection || !current?.reviewed) return;
+      const result = await confirmarAgenteRevisado({ expected_context: context, expected_revision: revision, expected_version_id: selection.version_id, run_id: current.run_id });
+      if (!result.ok) { setProof(null); setError(failure(result.error)); return; }
+      router.push("/onboarding/connect-whatsapp"); router.refresh();
+    })}>{t("Continuar para conexão")}</Button>
     {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
     <div className="border-t pt-4"><p className="mb-2 text-sm">{t("Continuar depois")}</p><ExplorarCrm /></div>
   </section>;

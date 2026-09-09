@@ -12,6 +12,7 @@ import {
 import { getWahaClient } from "@/lib/waha/client";
 import { createClient } from "@/lib/supabase/server";
 import { metadataInicialDoCanal } from "@/lib/ai/elegibilidade/pre-go-live";
+import { requireRole } from "@/lib/auth/require-role";
 
 /**
  * Onboarding WhatsApp session orchestration.
@@ -133,10 +134,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const requestId = randomUUID();
-  const user = await loadAuthUser();
-  if (!user) return fail("unauthenticated", "Sessão expirada", 401);
-  const activeOrg = await resolveActiveOrg(user);
-  if (!activeOrg) return fail("tenant_not_found", "Sem organização ativa", 404);
+  const authz = await requireRole("admin", { requestId, resource: "onboarding" });
+  if (!authz.ok) return authz.response;
+  const { user, org: activeOrg } = authz;
   const waha = getWahaClient();
   if (!waha) return fail("waha_not_configured", "Suba o Docker (docker compose up -d waha) e tente novamente.", 503);
   const sessionName = defaultSessionName(activeOrg.orgId);

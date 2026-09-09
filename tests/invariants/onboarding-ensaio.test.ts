@@ -26,6 +26,25 @@ async function finish(f: F, run: string, text = "Olá! Como posso ajudar?") {
 async function review(f: F, run: string) { return (await db.query("select fn_revisar_ensaio_onboarding($1,$2,1,$3,$4) r", [f.org, f.user, f.version, run])).rows[0].r; }
 
 describe("ensaio de texto conserva snapshot e não ativa atendimento", () => {
+  it("objetivo opcional persiste e alteração retira revisão; tipo arbitrário é recusado", async () => {
+    const f = await fixture(); const run = await start(f); await finish(f, run.run_id); await review(f, run.run_id);
+    const configuration = { name: "Atendente QA", prompt_template: "support_minimal", regras_da_casa: "Sem descontos", objetivo: "Qualificar orçamentos" };
+    const saved = (await db.query("select fn_save_onboarding_draft($1,$2,1,$3) r", [f.org, f.user, configuration])).rows[0].r;
+    expect(saved.configuration.objetivo).toBe("Qualificar orçamentos");
+    expect((await db.query("select rehearsal from onboarding_drafts where organization_id=$1", [f.org])).rows[0].rehearsal).toBeNull();
+    await expect(review(f, run.run_id)).rejects.toThrow("draft_conflict");
+    await expect(db.query("select fn_save_onboarding_draft($1,$2,2,$3)", [f.org, f.user, { ...configuration, objetivo: 42 }])).rejects.toThrow("draft_invalid_input");
+  });
+  it("segmento do negócio entra no snapshot e mudar/remover exige novo ensaio", async () => {
+    const f = await fixture(); const run = await start(f); await finish(f, run.run_id); await review(f, run.run_id);
+    await db.query("update organizations set onboarding_state=jsonb_build_object('welcome',jsonb_build_object('segmento','servicos')) where id=$1", [f.org]);
+    await expect(review(f, run.run_id)).rejects.toThrow("draft_context_changed");
+    const prepared = (await db.query("select fn_prepare_onboarding_draft($1,$2,1,$3,$4,$5) r", [f.org, f.user, f.version, { display_name: "Negócio QA", o_que_faz: null, segmento: "servicos" }, { system_prompt: "Atenda com cuidado no segmento serviços.", provider: "openai", model: "qa-ensaio", credential_id: null, tool_ids: [] }])).rows[0].r;
+    f.version = prepared.version_id;
+    const next = await start(f); await finish(f, next.run_id); await review(f, next.run_id);
+    await db.query("update organizations set onboarding_state='{}'::jsonb where id=$1", [f.org]);
+    await expect(review(f, next.run_id)).rejects.toThrow("draft_context_changed");
+  });
   it("revisão persistida é idempotente, exige chamada real registrada e não cria canal/evento", async () => {
     const f = await fixture(); const run = await start(f);
     await expect(review(f, run.run_id)).rejects.toThrow("rehearsal_not_completed");

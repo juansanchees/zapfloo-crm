@@ -31,6 +31,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
@@ -56,6 +57,7 @@ vi.mock("@/components/connections/CanalParceiroClient", () => ({
 }));
 
 import { ConnectWhatsappClient } from "@/app/onboarding/connect-whatsapp/_client";
+import { markWhatsappConfigured } from "@/app/actions/onboarding/skipWhatsapp";
 
 /** Toda chamada de rede que a tela tentar fazer passa por aqui. */
 let chamadas: string[] = [];
@@ -96,6 +98,14 @@ function chamadasDeSessao(): string[] {
 }
 
 describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
+  it("QR WORKING mostra conexão pronta sem concluir ou ativar automaticamente", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { status: "WORKING", session: "org_teste", channel_session_id: "11111111-1111-4111-8111-111111111111" } }) } as Response);
+    montar();
+    fireEvent.click(screen.getByTestId("forma-qr").querySelector("input")!);
+    await screen.findByText("Conexão pronta. Autorize os números de teste e confirme a ativação abaixo.");
+    expect(markWhatsappConfigured).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Conectei em outro lugar" })).toBeNull();
+  });
   it("abre com a pergunta e as três formas, não com o código", () => {
     montar();
 
@@ -167,8 +177,8 @@ describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
 
     // c2f88e83: um aviso correto que nasceu sem botão prendeu quem instalava
     // sem chave. A pergunta é um estado novo, e estados novos precisam de saída.
-    expect(screen.getByRole("button", { name: /pular por enquanto/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /conectei em outro lugar/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /explorar o crm/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /conferir canais conectados/i })).toBeTruthy();
   });
 
   it("avisa que o servidor ainda não recebe pelo caminho oficial, ANTES do formulário", async () => {
