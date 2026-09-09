@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 /** Performance budget (EPIC-12 §S-12.05):
@@ -67,6 +67,10 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // HSTS só é obedecido após uma resposta HTTPS. Não usamos
+          // includeSubDomains/preload: a instalação self-host não pode prometer
+          // que todo subdomínio do operador pertence a este produto.
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
           // microphone=(self): o gravador de voz do composer (PTT estilo WhatsApp)
           // usa getUserMedia({audio}); microphone=() bloquearia em TODA origem,
           // inclusive a própria — daria "microphone is not allowed in this document".

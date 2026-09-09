@@ -228,10 +228,11 @@ test.describe("navegação compacta", () => {
       .getByRole("link", { name: "Conexões" })
       .click();
     await page.waitForURL(/\/app\/connections/);
-    await expect(page.getByRole("heading", { name: "Escolha sabendo a diferença" })).toBeVisible();
-    await expect(page.getByText("API Oficial da Meta", { exact: true })).toBeVisible();
-    await expect(page.getByText("Conexão por QR", { exact: true })).toBeVisible();
-    await expect(page.getByText(/não promete impedir banimento/i)).toBeVisible();
+    const comparativo = page.getByRole("region", { name: "Escolha sabendo a diferença" });
+    await expect(comparativo).toBeVisible();
+    await expect(comparativo.getByText("API Oficial da Meta", { exact: true })).toBeVisible();
+    await expect(comparativo.getByText("Conexão por QR", { exact: true })).toBeVisible();
+    await expect(comparativo.getByText(/não promete impedir banimento/i)).toBeVisible();
     await expect(page.getByRole("tab", { name: /oficial/i })).toBeVisible({ timeout: 30_000 });
   });
 

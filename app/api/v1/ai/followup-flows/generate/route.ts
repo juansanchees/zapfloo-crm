@@ -18,6 +18,7 @@ import { env } from "@/lib/env";
 import { FollowupDraftInvalidError, generateFollowupDraft } from "@/lib/followup/ai-draft";
 import { generateFollowupFlowSchema } from "@/lib/followup/api-schemas";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -76,7 +77,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       if (error?.code === "23505") {
         return fail("conflict", t("Já existe um fluxo com este nome."), 409, { requestId });
       }
-      return fail("internal_error", error?.message ?? "followup_flow_insert_failed", 500, {
+      logger.error("followup-flow-generate: gravação do rascunho falhou", {
+        organization_id: authz.org.orgId,
+        request_id: requestId,
+        database_code: error?.code ?? "created_row_missing",
+      });
+      return fail("internal_error", t("Erro inesperado. Tente novamente."), 500, {
         requestId,
       });
     }

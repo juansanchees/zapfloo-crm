@@ -84,4 +84,34 @@ describe("POST /api/v1/ai/followup-flows/generate", () => {
     expect(res.status).toBe(422);
     expect(generateFollowupDraft).not.toHaveBeenCalled();
   });
+
+  it("não expõe detalhes internos quando a gravação do rascunho falha", async () => {
+    vi.mocked(createClient).mockResolvedValue({
+      from: () => ({
+        insert: () => ({
+          select: () => ({
+            single: async () => ({
+              data: null,
+              error: {
+                code: "XX000",
+                message: "connection failed with password segredo-super-secreto",
+              },
+            }),
+          }),
+        }),
+      }),
+    } as never);
+
+    const { POST } = await import("@/app/api/v1/ai/followup-flows/generate/route");
+    const res = await POST(request({
+      name: "Retomada segura",
+      description: "Espere trinta minutos, envie uma mensagem e encerre.",
+    }));
+    const body = await res.text();
+
+    expect(res.status).toBe(500);
+    expect(body).not.toContain("segredo-super-secreto");
+    expect(body).not.toContain("connection failed");
+    expect(body).toContain("Erro inesperado");
+  });
 });
