@@ -143,7 +143,7 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   );
   const usuarios = await svc.auth.admin.listUsers({ page: 1, perPage: 50 });
   if (usuarios.error) throw usuarios.error;
-  expect(usuarios.data.users).toHaveLength(1);
+  expect(usuarios.data.users.length === 1, "o banco fresco precisa ter exatamente um usuário").toBe(true);
   const dono = usuarios.data.users[0]!;
   expect(dono.email === OWNER_EMAIL, "o único usuário precisa ser o dono fictício configurado").toBe(true);
 
@@ -159,16 +159,26 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
     .select("id,created_by,display_name,settings,onboarded_at,onboarding_state")
     .eq("created_by", dono.id);
   if (organizacoes.error) throw organizacoes.error;
-  expect(organizacoes.data).toHaveLength(1);
+  expect(organizacoes.data.length === 1, "o dono fictício precisa ter exatamente uma organização").toBe(true);
   const org = organizacoes.data[0]!;
-  expect(org.created_by).toBe(dono.id);
-  expect(org.onboarded_at).toBeNull();
-  expect(org.onboarding_state ?? {}).toEqual({});
+  expect(org.created_by === dono.id, "a organização precisa pertencer ao dono fictício").toBe(true);
+  expect(org.onboarded_at === null, "a organização fresca não pode estar concluída").toBe(true);
+  const estadoInicial = org.onboarding_state ?? {};
+  const estadoInicialVazio = typeof estadoInicial === "object"
+    && !Array.isArray(estadoInicial)
+    && Object.keys(estadoInicial).length === 0;
+  expect(estadoInicialVazio, "a organização fresca precisa começar sem estado de onboarding").toBe(true);
   const provider = (org.settings as { llm?: { provider?: string } } | null)?.llm?.provider ?? "anthropic";
 
   const vinculos = await svc.from("user_organizations").select("user_id,organization_id,role,revoked_at").eq("user_id", dono.id);
   if (vinculos.error) throw vinculos.error;
-  expect(vinculos.data).toEqual([{ user_id: dono.id, organization_id: org.id, role: "admin", revoked_at: null }]);
+  const vinculo = vinculos.data[0];
+  const vinculoInicialValido = vinculos.data.length === 1
+    && vinculo?.user_id === dono.id
+    && vinculo.organization_id === org.id
+    && vinculo.role === "admin"
+    && vinculo.revoked_at === null;
+  expect(vinculoInicialValido, "o dono fictício precisa ter somente o vínculo admin ativo da organização").toBe(true);
   for (const tabela of ["ai_agents", "ai_agent_versions", "ai_provider_credentials", "channel_sessions", "onboarding_drafts"] as const) {
     const leitura = await svc.from(tabela).select("organization_id", { count: "exact", head: true }).eq("organization_id", org.id);
     if (leitura.error) throw new Error(`preflight ${tabela} falhou (status ${leitura.status})`);
@@ -176,7 +186,7 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   }
   const fatoresAntes = await svc.auth.admin.mfa.listFactors({ userId: dono.id });
   if (fatoresAntes.error) throw fatoresAntes.error;
-  expect(fatoresAntes.data.factors).toHaveLength(0);
+  expect(fatoresAntes.data.factors.length === 0, "o dono fictício precisa começar sem fatores MFA").toBe(true);
 
   await login(page);
   await expect(page).toHaveURL(/\/onboarding\/welcome/);

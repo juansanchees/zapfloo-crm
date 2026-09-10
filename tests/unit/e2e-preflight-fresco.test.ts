@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { expect as playwrightExpect } from "@playwright/test";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
@@ -69,6 +70,38 @@ function consultaDoPreflight(source: ts.SourceFile): { tabelas: string[]; coluna
   return encontrada;
 }
 
+function matchersQueSerializamRegistrosNoPreflight(source: ts.SourceFile): string[] {
+  const inicio = source.text.indexOf("const usuarios =");
+  const fim = source.text.indexOf("await login(page);");
+  if (inicio < 0 || fim < 0 || fim <= inicio) throw new Error("limites do preflight não encontrados na fresh");
+
+  const proibidos = new Set(["toEqual", "toHaveLength", "toMatchObject"]);
+  const encontrados: string[] = [];
+  function visitar(no: ts.Node): void {
+    if (
+      no.getStart(source) >= inicio
+      && no.getEnd() <= fim
+      && ts.isCallExpression(no)
+      && ts.isPropertyAccessExpression(no.expression)
+      && proibidos.has(no.expression.name.text)
+    ) {
+      encontrados.push(no.expression.name.text);
+    }
+    ts.forEachChild(no, visitar);
+  }
+  visitar(source);
+  return encontrados;
+}
+
+function mensagemDaFalha(executar: () => void): string {
+  try {
+    executar();
+  } catch (erro) {
+    return erro instanceof Error ? erro.message : String(erro);
+  }
+  throw new Error("a asserção deveria falhar");
+}
+
 describe("preflight da instalação fresca", () => {
   it("seleciona uma coluna existente nas cinco tabelas contadas por HEAD", () => {
     const spec = ts.createSourceFile(
@@ -90,5 +123,28 @@ describe("preflight da instalação fresca", () => {
     expect(consulta.tabelas).toEqual(TABELAS_DO_PREFLIGHT);
     expect(consulta.coluna).toBe("organization_id");
     expect(TABELAS_DO_PREFLIGHT.every((tabela) => colunasDaRow(tipos, tabela).has(consulta.coluna))).toBe(true);
+  });
+
+  it("não entrega registros pessoais aos matchers do preflight", () => {
+    const spec = ts.createSourceFile(
+      "vps-fresh-onboarding.spec.ts",
+      readFileSync(resolve("tests/e2e/vps-fresh-onboarding.spec.ts"), "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS,
+    );
+
+    expect(matchersQueSerializamRegistrosNoPreflight(spec)).toEqual([]);
+  });
+
+  it("o erro do matcher seguro da versão instalada não inclui o marcador sensível", () => {
+    const marcadorSensivel = "email-ficticio-nao-pode-vazar@example.invalid";
+    const registros = [{ email: marcadorSensivel }];
+    const mensagem = mensagemDaFalha(() => {
+      playwrightExpect(registros.length === 0, "o preflight precisa começar sem registros").toBe(true);
+    });
+
+    expect(mensagem).toContain("o preflight precisa começar sem registros");
+    expect(mensagem).not.toContain(marcadorSensivel);
   });
 });
