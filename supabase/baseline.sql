@@ -19801,3 +19801,50 @@ grant execute on function public.fn_decrypt_oauth(bytea) to service_role;
 grant execute on function public.fn_encrypt_oauth(text) to service_role;
 grant execute on function public.fn_lgpd_cascade_redact_contact(uuid, uuid, uuid) to service_role;
 grant execute on function public.fn_update_budget_consumption() to service_role;
+
+-- ---- api_audit_log append-only no schema + search_path de 3 gatilhos (migration 0231) ----
+--
+-- Racional completo no cabeçalho de
+-- supabase/migrations/20260910040000_0231_auditoria_append_only_e_search_path.sql.
+--
+-- Em uma frase: `ALTER DEFAULT PRIVILEGES ... GRANT ALL ON TABLES` (linhas ~4890
+-- deste arquivo) alcança `api_audit_log`, que nasce depois dele — então DELETE,
+-- UPDATE e TRUNCATE estavam concedidos a anon, authenticated e service_role em
+-- TODA instalação, enquanto a 0167 e o CLAUDE.md afirmavam o contrário. Este
+-- bloco torna a afirmação verdadeira.
+--
+-- Idempotente por natureza: revoke e grant podem ser reaplicados à vontade, e o
+-- bloco das funções confere existência antes de alterar. Precisa estar AQUI, e
+-- não só na migration, porque o kit self-host aplica apenas este arquivo — tanto
+-- no install.sh quanto no update.sh.
+
+revoke delete, update, truncate on table public.api_audit_log from public;
+revoke delete, update, truncate on table public.api_audit_log from anon;
+revoke delete, update, truncate on table public.api_audit_log from authenticated;
+revoke delete, update, truncate on table public.api_audit_log from service_role;
+
+grant select, insert on table public.api_audit_log to authenticated;
+grant select, insert on table public.api_audit_log to service_role;
+
+comment on table public.api_audit_log is
+  'Trilha de auditoria append-only. DELETE/UPDATE/TRUNCATE revogados de public, anon, '
+  'authenticated e service_role na migration 0231 — antes dela o ALTER DEFAULT PRIVILEGES '
+  'do baseline concedia GRANT ALL e a garantia existia só na prosa. O único caminho de '
+  'remoção é fn_expurgar_auditoria_vencida (security definer, piso de 90 dias no corpo, '
+  'sem seletor de linha), chamada pelo cron data-retention. Retenção default: 5 anos.';
+
+do $$
+begin
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname = 'public' and p.proname = 'fn_agent_versions_immutable') then
+    alter function public.fn_agent_versions_immutable() set search_path = public, pg_temp;
+  end if;
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname = 'public' and p.proname = 'fn_ai_agent_version_content_immutable') then
+    alter function public.fn_ai_agent_version_content_immutable() set search_path = public, pg_temp;
+  end if;
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname = 'public' and p.proname = 'fn_contato_anonimizado_limpa_campos_personalizados') then
+    alter function public.fn_contato_anonimizado_limpa_campos_personalizados() set search_path = public, pg_temp;
+  end if;
+end $$;

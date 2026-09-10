@@ -278,3 +278,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 - **Integrations**: tenant_integrations, orders, nuvemshop_products
 - **Compliance**: lgpd_requests
 - **Ops**: incidents
+| `20260910040000` | `0231_auditoria_append_only_e_search_path` | Revoga DELETE/UPDATE/TRUNCATE de `api_audit_log` para public, anon, authenticated e service_role — o `ALTER DEFAULT PRIVILEGES` do baseline concedia GRANT ALL e a garantia de append-only existia só na prosa da 0167. Mantém SELECT/INSERT; o expurgo segue pela `security definer`, que roda como dona da tabela. Fixa `search_path` em três funções de gatilho apontadas pelo linter. |
