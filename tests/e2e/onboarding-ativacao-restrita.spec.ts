@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdirSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
@@ -54,7 +53,7 @@ test("preparação arquivada é recuperável pela tela sem chave de IA", async (
         body: JSON.stringify({ viewport: width, ...measures, ...viewport }, null, 2),
         contentType: "application/json",
       });
-      await page.screenshot({ path: `.superpowers/evidence/anexos-3-6/recuperacao-${width}.png`, fullPage: true });
+      await page.screenshot({ path: test.info().outputPath(`recuperacao-${width}.png`), fullPage: true });
     }
     await page.getByRole("button", { name: "Recuperar preparação" }).click();
     await expect(page.getByRole("button", { name: "Recuperar preparação" })).toHaveCount(0);
@@ -70,7 +69,7 @@ test("preparação arquivada é recuperável pela tela sem chave de IA", async (
     const old = await svc.from("ai_agents").select("is_active,archived_at").eq("organization_id", org).eq("id", first.data!.prepared_agent_id).single();
     checked(old); expect(old.data!.is_active).toBe(false); expect(old.data!.archived_at).not.toBeNull();
     expect((await svc.from("ai_agent_runs").select("id").eq("organization_id", org)).data).toHaveLength(0);
-    await expect(page.getByRole("button", { name: "Continuar para conexão" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Continuar configuração" })).toBeDisabled();
   } finally {
     checked(await svc.from("organizations").delete().eq("id", org));
     checked(await svc.auth.admin.deleteUser(user));
@@ -105,12 +104,16 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     if (membership.error) throw membership.error;
     const modelWrite = await svc.from("ai_models").upsert({ provider: "openai", model_id: "qa-jornada-text", display_name: "QA jornada local", supports_tools: true }, { onConflict: "provider,model_id" });
     if (modelWrite.error) throw modelWrite.error;
+    // Fixture sintética declarada antes do SSR da conexão: o seletor precisa
+    // enxergá-la na carga inicial. Isto não prova transporte nem pareamento e
+    // não chama o botão de confirmação real para fingir um refresh do fixture.
+    const channelWrite = await svc.from("channel_sessions").insert({ id: channel, organization_id: org, display_name: "Canal sintético QA", waha_session_name: `fixture_${channel}`, status: "WORKING", webhook_secret_encrypted: "\\x00", metadata: { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: [] } });
+    if (channelWrite.error) throw channelWrite.error;
     await page.goto("/login");
-    mkdirSync("evidence/onboarding-jornada", { recursive: true });
     for (const theme of ["light", "dark"]) {
       await page.evaluate(t => document.documentElement.setAttribute("data-theme", t), theme);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await page.screenshot({ path: `evidence/onboarding-jornada/login-${locale}-${theme}.png`, fullPage: true });
+      await page.screenshot({ path: test.info().outputPath(`login-${locale}-${theme}.png`), fullPage: true });
     }
     await page.getByLabel(/e-?mail/i).fill(email);
     await page.getByLabel(/senha/i).fill(password);
@@ -125,12 +128,16 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     await page.locator("#o_que_faz").fill("Projetos sintéticos de demonstração");
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Continuar", exact: true }).click();
+    await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
+    await page.getByRole("link", { name: translated("Configurar IA (opcional)", "Configurar IA (opcional)") }).click();
     await expect(page).toHaveURL(/\/onboarding\/setup-ai/);
     await page.getByRole("link", { name: translated("Voltar ao negócio", "Volver al negocio") }).click();
     await expect(page.locator("#segmento")).toHaveValue("servicos");
     await expect(page.locator("#o_que_faz")).toHaveValue("Projetos sintéticos de demonstração");
     await expect(page.getByRole("checkbox")).toBeChecked();
     await page.getByRole("button", { name: "Continuar", exact: true }).click();
+    await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
+    await page.getByRole("link", { name: translated("Configurar IA (opcional)", "Configurar IA (opcional)") }).click();
     await expect(page).toHaveURL(/\/onboarding\/setup-ai/);
     await page.locator("#name").fill("Lia sintética QA");
     await page.locator("#objetivo").fill("Qualificar pedidos de orçamento");
@@ -145,7 +152,7 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     await page.getByRole("button", { name: translated("Preparar ensaio", "Preparar ensayo"), exact: true }).click();
     await expect(page.getByRole("button", { name: translated("Preparar ensaio", "Preparar ensayo"), exact: true })).toBeEnabled();
     await page.locator("#ensaio-message").fill("Olá, preciso de um orçamento fictício.");
-    const continuar = page.getByRole("button", { name: translated("Continuar para conexão", "Continuar a la conexión") });
+    const continuar = page.getByRole("button", { name: translated("Continuar configuração", "Continuar la configuración") });
     await expect(continuar).toBeDisabled();
     await page.getByRole("button", { name: translated("Testar mensagem", "Probar mensaje"), exact: true }).click();
     await expect(page.getByText("Resposta sintética local: posso ajudar com um orçamento.", { exact: true })).toBeVisible();
@@ -164,22 +171,17 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     expect(requests).toHaveLength(1); expect(requests[0]!.tools ?? []).toEqual([]);
     expect(JSON.stringify(requests[0])).toContain("Qualificar pedidos de orçamento");
     expect(JSON.stringify(requests[0])).toContain("Serviços, agência ou obra");
-    mkdirSync("evidence/onboarding-jornada", { recursive: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.screenshot({ path: `evidence/onboarding-jornada/agente-${locale}-desktop.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`agente-${locale}-desktop.png`), fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.screenshot({ path: `evidence/onboarding-jornada/agente-${locale}-celular.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`agente-${locale}-celular.png`), fullPage: true });
     await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
-    await page.screenshot({ path: `evidence/onboarding-jornada/agente-${locale}-celular-dark.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`agente-${locale}-celular-dark.png`), fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await continuar.focus(); await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
     await assertInactive();
-    // Não se conecta nenhum transporte. A sessão WORKING é fixture sintética.
-    const channelWrite = await svc.from("channel_sessions").insert({ id: channel, organization_id: org, display_name: "Canal sintético QA", waha_session_name: `fixture_${channel}`, status: "WORKING", webhook_secret_encrypted: "\\x00", metadata: { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: [] } });
-    if (channelWrite.error) throw channelWrite.error;
-    await page.getByRole("button", { name: translated("Conferir canais conectados", "Comprobar canales conectados") }).click();
     await page.locator("#canal-teste").selectOption(channel);
     const activate = page.getByRole("button", { name: translated("Ativar para estes números de teste", "Activar para estos números de prueba") });
     await expect(activate).toBeDisabled();
@@ -199,7 +201,7 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
       const preserved = await svc.from("channel_sessions").select("metadata").eq("organization_id", org).eq("id", channel).single();
       expect(preserved.error).toBeNull(); expect(preserved.data?.metadata).toEqual(concurrent);
       await assertInactive();
-      if (change === "list") await page.screenshot({ path: `evidence/onboarding-jornada/conflito-${locale}-celular.png`, fullPage: true });
+      if (change === "list") await page.screenshot({ path: test.info().outputPath(`conflito-${locale}-celular.png`), fullPage: true });
       await page.getByRole("button", { name: "Cancelar", exact: true }).click();
       await expect(activate).toBeDisabled();
       // Nova tentativa deliberada da fixture; não é uma restauração pelo produto.
@@ -212,13 +214,13 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     await page.getByRole("button", { name: translated("Salvar lista de teste", "Guardar lista de prueba") }).click();
     await expect(activate).toBeEnabled();
     await assertInactive();
-    await page.screenshot({ path: `evidence/onboarding-jornada/autorizacao-${locale}-celular.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`autorizacao-${locale}-celular.png`), fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await activate.focus(); await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name: translated("Ativação restrita confirmada", "Activación restringida confirmada") })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("heading", { name: translated("Ativação restrita confirmada", "Activación restringida confirmada") })).toBeVisible();
-    await page.screenshot({ path: `evidence/onboarding-jornada/recibo-${locale}-celular.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`recibo-${locale}-celular.png`), fullPage: true });
     const active = await svc.from("ai_agents").select("is_active,published_version_id").eq("id", agent).eq("organization_id", org).single();
     expect(active.error).toBeNull(); expect(active.data).toEqual({ is_active: true, published_version_id: version });
     const selected = await svc.from("channel_sessions").select("metadata").eq("id", channel).eq("organization_id", org).single();
@@ -245,7 +247,7 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await expect(page.getByText(translated("Selecione uma conversa", "Selecciona una conversación"), { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await page.screenshot({ path: `evidence/onboarding-jornada/inbox-${locale}-${theme}.png`, fullPage: true });
+      await page.screenshot({ path: test.info().outputPath(`inbox-${locale}-${theme}.png`), fullPage: true });
     }
   } finally { await new Promise<void>((resolve, reject) => receiver.close(error => error ? reject(error) : resolve())); }
 });

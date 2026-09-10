@@ -393,6 +393,7 @@ jobs:
         agenda-ver-na-agenda.spec.ts
         agenda-escopo-da-organizacao.spec.ts
         troca-de-organizacao-tem-volta.spec.ts
+        onboarding-sem-ia.spec.ts
         onboarding-ativacao-restrita.spec.ts
         agenda-caminho-ate-os-horarios.spec.ts
         agenda-google-volta-do-consentimento.spec.ts
@@ -426,37 +427,9 @@ jobs:
       # Cada item aqui tem o motivo MEDIDO, não presumido — e o gate cobra que a
       # lista exista e some com as outras duas.
       #
-      # `vps-fresh-onboarding` fica fora por DUAS razões, e só a primeira estava
-      # escrita — com o número errado, contradito 8 linhas abaixo neste mesmo
-      # arquivo, que já usava 17 como controle positivo:
-      #
-      #   (1) 17 linhas dependem de WAHA/Resend/Nuvemshop/Redis
-      #       (`grep -ciE "waha|resend|nuvemshop|redis"` → 17 linhas, 22 ocorrências).
-      #
-      #   (2) `orgRow()` resolvia a organização com `.limit(1).single()` em
-      #       `organizations`, SEM `where` — pressupondo banco de UMA organização
-      #       só. O banco do CI é compartilhado entre as duas partes do job, e
-      #       `signup-journey.spec.ts:32` cria uma segunda org sem cleanup: quando
-      #       a parte 2 começa, já há ≥2.
-      #
-      #       ⚠️ ESTA LINHA DIZIA QUE "o `.single()` falha". É FALSO, e a frase
-      #       errada é o motivo de a classe ter sobrevivido em quatro lugares:
-      #       ela descrevia o desfecho como barulho quando o desfecho é dano.
-      #       Medido em 2026-09-04 contra PostgREST v14.10, três linhas na tabela:
-      #
-      #           .select(...).limit(1).single()  →  error: null + a PRIMEIRA linha
-      #           .select(...).single()           →  PGRST116 ("Cannot coerce…")
-      #
-      #       O `.limit(1)` recorta ANTES da checagem de singularidade. Ou seja:
-      #       o `beforeAll` desta suíte — que zera `onboarded_at`, apaga
-      #       `ai_agents` e apaga `channel_sessions` — apagava dados de uma
-      #       organização QUALQUER, em silêncio. Levantado por @Elevstudio-Dev
-      #       (PR #559) depois de acontecer numa instalação de trabalho.
-      #
-      #       A instância está corrigida (a org sai do dono do bootstrap) e a
-      #       classe inteira virou gate: `tests/unit/e2e-nao-escolhe-a-primeira-linha`.
-      #       O que continua valendo aqui é a razão (1): esta suíte não roda no CI
-      #       por dependência externa, não por causa do rig de organização.
+      # `vps-fresh-onboarding` exige WAHA e Redis reais e o scan manual de um
+      # aparelho autorizado no mesmo contexto que gerou o QR. Resend e
+      # Nuvemshop não são dependências: a ausência deles é pré-condição medida.
       #
       # Continua sendo a P0 da doutrina de QA Visual: `e2e` verde NÃO prova a
       # jornada de instalação fresca, que é o produto que se vende.
@@ -958,7 +931,15 @@ jobs:
             echo "**Rodou: ${RODOU} de ${NO_DISCO} specs**, em três partes paralelas."
             echo ""
             echo "**Não rodou (${FORA}):**"
-            for s in $FORA_LISTA; do echo "- \`${s}\` — precisa de WAHA + Redis + Resend + Nuvemshop (P0 da doutrina de QA Visual)"; done
+            for s in $FORA_LISTA; do
+              case "$s" in
+                vps-fresh-onboarding.spec.ts) motivo="exige WAHA e Redis reais + scan manual de aparelho autorizado (P0 da doutrina de QA Visual)" ;;
+                inbox-tempo-real.spec.ts) motivo="a prova de Realtime ainda não discrimina o conserto e falha por sorte; issue #347" ;;
+                cadastro-sem-confirmacao-de-email.spec.ts) motivo="exige o provedor Auth com confirmação de e-mail desativada" ;;
+                *) echo "::error::spec fora do CI sem motivo conhecido: $s"; exit 1 ;;
+              esac
+              echo "- \`${s}\` — ${motivo}"
+            done
             echo ""
             echo "A soma é conferida mecanicamente por \`tests/unit/e2e-cobertura-completa.test.ts\`:"
             echo "spec no disco que não esteja em nenhuma das quatro listas reprova o build."

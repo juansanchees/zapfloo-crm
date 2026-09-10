@@ -131,11 +131,10 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
       await expect(page.getByText("Resposta revisada. Nenhum atendimento foi ativado.", { exact: true })).toBeVisible();
       await page.reload();
       await expect(page.getByText("Resposta revisada. Nenhum atendimento foi ativado.", { exact: true })).toBeVisible();
-      fs.mkdirSync(".superpowers/evidence/ensaio", { recursive: true });
-      await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: ".superpowers/evidence/ensaio/revisado-desktop.png" });
+      await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: test.info().outputPath("revisado-desktop.png") });
       await page.setViewportSize({ width: 390, height: 844 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: ".superpowers/evidence/ensaio/revisado-celular.png" });
+      await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: test.info().outputPath("revisado-celular.png") });
       await page.setViewportSize({ width: 1280, height: 720 });
       const other = await page.context().newPage(); await other.goto(page.url());
       await other.getByLabel("Como ele vai se chamar").fill("Outro nome de Lia QA");
@@ -157,13 +156,12 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
       const { count, error } = await svc.from(table).select("id", { count: "exact", head: true }).eq("organization_id", org);
       if (error) throw error; expect(count).toBe(0);
     }
-    fs.mkdirSync(".superpowers/evidence/ensaio", { recursive: true });
     await page.getByRole("heading", { name: "Ensaio de conversa, sem envio" }).scrollIntoViewIfNeeded();
-    await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: `.superpowers/evidence/ensaio/${synthetic ? "sintetico" : "sem-chave"}-desktop.png` });
+    await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: test.info().outputPath(`${synthetic ? "sintetico" : "sem-chave"}-desktop.png`) });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole("heading", { name: "Ensaio de conversa, sem envio" }).scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: `.superpowers/evidence/ensaio/${synthetic ? "sintetico" : "sem-chave"}-celular.png` });
+    await page.locator('[aria-labelledby="ensaio-title"]').screenshot({ path: test.info().outputPath(`${synthetic ? "sintetico" : "sem-chave"}-celular.png`) });
     if (synthetic) {
       // Caminho legado real: UI → route → SDK → ponte MCP → trace persistido.
       // Só o provedor HTTP é sintético; nenhum canal é criado ou conectado.
@@ -194,13 +192,13 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
         if (error) throw error; expect(count).toBe(0);
       }
       await expect(page.getByText("Teste executado.", { exact: true })).toBeHidden({ timeout: 10_000 });
-      await page.getByRole("tabpanel").screenshot({ path: ".superpowers/evidence/ensaio/legado-isolado-desktop.png" });
+      await page.getByRole("tabpanel").screenshot({ path: test.info().outputPath("legado-isolado-desktop.png") });
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(page.getByText(/Ferramentas não são executadas neste teste/)).toBeVisible();
       const notice = await page.getByText(/Ferramentas não são executadas neste teste/).boundingBox();
       expect(notice).not.toBeNull();
       expect(notice!.x + notice!.width).toBeLessThanOrEqual(390);
-      await page.getByRole("tabpanel").screenshot({ path: ".superpowers/evidence/ensaio/legado-isolado-celular.png" });
+      await page.getByRole("tabpanel").screenshot({ path: test.info().outputPath("legado-isolado-celular.png") });
     }
   } finally { if (synthetic) await new Promise<void>((resolve, reject) => receiver.close(error => error ? reject(error) : resolve())); }
 });
@@ -223,6 +221,8 @@ test("rascunho retoma os campos e protege contra outra aba sem ativar atendiment
   await expect(page).toHaveURL(/\/onboarding\/welcome/);
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
+  await page.getByRole("link", { name: "Configurar IA (opcional)", exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding\/setup-ai/);
   const { data: before, error: beforeError } = await svc.from("organizations").select("onboarded_at,onboarding_state").eq("id", orgId).single();
   if (beforeError) throw beforeError;
@@ -272,20 +272,22 @@ test("rascunho retoma os campos e protege contra outra aba sem ativar atendiment
   expect(draftB).toEqual({ revision: 1, configuration: { name: "Nome exclusivo B", prompt_template: "support_minimal", regras_da_casa: "Regra B" } });
   await switchTab.getByTestId("sair-do-onboarding").click();
   await switchTab.getByTestId(`sair-do-onboarding-item-${orgId}`).click();
+  await expect(switchTab).toHaveURL(/\/onboarding\/connect-whatsapp/);
+  await switchTab.getByRole("link", { name: "Configurar IA (opcional)", exact: true }).click();
   await expect(switchTab).toHaveURL(/\/onboarding\/setup-ai/);
   await switchTab.close();
   await page.reload();
   await expect(page.getByLabel("Como ele vai se chamar")).toHaveValue("Atendente QA salvo");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).scrollIntoViewIfNeeded();
-  await page.screenshot({ path: "evidence/onboarding/rascunho-desktop.png" });
+  await page.screenshot({ path: test.info().outputPath("rascunho-desktop.png") });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByLabel("Como ele vai se chamar").scrollIntoViewIfNeeded();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: "evidence/onboarding/rascunho-celular.png" });
+  await page.screenshot({ path: test.info().outputPath("rascunho-celular.png") });
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Rascunho salvo." })).toBeVisible();
   await page.getByRole("status").filter({ hasText: "Rascunho salvo." }).scrollIntoViewIfNeeded();
-  await page.screenshot({ path: "evidence/onboarding/rascunho-salvo-celular.png" });
+  await page.screenshot({ path: test.info().outputPath("rascunho-salvo-celular.png") });
 });
 
 test("convidado troca para uma organização não configurada sem ficar preso no wizard", async ({ page }) => {
@@ -330,7 +332,7 @@ test("convidado troca para uma organização não configurada sem ficar preso no
     `a volta não trouxe para "${nomeDaOrgA}" — trocou de lugar, não desfez a troca`,
   ).toContainText(nomeDaOrgA, { timeout: 20_000 });
 
-  await page.screenshot({ path: "evidence/onboarding/troca-de-org-tem-volta.png" });
+  await page.screenshot({ path: test.info().outputPath("troca-de-org-tem-volta.png") });
 });
 
 test("admin pendente mantém a saída do wizard para outra organização", async ({ page }) => {
@@ -369,11 +371,11 @@ test("admin pendente mantém a saída do wizard para outra organização", async
   await page.reload();
   await expect(page).toHaveURL(/\/app\/inbox/);
   await expect(page.getByText("Sem conversas por aqui", { exact: true })).toBeVisible({ timeout: 20_000 });
-  await page.screenshot({ path: "evidence/onboarding/explorar-desktop.png", fullPage: true });
+  await page.screenshot({ path: test.info().outputPath("explorar-desktop.png"), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("link", { name: "Retomar configuração" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: "evidence/onboarding/explorar-celular.png", fullPage: true });
+  await page.screenshot({ path: test.info().outputPath("explorar-celular.png"), fullPage: true });
   await page.setViewportSize({ width: 1280, height: 720 });
   const { data: depois, error: erroDepois } = await svc.from("organizations")
     .select("onboarded_at, onboarding_state").eq("id", semOnboarding).single();
@@ -381,10 +383,10 @@ test("admin pendente mantém a saída do wizard para outra organização", async
   expect(depois).toEqual(antes);
   await page.getByRole("link", { name: "Retomar configuração" }).click();
   await expect(page).toHaveURL(/\/onboarding\//, { timeout: 30_000 });
-  await page.screenshot({ path: "evidence/onboarding/estrutura-desktop.png", fullPage: true });
+  await page.screenshot({ path: test.info().outputPath("estrutura-desktop.png"), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: "evidence/onboarding/estrutura-celular.png", fullPage: true });
+  await page.screenshot({ path: test.info().outputPath("estrutura-celular.png"), fullPage: true });
   const saida = page.getByTestId("sair-do-onboarding");
   await expect(saida).toBeVisible();
   await saida.click();

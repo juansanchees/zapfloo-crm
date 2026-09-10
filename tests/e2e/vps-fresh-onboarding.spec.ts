@@ -1,440 +1,315 @@
 /**
- * J1 — Onboarding do primeiro usuário numa instalação FRESCA (estilo VPS).
+ * Onboarding do dono em instalação realmente fresca.
  *
- * Pré-condições (ambiente que simula o kit self-host):
- *   - banco zerado do baseline.sql (Supabase local pg17)
- *   - primeiro usuário criado via scripts/bootstrap-owner.ts (como o install.sh)
- *   - WAHA ativo, Redis local, RESEND_API_KEY VAZIO (realidade da VPS fresca)
- *   - app em produção (next build + next start) na E2E_PORT
- *
- * Casos: J1.1–J1.13 do docs/testing/user-journey-map.md. Tudo pelo frontend;
- * banco só para PROVAR estado (nunca para atalhar a jornada).
+ * Esta spec NÃO prepara o ambiente: não semeia, não reseta e não apaga banco,
+ * sessão WAHA ou MFA. O bootstrap, o build/start saneado, WAHA e Redis são
+ * responsabilidade externa. O banco é usado somente como leitura de prova.
+ * O scan manual acontece neste mesmo teste/contexto que gerou o QR.
  */
-import * as fs from "node:fs";
-import * as path from "node:path";
+import { existsSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { test, expect, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { generateTotp, msUntilNextTotpWindow } from "./utils/totp";
 
-const OWNER_EMAIL = "dono@qa.local";
-const OWNER_PASSWORD = "QaVps!2026#Dono";
-const OWNER_STATE_PATH = path.join(process.cwd(), ".e2e-owner.json");
-const EVIDENCE_DIR = path.join(process.cwd(), ".superpowers/evidence/vps-qa");
+const OWNER_EMAIL = process.env.OWNER_EMAIL!;
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD!;
+const CHAVES_OPCIONAIS = [
+  "RESEND_API_KEY",
+  "AI_GATEWAY_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "OPENAI_API_KEY",
+  "OPENROUTER_API_KEY",
+  "GOOGLE_API_KEY",
+  "GOOGLE_GENERATIVE_AI_API_KEY",
+] as const;
 
-const svc = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } },
-);
-
-/**
- * A ORGANIZACAO DO DONO — resolvida por QUEM ELA E, nunca por "a primeira".
- *
- * Este seletor era `.limit(1).single()` sem filtro nenhum: pegava a primeira
- * organizacao que o Postgres devolvesse. Num banco recem-semeado isso funciona
- * por acidente — a unica org existente e a do teste. Num banco que ja tem uso,
- * a primeira e OUTRA, e o `beforeAll` desta suite entao zerava `onboarded_at`,
- * apagava `ai_agents` e apagava `channel_sessions` DELA.
- *
- * Medido em 2026-09-03, numa instalacao de trabalho: a organizacao real perdeu
- * o onboarding e caiu no wizard, e a sessao de WhatsApp conectada foi apagada.
- * O sintoma que apareceu primeiro foi outro e nao apontava para ca — duas specs
- * de webhooks falhando porque o link sumia da barra lateral, que e o que o
- * layout faz quando a org nao esta onboarded.
- *
- * A correcao amarra a org ao DONO do bootstrap (`OWNER_EMAIL`), que e de quem
- * esta suite fala. Se ele nao existir, falha alto: um teste destrutivo que nao
- * sabe em quem esta mexendo deve parar, nunca escolher alguem.
- */
-async function orgRow(): Promise<{
-  id: string;
-  display_name: string;
-  timezone: string | null;
-  onboarded_at: string | null;
-  onboarding_state: Record<string, unknown> | null;
-}> {
-  const { data: users, error: erroUsuarios } = await svc.auth.admin.listUsers();
-  if (erroUsuarios) throw erroUsuarios;
-  const dono = users?.users.find((u) => u.email === OWNER_EMAIL);
-  if (!dono) {
-    throw new Error(
-      `esta suite APAGA dados da organizacao que resolver aqui, e nao achou o dono ` +
-        `(${OWNER_EMAIL}). Sem saber em quem mexer, ela para — escolher "a primeira" ` +
-        `ja custou o onboarding e a sessao de WhatsApp de uma instalacao real.`,
-    );
-  }
-
-  const { data: vinculo, error: erroVinculo } = await svc
-    .from("user_organizations")
-    .select("organization_id")
-    .eq("user_id", dono.id)
-    .is("revoked_at", null)
-    .limit(1)
-    .single();
-  if (erroVinculo) throw erroVinculo;
-
-  const { data, error } = await svc
-    .from("organizations")
-    .select("id, display_name, timezone, onboarded_at, onboarding_state")
-    .eq("id", (vinculo as { organization_id: string }).organization_id)
-    .single();
-  if (error) throw error;
-  return data as never;
-}
-
-async function snap(page: Page, name: string): Promise<void> {
-  fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
-  await page.screenshot({ path: path.join(EVIDENCE_DIR, `${name}.png`), fullPage: true });
-}
-
-async function login(page: Page, password = OWNER_PASSWORD): Promise<void> {
+async function login(page: Page): Promise<void> {
   await page.goto("/login");
   await page.locator("#email").fill(OWNER_EMAIL);
-  await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: /entrar/i }).click();
+  await page.locator("#password").fill(OWNER_PASSWORD);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
 }
 
-test.describe.configure({ mode: "serial", timeout: 120_000 });
+async function semCookieDeExploracao(context: BrowserContext): Promise<void> {
+  const ausente = (await context.cookies()).every((cookie) => cookie.name !== "onboarding_explore");
+  expect(ausente, "o contexto fresco não pode herdar a preferência temporária de exploração").toBe(true);
+}
 
-test.describe("J1 — onboarding do dono numa instalação fresca", () => {
-  test.beforeAll(async () => {
-    // Reset ao estado recém-bootstrapado (re-runs idempotentes): wizard zerado,
-    // sem agente, sem canal, sem fatores MFA do dono.
-    const org = await orgRow();
-    await svc
-      .from("organizations")
-      .update({ onboarding_state: {}, onboarded_at: null })
-      .eq("id", org.id);
-    await svc.from("ai_agents").delete().eq("organization_id", org.id);
-    await svc.from("channel_sessions").delete().eq("organization_id", org.id);
+function mascarasSensiveis(page: Page) {
+  return [
+    page.locator('img[src*="/qr"], img[alt*="QR code"]'),
+    page.locator('input[type="tel"]'),
+    page.locator("code"),
+    page.locator(".font-mono"),
+  ];
+}
 
-    const { data: users } = await svc.auth.admin.listUsers();
-    const owner = users?.users.find((u) => u.email === OWNER_EMAIL);
-    if (owner) {
-      const { data: factors } = await svc.auth.admin.mfa.listFactors({ userId: owner.id });
-      for (const f of factors?.factors ?? []) {
-        await svc.auth.admin.mfa.deleteFactor({ id: f.id, userId: owner.id });
-      }
-    }
-    if (fs.existsSync(OWNER_STATE_PATH)) fs.rmSync(OWNER_STATE_PATH);
-
-    // WAHA: remove sessões org_* de rodadas anteriores (instalação fresca não
-    // teria sessão FAILED pendurada; QR não re-renderiza sobre sessão morta).
-    const wahaBase = process.env.WAHA_API_BASE_URL;
-    const wahaKey = process.env.WAHA_API_KEY;
-    if (wahaBase && wahaKey) {
-      const res = await fetch(`${wahaBase}/api/sessions?all=true`, {
-        headers: { "X-Api-Key": wahaKey },
-      }).catch(() => null);
-      const sessions = res?.ok ? ((await res.json()) as Array<{ name: string }>) : [];
-      for (const s of sessions) {
-        if (!s.name.startsWith("org_")) continue;
-        await fetch(`${wahaBase}/api/sessions/${s.name}`, {
-          method: "DELETE",
-          headers: { "X-Api-Key": wahaKey },
-        }).catch(() => null);
-      }
-    }
+async function screenshotMascarado(page: Page, testInfo: TestInfo, nome: string): Promise<void> {
+  await page.screenshot({
+    path: testInfo.outputPath(`${nome}.png`),
+    fullPage: true,
+    mask: mascarasSensiveis(page),
+    maskColor: "#111827",
   });
+}
 
-  test("J1.2 senha errada → mensagem clara, sem stack", async ({ page }) => {
-    await login(page, "senha-errada-123");
-    await expect(page.getByText(/email ou senha incorretos/i)).toBeVisible({ timeout: 10_000 });
-    const body = await page.locator("body").innerText();
-    expect(body).not.toMatch(/error:|stack|exception/i);
-    await snap(page, "j1.2-senha-errada");
+async function medirConexao(page: Page, testInfo: TestInfo, width: number): Promise<void> {
+  await page.setViewportSize({ width, height: 1000 });
+  await expect(page.getByRole("heading", { name: "Conecte seu WhatsApp" })).toBeVisible();
+  const medidas = await page.evaluate(() => {
+    const boxes = [...document.querySelectorAll("main h2, main h3, main p, main label, main button, main a, main img")]
+      .map((elemento) => {
+        const rect = elemento.getBoundingClientRect();
+        const estilo = getComputedStyle(elemento);
+        return {
+          texto: elemento.textContent?.slice(0, 70) ?? "",
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height,
+          fontSize: estilo.fontSize,
+          lineHeight: estilo.lineHeight,
+          display: estilo.display,
+          naturalWidth: elemento instanceof HTMLImageElement ? elemento.naturalWidth : null,
+          naturalHeight: elemento instanceof HTMLImageElement ? elemento.naturalHeight : null,
+        };
+      });
+    return { viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth, boxes };
   });
-
-  test("J1.1 login do bootstrap cai no wizard (org sem onboarded_at)", async ({ page }) => {
-    const before = await orgRow();
-    expect(before.onboarded_at).toBeNull();
-    await login(page);
-    await page.waitForURL(/\/onboarding/, { timeout: 20_000 });
-    await expect(page).toHaveURL(/\/onboarding\/welcome/);
-    await snap(page, "j1.1-welcome");
+  expect(medidas.scrollWidth, `overflow em ${width}px`).toBeLessThanOrEqual(width + 1);
+  for (const box of medidas.boxes.filter((item) => item.width > 0)) {
+    expect(box.left, `${box.texto}: esquerda em ${width}px`).toBeGreaterThanOrEqual(-1);
+    expect(box.right, `${box.texto}: direita em ${width}px`).toBeLessThanOrEqual(width + 1);
+  }
+  await testInfo.attach(`medidas-conexao-${width}`, {
+    body: JSON.stringify(medidas, null, 2),
+    contentType: "application/json",
   });
+  await screenshotMascarado(page, testInfo, `conexao-${width}`);
+}
 
-  test("J1.12 /app/inbox antes de concluir → volta pro onboarding", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding/);
-    await page.goto("/app/inbox");
-    await page.waitForURL(/\/onboarding/, { timeout: 15_000 });
-  });
+async function preencherTotp(page: Page, secret: string): Promise<void> {
+  if (msUntilNextTotpWindow() < 4_000) {
+    await page.waitForTimeout(msUntilNextTotpWindow() + 300);
+  }
+  await page.locator('input[aria-label="Dígito 1"]').click();
+  await page.keyboard.type(generateTotp(secret), { delay: 40 });
+}
 
-  test("J1.3 + J1.4 welcome: termos obrigatórios; salva nome/timezone e avança", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/welcome/);
+test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e reentrada", async ({
+  browser,
+  page,
+}, testInfo) => {
+  test.setTimeout(16 * 60_000);
+  for (const chave of CHAVES_OPCIONAIS) {
+    const ausente = process.env[chave] === undefined;
+    expect(ausente, `${chave} precisa estar ausente no runner fresco`).toBe(true);
+  }
 
-    // J1.3 — sem aceitar os termos o botão fica desabilitado
-    const continuar = page.getByRole("button", { name: /continuar/i });
-    await expect(continuar).toBeDisabled();
+  const svc = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+  const usuarios = await svc.auth.admin.listUsers({ page: 1, perPage: 50 });
+  if (usuarios.error) throw usuarios.error;
+  expect(usuarios.data.users).toHaveLength(1);
+  const dono = usuarios.data.users[0]!;
+  expect(dono.email === OWNER_EMAIL, "o único usuário precisa ser o dono fictício configurado").toBe(true);
 
-    // J1.4 — preenche e avança
-    await page.locator("#display_name").fill("Loja QA VPS");
-    await page.locator('input[type="checkbox"]').check();
-    await expect(continuar).toBeEnabled();
-    await continuar.click();
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 20_000 });
-    await snap(page, "j1.4-connect-whatsapp");
+  // `head/count` recusa qualquer organização extra sem trazer seus dados para
+  // a memória ou para uma mensagem de falha. O filtro seguinte resolve a única
+  // linha pelo dono, em vez de escolher implicitamente "a primeira".
+  const totalDeOrganizacoes = await svc.from("organizations")
+    .select("id", { count: "exact", head: true })
+    .or("id.not.is.null");
+  if (totalDeOrganizacoes.error) throw totalDeOrganizacoes.error;
+  expect(totalDeOrganizacoes.count === 1, "o banco fresco precisa ter exatamente uma organização").toBe(true);
+  const organizacoes = await svc.from("organizations")
+    .select("id,created_by,display_name,settings,onboarded_at,onboarding_state")
+    .eq("created_by", dono.id);
+  if (organizacoes.error) throw organizacoes.error;
+  expect(organizacoes.data).toHaveLength(1);
+  const org = organizacoes.data[0]!;
+  expect(org.created_by).toBe(dono.id);
+  expect(org.onboarded_at).toBeNull();
+  expect(org.onboarding_state ?? {}).toEqual({});
+  const provider = (org.settings as { llm?: { provider?: string } } | null)?.llm?.provider ?? "anthropic";
 
-    const org = await orgRow();
-    expect(org.display_name).toBe("Loja QA VPS");
-    expect(org.timezone).toBe("America/Sao_Paulo");
-    expect((org.onboarding_state as { welcome?: unknown })?.welcome).toBeTruthy();
-  });
+  const vinculos = await svc.from("user_organizations").select("user_id,organization_id,role,revoked_at").eq("user_id", dono.id);
+  if (vinculos.error) throw vinculos.error;
+  expect(vinculos.data).toEqual([{ user_id: dono.id, organization_id: org.id, role: "admin", revoked_at: null }]);
+  for (const tabela of ["ai_agents", "ai_agent_versions", "ai_provider_credentials", "channel_sessions", "onboarding_drafts"] as const) {
+    const leitura = await svc.from(tabela).select("id", { count: "exact", head: true }).eq("organization_id", org.id);
+    if (leitura.error) throw leitura.error;
+    expect(leitura.count, `${tabela} precisa começar vazia`).toBe(0);
+  }
+  const fatoresAntes = await svc.auth.admin.mfa.listFactors({ userId: dono.id });
+  if (fatoresAntes.error) throw fatoresAntes.error;
+  expect(fatoresAntes.data.factors).toHaveLength(0);
 
-  test("J1.5 WAHA ativo → QR code aparece de verdade", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/);
+  await login(page);
+  await expect(page).toHaveURL(/\/onboarding\/welcome/);
+  await page.goto("/app/inbox");
+  await expect(page).toHaveURL(/\/onboarding\/welcome/);
 
-    // O passo agora ABRE PERGUNTANDO como a pessoa já usa o número — o código
-    // deixou de ser suposição. Escolher "leio um código com o celular" é o que
-    // sobe a sessão; antes ela subia sozinha na montagem da tela, e quem tinha
-    // conta oficial entrava pelo caminho errado sem ter sido perguntado.
-    await page.getByTestId("forma-qr").locator("input").click();
+  // Sem `?provar=1`: este retrato confirma somente o provedor selecionado,
+  // a origem da chave dele e o envio de e-mail no processo do app.
+  const instalacao = await page.request.get("/api/v1/system/instalacao");
+  expect(instalacao.status()).toBe(200);
+  const retrato = (await instalacao.json()) as {
+    data: { inteligencia: { provedor: string; origemDaChave: string }; email: { configurado: boolean } };
+  };
+  expect(retrato.data.inteligencia.provedor).toBe(provider);
+  expect(retrato.data.inteligencia.origemDaChave).toBe("nenhuma");
+  expect(retrato.data.email.configurado).toBe(false);
 
-    // sem banner de "WAHA não está configurado"
-    // O nome do transporte saiu da tela: o aviso agora fala do "WhatsApp desta
-    // instalação", que é como o dono chama a coisa.
-    await expect(page.getByText(/ainda não subiu/i)).toHaveCount(0);
+  await page.locator("#display_name").fill("Empresa fresca QA");
+  await page.locator("#segmento").selectOption("servicos");
+  await page.locator("#o_que_faz").fill("Atendimento humano em instalação fresca");
+  const continuarWelcome = page.getByRole("button", { name: "Continuar", exact: true });
+  await expect(continuarWelcome).toBeDisabled();
+  await page.getByRole("checkbox").check();
+  await expect(continuarWelcome).toBeEnabled();
+  await continuarWelcome.click();
+  await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
 
-    // QR do proxy (poll de 3s até SCAN_QR_CODE) — imagem carregada de fato
-    const qr = page.locator('img[src*="/whatsapp/qr"]');
-    await expect(qr).toBeVisible({ timeout: 60_000 });
-    await expect
-      .poll(async () => qr.evaluate((el: HTMLImageElement) => el.naturalWidth), {
-        timeout: 15_000,
-      })
-      .toBeGreaterThan(0);
-    await snap(page, "j1.5-qr-visivel");
-  });
+  await expect(page.getByTestId("forma-qr")).toBeVisible();
+  await expect(page.getByTestId("forma-oficial")).toBeVisible();
+  await expect(page.getByTestId("forma-parceiro")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Configurar IA (opcional)", exact: true })).toBeVisible();
 
-  test("J1.11 + J1.6 abandona e volta → retoma no step pendente; pular WhatsApp avança", async ({ page }) => {
-    // sessão nova (simula fechar o browser): retoma exatamente no connect-whatsapp
-    await login(page);
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 20_000 });
-
-    // Com Nuvemshop desabilitado (VPS fresca), pular o WhatsApp deve cair
-    // DIRETO no setup de IA — nunca num step oculto (bug corrigido: as actions
-    // redirecionavam hardcoded pro connect-nuvemshop).
-    await page.getByRole("button", { name: /pular por enquanto/i }).click();
-    await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 20_000 });
-    await snap(page, "j1.6-setup-ai");
-  });
-
-  test("J1.7 setup IA: cria agente default e avança", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/setup-ai/);
-
-    await page.locator("#name").fill("Tomik QA");
-    await page.getByRole("button", { name: /criar e continuar/i }).click();
-    // O wizard ganhou um passo entre treinar e chamar o time: ver o
-    // funcionário atender. Terminar sem nunca tê-lo visto fazer nada era como
-    // o onboarding entregava a pessoa num inbox vazio.
-    await page.waitForURL(/\/onboarding\/testar/, { timeout: 20_000 });
-    await snap(page, "j1.7-testar");
-
-    // `eq(organization_id)` pela MESMA razão de `orgRow()` acima: sem ele, este
-    // `select` lê os agentes de TODAS as organizações do banco, e o
-    // `expect(length).toBe(1)` deixa de medir "o wizard criou um agente" e passa
-    // a medir "o banco inteiro tem um agente" — que é falso em qualquer
-    // instalação com uso, e vermelho por motivo que não é o desta jornada.
-    const orgDoDono = await orgRow();
-    const { data: agents } = await svc
-      .from("ai_agents")
-      .select("id, name, is_active, is_default, published_version_id")
-      .eq("organization_id", orgDoDono.id);
-    expect(agents?.length).toBe(1);
-    expect(agents?.[0]).toMatchObject({ name: "Tomik QA", is_active: true, is_default: true });
-
-    // A VERSÃO, e não só o agente. Este caso olhava apenas `ai_agents` — e foi
-    // por isso que a regressão do provedor nasceu invisível: o agente ficava
-    // bonito na tabela enquanto a versão publicada apontava para uma empresa de
-    // IA que a instalação não contratou, morrendo em toda mensagem.
-    const { data: versoes } = await svc
-      .from("ai_agent_versions")
-      .select("provider, model, status, channel_session_id")
-      .eq("agent_id", agents?.[0]?.id ?? "");
-    expect(versoes?.length).toBe(1);
-    expect(versoes?.[0]?.status).toBe("published");
-
-    // E o provedor da versão é o MESMO que a instalação escolheu. Comparar com
-    // uma string fixa aqui não provaria nada: o teste passaria justamente na
-    // instalação Anthropic, que é a única em que o defeito não aparecia.
-    // A SEGUNDA instância de "a primeira organização" neste mesmo arquivo. Aqui
-    // ela não apaga nada — faz pior de um jeito silencioso: `escolhido` vira o
-    // provedor de OUTRA organização, e a asserção abaixo passa ou reprova sem
-    // relação com a instalação que o wizard acabou de configurar.
-    const { data: org } = await svc
-      .from("organizations")
-      .select("settings")
-      .eq("id", orgDoDono.id)
-      .maybeSingle();
-    const escolhido =
-      (org?.settings as { llm?: { provider?: string } } | null)?.llm?.provider ?? "anthropic";
-    expect(versoes?.[0]?.provider).toBe(escolhido);
-
-    // O modelo veio do catálogo DAQUELE provedor — nunca um id emprestado.
-    const { data: curado } = await svc
-      .from("ai_models")
-      .select("model_id")
-      .eq("provider", escolhido)
-      .eq("is_default_for_provider", true)
-      .is("deprecated_at", null)
-      .limit(1)
-      .maybeSingle();
-    expect(versoes?.[0]?.model).toBe(curado?.model_id);
-  });
-
-  test("J1.24 ver ele atender: o wizard não termina sem mostrar o funcionário", async ({ page }) => {
-    // O passo que faltava. O onboarding entregava a pessoa num inbox vazio
-    // ("Sem conversas por aqui") logo depois de ela montar um funcionário que
-    // nunca tinha visto fazer nada — e um erro de chave ou de saldo só
-    // apareceria quando um cliente de verdade escrevesse.
-    await login(page);
-    await page.waitForURL(/\/onboarding\/testar/, { timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: /veja ele atender/i })).toBeVisible();
-
-    // O agente desta jornada nasceu SEM canal (o WhatsApp foi pulado em J1.6),
-    // então ficou rascunho — e rascunho não responde. A tela tem de dizer isso
-    // em vez de oferecer um ensaio que nunca funcionaria.
-    await expect(page.getByText(/rascunho/i)).toBeVisible();
-    await snap(page, "j1.24-testar-rascunho");
-
-    await page.getByRole("button", { name: /^continuar$/i }).click();
-    await page.waitForURL(/\/onboarding\/invite-team/, { timeout: 20_000 });
-
-    const org = await orgRow();
-    expect((org.onboarding_state as { teste?: unknown })?.teste).toBeTruthy();
-  });
-
-  test("J1.8 convite SEM Resend: a UI não pode mentir que enviou email", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/invite-team/);
-
-    await page.locator("#emails").fill("atendente@qa.local");
-    await page.getByRole("button", { name: /enviar convites/i }).click();
-
-    // Honestidade: sem RESEND_API_KEY nenhum email sai. A UI deve dizer isso
-    // e oferecer o link de aceite copiável (nunca redirecionar em silêncio).
-    await expect(page.getByText(/não está configurado neste servidor/i)).toBeVisible({
-      timeout: 15_000,
-    });
-    const acceptUrl = (
-      await page.locator("code", { hasText: /team\/accept-invite/ }).first().innerText()
-    ).trim();
-    expect(acceptUrl).toMatch(/\/team\/accept-invite\/.+/);
-    fs.writeFileSync(
-      path.join(process.cwd(), ".e2e-invite-url.json"),
-      JSON.stringify({ email: "atendente@qa.local", accept_url: acceptUrl }, null, 2),
-    );
-    await snap(page, "j1.8-convite-sem-resend");
-
-    // e o wizard segue em frente conscientemente
-    await page.getByRole("button", { name: /^continuar$/i }).click();
-    await page.waitForURL(/\/onboarding\/done/, { timeout: 20_000 });
-  });
-
-  test("J1.9 done → onboarded_at setado e cai no inbox", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/done/);
-    await snap(page, "j1.9-done-recap");
-
-    await page.getByRole("button", { name: /começar a usar/i }).click();
-    await page.waitForURL(/\/app\/inbox/, { timeout: 30_000 });
-
-    const org = await orgRow();
-    expect(org.onboarded_at).not.toBeNull();
-  });
-
-  test("J1.10 verificação em duas etapas: ativa pela tela e VÊ os códigos de recuperação", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/app\//, { timeout: 30_000 });
-
-    // ⚠️ ESTE CASO MUDOU DE PORTA, e a mudança é o ponto. Ele testava o
-    // BLOQUEADOR não-dismissível que aparecia sozinho para todo admin — e era
-    // exatamente o que fazia a instalação fresca receber um sétimo passo logo
-    // depois do wizard, sem aviso. A verificação virou opcional; o cadastro
-    // agora começa em Configurações › Segurança, por escolha de quem entra.
-    //
-    // O que este caso continua guardando é o que importava nele: o fluxo de
-    // enroll leva até os CÓDIGOS DE RECUPERAÇÃO (a regressão que o nome antigo
-    // citava). Perder isso seria trocar uma tela por nenhuma.
-    await page.goto("/app/settings/security");
-    await expect(page.getByText("Desativada")).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^ativar$/i }).click();
-
-    await expect(
-      page.getByRole("heading", { name: /verificação em duas etapas/i }),
-    ).toBeVisible({ timeout: 20_000 });
-    await snap(page, "j1.10-mfa-ativar");
-
-    await page.getByRole("button", { name: /iniciar configuração/i }).click();
-    await expect(
-      page.locator('img[alt="QR code para configurar autenticador"]'),
-    ).toBeVisible({ timeout: 20_000 });
-
-    // secret manual (o que um leigo digitaria no app autenticador)
-    await page.getByText(/não consegue escanear/i).click();
-    const secret = (await page.locator("code").innerText()).trim();
-    expect(secret.length).toBeGreaterThan(15);
-    fs.writeFileSync(
-      OWNER_STATE_PATH,
-      JSON.stringify({ email: OWNER_EMAIL, password: OWNER_PASSWORD, totp_secret: secret }, null, 2),
-    );
-
-    // digita o código com retry na virada da janela TOTP
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (msUntilNextTotpWindow() < 4_000) await page.waitForTimeout(msUntilNextTotpWindow() + 300);
-      await page.locator('input[aria-label="Dígito 1"]').click();
-      await page.keyboard.type(generateTotp(secret), { delay: 40 });
+  await page.getByTestId("forma-qr").locator("input").click();
+  const qr = page.locator('img[src*="/api/v1/onboarding/whatsapp/qr"]');
+  await expect(qr).toBeVisible({ timeout: 60_000 });
+  await expect.poll(() => qr.evaluate((imagem: HTMLImageElement) => imagem.naturalWidth), { timeout: 30_000 }).toBeGreaterThan(0);
+  // Mede o bloco real com QR carregado antes de emitir o marcador ao dono.
+  // Nas screenshots persistidas o QR é sempre mascarado.
+  for (const width of [1440, 768, 390]) {
+    await medirConexao(page, testInfo, width);
+  }
+  const qrTemporario = join(tmpdir(), `zapfloo-qr-${process.pid}-${Date.now()}.png`);
+  await qr.screenshot({ path: qrTemporario });
+  console.info(`QR_PRONTO ${qrTemporario}`);
+  let ultimaFonte = await qr.getAttribute("src");
+  let pararAtualizacaoDoQr = false;
+  const atualizarQrEnquantoValido = (async () => {
+    while (!pararAtualizacaoDoQr && /\/onboarding\/connect-whatsapp/.test(page.url())) {
+      await page.waitForTimeout(1_000);
       try {
-        await expect(page.getByRole("heading", { name: /códigos de recuperação/i })).toBeVisible({
-          timeout: 8_000,
-        });
-        break;
+        const fonte = await qr.getAttribute("src");
+        const carregado = await qr.evaluate((imagem: HTMLImageElement) => imagem.complete && imagem.naturalWidth > 0);
+        if (fonte && fonte !== ultimaFonte && carregado) {
+          // O cliente renova o QR a cada tick. Sobrescrever o mesmo arquivo
+          // transitório evita que o dono tente escanear uma imagem expirada.
+          await qr.screenshot({ path: qrTemporario });
+          ultimaFonte = fonte;
+          console.info(`QR_PRONTO ${qrTemporario}`);
+        }
       } catch {
-        if (attempt === 2) throw new Error("MFA enroll não chegou aos recovery codes");
-        // código recusado (janela virou) → limpa e tenta de novo
-        await page.locator('input[aria-label="Dígito 1"]').click();
-        for (let i = 0; i < 6; i++) await page.keyboard.press("Backspace");
+        // A navegação após WORKING pode desmontar a imagem entre as leituras.
       }
     }
+  })();
 
-    // O BUG: a revalidação do server action desmontava o gate e o usuário
-    // caía no inbox sem ver estes códigos. Prova de que a tela persiste com os
-    // 10 códigos + ações de salvar (grid font-mono no RecoveryCodesPanel).
-    await expect(page.getByText(/salve esses 10 códigos/i)).toBeVisible();
-    const codes = page.locator("div.font-mono");
-    await expect(codes).toHaveCount(10);
-    await expect(page.getByRole("button", { name: /copiar todos/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /baixar \.txt/i })).toBeVisible();
-    await snap(page, "j1.10-recovery-codes");
+  // O dono escaneia enquanto este teste continua vivo. O produto observa
+  // WORKING, conserva o UUID do POST e avança pelo escritor canônico.
+  try {
+    await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 10 * 60_000 });
+  } finally {
+    pararAtualizacaoDoQr = true;
+    await atualizarQrEnquantoValido;
+    if (existsSync(qrTemporario)) unlinkSync(qrTemporario);
+  }
 
-    await page.getByText(/salvei meus códigos/i).click();
-    await page.getByRole("button", { name: /^concluir$/i }).click();
+  await page.getByRole("button", { name: "Adiar IA e continuar", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/funil/);
+  await page.getByRole("button", { name: /usar este quadro/i }).click();
+  await expect(page).toHaveURL(/\/onboarding\/invite-team/);
+  await expect(page.getByText("Esta instalação ainda não envia e-mail.", { exact: true })).toBeVisible();
 
-    // gate some após reload; shell do app visível
-    await page.waitForLoadState("networkidle");
-    await expect(
-      page.getByRole("heading", { name: /verificação em duas etapas/i }),
-    ).toHaveCount(0, { timeout: 20_000 });
-    await snap(page, "j1.10-inbox-livre");
+  const emailConvidado = "atendente-fresco@example.test";
+  await page.locator("#emails").fill(emailConvidado);
+  await page.getByRole("button", { name: "Enviar convites", exact: true }).click();
+  await expect(page.getByText(/convite\(s\) não puderam ser enviados por email/i)).toBeVisible();
+  const convite = page.locator("code", { hasText: /team\/accept-invite/ });
+  await expect(convite).toHaveCount(1);
+  const conviteEmMemoria = (await convite.innerText()).trim();
+  expect(/\/team\/accept-invite\/.+/.test(conviteEmMemoria), "o fallback precisa produzir um link de aceite").toBe(true);
+  await screenshotMascarado(page, testInfo, "convite-sem-resend");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/done/);
+  await screenshotMascarado(page, testInfo, "onboarding-concluido");
+  await page.getByRole("button", { name: "Começar a usar", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/inbox/);
+
+  const depois = await svc.from("organizations").select("onboarded_at,onboarding_state").eq("id", org.id).single();
+  if (depois.error) throw depois.error;
+  expect(depois.data.onboarded_at).not.toBeNull();
+  expect(depois.data.onboarding_state).toMatchObject({
+    welcome: { display_name: "Empresa fresca QA" },
+    whatsapp: { status: "WORKING", channel_session_id: expect.any(String) },
+    ai: { skipped: true },
+    funil: expect.any(Object),
+    team: { invites_sent: 1, skipped: false },
   });
+  expect((depois.data.onboarding_state as { ai?: { restricted_activation?: unknown } }).ai?.restricted_activation).toBeUndefined();
+  const canais = await svc.from("channel_sessions").select("id,status,organization_id").eq("organization_id", org.id);
+  if (canais.error) throw canais.error;
+  expect(canais.data).toHaveLength(1);
+  expect(canais.data[0]).toMatchObject({ organization_id: org.id, status: "WORKING" });
+  for (const tabela of ["ai_agents", "ai_agent_versions", "ai_provider_credentials"] as const) {
+    const leitura = await svc.from(tabela).select("id", { count: "exact", head: true }).eq("organization_id", org.id);
+    if (leitura.error) throw leitura.error;
+    expect(leitura.count, `${tabela} continua vazia após adiar IA`).toBe(0);
+  }
+  const funis = await svc.from("crm_pipelines").select("id").eq("organization_id", org.id).eq("is_default", true).eq("is_archived", false);
+  if (funis.error) throw funis.error;
+  expect(funis.data).toHaveLength(1);
 
-  test("J1.13 wizard não reabre depois de concluído", async ({ page }) => {
-    // agora o login do dono exige TOTP
-    const state = JSON.parse(fs.readFileSync(OWNER_STATE_PATH, "utf8")) as { totp_secret: string };
-    await login(page);
-    await page.waitForURL(/\/login\/mfa/, { timeout: 20_000 });
-    if (msUntilNextTotpWindow() < 4_000) await page.waitForTimeout(msUntilNextTotpWindow() + 300);
-    await page.locator('input[aria-label="Dígito 1"]').click();
-    await page.keyboard.type(generateTotp(state.totp_secret), { delay: 40 });
-    await page.waitForURL(/\/app\//, { timeout: 30_000 });
+  // MFA continua opcional, mas o caminho escolhido pelo dono precisa chegar
+  // aos recovery codes. QR, secret e códigos só vivem no DOM/memória e são
+  // sempre mascarados nas evidências persistidas pelo Playwright.
+  await page.goto("/app/settings/security");
+  await expect(page.getByText("Desativada", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Ativar", exact: true }).click();
+  await page.getByRole("button", { name: "Iniciar configuração", exact: true }).click();
+  const qrMfa = page.locator('img[alt="QR code para configurar autenticador"]');
+  await expect(qrMfa).toBeVisible();
+  await page.getByText(/não consegue escanear/i).click();
+  const secretTotp = (await page.locator("code").innerText()).trim();
+  expect(secretTotp.length > 15, "o segredo TOTP precisa existir apenas em memória").toBe(true);
+  await screenshotMascarado(page, testInfo, "mfa-qr-mascarado");
+  await preencherTotp(page, secretTotp);
+  await expect(page.getByRole("heading", { name: "Códigos de recuperação", exact: true })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("dialog").locator(".font-mono")).toHaveCount(10);
+  await screenshotMascarado(page, testInfo, "mfa-recovery-mascarado");
+  await page.getByText(/salvei meus códigos em local seguro/i).click();
+  await page.getByRole("button", { name: "Concluir", exact: true }).click();
+  await expect(page.getByText("Ativada", { exact: true })).toBeVisible({ timeout: 20_000 });
+  const fatoresDepois = await svc.auth.admin.mfa.listFactors({ userId: dono.id });
+  if (fatoresDepois.error) throw fatoresDepois.error;
+  expect(fatoresDepois.data.factors).toHaveLength(1);
+  expect(fatoresDepois.data.factors.every((fator) => fator.status === "verified"), "o único fator precisa estar verificado").toBe(true);
 
-    await page.goto("/onboarding");
-    await page.waitForURL(/\/app\/inbox/, { timeout: 15_000 });
-  });
+  const reentrada = await browser.newContext({ baseURL: String(testInfo.project.use.baseURL) });
+  try {
+    await semCookieDeExploracao(reentrada);
+    const novaPagina = await reentrada.newPage();
+    await login(novaPagina);
+    await expect(novaPagina).toHaveURL(/\/login\/mfa/);
+    await novaPagina.waitForTimeout(msUntilNextTotpWindow() + 300);
+    await preencherTotp(novaPagina, secretTotp);
+    await expect(novaPagina).toHaveURL(/\/app\/inbox/, { timeout: 30_000 });
+    await novaPagina.goto("/onboarding");
+    await expect(novaPagina).toHaveURL(/\/app\/inbox/);
+    await semCookieDeExploracao(reentrada);
+    await screenshotMascarado(novaPagina, testInfo, "reentrada-com-mfa");
+  } finally {
+    await reentrada.close();
+  }
 });
