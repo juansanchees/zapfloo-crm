@@ -197,3 +197,40 @@ Testes:
 - A alteração da fresh está limitada ao preflight anterior ao login e é coberta pelo teste AST e pelo matcher Playwright instalado; ela não altera a jornada QR.
 - O root executa build, `gov:verify` e `test:db` consolidados depois do FREEZE.
 - `.changes/2026-09-10-conexao-sem-ia.md` pertence ao root, permaneceu fora dos commits do executor e era o único arquivo sujo ao encerrar produto/testes.
+
+## Re-review — sequência de recuperação da organização B
+
+Commit do ajuste: `7ad671bd2` — `test(onboarding): percorrer boas-vindas na troca de contexto`.
+
+O re-review identificou que a sequência esperada de B ainda precisava concluir `welcome`; exigir `/setup-ai` imediatamente contrariava o guard legítimo de `SetupAiPage`. A adoção efetiva do contexto B pela tela aguarda a reexecução E2E isolada. A prova foi ajustada para percorrer somente os controles reais e a ordem do roteador:
+
+1. mantém o conflito A→B, a medição a 390 px e a prova de zero patch/auditoria em B;
+2. clica `Recarregar esta etapa` e exige `/onboarding/welcome`;
+3. marca o checkbox e clica `Continuar`, exigindo `/onboarding/connect-whatsapp`;
+4. abre `Configurar IA (opcional)` e confirma o rascunho `Nome exclusivo B`;
+5. adia a IA e exige retorno a `/onboarding/connect-whatsapp`, pois B segue sem conexão;
+6. preserva as provas de `skipped`, auditoria `+1`, rascunho inalterado e retorno posterior a A.
+
+Nenhuma marca de onboarding foi inserida diretamente, nenhum timeout foi ampliado e nenhum arquivo de produto, banco ou outra spec foi alterado.
+
+Verificações do ajuste:
+
+```bash
+PATH=/tmp/zapfloo-corepack.wMswWn:/Users/juansanches/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:$PATH COREPACK_ENABLE_DOWNLOAD_PROMPT=0 NODE_OPTIONS=--max-old-space-size=4096 corepack pnpm eslint tests/e2e/troca-de-organizacao-tem-volta.spec.ts
+```
+
+Resultado: exit `0`, sem saída.
+
+```bash
+PATH=/tmp/zapfloo-corepack.wMswWn:/Users/juansanches/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:$PATH COREPACK_ENABLE_DOWNLOAD_PROMPT=0 NODE_OPTIONS=--max-old-space-size=4096 corepack pnpm typecheck
+```
+
+Resultado: exit `0`; `tsc --noEmit -p tsconfig.typecheck.json`.
+
+```bash
+git diff --check
+```
+
+Resultado: exit `0`, sem saída.
+
+A rodada E2E R4 anterior não valida nem invalida esta linha específica: terminou exit `1` com `5 failed / 4 passed / 2 skipped / 10 not run` em aproximadamente 6,5 minutos, incluindo 504 e statement timeouts. A falha real de `troca-de-organizacao-tem-volta` nessa rodada ocorreu antes do novo recovery (esperava `welcome`, recebeu `/app/inbox`); o finding da antiga linha 321 veio do re-review do código. A reexecução isolada do E2E corrigido fica com o root depois do gate de banco.
