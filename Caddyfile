@@ -8,6 +8,21 @@
 {$DOMAIN} {
 	encode gzip
 
+	# HSTS. Sem esta linha o Caddy termina TLS e redireciona HTTP→HTTPS, mas o
+	# navegador continua aceitando tentar HTTP primeiro — e a primeira requisição
+	# de cada visita fica interceptável. Medido em 2026-09-10: a produção
+	# respondia com permissions-policy, referrer-policy, x-content-type-options e
+	# x-frame-options, e SEM Strict-Transport-Security.
+	#
+	# `includeSubDomains` alcança apenas subdomínios de {$DOMAIN} (num
+	# `crm.exemplo.com` isso NÃO atinge `exemplo.com`), então é seguro para a
+	# topologia do kit, em que o CRM vive num subdomínio próprio.
+	#
+	# SEM `preload`, de propósito: preload é porta de uma via só — entra numa
+	# lista embutida nos navegadores e sair leva meses. Um ano de max-age já dá a
+	# proteção; a lista é decisão de quem opera o domínio, não default de kit.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
 	# `route` é obrigatório aqui: fora dele o Caddy reordena as diretivas pela
 	# ordem padrão dele, na qual `respond` vem DEPOIS de `reverse_proxy` — o
 	# catch-all atendia primeiro e o 403 abaixo nunca era alcançado (medido: o

@@ -69,6 +69,25 @@ jobs:
       # (issue #191): dois defeitos que tornavam a instalação impossível —
       # escolher OpenRouter travava o instalador num laço, escolher OpenAI
       # deixava o .env pela metade — passaram por todos os checks verdes. 15s.
+      - name: Vulnerabilidade conhecida em dependência
+        # POR QUE ESTE PASSO EXISTE. Até 2026-09-10 NENHUM job do CI olhava
+        # advisory: `grep -rn audit .github/workflows/` voltava vazio, e
+        # `gov:verify` é typecheck + lint + lint:channels + lint:role-rank +
+        # test:unit. O resultado medido: a `main` resolvia js-yaml 4.3.1
+        # (GHSA-2883-xcg3-v3hh, HIGH) e hono 4.13.1 com três moderadas, e as
+        # imagens publicadas carregavam as duas, com os cinco checks verdes.
+        #
+        # `--audit-level=high` e não `moderate`: um gate que reprova por
+        # advisory sem correção disponível ensina o time a ignorar o gate — é a
+        # mesma razão pela qual `vitest.config.ts` subiu o testTimeout para 15s.
+        # Moderadas continuam aparecendo na saída, sem reprovar.
+        #
+        # ⚠️ ESPERADO REPROVAR NA PRIMEIRA EXECUÇÃO CONTRA A `main`: o js-yaml
+        # HIGH está lá. A branch codex/onboarding-roxo já sobe para 4.3.2 e
+        # 4.13.7; o vermelho some quando ela entrar. Isso é o gate funcionando
+        # na estreia, não defeito do gate.
+        run: pnpm audit --audit-level=high
+
       - name: Kit self-host (bash)
         run: pnpm test:shell
 
