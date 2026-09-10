@@ -50,7 +50,7 @@ export type MarkWhatsappConfiguredResult = {
  * O navegador informa apenas o UUID observado na lista/rota escopada. Provider,
  * referência, organização e status vêm da sessão autenticada, do banco e do
  * adapter. Em especial, o espelho no banco pode continuar STARTING enquanto o
- * WAHA já responde WORKING; confiar só nele prenderia quem acabou de parear.
+ * transporte já responde WORKING; confiar só nele prenderia quem acabou de parear.
  */
 export async function markWhatsappConfigured(
   input: unknown,

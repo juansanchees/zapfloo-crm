@@ -27,11 +27,15 @@ export default defineConfig({
       ".next",
       "dist",
       ".claude/**",
+      // Planos/evidências locais não são código do produto nem da suíte.
+      ".superpowers/**",
       // Outro checkout não pertence à suíte, mesmo quando está aninhado.
       "**/.worktrees/**",
-      "**/tests/e2e/**",
-      "**/tests/invariants/**",
-      "**/tests/journeys/**",
+      // Só estas suítes da RAIZ pertencem a outros runners. Um pacote próprio
+      // aninhado pode legitimamente manter testes sob `pacote/tests/e2e`.
+      "tests/e2e/**",
+      "tests/invariants/**",
+      "tests/journeys/**",
     ],
   },
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },
