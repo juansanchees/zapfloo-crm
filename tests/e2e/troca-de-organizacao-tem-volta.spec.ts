@@ -317,6 +317,27 @@ test("rascunho retoma os campos e protege contra outra aba sem ativar atendiment
   expect(estadoBDepois.onboarding_state).toEqual(estadoBAntes.onboarding_state);
   expect(auditoriasBDepois).toBe(auditoriasBAntes);
 
+  await alertaDeContexto.getByRole("link", { name: "Recarregar esta etapa", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/setup-ai/);
+  await expect(page.getByLabel("Como ele vai se chamar")).toHaveValue("Nome exclusivo B");
+  await page.getByRole("button", { name: "Adiar IA e continuar", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/welcome/);
+  const { data: estadoBDepoisDeSeguir, error: estadoBDepoisDeSeguirError } = await svc
+    .from("organizations")
+    .select("onboarding_state")
+    .eq("id", orgB)
+    .single();
+  if (estadoBDepoisDeSeguirError) throw estadoBDepoisDeSeguirError;
+  const aiDaOrganizacaoB = (estadoBDepoisDeSeguir.onboarding_state as { ai?: { skipped?: unknown } } | null)?.ai;
+  expect(aiDaOrganizacaoB?.skipped === true, "o adiamento precisa alcançar a organização B após recarregar").toBe(true);
+  const { count: auditoriasBDepoisDeSeguir, error: auditoriasBDepoisDeSeguirError } = await svc
+    .from("api_audit_log")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgB)
+    .eq("action", "onboarding.ai_skipped");
+  if (auditoriasBDepoisDeSeguirError) throw auditoriasBDepoisDeSeguirError;
+  expect(auditoriasBDepoisDeSeguir).toBe((auditoriasBAntes ?? 0) + 1);
+
   const { data: draftB, error: readBError } = await svc.from("onboarding_drafts").select("revision,configuration").eq("organization_id", orgB).single();
   if (readBError) throw readBError;
   expect(draftB).toEqual({ revision: 1, configuration: { name: "Nome exclusivo B", prompt_template: "support_minimal", regras_da_casa: "Regra B" } });
@@ -326,7 +347,7 @@ test("rascunho retoma os campos e protege contra outra aba sem ativar atendiment
   await switchTab.getByRole("link", { name: "Configurar IA (opcional)", exact: true }).click();
   await expect(switchTab).toHaveURL(/\/onboarding\/setup-ai/);
   await switchTab.close();
-  await page.reload();
+  await page.goto("/onboarding/setup-ai");
   await expect(page.getByLabel("Como ele vai se chamar")).toHaveValue("Atendente QA salvo");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: test.info().outputPath("rascunho-desktop.png") });
