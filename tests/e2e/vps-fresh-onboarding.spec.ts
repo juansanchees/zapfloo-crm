@@ -6,13 +6,10 @@
  * responsabilidade externa. O banco é usado somente como leitura de prova.
  * O scan manual acontece neste mesmo teste/contexto que gerou o QR.
  */
-import { existsSync, unlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { criarArquivoTemporarioPrivado } from "./utils/seguranca-da-prova-fresca";
 import { generateTotp, msUntilNextTotpWindow } from "./utils/totp";
 
 const OWNER_EMAIL = process.env.OWNER_EMAIL!;
@@ -100,11 +97,49 @@ async function preencherTotp(page: Page, secret: string): Promise<void> {
   await page.keyboard.type(generateTotp(secret), { delay: 40 });
 }
 
+async function limparEntradaTotp(page: Page): Promise<void> {
+  await page.locator('input[aria-label="Dígito 1"]').click();
+  for (let i = 0; i < 6; i += 1) await page.keyboard.press("Backspace");
+}
+
+async function confirmarEnrollTotp(page: Page, secret: string): Promise<void> {
+  for (let tentativa = 0; tentativa < 3; tentativa += 1) {
+    await preencherTotp(page, secret);
+    const chegou = await expect(page.getByRole("heading", { name: "Códigos de recuperação", exact: true }))
+      .toBeVisible({ timeout: 8_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (chegou) return;
+    if (tentativa === 2) throw new Error("MFA enroll não chegou aos códigos de recuperação após 3 tentativas.");
+    await limparEntradaTotp(page);
+    await page.waitForTimeout(msUntilNextTotpWindow() + 300);
+  }
+}
+
+async function confirmarLoginTotp(page: Page, secret: string): Promise<void> {
+  // O código usado no enroll não pode ser reutilizado no login seguinte.
+  await page.waitForTimeout(msUntilNextTotpWindow() + 300);
+  for (let tentativa = 0; tentativa < 3; tentativa += 1) {
+    await preencherTotp(page, secret);
+    const chegou = await page.waitForURL(/\/app\/inbox/, { timeout: 8_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (chegou) return;
+    if (tentativa === 2) throw new Error("MFA login não chegou ao Inbox após 3 tentativas.");
+    await limparEntradaTotp(page);
+    await page.waitForTimeout(msUntilNextTotpWindow() + 300);
+  }
+}
+
 test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e reentrada", async ({
   browser,
   page,
 }, testInfo) => {
   test.setTimeout(16 * 60_000);
+  expect(
+    process.env.PLAYWRIGHT_NO_COPY_PROMPT === "1",
+    "a fresh precisa desativar o snapshot DOM automático do Playwright",
+  ).toBe(true);
   for (const chave of CHAVES_OPCIONAIS) {
     const ausente = process.env[chave] === undefined;
     expect(ausente, `${chave} precisa estar ausente no runner fresco`).toBe(true);
@@ -192,38 +227,43 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   for (const width of [1440, 768, 390]) {
     await medirConexao(page, testInfo, width);
   }
-  const qrTemporario = join(tmpdir(), `zapfloo-qr-${process.pid}-${Date.now()}.png`);
-  await qr.screenshot({ path: qrTemporario });
-  console.info(`QR_PRONTO ${qrTemporario}`);
-  let ultimaFonte = await qr.getAttribute("src");
-  let pararAtualizacaoDoQr = false;
-  const atualizarQrEnquantoValido = (async () => {
-    while (!pararAtualizacaoDoQr && /\/onboarding\/connect-whatsapp/.test(page.url())) {
-      await page.waitForTimeout(1_000);
-      try {
-        const fonte = await qr.getAttribute("src");
-        const carregado = await qr.evaluate((imagem: HTMLImageElement) => imagem.complete && imagem.naturalWidth > 0);
-        if (fonte && fonte !== ultimaFonte && carregado) {
-          // O cliente renova o QR a cada tick. Sobrescrever o mesmo arquivo
-          // transitório evita que o dono tente escanear uma imagem expirada.
-          await qr.screenshot({ path: qrTemporario });
-          ultimaFonte = fonte;
-          console.info(`QR_PRONTO ${qrTemporario}`);
-        }
-      } catch {
-        // A navegação após WORKING pode desmontar a imagem entre as leituras.
-      }
-    }
-  })();
-
-  // O dono escaneia enquanto este teste continua vivo. O produto observa
-  // WORKING, conserva o UUID do POST e avança pelo escritor canônico.
+  let limparQrTemporario = () => undefined;
   try {
-    await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 10 * 60_000 });
+    const qrTemporario = criarArquivoTemporarioPrivado("qr-whatsapp.png");
+    limparQrTemporario = qrTemporario.limpar;
+    // O lifecycle protegido começa antes da primeira operação que grava o QR.
+    await qr.screenshot({ path: qrTemporario.arquivo });
+    console.info(`QR_PRONTO ${qrTemporario.arquivo}`);
+    let ultimaFonte = await qr.getAttribute("src");
+    let pararAtualizacaoDoQr = false;
+    const atualizarQrEnquantoValido = (async () => {
+      while (!pararAtualizacaoDoQr && /\/onboarding\/connect-whatsapp/.test(page.url())) {
+        await page.waitForTimeout(1_000);
+        try {
+          const fonte = await qr.getAttribute("src");
+          const carregado = await qr.evaluate((imagem: HTMLImageElement) => imagem.complete && imagem.naturalWidth > 0);
+          if (fonte && fonte !== ultimaFonte && carregado) {
+            // O cliente renova o QR a cada tick. Sobrescrever o mesmo arquivo
+            // transitório evita que o dono tente escanear uma imagem expirada.
+            await qr.screenshot({ path: qrTemporario.arquivo });
+            ultimaFonte = fonte;
+            console.info(`QR_PRONTO ${qrTemporario.arquivo}`);
+          }
+        } catch {
+          // A navegação após WORKING pode desmontar a imagem entre as leituras.
+        }
+      }
+    })();
+    try {
+      // O dono escaneia enquanto este teste continua vivo. O produto observa
+      // WORKING, conserva o UUID do POST e avança pelo escritor canônico.
+      await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 10 * 60_000 });
+    } finally {
+      pararAtualizacaoDoQr = true;
+      await atualizarQrEnquantoValido;
+    }
   } finally {
-    pararAtualizacaoDoQr = true;
-    await atualizarQrEnquantoValido;
-    if (existsSync(qrTemporario)) unlinkSync(qrTemporario);
+    limparQrTemporario();
   }
 
   await page.getByRole("button", { name: "Adiar IA e continuar", exact: true }).click();
@@ -284,8 +324,7 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   const secretTotp = (await page.locator("code").innerText()).trim();
   expect(secretTotp.length > 15, "o segredo TOTP precisa existir apenas em memória").toBe(true);
   await screenshotMascarado(page, testInfo, "mfa-qr-mascarado");
-  await preencherTotp(page, secretTotp);
-  await expect(page.getByRole("heading", { name: "Códigos de recuperação", exact: true })).toBeVisible({ timeout: 10_000 });
+  await confirmarEnrollTotp(page, secretTotp);
   await expect(page.getByRole("dialog").locator(".font-mono")).toHaveCount(10);
   await screenshotMascarado(page, testInfo, "mfa-recovery-mascarado");
   await page.getByText(/salvei meus códigos em local seguro/i).click();
@@ -302,9 +341,7 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
     const novaPagina = await reentrada.newPage();
     await login(novaPagina);
     await expect(novaPagina).toHaveURL(/\/login\/mfa/);
-    await novaPagina.waitForTimeout(msUntilNextTotpWindow() + 300);
-    await preencherTotp(novaPagina, secretTotp);
-    await expect(novaPagina).toHaveURL(/\/app\/inbox/, { timeout: 30_000 });
+    await confirmarLoginTotp(novaPagina, secretTotp);
     await novaPagina.goto("/onboarding");
     await expect(novaPagina).toHaveURL(/\/app\/inbox/);
     await semCookieDeExploracao(reentrada);

@@ -32,6 +32,11 @@ if (process.env.FRESH_E2E_OPT_IN !== "1") {
   throw new Error("Prova fresca recusada: defina FRESH_E2E_OPT_IN=1.");
 }
 
+// Playwright 1.62.1 ignora a captura `page.ariaSnapshot()` quando este guard
+// está ativo. `error-context.md` ainda pode existir com erro/source, mas sem o
+// snapshot DOM que poderia conter QR, secret TOTP, recovery ou link de convite.
+process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
+
 const appUrl = urlLocal("NEXT_PUBLIC_APP_URL");
 urlLocal("NEXT_PUBLIC_SUPABASE_URL");
 obrigatoria("NEXT_PUBLIC_SUPABASE_ANON_KEY");
