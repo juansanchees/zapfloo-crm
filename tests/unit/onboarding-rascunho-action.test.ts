@@ -52,6 +52,10 @@ describe("rascunho: action não confia em IDs ou sucesso do browser", () => {
     fake.rpc.mockResolvedValue({ data: null, error: { message: "draft_conflict" } });
     expect(await salvarRascunho({ expected_context: context, expected_revision: 0, configuration })).toEqual({ ok: false, error: "draft_conflict" });
   });
+  it("teto do prompt devolvido pelo banco é explícito e não vira erro genérico", async () => {
+    fake.rpc.mockResolvedValue({ data: null, error: { message: "draft_prompt_too_long" } });
+    expect(await salvarRascunho({ expected_context: context, expected_revision: 0, configuration })).toEqual({ ok: false, error: "draft_prompt_too_long" });
+  });
   it("erro inesperado não vaza detalhe do banco", async () => {
     fake.rpc.mockResolvedValue({ data: null, error: { message: "segredo-sintetico-do-banco" } });
     expect(await salvarRascunho({ expected_context: context, expected_revision: 0, configuration })).toEqual({ ok: false, error: "db_error" });

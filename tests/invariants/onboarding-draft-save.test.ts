@@ -1,17 +1,33 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import pg from "pg";
+import { promptDoRascunho } from "@/lib/onboarding/prompt";
+import type { PromptTemplate } from "@/lib/schemas/onboarding";
 
 if (!process.env.TEST_DB_CONTAINER) throw new Error("Execute via pnpm test:db.");
 const db = new pg.Pool({ connectionString: `postgresql://postgres:postgres@127.0.0.1:${process.env.TEST_DB_PORT ?? "54329"}/postgres`, max: 3 });
 afterAll(async () => { await db.end(); });
 const config = (name = "Atendente QA") => ({ name, prompt_template: "support_minimal", regras_da_casa: "Sem prometer descontos." });
-async function fixture(role = "admin") {
+async function fixture(role = "admin", business: { display_name: string; o_que_faz: string | null; segmento?: string } = { display_name: "QA", o_que_faz: null }) {
   const org = randomUUID(); const user = randomUUID();
   await db.query("insert into auth.users(id,email) values($1,$2)", [user, `${user}@example.test`]);
-  await db.query("insert into organizations(id,slug,legal_name,display_name) values($1,$2,'QA','QA')", [org, org]);
+  const welcome = {
+    ...(business.o_que_faz === null ? {} : { o_que_faz: business.o_que_faz }),
+    ...(business.segmento ? { segmento: business.segmento } : {}),
+  };
+  const onboardingState = Object.keys(welcome).length === 0 ? {} : { welcome };
+  await db.query("insert into organizations(id,slug,legal_name,display_name,onboarding_state) values($1,$2,'QA',$3,$4)", [org, org, business.display_name, onboardingState]);
   await db.query("insert into user_organizations(user_id,organization_id,role,accepted_at) values($1,$2,$3,now())", [user, org, role]);
   return { org, user };
+}
+
+const separadorObjetivo = "\n\nObjetivo do agente:\n";
+function configuracaoNaFronteira(template: PromptTemplate, business: { display_name: string; o_que_faz: string | null; segmento?: string }, extra = 0) {
+  const semObjetivo = { name: "Atendente QA", prompt_template: template, regras_da_casa: "" };
+  const tamanhoFixo = promptDoRascunho(semObjetivo, business).length + separadorObjetivo.length;
+  const unidades = 20000 - tamanhoFixo + extra;
+  const objetivo = "🧠".repeat(Math.floor(unidades / 2)) + (unidades % 2 ? "x" : "");
+  return { ...semObjetivo, objetivo };
 }
 async function save(org: string, user: string, revision: number, configuration = config()) {
   const { rows } = await db.query("select public.fn_save_onboarding_draft($1,$2,$3,$4::jsonb) as result", [org, user, revision, JSON.stringify(configuration)]);
@@ -21,6 +37,39 @@ async function read(org: string) {
   return (await db.query("select revision,configuration from onboarding_drafts where organization_id=$1", [org])).rows[0];
 }
 describe("rascunho do onboarding: persistência sem ativação", () => {
+  it("SQL preserva a letra v e trata tab vertical como trim do JavaScript", async () => {
+    const business = { display_name: "QA", o_que_faz: null };
+    for (const objetivo of ["vvv", "\u000b"]) {
+      const configuration = { name: "Atendente QA", prompt_template: "support_minimal" as const, regras_da_casa: "", objetivo };
+      const expected = promptDoRascunho(configuration, business);
+      const result = (await db.query("select private.fn_onboarding_draft_prompt($1,$2) as prompt", [configuration, business])).rows[0].prompt;
+      expect(result).toBe(expected);
+    }
+  });
+
+  it("não trata um objetivo longo composto só pela letra v como espaço", async () => {
+    const business = { display_name: "QA", o_que_faz: null };
+    const configuration = { name: "Atendente QA", prompt_template: "support_minimal" as const, regras_da_casa: "", objetivo: "v".repeat(20000) };
+    const { org, user } = await fixture("admin", business);
+    expect(() => promptDoRascunho(configuration, business)).toThrow("draft_prompt_too_long");
+    await expect(save(org, user, 0, configuration)).rejects.toThrow("draft_prompt_too_long");
+  });
+
+  it.each([
+    ["ecommerce_friendly", { display_name: "Loja QA", o_que_faz: null }],
+    ["ecommerce_professional", { display_name: "Clínica 🚀", o_que_faz: "saúde 🧠", segmento: "clinica" }],
+    ["support_minimal", { display_name: "Serviços QA", o_que_faz: "obras", segmento: "servicos" }],
+  ] as const)("salvar e montar concordam no teto exato para %s, negócio, segmento e Unicode", async (template, business) => {
+    const { org, user } = await fixture("admin", business);
+    const noLimite = configuracaoNaFronteira(template, business);
+    const acima = configuracaoNaFronteira(template, business, 1);
+    expect(promptDoRascunho(noLimite, business)).toHaveLength(20000);
+    expect(() => promptDoRascunho(acima, business)).toThrow("draft_prompt_too_long");
+
+    expect((await save(org, user, 0, noLimite)).revision).toBe(1);
+    await expect(save(org, user, 1, acima)).rejects.toThrow("draft_prompt_too_long");
+    expect((await read(org)).configuration).toEqual(noLimite);
+  });
   it("salva sem criar agente, versão ou canal e sem concluir onboarding", async () => {
     const { org, user } = await fixture();
     expect(await save(org, user, 0)).toEqual({ revision: 1, configuration: config() });

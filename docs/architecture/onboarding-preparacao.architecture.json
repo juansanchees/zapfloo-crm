@@ -12,7 +12,9 @@
     { "id": "draft", "lane": "db", "col": 1, "type": "database", "label": "onboarding_drafts / configuração salva" },
     { "id": "agent", "lane": "db", "col": 4, "type": "database", "label": "ai_agents / inativo, não padrão, sem publicação" },
     { "id": "version", "lane": "db", "col": 5, "type": "database", "label": "ai_agent_versions / draft, sem canal" },
-    { "id": "audit", "lane": "db", "col": 4, "type": "database", "label": "api_audit_log / revisão e ID da versão" }
+    { "id": "audit", "lane": "db", "col": 4, "type": "database", "label": "api_audit_log / preparação e recuperação, sem conteúdo" },
+    { "id": "recover", "lane": "server", "col": 4, "type": "service", "label": "Recuperar preparação / admin + MFA + CAS" },
+    { "id": "recover_rpc", "lane": "db", "col": 2, "type": "database", "label": "fn_recuperar_preparacao_onboarding / somente vínculo indisponível" }
   ],
   "edges": [
     { "id": "p1", "from": "draft", "to": "action", "label": "leitura com organização confiável" },
@@ -23,10 +25,14 @@
     { "id": "p6", "from": "rpc", "to": "version", "label": "materializa sem chamada de IA" },
     { "id": "p7", "from": "version", "to": "draft", "label": "snapshot completo e vínculo com revisão salva" },
     { "id": "p8", "from": "rpc", "to": "audit", "label": "mesma transação, sem conteúdo ou segredo" },
-    { "id": "p9", "from": "rpc", "to": "action", "label": "IDs/revisão ou conflito explícito, nunca atestado de teste" }
+    { "id": "p9", "from": "rpc", "to": "action", "label": "IDs/revisão ou conflito explícito, nunca atestado de teste" },
+    { "id": "r1", "from": "draft", "to": "recover", "label": "lerEnsaio expõe preparação arquivada/removida no painel existente" },
+    { "id": "r2", "from": "recover", "to": "recover_rpc", "label": "clique explícito; org/ator confiáveis e revisão/versão esperadas" },
+    { "id": "r3", "from": "recover_rpc", "to": "draft", "label": "limpa vínculos e ensaio, conserva configuração; prepara novamente" },
+    { "id": "r4", "from": "recover_rpc", "to": "audit", "label": "onboarding.preparation_recovered; consulta administrativa existente" }
   ],
   "non_connections": [
-    "Consumido pelo painel app/onboarding/setup-ai/_ensaio.tsx; ensaio/revisão no mapa onboarding-ensaio. Não ativa atendimento.",
+    "Consumido pelo painel app/onboarding/setup-ai/_ensaio.tsx; ensaio/revisão no mapa onboarding-ensaio. Não ativa atendimento. Nome ainda ocupado exige outro nome salvo; nunca renomeia nem reativa o agente antigo.",
     "Não chama runtime legado, IA, WAHA, memória compartilhada ou função de publicação.",
     "credential_id null representa credencial disponível do provedor (organização/instalação), não prova de existência ou validade."
   ]

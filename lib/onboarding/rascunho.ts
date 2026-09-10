@@ -18,5 +18,6 @@ export const rascunhoSchema = z.object({
 });
 export type Rascunho = z.infer<typeof rascunhoSchema>;
 export type ErroRascunho = "auth_required" | "no_active_org" | "forbidden" | "mfa_required"
-  | "not_found" | "db_error" | "invalid_input" | "draft_conflict" | "draft_unavailable" | "draft_context_changed";
+  | "not_found" | "db_error" | "invalid_input" | "draft_conflict" | "draft_unavailable" | "draft_context_changed"
+  | "draft_prompt_too_long";
 export type LeituraRascunho = { ok: true; context: string; draft: Rascunho | null } | { ok: false; error: ErroRascunho };

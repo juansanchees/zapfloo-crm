@@ -10,6 +10,72 @@ import { lerNumerosDeTeste, numeroPodeTestar } from "@/lib/ai/elegibilidade/pre-
 // HTTP sintético exclusivo do harness. O canal abaixo é fixture de banco:
 // isto prova UI/actions/Postgres/gate, nunca o pareamento ou transporte WAHA.
 test.describe.configure({ timeout: 150_000 });
+test("preparação arquivada é recuperável pela tela sem chave de IA", async ({ page }) => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  if (!["127.0.0.1", "localhost"].includes(new URL(url).hostname)) throw new Error("Somente banco local.");
+  const svc = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const org = randomUUID();
+  const email = `recuperacao-${randomUUID()}@example.test`;
+  const password = "SomenteFixtureLocal-2026!";
+  const userResult = await svc.auth.admin.createUser({ email, password, email_confirm: true });
+  if (userResult.error || !userResult.data.user) throw userResult.error ?? new Error("Fixture de usuário falhou");
+  const user = userResult.data.user.id;
+  const checked = (result: { error: unknown }) => { if (result.error) throw result.error; };
+  try {
+    checked(await svc.from("organizations").insert({ id: org, slug: org, legal_name: "QA recuperação", display_name: "QA recuperação", onboarding_state: { welcome: { display_name: "QA recuperação", timezone: "America/Sao_Paulo", accepted_at: new Date().toISOString() } } }));
+    checked(await svc.from("user_organizations").insert({ user_id: user, organization_id: org, role: "admin", accepted_at: new Date().toISOString() }));
+    checked(await svc.from("ai_models").upsert({ provider: "openai", model_id: "qa-recuperacao", display_name: "QA recuperação", supports_tools: true }, { onConflict: "provider,model_id" }));
+    await page.goto("/login");
+    await page.getByLabel(/e-?mail/i).fill(email);
+    await page.getByLabel(/Senha/, { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(page).not.toHaveURL(/\/login/);
+    await page.goto("/onboarding/setup-ai");
+    await page.locator("#name").fill("Lia recuperação QA");
+    await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Rascunho salvo" })).toBeVisible();
+    await page.locator("#ensaio-model").selectOption("openai/qa-recuperacao");
+    await page.getByRole("button", { name: "Preparar ensaio", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Preparar ensaio", exact: true })).toBeEnabled();
+    const first = await svc.from("onboarding_drafts").select("prepared_agent_id,prepared_version_id").eq("organization_id", org).single();
+    checked(first);
+    expect(first.data?.prepared_agent_id).toBeTruthy();
+    checked(await svc.from("ai_agents").update({ archived_at: new Date().toISOString() }).eq("organization_id", org).eq("id", first.data!.prepared_agent_id));
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Recuperar preparação" })).toBeVisible();
+    for (const width of [1440, 768, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const measures = await page.getByRole("button", { name: "Recuperar preparação" }).evaluate(el => ({ width: el.getBoundingClientRect().width, fontSize: getComputedStyle(el).fontSize }));
+      expect(measures.width).toBeGreaterThan(44);
+      expect(parseFloat(measures.fontSize)).toBeGreaterThanOrEqual(12);
+      const viewport = await page.evaluate(() => ({ documentScrollWidth: document.documentElement.scrollWidth, innerWidth }));
+      expect(viewport.documentScrollWidth).toBeLessThanOrEqual(viewport.innerWidth);
+      await test.info().attach(`medidas-recuperacao-${width}`, {
+        body: JSON.stringify({ viewport: width, ...measures, ...viewport }, null, 2),
+        contentType: "application/json",
+      });
+      await page.screenshot({ path: `.superpowers/evidence/anexos-3-6/recuperacao-${width}.png`, fullPage: true });
+    }
+    await page.getByRole("button", { name: "Recuperar preparação" }).click();
+    await expect(page.getByRole("button", { name: "Recuperar preparação" })).toHaveCount(0);
+    await page.locator("#name").fill("Nova Lia recuperação QA");
+    await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Rascunho salvo" })).toBeVisible();
+    await page.getByRole("button", { name: "Preparar ensaio", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Preparar ensaio", exact: true })).toBeEnabled();
+    const second = await svc.from("onboarding_drafts").select("prepared_agent_id,prepared_version_id").eq("organization_id", org).single();
+    checked(second);
+    expect(second.data?.prepared_agent_id).toBeTruthy();
+    expect(second.data?.prepared_agent_id).not.toBe(first.data?.prepared_agent_id);
+    const old = await svc.from("ai_agents").select("is_active,archived_at").eq("organization_id", org).eq("id", first.data!.prepared_agent_id).single();
+    checked(old); expect(old.data!.is_active).toBe(false); expect(old.data!.archived_at).not.toBeNull();
+    expect((await svc.from("ai_agent_runs").select("id").eq("organization_id", org)).data).toHaveLength(0);
+    await expect(page.getByRole("button", { name: "Continuar para conexão" })).toBeDisabled();
+  } finally {
+    checked(await svc.from("organizations").delete().eq("id", org));
+    checked(await svc.auth.admin.deleteUser(user));
+  }
+});
 for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativação restrita em ${locale}`, async ({ page }) => {
   test.skip(process.env.E2E_ONBOARDING_SYNTHETIC_PROVIDER !== "1", "Exige o preload HTTP sintético do harness; não chamar IA real.");
   if (process.env.OPENAI_API_KEY !== "onboarding-local-provider-only") throw new Error("Somente chave sintética permitida.");

@@ -27,6 +27,7 @@ export const selecaoEnsaioSchema = z.object({
   provider: z.enum(PROVIDERS), model: z.string(), credential_id: z.string().uuid().nullable(),
 });
 export const painelEnsaioSchema = z.object({
+  recovery_available: z.boolean().optional(),
   selection: selecaoEnsaioSchema.nullable(), proof: provaEnsaioSchema.nullable(),
   models: z.array(z.object({ provider: z.enum(PROVIDERS), model_id: z.string(), display_name: z.string() })),
   credentials: z.array(z.object({ id: z.string().uuid(), provider: z.enum(PROVIDERS), label: z.string() })),

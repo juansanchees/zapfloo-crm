@@ -267,6 +267,9 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260908222232` | `0225_onboarding_concluir_fail_closed` | Forward-fix da conclusão restrita: chaves JSON ausentes falham fechadas; credencial válida mais recente da organização precede a chave da instalação sem alterar a versão selecionada; retry mantém campos canônicos e hash verificados entre recibo e audit. Mesma RPC service-only, sem ampliar ativação ou publicar para canal aberto. |
 | `20260908224839` | `0226_onboarding_business_goal` | Objetivo opcional no rascunho e segmento no snapshot de negócio; mudanças exigem novo ensaio. Sem backfill, preservando configuração antiga e assinaturas service-only. |
 | `20260909130000` | `0227_user_dashboard_preferences` | Layout pessoal versionado do dashboard, com ordem, visibilidade e tamanho; RLS limita cada linha ao próprio usuário dentro de organização ativa. |
+| `20260910141154` | `0228_onboarding_recover_preparation` | Recuperação explícita e auditada da preparação arquivada/removida: limpa vínculos e prova obsoletos sem reativar agente, com admin/tenant e CAS. |
+
+| `20260910141734` | `0229_limite_exato_prompt_onboarding` | Alinha salvar e preparar ao teto total de 20.000 unidades UTF-16 sem truncar rascunhos antigos. |
 
 ## Tables created (33 total, all RLS enabled)
 

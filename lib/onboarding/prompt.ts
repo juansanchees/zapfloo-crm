@@ -2,6 +2,8 @@ import type { PromptTemplate } from "@/lib/schemas/onboarding";
 import type { Rascunho } from "./rascunho";
 import { PACOTES } from "./pacotes-de-funil";
 
+export const LIMITE_PROMPT_RASCUNHO = 20_000;
+
 const PROMPT_BODIES: Record<PromptTemplate, (onde: string) => string> = {
   ecommerce_friendly: (n) =>
     `Você atende os clientes de ${n}. Fale de forma calorosa e próxima, como alguém que gosta de ajudar. Cumprimente, entenda o que a pessoa precisa e ofereça opções claras. Confirme os detalhes antes de agir.`,
@@ -25,6 +27,6 @@ export function promptDoRascunho(configuration: Rascunho["configuration"], busin
     configuration.objetivo?.trim() ? `Objetivo do agente:\n${configuration.objetivo}` : null,
     configuration.regras_da_casa.trim() ? `Regras deste rascunho:\n${configuration.regras_da_casa}` : null,
   ].filter(Boolean).join("\n\n");
-  if (prompt.length > 20000) throw new Error("draft_prompt_too_long");
+  if (prompt.length > LIMITE_PROMPT_RASCUNHO) throw new Error("draft_prompt_too_long");
   return prompt;
 }

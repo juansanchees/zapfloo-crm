@@ -160,6 +160,8 @@ export function SetupAiForm({ capacidades, conferencias, rascunhoInicial, ensaio
               ? t("A organização ou a sessão mudou em outra aba. Copie suas alterações e recarregue a página antes de salvar.")
               : res.error === "draft_conflict"
               ? t("Este rascunho mudou em outra aba. Copie suas alterações e recarregue a página para conferir a versão salva.")
+              : res.error === "draft_prompt_too_long"
+                ? t("Objetivo e regras juntos passam do limite de 20.000 caracteres. Reduza o texto para salvar.")
               : res.error === "invalid_input"
                 ? t("Confira o nome (2 a 80 caracteres) e as regras (até 20.000 caracteres).")
                 : t("Não foi possível salvar. Seus campos continuam aqui; confira seu acesso antes de tentar novamente."));

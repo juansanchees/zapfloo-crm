@@ -37,6 +37,15 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Ensaiar a configuração no onboarding": { es: "Ensayar la configuración inicial" },
+  "Gera uma resposta de prévia com o provedor, o modelo e a credencial escolhidos no onboarding, sem usar ferramentas nem enviar mensagem ao cliente.": { es: "Genera una respuesta de vista previa con el proveedor, el modelo y la credencial elegidos en la configuración inicial, sin usar herramientas ni enviar mensajes al cliente." },
+  "Usa a seleção do próprio ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; para testar outra combinação, escolha outro provedor, modelo ou credencial no onboarding e execute um novo ensaio.": { es: "Usa la selección del propio ensayo, capturada antes de la llamada. Una elección de este panel no la sustituye; para probar otra combinación, elija otro proveedor, modelo o credencial en la configuración inicial y ejecute un nuevo ensayo." },
+  "A prévia não aparece, e o onboarding mostra que o ensaio falhou para você revisar a configuração ou tentar novamente.": { es: "La vista previa no aparece y la configuración inicial muestra que el ensayo falló para que revise la configuración o lo intente de nuevo." },
+  "Objetivo e regras juntos passam do limite de 20.000 caracteres. Reduza o texto para salvar.": { es: "El objetivo y las reglas juntos superan el límite de 20.000 caracteres. Reduzca el texto para guardar." },
+  "Recuperar preparação": { es: "Recuperar preparación" },
+  "A preparação anterior está indisponível. Se o agente foi arquivado ou removido, recupere a preparação; seu rascunho será preservado.": { es: "La preparación anterior no está disponible. Si el agente fue archivado o eliminado, recupere la preparación; se conservará su borrador." },
+  "Se o nome já estiver em uso, escolha outro nome e salve o rascunho antes de preparar novamente.": { es: "Si el nombre ya está en uso, elija otro y guarde el borrador antes de preparar de nuevo." },
+  "Este nome já está em uso. Altere o nome do agente acima, salve o rascunho e prepare novamente.": { es: "Este nombre ya está en uso. Cambie el nombre del agente arriba, guarde el borrador y prepare de nuevo." },
   "Configurar gatilho": { es: "Configurar disparador" },
   "Escolha abaixo o que inicia este fluxo. O gatilho é salvo separadamente do desenho do fluxo.": { es: "Elige abajo qué inicia este flujo. El disparador se guarda por separado del diseño del flujo." },
   "Salvar gatilho altera a configuração do fluxo, inclusive se ele já estiver publicado.": { es: "Guardar el disparador cambia la configuración del flujo, incluso si ya está publicado." },

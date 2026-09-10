@@ -23,6 +23,17 @@ async function prepare(f: { org: string; user: string }, overrides: { revision?:
 }
 
 describe("preparar rascunho não publica nem autoriza atendimento", () => {
+  it("usa o mesmo teto de 20.000 unidades UTF-16 inclusive com Unicode", async () => {
+    const noLimite = "🧠".repeat(10000);
+    const acima = `${noLimite}x`;
+    const aceito = await fixture();
+    const result = await prepare(aceito, { version: { ...version, system_prompt: noLimite } });
+    expect((await db.query("select system_prompt from ai_agent_versions where id=$1", [result.version_id])).rows[0].system_prompt).toBe(noLimite);
+
+    const recusado = await fixture();
+    await expect(prepare(recusado, { version: { ...version, system_prompt: acima } })).rejects.toThrow("draft_prompt_too_long");
+    expect((await db.query("select count(*)::int n from ai_agents where organization_id=$1", [recusado.org])).rows[0].n).toBe(0);
+  });
   it("materializa uma versão sem canal, preservando organização e ausência de efeitos externos", async () => {
     const f = await fixture();
     const before = (await db.query("select settings,onboarding_state,onboarded_at from organizations where id=$1", [f.org])).rows[0];

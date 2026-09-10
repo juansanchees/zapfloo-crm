@@ -67,6 +67,16 @@ export async function lerEnsaio(input: unknown): Promise<LeituraEnsaio> {
     ]);
     if (draft.error || models.error || credentials.error) return { ok: false, error: "db_error" };
     let selection = null; let proof = null;
+    // Recuperabilidade não depende de o ensaio ainda corresponder à revisão salva.
+    // A RPC de recuperação repete as verificações sob lock; isto só projeta a saída na tela.
+    let recoveryAvailable = Boolean(draft.data?.prepared_revision && !draft.data?.prepared_agent_id && !draft.data?.prepared_version_id);
+    if (draft.data?.prepared_revision && draft.data.prepared_agent_id) {
+      const agent = await admin.from("ai_agents").select("is_active,is_default,published_version_id,archived_at")
+        .eq("id", draft.data.prepared_agent_id).eq("organization_id", ctx.orgId).maybeSingle();
+      if (agent.error) return { ok: false, error: "db_error" };
+      recoveryAvailable = Boolean(agent.data && !agent.data.is_active && !agent.data.is_default
+        && !agent.data.published_version_id && (agent.data.archived_at || !draft.data.prepared_version_id));
+    }
     if (draft.data?.prepared_version_id) {
       const snapshot = z.object({ provider: z.string(), model: z.string(), credential_id: z.string().nullable() }).safeParse(draft.data.prepared_snapshot);
       if (!snapshot.success) return { ok: false, error: "db_error" };
@@ -77,11 +87,13 @@ export async function lerEnsaio(input: unknown): Promise<LeituraEnsaio> {
       if (!valid.error && JSON.stringify(valid.data) === JSON.stringify(draft.data.prepared_snapshot)) {
         const rehearsal = z.object({ snapshot: z.unknown() }).passthrough().safeParse(draft.data.rehearsal);
         if (rehearsal.success && JSON.stringify(rehearsal.data.snapshot) === JSON.stringify(valid.data)) proof = provaEnsaioSchema.parse(rehearsal.data);
+      } else if (valid.error?.message === "draft_unavailable" && recoveryAvailable) {
+        proof = null;
       } else if (valid.error && !["draft_conflict", "draft_context_changed", "draft_model_unavailable", "draft_credential_unavailable"].includes(valid.error.message)) {
         return { ok: false, error: erro(valid.error.message) };
       }
     }
-    const parsed = painelEnsaioSchema.safeParse({ selection, proof, models: models.data, credentials: credentials.data });
+    const parsed = painelEnsaioSchema.safeParse({ selection, proof, models: models.data, credentials: credentials.data, recovery_available: recoveryAvailable });
     return parsed.success ? { ok: true, panel: parsed.data } : { ok: false, error: "db_error" };
   } catch (error) { return { ok: false, error: error instanceof OnboardingError ? error.code : "db_error" }; }
 }

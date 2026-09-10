@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { prepararRascunho } from "@/app/actions/onboarding/prepararRascunho";
+import { recuperarPreparacao } from "@/app/actions/onboarding/recuperarPreparacao";
 import { iniciarEnsaio, revisarEnsaio, lerEnsaio } from "@/app/actions/onboarding/ensaio";
 import { ExplorarCrm } from "@/app/onboarding/_components/ExplorarCrm";
 import type { LeituraEnsaio, ProvaEnsaio } from "@/lib/onboarding/ensaio";
@@ -32,11 +33,12 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
     && selection.model === chosen?.model_id && selection.credential_id === (credential || null);
   const current = !dirty && proofEpoch === epoch && proof?.version_id === selection?.version_id && proof?.revision === revision ? proof : null;
   const reviewable = ready && current?.status === "completed" && !current.reviewed;
-  const blocked = busy || dirty || revision < 1 || !panel;
+  const blocked = busy || dirty || revision < 1 || !panel || Boolean(panel.recovery_available);
   const failure = (code: string) => code === "rehearsal_busy" || code === "rehearsal_rate_limited"
     ? "Há um ensaio em andamento ou muitas tentativas recentes. Aguarde um minuto antes de testar novamente."
     : code === "draft_context_changed" || code === "draft_conflict" || code === "rehearsal_conflict"
     ? "A configuração ou organização mudou. Recarregue a página para conferir antes de testar novamente."
+    : code === "draft_name_conflict" ? "Este nome já está em uso. Altere o nome do agente acima, salve o rascunho e prepare novamente."
     : code === "draft_model_unavailable" ? "Este modelo não está disponível. Confira o catálogo e escolha novamente."
       : code === "draft_credential_unavailable" ? "Esta credencial não está disponível. Confira a chave escolhida."
         : "Não foi possível concluir. Sua mensagem continua aqui; confira a configuração e tente novamente.";
@@ -72,11 +74,30 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
       </div>
     </div>
     {dirty || revision < 1 ? <p className="text-sm">{t("Salve o rascunho antes de preparar, testar ou revisar.")}</p> : null}
+    {panel?.recovery_available && <div className="space-y-2 rounded-lg border p-3">
+      <p role="status" className="text-sm">{t("A preparação anterior está indisponível. Se o agente foi arquivado ou removido, recupere a preparação; seu rascunho será preservado.")}</p>
+      <Button type="button" variant="outline" disabled={busy || dirty || revision < 1} onClick={() => void perform(async () => {
+        const result = await recuperarPreparacao({ expected_context: context, expected_revision: revision, expected_version_id: selection?.version_id ?? null });
+        if (!result.ok) { setError(failure(result.error)); return; }
+        setSelection(null); setProof(null);
+        const read = await lerEnsaio({ expected_context: context });
+        if (read.ok) setPanel(read.panel);
+        else { setPanel(null); setError(failure(read.error)); }
+      })}>{t("Recuperar preparação")}</Button>
+      <p className="text-xs text-muted-foreground">{t("Se o nome já estiver em uso, escolha outro nome e salve o rascunho antes de preparar novamente.")}</p>
+    </div>}
     <Button type="button" variant="outline" disabled={blocked || !chosen} onClick={() => void perform(async () => {
       if (!chosen) return;
       const r = await prepararRascunho({ expected_context: context, expected_revision: revision, expected_version_id: selection?.version_id ?? null,
         provider: chosen.provider, model: chosen.model_id, credential_id: credential || null });
-      if (!r.ok) { setProof(null); setError(failure(r.error)); return; }
+      if (!r.ok) {
+        setProof(null); setError(failure(r.error));
+        if (r.error === "draft_unavailable") {
+          const read = await lerEnsaio({ expected_context: context });
+          if (read.ok) { setPanel(read.panel); setSelection(read.panel.selection); }
+        }
+        return;
+      }
       setSelection({ ...r, provider: chosen.provider, model: chosen.model_id, credential_id: credential || null });
       setProof(null);
       const read = await lerEnsaio({ expected_context: context });

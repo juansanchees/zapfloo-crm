@@ -24,6 +24,7 @@ export async function salvarRascunho(input: unknown): Promise<{ ok: true; revisi
       const code: ErroRascunho = error.message === "draft_conflict" ? "draft_conflict"
         : error.message === "draft_unavailable" ? "draft_unavailable"
         : error.message === "draft_forbidden" ? "forbidden"
+        : error.message === "draft_prompt_too_long" ? "draft_prompt_too_long"
         : error.message === "draft_invalid_input" ? "invalid_input" : "db_error";
       return { ok: false, error: code };
     }

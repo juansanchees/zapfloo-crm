@@ -7668,6 +7668,15 @@ export type Database = {
         }
         Returns: string
       }
+      fn_recuperar_preparacao_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
       fn_revisar_ensaio_onboarding: {
         Args: {
           p_actor_id: string
