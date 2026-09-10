@@ -318,10 +318,15 @@ test("rascunho retoma os campos e protege contra outra aba sem ativar atendiment
   expect(auditoriasBDepois).toBe(auditoriasBAntes);
 
   await alertaDeContexto.getByRole("link", { name: "Recarregar esta etapa", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/welcome/);
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
+  await page.getByRole("link", { name: "Configurar IA (opcional)", exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding\/setup-ai/);
   await expect(page.getByLabel("Como ele vai se chamar")).toHaveValue("Nome exclusivo B");
   await page.getByRole("button", { name: "Adiar IA e continuar", exact: true }).click();
-  await expect(page).toHaveURL(/\/onboarding\/welcome/);
+  await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
   const { data: estadoBDepoisDeSeguir, error: estadoBDepoisDeSeguirError } = await svc
     .from("organizations")
     .select("onboarding_state")
