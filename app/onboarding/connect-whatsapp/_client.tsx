@@ -208,6 +208,7 @@ function ConfirmacaoDoPasso({
       <label className="min-w-56 space-y-1 text-sm">
         <span className="block font-medium">{t("Canal conectado")}</span>
         <select className="h-10 w-full rounded-md border bg-background px-3" value={canalSelecionado} onChange={(event) => onSelecionar(event.target.value)}>
+          <option value="" disabled>{t("Selecione um canal")}</option>
           {canais.map((canal) => <option key={canal.id} value={canal.id}>{canal.nome}</option>)}
         </select>
       </label>
@@ -230,7 +231,7 @@ export function ConnectWhatsappClient({
   const [qrFailed, setQrFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [canais, setCanais] = useState<CanalInicial[]>(canaisIniciais);
-  const [canalSelecionado, setCanalSelecionado] = useState(canaisIniciais[0]?.id ?? "");
+  const [canalSelecionado, setCanalSelecionado] = useState("");
   const [mostrarSelecao, setMostrarSelecao] = useState(false);
   const [conferindo, setConferindo] = useState(false);
   const [erroDaConfirmacao, setErroDaConfirmacao] = useState<string | null>(null);
@@ -379,7 +380,7 @@ export function ConnectWhatsappClient({
         }];
       });
       setCanais(encontrados);
-      setCanalSelecionado(encontrados[0]?.id ?? "");
+      setCanalSelecionado(encontrados.length === 1 ? encontrados[0]!.id : "");
       setMostrarSelecao(encontrados.length > 1);
       if (encontrados.length === 0) {
         setErroDaConfirmacao("Nenhum canal conectado foi encontrado. Conecte um canal e tente novamente.");

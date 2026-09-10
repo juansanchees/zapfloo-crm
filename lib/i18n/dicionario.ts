@@ -39,6 +39,7 @@ type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>
 export const DICIONARIO: Traducoes = {
   "Conferindo canais…": { es: "Comprobando canales…" },
   "Canal conectado": { es: "Canal conectado" },
+  "Selecione um canal": { es: "Selecciona un canal" },
   "Confirmar este canal": { es: "Confirmar este canal" },
   "Não foi possível confirmar a conexão no servidor. Aguarde alguns segundos e tente confirmar novamente.": { es: "No se pudo confirmar la conexión en el servidor. Espera unos segundos e intenta confirmarla de nuevo." },
   "Não foi possível confirmar este canal. Recarregue a página, confira seu acesso e tente novamente.": { es: "No se pudo confirmar este canal. Recarga la página, revisa tu acceso e inténtalo de nuevo." },
