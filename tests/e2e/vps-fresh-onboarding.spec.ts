@@ -10,6 +10,8 @@ import { expect, test, type BrowserContext, type Locator, type Page, type TestIn
 import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "../../lib/database.types";
+import { coletarMedidasSeguras, persistirMedidasSeguras } from "./utils/evidencia-fresca";
+import { iniciarObservadorQr } from "./utils/observador-qr";
 import { criarArquivoTemporarioPrivado } from "./utils/seguranca-da-prova-fresca";
 import { generateTotp, msUntilNextTotpWindow } from "./utils/totp";
 
@@ -58,35 +60,13 @@ async function screenshotMascarado(page: Page, testInfo: TestInfo, nome: string)
 async function medirConexao(page: Page, testInfo: TestInfo, width: number): Promise<void> {
   await page.setViewportSize({ width, height: 1000 });
   await expect(page.getByRole("heading", { name: "Conecte seu WhatsApp" })).toBeVisible();
-  const medidas = await page.evaluate(() => {
-    const boxes = [...document.querySelectorAll("main h2, main h3, main p, main label, main button, main a, main img")]
-      .map((elemento) => {
-        const rect = elemento.getBoundingClientRect();
-        const estilo = getComputedStyle(elemento);
-        return {
-          texto: elemento.textContent?.slice(0, 70) ?? "",
-          left: rect.left,
-          right: rect.right,
-          width: rect.width,
-          height: rect.height,
-          fontSize: estilo.fontSize,
-          lineHeight: estilo.lineHeight,
-          display: estilo.display,
-          naturalWidth: elemento instanceof HTMLImageElement ? elemento.naturalWidth : null,
-          naturalHeight: elemento instanceof HTMLImageElement ? elemento.naturalHeight : null,
-        };
-      });
-    return { viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth, boxes };
-  });
+  const medidas = await coletarMedidasSeguras(page);
   expect(medidas.scrollWidth, `overflow em ${width}px`).toBeLessThanOrEqual(width + 1);
   for (const box of medidas.boxes.filter((item) => item.width > 0)) {
-    expect(box.left, `${box.texto}: esquerda em ${width}px`).toBeGreaterThanOrEqual(-1);
-    expect(box.right, `${box.texto}: direita em ${width}px`).toBeLessThanOrEqual(width + 1);
+    expect(box.left, `${box.alvo}: esquerda em ${width}px`).toBeGreaterThanOrEqual(-1);
+    expect(box.right, `${box.alvo}: direita em ${width}px`).toBeLessThanOrEqual(width + 1);
   }
-  await testInfo.attach(`medidas-conexao-${width}`, {
-    body: JSON.stringify(medidas, null, 2),
-    contentType: "application/json",
-  });
+  await persistirMedidasSeguras(testInfo, `medidas-conexao-${width}`, medidas);
   await screenshotMascarado(page, testInfo, `conexao-${width}`);
 }
 
@@ -243,35 +223,17 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
     const qrTemporario = criarArquivoTemporarioPrivado("qr-whatsapp.png");
     limparQrTemporario = qrTemporario.limpar;
     // O lifecycle protegido começa antes da primeira operação que grava o QR.
-    await qr.screenshot({ path: qrTemporario.arquivo });
-    console.info(`QR_PRONTO ${qrTemporario.arquivo}`);
-    let ultimaFonte = await qr.getAttribute("src");
-    let pararAtualizacaoDoQr = false;
-    const atualizarQrEnquantoValido = (async () => {
-      while (!pararAtualizacaoDoQr && /\/onboarding\/connect-whatsapp/.test(page.url())) {
-        await page.waitForTimeout(1_000);
-        try {
-          const fonte = await qr.getAttribute("src");
-          const carregado = await qr.evaluate((imagem: HTMLImageElement) => imagem.complete && imagem.naturalWidth > 0);
-          if (fonte && fonte !== ultimaFonte && carregado) {
-            // O cliente renova o QR a cada tick. Sobrescrever o mesmo arquivo
-            // transitório evita que o dono tente escanear uma imagem expirada.
-            await qr.screenshot({ path: qrTemporario.arquivo });
-            ultimaFonte = fonte;
-            console.info(`QR_PRONTO ${qrTemporario.arquivo}`);
-          }
-        } catch {
-          // A navegação após WORKING pode desmontar a imagem entre as leituras.
-        }
-      }
-    })();
+    const observadorQr = await iniciarObservadorQr({
+      qr,
+      arquivo: qrTemporario.arquivo,
+      aoCapturar: () => console.info(`QR_PRONTO ${qrTemporario.arquivo}`),
+    });
     try {
       // O dono escaneia enquanto este teste continua vivo. O produto observa
       // WORKING, conserva o UUID do POST e avança pelo escritor canônico.
       await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 10 * 60_000 });
     } finally {
-      pararAtualizacaoDoQr = true;
-      await atualizarQrEnquantoValido;
+      await observadorQr.encerrar();
     }
   } finally {
     limparQrTemporario();
