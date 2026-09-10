@@ -48,8 +48,59 @@ function loadCreds(): Creds {
 }
 
 const creds = loadCreds();
-const NOME = `Clinica E2E ${Date.now()}`;
+
+/**
+ * O prefixo é constante para a VARREDURA poder reconhecer o que este spec cria.
+ * Trocar o texto aqui e esquecer o padrão abaixo faria a limpeza parar de achar
+ * o próprio lixo — em silêncio, que é como este defeito nasceu.
+ */
+const PREFIXO = "Clinica E2E ";
+const NOME = `${PREFIXO}${Date.now()}`;
 const RENOMEADO = `${NOME} renomeado`;
+
+/** `Clinica E2E 1757529600000` e `… renomeado` — só o que este spec cria. */
+const PADRAO_DE_TESTE = /^Clinica E2E \d+( renomeado)?$/;
+
+/**
+ * Arquiva os funis que ESTE spec deixou para trás em execuções anteriores.
+ *
+ * ⚠️ POR QUE ISTO EXISTE. O spec cria `Clinica E2E <timestamp>` a cada rodada e
+ * só arquivava no caminho feliz — no fim do caso. Enquanto o caso falhou (e ele
+ * falhou por semanas, antes na reordenação), a linha de arquivar NUNCA era
+ * alcançada, e cada rodada deixava mais um funil ativo na organização.
+ *
+ * O estrago não foi só sujeira: o último passo do caso afirma "não dá para
+ * arquivar o ÚLTIMO funil", e com o entulho o «Pedidos» deixou de ser o último.
+ * O produto então recusava com a razão CERTA e OUTRA — "é o funil padrão"
+ * (`validarArquivamento` confere «único» ANTES de «padrão», em
+ * lib/pipelines/pipeline-editing.ts) —, e o teste lia isso como defeito. Ou
+ * seja: o teste sujava o ambiente e depois falhava por causa da própria sujeira.
+ *
+ * A varredura é DELIBERADAMENTE estreita: só nomes que casam com PADRAO_DE_TESTE
+ * e só ARQUIVA (o DELETE sem `?definitivo=1` marca `is_archived`, não apaga).
+ * Nenhum funil de verdade tem esse formato de nome.
+ */
+async function varrerFunisDeTeste(page: Page, exceto: string[] = []): Promise<void> {
+  try {
+    const resposta = await page.request.get("/api/v1/pipelines");
+    if (!resposta.ok()) return;
+    const corpo = (await resposta.json()) as {
+      data?: Array<{ id: string; name: string; is_archived?: boolean }>;
+    };
+    const orfaos = (corpo.data ?? []).filter(
+      (f) => !f.is_archived && PADRAO_DE_TESTE.test(f.name) && !exceto.includes(f.name),
+    );
+    for (const f of orfaos) {
+      await page.request.delete(`/api/v1/pipelines/${f.id}`);
+    }
+  } catch {
+    // A LIMPEZA NUNCA DERRUBA O TESTE, e a razão é a mesma que fez duas falhas
+    // ficarem indeterminadas neste repo: exceção lançada num teardown SUBSTITUI
+    // a exceção real que estava em voo, e o relatório passa a mostrar o erro da
+    // faxina em vez do erro do produto. Falhar em limpar é ruído; apagar o
+    // diagnóstico é perder a rodada inteira.
+  }
+}
 
 async function login(page: Page, email: string): Promise<void> {
   await page.goto("/login");
@@ -81,8 +132,19 @@ async function idDoFunil(page: Page, nome: string): Promise<string> {
 test.describe("gestão de funis", () => {
   test.beforeEach(async ({ page }) => {
     await login(page, creds.users.manager!.email);
+    // Varre ANTES de abrir a tela: o entulho de rodadas passadas some da lista
+    // que o caso vai medir. Sem isto, "o último funil" nunca volta a ser o
+    // último, e o caso mede o histórico do CI em vez do produto.
+    await varrerFunisDeTeste(page);
     await page.goto("/app/kanban");
     await expect(page.getByRole("heading", { name: "Funis" })).toBeVisible();
+  });
+
+  // E varre DEPOIS, para o que este caso criou não virar o entulho do próximo —
+  // inclusive (e principalmente) quando ele falha no meio, que é exatamente
+  // quando o caminho feliz de arquivar não é alcançado.
+  test.afterEach(async ({ page }) => {
+    await varrerFunisDeTeste(page);
   });
 
   test("a lista mostra só a organização ativa, mesmo com funil homônimo em outra", async ({
@@ -173,6 +235,18 @@ test.describe("gestão de funis", () => {
     await expect(linhaDoFunil(page, RENOMEADO)).toHaveCount(0);
 
     // ---- recusa: arquivar o último funil ----
+    //
+    // A PRECONDIÇÃO É MEDIDA, e não suposta. Este caso só existe se «Pedidos»
+    // for mesmo o único ativo: `validarArquivamento` confere «único» ANTES de
+    // «padrão» (lib/pipelines/pipeline-editing.ts), então com qualquer outro
+    // funil vivo a recusa vem com a outra razão — certa, porém outra — e o
+    // vermelho acusaria o produto quando a causa é o AMBIENTE. Foi exatamente
+    // isso que aconteceu enquanto o spec não limpava o que criava.
+    await expect(
+      page.locator('li[data-testid^="funil-"]'),
+      "o caso do «último funil» exige que só «Pedidos» tenha sobrado — há funil de outra origem na organização",
+    ).toHaveCount(1);
+
     await page.getByTestId(`arquivar-${idPedidos}`).click();
     await page.getByTestId(`arquivar-confirmar-${idPedidos}`).click();
     await expect(page.getByTestId(`arquivar-erro-${idPedidos}`)).toContainText(/único/i);
