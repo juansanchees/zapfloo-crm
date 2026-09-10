@@ -3,7 +3,7 @@
  *
  * ## Por que este arquivo existe
  *
- * O DeskcommCRM chama modelo de linguagem em 23 lugares. Até aqui, QUAL modelo
+ * O produto chama modelo de linguagem em vários lugares. Até aqui, QUAL modelo
  * cada um usava estava espalhado por três pilhas que não se falavam
  * (`runModelCall` com BYOK por org, `lib/ai/gateway.ts` por variável de
  * ambiente, `lib/ai/runtime/agent.ts` com um terceiro `switch`) e por sete
@@ -471,6 +471,22 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
     emissor: "lib/agent-engine/edge/llm/test-model.ts",
     sintomaDeFalha:
       "O botão de testar não conclui, e você fica sem saber se a configuração está de pé antes de colocar no ar.",
+    registraEm: "llm_calls",
+  },
+  {
+    id: "onboarding_rehearsal",
+    rotulo: "Ensaiar a configuração no onboarding",
+    oQueFaz:
+      "Gera uma resposta de prévia com o provedor, o modelo e a credencial escolhidos no onboarding, sem usar ferramentas nem enviar mensagem ao cliente.",
+    papel: "melhorar",
+    exige: {},
+    emissor: "lib/onboarding/executar-ensaio.ts",
+    fixo: {
+      razao:
+        "Usa a seleção do próprio ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; para testar outra combinação, escolha outro provedor, modelo ou credencial no onboarding e execute um novo ensaio.",
+    },
+    sintomaDeFalha:
+      "A prévia não aparece, e o onboarding mostra que o ensaio falhou para você revisar a configuração ou tentar novamente.",
     registraEm: "llm_calls",
   },
   {
