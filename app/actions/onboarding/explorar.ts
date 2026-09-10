@@ -27,6 +27,7 @@ async function entrarNoCrm(destination: "/app/inbox" | "/app/ai/agents" | "/app/
     sameSite: "lax",
     secure: cookieSecure(),
     path: "/",
+    maxAge: 60 * 60 * 24 * 30,
   });
   redirect(destination);
 }

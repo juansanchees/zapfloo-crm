@@ -30,7 +30,7 @@
  * se a escolha virasse estado gravado, ela não teria como voltar a ser nula.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 vi.mock("sonner", () => ({
@@ -56,7 +56,10 @@ vi.mock("@/components/connections/CanalParceiroClient", () => ({
   CanalParceiroClient: () => <div data-testid="dublê-parceiro" />,
 }));
 
-import { ConnectWhatsappClient } from "@/app/onboarding/connect-whatsapp/_client";
+import {
+  ConnectWhatsappClient,
+  relancarInterrupcaoDoNext,
+} from "@/app/onboarding/connect-whatsapp/_client";
 import { markWhatsappConfigured } from "@/app/actions/onboarding/skipWhatsapp";
 
 /** Toda chamada de rede que a tela tentar fazer passa por aqui. */
@@ -64,6 +67,8 @@ let chamadas: string[] = [];
 
 beforeEach(() => {
   chamadas = [];
+  vi.mocked(markWhatsappConfigured).mockReset();
+  vi.mocked(markWhatsappConfigured).mockResolvedValue(undefined as never);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: unknown, init?: { method?: string }) => {
@@ -79,6 +84,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -88,6 +94,7 @@ function montar(props?: { oficialPodeReceber?: boolean }) {
       wahaConfigured
       sessionName="org_teste"
       oficialPodeReceber={props?.oficialPodeReceber ?? true}
+      canaisIniciais={[]}
     />,
   );
 }
@@ -98,13 +105,128 @@ function chamadasDeSessao(): string[] {
 }
 
 describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
-  it("QR WORKING mostra conexão pronta sem concluir ou ativar automaticamente", async () => {
+  it("não transforma o redirect de sucesso da Server Action em erro de confirmação", () => {
+    const redirect = new Error("NEXT_REDIRECT");
+    (redirect as Error & { digest: string }).digest =
+      "NEXT_REDIRECT;replace;/onboarding;303;";
+
+    expect(() => relancarInterrupcaoDoNext(redirect)).toThrow(redirect);
+    expect(() => relancarInterrupcaoDoNext(new Error("falha de rede"))).not.toThrow();
+  });
+
+  it("QR WORKING confirma a conexão no servidor uma única vez sem ativar IA", async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { status: "WORKING", session: "org_teste", channel_session_id: "11111111-1111-4111-8111-111111111111" } }) } as Response);
     montar();
     fireEvent.click(screen.getByTestId("forma-qr").querySelector("input")!);
     await screen.findByText("Conexão pronta. Você já pode abrir as conversas para atender manualmente. A IA continua com a política atual do canal.");
-    expect(markWhatsappConfigured).not.toHaveBeenCalled();
+    await waitFor(() => expect(markWhatsappConfigured).toHaveBeenCalledOnce());
+    expect(markWhatsappConfigured).toHaveBeenCalledWith({
+      channel_session_id: "11111111-1111-4111-8111-111111111111",
+    });
     expect(screen.queryByRole("button", { name: "Conectei em outro lugar" })).toBeNull();
+  });
+
+  it("preserva o UUID do POST quando o polling GET chega WORKING sem repeti-lo", async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          data: {
+            status: "SCAN_QR_CODE",
+            session: "org_teste",
+            channel_session_id: "22222222-2222-4222-8222-222222222222",
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: { status: "WORKING", session: "org_teste" } }),
+      } as Response);
+
+    montar();
+    fireEvent.click(screen.getByTestId("forma-qr").querySelector("input")!);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    await act(async () => { vi.advanceTimersByTime(3_000); await Promise.resolve(); await Promise.resolve(); });
+
+    expect(markWhatsappConfigured).toHaveBeenCalledOnce();
+    expect(markWhatsappConfigured).toHaveBeenCalledWith({
+      channel_session_id: "22222222-2222-4222-8222-222222222222",
+    });
+    vi.useRealTimers();
+  });
+
+  it("falha de confirmação interrompe o avanço automático e oferece tentativa manual", async () => {
+    vi.mocked(markWhatsappConfigured).mockResolvedValue({ ok: false, error: "upstream_unavailable" });
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          status: "WORKING",
+          session: "org_teste",
+          channel_session_id: "33333333-3333-4333-8333-333333333333",
+        },
+      }),
+    } as Response);
+
+    montar();
+    fireEvent.click(screen.getByTestId("forma-qr").querySelector("input")!);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível confirmar/i);
+    expect(markWhatsappConfigured).toHaveBeenCalledOnce();
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(markWhatsappConfigured).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: /tentar confirmar novamente/i }));
+    await waitFor(() => expect(markWhatsappConfigured).toHaveBeenCalledTimes(2));
+  });
+
+  it("Conferir canais consulta a lista autenticada e confirma o único canal pelo mesmo escritor", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: [{
+          id: "44444444-4444-4444-8444-444444444444",
+          display_name: "Vendas",
+          phone_number: "+5511999999999",
+          status: "STARTING",
+        }],
+      }),
+    } as Response);
+    montar();
+
+    fireEvent.click(screen.getByRole("button", { name: /conferir canais conectados/i }));
+
+    await waitFor(() => expect(markWhatsappConfigured).toHaveBeenCalledWith({
+      channel_session_id: "44444444-4444-4444-8444-444444444444",
+    }));
+    expect(fetch).toHaveBeenCalledWith("/api/v1/channel-sessions");
+  });
+
+  it("com mais de um canal exige escolha explícita e confirma o UUID selecionado", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [
+        { id: "55555555-5555-4555-8555-555555555555", display_name: "Suporte", status: "STARTING" },
+        { id: "66666666-6666-4666-8666-666666666666", display_name: "Vendas", status: "WORKING" },
+      ] }),
+    } as Response);
+    montar();
+
+    fireEvent.click(screen.getByRole("button", { name: /conferir canais conectados/i }));
+    const seletor = await screen.findByLabelText("Canal conectado");
+    expect(markWhatsappConfigured).not.toHaveBeenCalled();
+    fireEvent.change(seletor, { target: { value: "66666666-6666-4666-8666-666666666666" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar este canal" }));
+
+    await waitFor(() => expect(markWhatsappConfigured).toHaveBeenCalledWith({
+      channel_session_id: "66666666-6666-4666-8666-666666666666",
+    }));
   });
   it("abre com a pergunta e as três formas, não com o código", () => {
     montar();
@@ -172,12 +294,9 @@ describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
     expect(screen.getByTestId("forma-qr")).toBeTruthy();
   });
 
-  it("as saídas existem já na pergunta — nenhum estado é beco", () => {
+  it("a confirmação existe já na pergunta — nenhum estado é beco", () => {
     montar();
 
-    // c2f88e83: um aviso correto que nasceu sem botão prendeu quem instalava
-    // sem chave. A pergunta é um estado novo, e estados novos precisam de saída.
-    expect(screen.getByRole("button", { name: /explorar o crm/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /conferir canais conectados/i })).toBeTruthy();
   });
 

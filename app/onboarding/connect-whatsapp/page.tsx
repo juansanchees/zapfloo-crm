@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/server";
 import { listSelectableChannels } from "@/lib/channels/selectable";
 import { confirmarAgenteRevisadoSchema } from "@/lib/onboarding/concluir";
 import { AutorizacaoRestrita } from "./_autorizacao";
-import { ExplorarCrm } from "../_components/ExplorarCrm";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +26,6 @@ export default async function ConnectWhatsappPage() {
     <p>{traduzir("A versão revisada foi ativada para os números de teste. Nenhuma mensagem foi enviada por essa ação.", idioma)}</p>
     <p className="text-sm text-muted-foreground">{traduzir("O público geral ficou bloqueado nessa ativação. Confira o estado atual e gerencie alterações no CRM.", idioma)}</p>
     <Link href="/onboarding" className="inline-block rounded-md bg-primary px-4 py-2 text-primary-foreground">{traduzir("Continuar", idioma)}</Link>
-    <ExplorarCrm />
   </section>;
   // A revisão autoriza somente a oferta de ativação restrita, não a conexão.
   // Ausência de IA (ou decisão de adiar) não bloqueia atendimento humano.
@@ -67,12 +65,15 @@ export default async function ConnectWhatsappPage() {
         wahaConfigured={wahaConfigured}
         sessionName={`org_${activeOrg.orgId.slice(0, 8)}`}
         oficialPodeReceber={oficialPodeReceber}
+        canaisIniciais={channels.map((canal) => ({
+          id: canal.id,
+          nome: canal.display_name,
+        }))}
       />
       {channelsError && <p role="alert">{traduzir("Não foi possível carregar os canais. Recarregue a página.", idioma)}</p>}
       <section className="min-w-0 space-y-3 rounded-xl border p-4 sm:p-6">
         <h3 className="text-lg font-semibold">{traduzir("Atendimento humano primeiro", idioma)}</h3>
         <p className="text-sm text-muted-foreground">{traduzir("Você pode abrir as conversas agora. Para enviar e receber pelo WhatsApp, o número precisa estar conectado. A configuração restante pode ser retomada depois.", idioma)}</p>
-        <ExplorarCrm />
         <Link href="/onboarding/setup-ai" className="block text-sm underline underline-offset-4">{traduzir("Configurar IA (opcional)", idioma)}</Link>
       </section>
       {!channelsError && !state.ai?.skipped && reference.success && <AutorizacaoRestrita key={activeOrg.orgId} reference={reference.data} channels={channels.map((c, index) => ({ id: c.id, name: c.display_name || `${traduzir("Canal", idioma)} ${index + 1}`, status: c.status, mode: c.ai_access_mode, count: c.ai_test_phone_count }))} />}
