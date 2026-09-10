@@ -16,6 +16,7 @@
 Ruling: cookie de exploração terá 30 dias, seguindo a preferência de organização ativa existente em app/actions/shell/setActiveOrg.ts — é preferência autenticada, não token de autorização — se inadequado, custo é alterar a validade, sem migração.
 Ruling: o comando de rebase pedido prevalece sobre a regra geral de atualizar por merge — preservado backup codex/jornada-p0-backup-20260910 em 301530677, remoto original igual — publicação exigirá force-with-lease exato para não sobrescrever trabalho concorrente.
 Ruling: o dono não consegue parear agora e autorizou avançar; corrigir o harness e revisar o código sem consumir outra instalação fresca nem simular conexão. O custo é manter o aceite positivo de pareamento/conclusão pendente até haver aparelho disponível.
+Ruling: a regressão Chromium do observador fica em `tests/e2e/observador-qr-fresco.spec.ts`, inscrita em uma SPECS_PARTE existente; verify não instala browser, então não introduzir Chromium nos unitários. Custo é um caso E2E curto no job existente, sem novo job, config de CI ou skip.
 
 ## Estado
 

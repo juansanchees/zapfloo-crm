@@ -50,7 +50,7 @@ não confundir política de compatibilidade com inventário.
   do wizard nem envio de mensagem.
 - A exploração é uma preferência separada de concluir o onboarding. Conectar
   precisa poder cumprir sua própria etapa sem IA; a continuação completa está
-  sendo medida na prova fresca desta leva. Não se cria novo modo de separação
+  pendente de pareamento na prova fresca desta leva. Não se cria novo modo de separação
   nem se muda `em_teste`, `is_dry_run` ou regras de elegibilidade.
 - A ordem humana primeiro é decisão aprovada de produto; não altera por si só
   agentes já ativos nem promete que o serviço de transporte esteja configurado.

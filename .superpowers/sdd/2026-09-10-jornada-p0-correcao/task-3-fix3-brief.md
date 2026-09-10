@@ -15,3 +15,11 @@ Base: 8f6851533372d23ad7f7626432ab82d61abce426. O dono autorizou avançar sem ce
 - Não rodar a spec fresca nem usar o banco/perfil A: já foi consumido parcialmente, não é mais pristine. Não enviar mensagens. Não inventar WORKING/conclusão. Não abrir `.env*` ou runtime.json.
 - Node22/corepack conforme brief original. Rodar testes focados, typecheck/lint dos arquivos próprios; a suíte completa será consolidada pelo root, não reexecutada por você.
 - Commit nomeado só dos próprios arquivos e relatório. Reportar RED/GREEN, sabotagens, comandos/logs, o que não mediu. Não declarar jornada positiva concluída.
+
+Expansão estreita aprovada pelo root: a regressão Chromium fica em
+`tests/e2e/observador-qr-fresco.spec.ts`, usando somente `page.setContent` e arquivos
+temporários fictícios, inscrita em uma `SPECS_PARTE_*` existente no workflow. O job
+verify não instala browser; não impor essa dependência a `test:unit`. Ownership
+inclui essa spec e a entrada no workflow, sem novo job/config/skip/seed. Para
+executar localmente sem globalSetup/seed, usar config temporária isolada e registrar
+o comando. O CI usa a configuração normal já existente.

@@ -42,6 +42,12 @@ foram salvos no remoto. Nenhum PR novo foi aberto.
 2. Rebase solicitado prevalece sobre atualização por merge. Backup local preserva
    a antiga ponta `301530677`; publicar requer lease exato para não sobrescrever
    avanço concorrente. Não há merge automático.
+3. O dono autorizou avançar sem celular: corrigir o harness e revisar código sem
+   outra tentativa de pareamento nem estado simulado. Custo: o aceite positivo
+   de conexão/conclusão permanece pendente até a prova assistida.
+4. A regressão Chromium entra numa SPECS_PARTE existente, não no `test:unit`, pois
+   o job verify não instala browser. Custo: execução curta adicional no E2E
+   existente, sem novo job ou skip.
 
 ## Evidências e continuidade
 
@@ -51,5 +57,7 @@ foram salvos no remoto. Nenhum PR novo foi aberto.
   artefatos remotos. Credenciais efêmeras e estado de sessão não vão para Git.
 - Ordem de integração permanece altura-shell antes de jornada-p0. A ponta contém
   a base por ancestralidade; não descartar os consertos herdados para abrir PR.
-- Próximo passo: combinar nova janela de scan, completar a prova positiva, fechar
-  revisão integrada e só então avisar antes de abrir PR para medir o CI.
+- Próximo passo autorizado: corrigir os dois defeitos de harness, fechar a revisão
+  integrada e salvar a branch. A prova positiva aguarda uma futura janela de scan;
+  avisar antes de qualquer PR para medir o CI. Não abrir PR nem fazer deploy nesta
+  retomada sem pareamento.

@@ -68,8 +68,12 @@ com cookie de 30 dias, e não substitui conclusão.
   `FAILED`; o transporte registrou `QR refs attempts ended`. Geração de QR
   não equivale a conexão concluída.
 - Evidência desta correção: `.superpowers/evidence/jornada-p0-correcao-2026-09-10/`.
-  O perfil de pareamento é outro banco recém-bootstrapado, com WAHA e Redis vivos;
-  a preparação da infraestrutura sozinha não comprova a jornada.
+  O perfil de pareamento começou em outro banco recém-bootstrapado, com WAHA e
+  Redis vivos; após welcome/tentativa de conexão ele já não está vazio. Não
+  reaproveitá-lo como instalação fresca nem simular WORKING para fechar o aceite.
+- Retomada autorizada sem celular: corrigir o harness e revisar a branch enquanto
+  o scan não está disponível. Nenhuma nova tentativa de pareamento é prova desta
+  retomada; a preparação da infraestrutura sozinha não comprova a jornada.
 
 ## Convenções
 
