@@ -35,7 +35,7 @@
 
 ## Task 2: Avanço visível, IA adiável e saída única persistente
 
-**Files:** `app/onboarding/connect-whatsapp/_client.tsx`, `page.tsx`, `app/onboarding/setup-ai/{page,_form,_ensaio}.tsx`, `app/onboarding/welcome/page.tsx` (cópia da mesma saída), `app/actions/onboarding/{explorar,createDefaultAgent}.ts`, `lib/onboarding/jornada.ts` se necessário para preservar adiamento, `lib/i18n/dicionario.ts`, testes unitários de conexão/saídas/exploração/ensaio. Componente auxiliar focado na confirmação permitido dentro de `connect-whatsapp/` se reduzir a duplicação entre as três formas de conectar.
+**Files:** `app/onboarding/connect-whatsapp/_client.tsx`, `page.tsx`, `app/onboarding/setup-ai/{page,_form,_ensaio}.tsx`, `app/onboarding/welcome/page.tsx` (cópia da mesma saída), `app/actions/onboarding/{explorar,createDefaultAgent}.ts`, `lib/onboarding/jornada.ts` se necessário para preservar adiamento, `lib/i18n/dicionario.ts`, `lib/audit/actions.ts` (evento específico de adiamento), testes unitários de conexão/saídas/exploração/ensaio. Componente auxiliar focado na confirmação permitido dentro de `connect-whatsapp/` se reduzir a duplicação entre as três formas de conectar.
 
 **Interfaces:** consumir escritor da Task 1 ao observar conexão; redirecionar pelo roteador após confirmação. Reaproveitar `skipAi` por escolha explícita e preservar configuração ativa/revisada ao adiar, sem apagar rascunhos. Um único `ExplorarCrm` permanece no layout comum; sem `.last()` para contornar duplicação.
 
@@ -46,13 +46,14 @@
 - [ ] Remover as duas cópias de Explorar da tela de conexão e testar composição com layout: exatamente um botão.
 - [ ] Cookie de exploração dura 30 dias (`60 * 60 * 24 * 30`), alinhado à preferência existente de organização ativa; mantém httpOnly, sameSite, secure, path e vínculo usuário/tenant. Testar expiração positiva e sabotar sua remoção.
 - [ ] Testar negativo: adiar não publica/ativa/desativa agente, não muda `em_teste` ou listas de confiança; erro não marca etapa.
+- [ ] Mais de um canal exige seleção vazia inicialmente e botão desabilitado até escolha explícita. Adiar IA emite `onboarding.ai_skipped` somente após persistência bem-sucedida; nenhum audit de sucesso se a escrita falhar. Sabotar as duas proteções.
 - [ ] i18n, testes dirigidos, sabotagens restauradas, commit próprio e revisão.
 
 ## Task 3: E2E versionado e jornada fresca executável
 
-**Files:** `tests/e2e/vps-fresh-onboarding.spec.ts`, nova `tests/e2e/onboarding-sem-ia.spec.ts`, specs afetadas pela ordem, `.github/workflows/e2e.yml`; `vitest.config.ts` e `tests/unit/escopo-dos-gates.test.ts` somente se necessário para estreitar o escopo.
+**Files:** `tests/e2e/vps-fresh-onboarding.spec.ts`, nova `tests/e2e/onboarding-sem-ia.spec.ts`, specs afetadas pela ordem, `.github/workflows/e2e.yml`; `vitest.config.ts` e `tests/unit/escopo-dos-gates.test.ts` para estreitar o escopo; `playwright.fresh.config.ts` estreito para executar somente a prova fresca contra app local explicitamente preparado, sem carregar arquivos `.env` nem reutilizar implicitamente a instalação compartilhada.
 
-**Interfaces:** telas finais das Tasks 1–2. Spec sem IA verifica variáveis opcionais ausentes, zero credenciais/ativação no banco, QR carregado, progresso real, funil, equipe, onboarded_at e novo contexto sem cookie de exploração.
+**Interfaces:** telas finais das Tasks 1–2. A spec fresca positiva verifica variáveis opcionais ausentes, zero credenciais/ativação no banco, QR carregado, progresso real, funil, equipe, onboarded_at e novo contexto sem cookie de exploração. A nova `onboarding-sem-ia` é prova negativa determinística no CI: fronteira de sessão recusada explicitamente, erro visível, adiamento de IA sem mutação de agente, exploração sem fingir conclusão e reentrada sem cookie voltando ao passo ainda pendente. Ela NÃO prova pareamento.
 
 - [ ] Migrar/adaptar a prova local para `tests/e2e/`, sem caminhos fixos de máquina nem portas mortas. Declarar execução ou exclusão com motivo exato no workflow.
 - [ ] Atualizar vps-fresh para ordem real e retirada de ações inexistentes. Não apagar sessões `org_*` indiscriminadamente; atuar só no recurso do dono fictício em ambiente isolado validado.
@@ -60,15 +61,18 @@
 - [ ] Rodar specs afetadas; alterar expectativa de ordem apenas quando ela mede a decisão aprovada, não mascarar bugs do produto.
 - [ ] Reavaliar `**/tests/e2e/**`: se não houver justificativa de domínio, voltar à âncora da raiz mantendo exclusões explícitas de worktrees/evidências. Testar que arquivo próprio aninhado volta à coleta e terceiros ficam fora; sabotar.
 - [ ] Se a prova exige scan manual/licença/canal externo que o CI não possui, não inventar automação: registrar impedimento exato e separar teste determinístico com fronteira controlada da prova real executada localmente.
+- [ ] Usar o endpoint autenticado existente `/api/v1/system/instalacao` sem `provar=1` para conferir ausência de chave do provedor selecionado e de e-mail no Next, além das asserções no runner/banco e do ambiente saneado de build/start. Não alegar que esse endpoint enumera chaves de todos os provedores.
+- [ ] Configuração fresca exige opt-in explícito, URLs de app/Supabase locais e credenciais de dono fictício por ambiente; sem seed/reset, sem processo de produção, sem trace contendo pareamento/MFA. Screenshots sensíveis são mascarados antes de persistir, exceto QR de pareamento transitório mostrado ao dono e invalidado antes de versionar.
 - [ ] Commit próprio, revisão e teste de completude das specs.
 
 ## Task 4: Prova real, docs e fechamento
 
-**Files:** `.superpowers/evidence/jornada-p0-correcao-2026-09-10/`, `.changes/2026-09-10-conexao-sem-ia.md`, `docs/testing/{jornada-p0-sem-ia,user-journey-map}.md`; runner local da prova em pasta ignorada, spec sempre versionada.
+**Files:** `.superpowers/evidence/jornada-p0-correcao-2026-09-10/`, `.changes/2026-09-10-conexao-sem-ia.md`, `docs/testing/{jornada-p0-sem-ia,user-journey-map}.md`, `docs/architecture/onboarding-ativacao-restrita.architecture.json` (corrigir as arestas antigas que exigiam IA para conectar); runner local da prova em pasta ignorada, spec sempre versionada.
 
 - [ ] Preparar stack isolada com portas livres, baseline pg15 + extensões do instalador + bootstrap-owner. WAHA e Redis ativos de verdade; segredos efêmeros fora do git/logs.
 - [ ] Mostrar QR real sem chave IA em 1440/768/390; medir getBoundingClientRect/getComputedStyle e overflow. Solicitar aparelho de teste ao dono para pareamento real, sem enviar mensagens a terceiros.
 - [ ] Após pareamento, registrar progresso automático, funil e convite acessíveis, fim persistido e reentrada em contexto novo. QR deve ser invalidado/seguro antes de versionar evidência; não versionar sessão/token/telefone.
 - [ ] Rodar gov:verify e test:db completos, E2E e cinco checks de CI. Separar bloqueio de infraestrutura/acesso de falha de produto.
 - [ ] Atualizar fragmento e mapa com resultados concretos e limites, corrigindo afirmações antigas do pacote sem reescrever seus logs históricos.
+- [ ] Mapa arquitetural: conexão confirmada alimenta progresso e auditoria independentemente da IA; ativação restrita continua uma escolha separada. Remover afirmações antigas de QR que nunca avança e de conta sem IA obrigatoriamente voltando ao treino.
 - [ ] Revisão final, commits/push seguros (lease explícito para rebase remoto), nenhum merge/deploy. Relatório em três colunas e campo O QUE NÃO FOI MEDIDO.

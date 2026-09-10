@@ -3,7 +3,7 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "Conclusão restrita do agente no onboarding",
-    "subtitle": "Revisão confirmada não ativa; publicação exige ação explícita e canal pré-go-live fechado",
+    "subtitle": "Conexão confirmada avança sem IA; publicação exige revisão, ação explícita e canal pré-go-live fechado",
     "output": "onboarding-ativacao-restrita.html",
     "quality_profile": "standard"
   },
@@ -17,7 +17,11 @@
   "nodes": [
     { "id": "welcome_ui", "lane": "ui", "col": 1, "type": "service", "label": "Negócio / valores retomáveis, segmento da taxonomia existente" },
     { "id": "draft_ui", "lane": "ui", "col": 2, "type": "service", "label": "Agente / nome, objetivo, tom, resumo e ensaio sem envio" },
-    { "id": "channel_ui", "lane": "ui", "col": 4, "type": "service", "label": "Conexão / UUID servidor, escolha explícita, QR não avança" },
+    { "id": "channel_ui", "lane": "ui", "col": 4, "type": "service", "label": "Conexão / UUID preservado, WORKING solicita confirmação no servidor" },
+    { "id": "connection_action", "lane": "server", "col": 2, "type": "service", "label": "markWhatsappConfigured / admin, MFA, tenant, UUID e saúde real do canal" },
+    { "id": "onboarding_router", "lane": "server", "col": 4, "type": "service", "label": "proximoPasso / conexão independente da IA; adiamento leva ao próximo passo restante" },
+    { "id": "skip_ai_action", "lane": "server", "col": 3, "type": "service", "label": "skipAi / preserva estado anterior e registra decisão explícita de adiar" },
+    { "id": "audit_ui", "lane": "ui", "col": 9, "type": "service", "label": "Auditoria / eventos reais de conexão, adiamento e ativação" },
     { "id": "access_ui", "lane": "ui", "col": 5, "type": "service", "label": "ChannelAiAccess restrito / lista não vazia, sem liberar público" },
     { "id": "receipt_ui", "lane": "ui", "col": 8, "type": "service", "label": "Recibo histórico retomável / ISO UTC com Z ou offset" },
     { "id": "confirm_action", "lane": "server", "col": 1, "type": "service", "label": "confirmarAgenteRevisado / guard, contexto e CAS" },
@@ -35,10 +39,18 @@
   ],
   "edges": [
     { "id": "ui1", "from": "welcome_ui", "to": "org_state", "label": "guard, contexto e CAS preservam fuso e consentimento" },
-    { "id": "ui2", "from": "welcome_ui", "to": "draft_ui", "label": "negócio antecede treino; voltar restaura valores" },
+    { "id": "ui2", "from": "welcome_ui", "to": "channel_ui", "label": "negócio antecede conexão; IA é opcional, não pré-condição" },
     { "id": "ui3", "from": "draft_ui", "to": "draft", "label": "objetivo e segmento entram no snapshot e invalidam revisão quando mudam" },
-    { "id": "ui4", "from": "draft_ui", "to": "confirm_action", "label": "Continuar para conexão somente com prova corrente sem dirty" },
-    { "id": "ui5", "from": "org_state", "to": "channel_ui", "label": "guard revalida prova atual; conta nova incompleta volta ao agente" },
+    { "id": "ui4", "from": "draft_ui", "to": "confirm_action", "label": "revisão exige prova corrente sem dirty; depois retorna ao roteador" },
+    { "id": "ui5", "from": "org_state", "to": "onboarding_router", "label": "relê etapas persistidas; falta de ativação não invalida conexão" },
+    { "id": "connection1", "from": "channel_ui", "to": "connection_action", "label": "POST preserva UUID durante polling; canal existente usa escolha explícita" },
+    { "id": "connection2", "from": "connection_action", "to": "org_state", "label": "grava whatsapp somente após saúde WORKING; erro visível permite tentar novamente" },
+    { "id": "connection3", "from": "connection_action", "to": "audit", "label": "onboarding.whatsapp_configured após persistência, sem telefone" },
+    { "id": "connection4", "from": "onboarding_router", "to": "draft_ui", "label": "etapa opcional de IA quando ainda não revisada nem adiada" },
+    { "id": "skip1", "from": "draft_ui", "to": "skip_ai_action", "label": "usuário escolhe adiar; nunca ativação automática" },
+    { "id": "skip2", "from": "skip_ai_action", "to": "org_state", "label": "mescla ai.skipped, sem apagar revisão ou alterar agente e política do canal" },
+    { "id": "skip3", "from": "skip_ai_action", "to": "audit", "label": "onboarding.ai_skipped somente após escrita bem-sucedida" },
+    { "id": "audit1", "from": "audit", "to": "audit_ui", "label": "consulta do histórico existente em /app/audit, sem evento ilustrativo" },
     { "id": "ui6", "from": "channel_ui", "to": "access_ui", "label": "seleção explícita de canal pre_go_live; política existente não é substituída" },
     { "id": "ui7", "from": "access_ui", "to": "activate_action", "label": "último botão distinto habilita respostas reais somente aos números autorizados" },
     { "id": "ui10", "from": "channel", "to": "access_ui", "label": "GET fornece hash do acesso observado; PATCH restrito exige esse hash e CAS atômico da metadata" },
@@ -61,6 +73,8 @@
     { "id": "e15", "from": "channel", "to": "dispatcher", "label": "allowlist pré-go-live segue sendo a trava canônica em tempo de envio" }
   ],
   "non_connections": [
+    "Conectar e adiar IA não publicam agente, não alteram em_teste nem abrem a lista de números autorizados.",
+    "Explorar o CRM é preferência autenticada de usuário/organização por 30 dias; não grava whatsapp nem onboarded_at.",
     "Salvar, preparar, ensaiar, revisar e confirmar não ativam o agente; somente ativarAgenteParaTeste chama a RPC de publicação.",
     "A transação não executa modelo, ferramenta, HTTP, WAHA, mensagem nem cria event_log que possa iniciar contato.",
     "O recibo não guarda telefone, resposta ensaiada, prompt, credencial ou chave da instalação.",
