@@ -16,6 +16,19 @@
 - Resultado: `PASS` / `FAIL(bug#)` / `WARN` (funciona mas UX ruim).
 - Evidência: screenshot/trace em `.superpowers/evidence/vps-qa/`.
 
+### Altura da shell e Agenda `[P0]` — 10/set/2026
+
+`codex/altura-shell`: contêiner não-Inbox com altura automática e piso
+`min-h-full`, sem mudar a implementação da Agenda. Os quatro casos pedidos
+(clique, dois arrastes e histórico) passaram no recorte de 10 testes em
+1280×720 e 390×720; a preparação mobile abre o menu recolhido por clique.
+Sonda em 12 rotas × 2 larguras: grade da Agenda 0 → 752px, rolador principal
+preservado. A retirada isolada do mínimo NÃO reproduziu as quatro falhas;
+reprovou o piso de Plano. Sem o contêiner, três casos reprovaram na repetição
+(quatro na rodada original), com grade novamente em 0px nas duas larguras.
+Limites, comandos e evidências: [altura-shell.md](altura-shell.md) e
+`.superpowers/evidence/altura-shell/`. Não equivale a QA completo das 12 telas.
+
 ### Contraste da navegação autenticada `[P0]` — 10/set/2026
 
 `rbac-roles.spec.ts` intacta, executada nos temas claro/escuro: 8/8 passaram.

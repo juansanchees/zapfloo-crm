@@ -1,0 +1,441 @@
+[WebServer] (node:13465) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:13466) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+
+[WebServer] Invalid Sentry Dsn: off
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+
+Running 10 tests using 1 worker
+
+(node:13475) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/10] [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:145:5 › clicar num bloco livre abre a marcação NAQUELE horário
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:58:30.346Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+  1) [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:145:5 › clicar num bloco livre abre a marcação NAQUELE horário 
+
+    Test timeout of 150000ms exceeded.
+
+    Error: locator.click: Test timeout of 150000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid^="bloco-"][data-livre="true"]').first()
+        - locator resolved to <button type="button" data-livre="true" data-testid="bloco-2026-09-14-09:00" aria-label="Marcar às 09:00 de 14 de setembro" class="absolute inset-x-0 z-0 transition-colors duration-fast ease-out focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500 cursor-pointer hover:bg-accent-soft"></button>
+      - attempting click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+      - retrying click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+      - retrying click action
+        - waiting 20ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+      2 × retrying click action
+          - waiting 100ms
+          - waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+      68 × retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+      - retrying click action
+        - waiting 500ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+      - retrying click action
+        - waiting 500ms
+
+
+      158 |   expect(oferecido, `o bloco livre não anuncia o horário que vai marcar: "${rotulo}"`).toBeTruthy();
+      159 |
+    > 160 |   await bloco.click();
+          |               ^
+      161 |
+      162 |   const painel = page.getByTestId("painel-de-marcacao");
+      163 |   await expect(painel).toBeVisible({ timeout: 15_000 });
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/altura-shell/tests/e2e/agenda-grade-interativa.spec.ts:160:15
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-cl-fbeea--a-marcação-NAQUELE-horário-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-cl-fbeea--a-marcação-NAQUELE-horário-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-cl-fbeea--a-marcação-NAQUELE-horário-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-cl-fbeea--a-marcação-NAQUELE-horário-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:13672) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/10] [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:206:5 › arrastar um card remarca — e o horário novo sobrevive ao reload
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T16:01:04.582Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+
+  2) [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:206:5 › arrastar um card remarca — e o horário novo sobrevive ao reload 
+
+    Test timeout of 150000ms exceeded.
+
+    Error: locator.click: Test timeout of 150000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid^="bloco-"][data-livre="true"]').first()
+        - locator resolved to <button type="button" data-livre="true" data-testid="bloco-2026-09-14-09:00" aria-label="Marcar às 09:00 de 14 de setembro" class="absolute inset-x-0 z-0 transition-colors duration-fast ease-out focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500 cursor-pointer hover:bg-accent-soft"></button>
+      - attempting click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+      - retrying click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+      - retrying click action
+        - waiting 20ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+      2 × retrying click action
+          - waiting 100ms
+          - waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+      67 × retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+      - retrying click action
+        - waiting 500ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+      - retrying click action
+        - waiting 500ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+      - retrying click action
+        - waiting 500ms
+        - waiting for element to be visible, enabled and stable
+
+
+      222 |   const origem = blocoLivre(page);
+      223 |   const testidOrigem = (await origem.getAttribute("data-testid"))!;
+    > 224 |   await origem.click();
+          |                ^
+      225 |   await expect(page.getByTestId("painel-de-marcacao")).toBeVisible({ timeout: 15_000 });
+      226 |   await page.getByTestId("confirmar-marcacao").click();
+      227 |   await expect(page.getByTestId("ver-na-agenda")).toBeVisible({ timeout: 20_000 });
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/altura-shell/tests/e2e/agenda-grade-interativa.spec.ts:224:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-64130-io-novo-sobrevive-ao-reload-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-64130-io-novo-sobrevive-ao-reload-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-64130-io-novo-sobrevive-ao-reload-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-64130-io-novo-sobrevive-ao-reload-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:13903) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/10] [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:369:5 › arrastar para fora da disponibilidade é RECUSADO e o card volta
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T16:03:39.975Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+
+  3) [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:369:5 › arrastar para fora da disponibilidade é RECUSADO e o card volta 
+
+    Test timeout of 150000ms exceeded.
+
+    Error: locator.click: Test timeout of 150000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid^="bloco-"][data-livre="true"]').first()
+        - locator resolved to <button type="button" data-livre="true" data-testid="bloco-2026-09-14-09:00" aria-label="Marcar às 09:00 de 14 de setembro" class="absolute inset-x-0 z-0 transition-colors duration-fast ease-out focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500 cursor-pointer hover:bg-accent-soft"></button>
+      - attempting click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+      - retrying click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+      - retrying click action
+        - waiting 20ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+      2 × retrying click action
+          - waiting 100ms
+          - waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+      68 × retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <main class="min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6">…</main> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+           - waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <html lang="pt-BR" data-theme="light" class="atkinson_hyperlegible_ba71068c-module__aJFJ7a__variable ibm_plex_mono_8d08b8a6-module__qbzxzG__variable">…</html> intercepts pointer events
+      - retrying click action
+        - waiting 500ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - <button type="button" aria-pressed="false" data-testid="tipo-da-grade-ebb37ddf-1ae1-45b6-a374-b33748d63bdf" class="rounded-full border px-2.5 py-0.5 transition-colors duration-fast border-border hover:border-border-strong hover:text-text">Consulta</button> from <div data-testid="tipo-da-grade" class="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">…</div> subtree intercepts pointer events
+      - retrying click action
+        - waiting 500ms
+
+
+      384 |   const origem = blocoLivre(page);
+      385 |   const testidOrigem = (await origem.getAttribute("data-testid"))!;
+    > 386 |   await origem.click();
+          |                ^
+      387 |   await expect(page.getByTestId("painel-de-marcacao")).toBeVisible({ timeout: 15_000 });
+      388 |   await page.getByTestId("confirmar-marcacao").click();
+      389 |   await expect(page.getByTestId("ver-na-agenda")).toBeVisible({ timeout: 20_000 });
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/altura-shell/tests/e2e/agenda-grade-interativa.spec.ts:386:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-fb17a-e-é-RECUSADO-e-o-card-volta-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-fb17a-e-é-RECUSADO-e-o-card-volta-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-fb17a-e-é-RECUSADO-e-o-card-volta-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .superpowers/evidence/altura-shell/runtime-results/agenda-grade-interativa-ar-fb17a-e-é-RECUSADO-e-o-card-volta-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:16191) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/10] [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:38:7 › a Agenda como o dono do produto a usa › chego na Agenda CLICANDO no menu, não digitando a URL
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T16:06:14.532Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[5/10] [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:57:7 › a Agenda como o dono do produto a usa › as pessoas da equipe são REAIS — o filtro deixou de ser invisível
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+[6/10] [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:120:7 › a Agenda como o dono do produto a usa › o histórico está NA TELA DO PRODUTO, com as quatro abas
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+
+  4) [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:120:7 › a Agenda como o dono do produto a usa › o histórico está NA TELA DO PRODUTO, com as quatro abas 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator:  getByTestId('historico-da-agenda')
+    Expected: visible
+    Received: hidden
+    Timeout:  60000ms
+
+    Call log:
+      - Expect "toBeVisible" with timeout 60000ms
+      - waiting for getByTestId('historico-da-agenda')
+        121 × locator resolved to <div data-aba="proximos" data-testid="historico-da-agenda" class="flex min-h-0 flex-col max-h-[320px]">…</div>
+            - unexpected value "hidden"
+
+
+      122 |     // contador zero respondem "não há nada" sem gastar um clique.
+      123 |     const hist = page.getByTestId("historico-da-agenda");
+    > 124 |     await expect(hist).toBeVisible({ timeout: ESPERA });
+          |                        ^
+      125 |     for (const aba of ["proximos", "aguardando", "passados", "cancelados"]) {
+      126 |       await expect(page.getByTestId(`aba-${aba}`)).toBeVisible();
+      127 |     }
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/altura-shell/tests/e2e/agenda-tela-do-produto.spec.ts:124:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-tela-do-produto-a-A-086d9--PRODUTO-com-as-quatro-abas-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: .superpowers/evidence/altura-shell/runtime-results/agenda-tela-do-produto-a-A-086d9--PRODUTO-com-as-quatro-abas-chromium/error-context.md
+
+    Error Context: .superpowers/evidence/altura-shell/runtime-results/agenda-tela-do-produto-a-A-086d9--PRODUTO-com-as-quatro-abas-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    .superpowers/evidence/altura-shell/runtime-results/agenda-tela-do-produto-a-A-086d9--PRODUTO-com-as-quatro-abas-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace .superpowers/evidence/altura-shell/runtime-results/agenda-tela-do-produto-a-A-086d9--PRODUTO-com-as-quatro-abas-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[7/10] [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:130:7 › a Agenda como o dono do produto a usa › a tela declara de onde veio o que ela mostra — e nunca de mentira
+[8/10] [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:157:7 › a Agenda como o dono do produto a usa › as três visões desenham, e a régua do agora existe — NO PRODUTO
+[9/10] [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:189:7 › a Agenda como o dono do produto a usa › o filtro por pessoa ISOLA de verdade — clicando, no produto
+[10/10] [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:216:7 › a Agenda como o dono do produto a usa › evidência visual da tela do produto
+  4 failed
+    [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:145:5 › clicar num bloco livre abre a marcação NAQUELE horário 
+    [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:206:5 › arrastar um card remarca — e o horário novo sobrevive ao reload 
+    [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:369:5 › arrastar para fora da disponibilidade é RECUSADO e o card volta 
+    [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:120:7 › a Agenda como o dono do produto a usa › o histórico está NA TELA DO PRODUTO, com as quatro abas 
+  4 did not run
+  2 passed (9.1m)
