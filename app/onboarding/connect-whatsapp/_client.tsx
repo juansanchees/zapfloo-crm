@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/hooks/i18n/useT";
 
 import { Button } from "@/components/ui/button";
-import { ExplorarCrm } from "../_components/ExplorarCrm";
-import { useRouter } from "next/navigation";
 import { CanalOficialClient } from "@/components/connections/CanalOficialClient";
 import { CanalParceiroClient } from "@/components/connections/CanalParceiroClient";
+import { markWhatsappConfigured } from "@/app/actions/onboarding/skipWhatsapp";
+import { nomeDoCanal } from "@/lib/channels/estado";
+
+interface CanalInicial {
+  id: string;
+  nome: string;
+}
 
 interface Props {
   wahaConfigured: boolean;
@@ -20,6 +25,8 @@ interface Props {
    * isso é ANTES de a pessoa buscar três credenciais no painel, não depois.
    */
   oficialPodeReceber: boolean;
+  /** Projeção segura lida no servidor; a conferência manual atualiza pela rota autenticada. */
+  canaisIniciais: CanalInicial[];
 }
 
 /**
@@ -29,8 +36,9 @@ interface Props {
  * (`lib/onboarding/passos.ts`), então persistir a escolha no clique marcaria o
  * passo como resolvido — e quem fechasse o navegador no meio cairia direto no
  * passo seguinte, sem telefone e sem caminho de volta, porque o roteador só
- * devolve o primeiro passo NÃO cumprido. O banco só é tocado quando o passo
- * termina de verdade: conectou, pulou, ou disse que já tinha conectado.
+ * devolve o primeiro passo NÃO cumprido. O passo só termina quando o servidor
+ * relê o canal, confirma `WORKING` no transporte e grava o UUID canônico (ou
+ * quando a pessoa escolhe pular).
  */
 type Forma = "qr" | "oficial" | "parceiro";
 
@@ -49,6 +57,23 @@ interface SessionInfo {
   session: string | null;
   channel_session_id?: string;
   error?: string;
+}
+
+/**
+ * `redirect()` encerra uma Server Action lançando uma interrupção controlada
+ * pelo Next. Uma captura genérica não pode convertê-la em mensagem de falha,
+ * senão o escritor conclui o passo mas a tela permanece parada.
+ */
+export function relancarInterrupcaoDoNext(error: unknown): void {
+  const digest = typeof error === "object" && error !== null && "digest" in error
+    ? (error as { digest?: unknown }).digest
+    : undefined;
+  if (
+    (error instanceof Error && error.message.startsWith("NEXT_REDIRECT")) ||
+    (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT"))
+  ) {
+    throw error;
+  }
 }
 
 /**
@@ -148,22 +173,55 @@ function VoltarParaEscolha({ onVoltar }: { onVoltar: () => void }) {
 }
 
 /**
- * As duas saídas do passo, iguais nos três ramos.
+ * A confirmação do passo, igual nos três ramos.
  *
- * Ficam FORA do ramo de propósito: o defeito que este projeto já pagou caro
- * (commit c2f88e83) foi um aviso correto que nasceu sem botão — quem instalava
- * sem chave ficava preso numa tela com o diagnóstico certo e nenhum caminho.
- * Aqui, nenhuma escolha — nem a pergunta em si — deixa a pessoa sem saída.
+ * Ela fica fora do ramo porque os formulários oficial/parceiro não navegam ao
+ * gravar e o QR também precisa de uma tentativa manual depois de erro. A saída
+ * persistente para o CRM não é repetida aqui: vive uma única vez no layout do
+ * onboarding e permanece visível em todos estes estados.
  */
-function Saidas() {
-  const t = useT(); const router = useRouter();
-  return <div className="flex flex-wrap items-center gap-2 pt-2"><ExplorarCrm /><Button variant="outline" onClick={() => router.refresh()}>{t("Conferir canais conectados")}</Button></div>;
+function ConfirmacaoDoPasso({
+  conferindo,
+  canais,
+  canalSelecionado,
+  mostrarSelecao,
+  erro,
+  onConferir,
+  onSelecionar,
+  onConfirmar,
+}: {
+  conferindo: boolean;
+  canais: CanalInicial[];
+  canalSelecionado: string;
+  mostrarSelecao: boolean;
+  erro: string | null;
+  onConferir: () => void;
+  onSelecionar: (id: string) => void;
+  onConfirmar: () => void;
+}) {
+  const t = useT();
+  return <div className="space-y-2 pt-2">
+    <Button type="button" variant="outline" disabled={conferindo} onClick={onConferir}>
+      {t(conferindo ? "Conferindo canais…" : "Conferir canais conectados")}
+    </Button>
+    {mostrarSelecao && canais.length > 1 ? <div className="flex flex-wrap items-end gap-2">
+      <label className="min-w-56 space-y-1 text-sm">
+        <span className="block font-medium">{t("Canal conectado")}</span>
+        <select className="h-10 w-full rounded-md border bg-background px-3" value={canalSelecionado} onChange={(event) => onSelecionar(event.target.value)}>
+          {canais.map((canal) => <option key={canal.id} value={canal.id}>{canal.nome}</option>)}
+        </select>
+      </label>
+      <Button type="button" disabled={conferindo || !canalSelecionado} onClick={onConfirmar}>{t("Confirmar este canal")}</Button>
+    </div> : null}
+    {erro ? <p role="alert" className="text-sm text-destructive">{t(erro)}</p> : null}
+  </div>;
 }
 
 export function ConnectWhatsappClient({
   wahaConfigured,
   sessionName,
   oficialPodeReceber,
+  canaisIniciais,
 }: Props) {
   const t = useT();
   const [forma, setForma] = useState<Forma | null>(null);
@@ -171,8 +229,36 @@ export function ConnectWhatsappClient({
   const [qrTick, setQrTick] = useState(0);
   const [qrFailed, setQrFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [canais, setCanais] = useState<CanalInicial[]>(canaisIniciais);
+  const [canalSelecionado, setCanalSelecionado] = useState(canaisIniciais[0]?.id ?? "");
+  const [mostrarSelecao, setMostrarSelecao] = useState(false);
+  const [conferindo, setConferindo] = useState(false);
+  const [erroDaConfirmacao, setErroDaConfirmacao] = useState<string | null>(null);
+  const tentativasAutomaticas = useRef(new Set<string>());
 
   const status = info.status;
+
+  const confirmarCanal = useCallback(async (channelSessionId: string) => {
+    setConferindo(true);
+    setErroDaConfirmacao(null);
+    try {
+      // No sucesso, a action redireciona para o roteador do onboarding e não
+      // devolve DTO. Só retornos de falha continuam nesta tela.
+      const result: Awaited<ReturnType<typeof markWhatsappConfigured>> | undefined =
+        await markWhatsappConfigured({ channel_session_id: channelSessionId });
+      if (result?.ok === false) {
+        const indisponivel = result.error === "upstream_unavailable" || result.error === "invalid_state";
+        setErroDaConfirmacao(indisponivel
+          ? "Não foi possível confirmar a conexão no servidor. Aguarde alguns segundos e tente confirmar novamente."
+          : "Não foi possível confirmar este canal. Recarregue a página, confira seu acesso e tente novamente.");
+      }
+    } catch (error) {
+      relancarInterrupcaoDoNext(error);
+      setErroDaConfirmacao("Não foi possível confirmar este canal. Recarregue a página, confira seu acesso e tente novamente.");
+    } finally {
+      setConferindo(false);
+    }
+  }, []);
 
   // 1) Sobe a sessão QUANDO A PESSOA ESCOLHE o código — não ao montar a tela.
   //
@@ -192,7 +278,10 @@ export function ConnectWhatsappClient({
         const json = (await res.json()) as { data?: SessionInfo; error?: { message?: string } };
         if (cancelled) return;
         if (json.data) {
-          setInfo(json.data);
+          setInfo((antes) => ({
+            ...json.data!,
+            channel_session_id: json.data!.channel_session_id ?? antes.channel_session_id,
+          }));
           return;
         }
         // MEDIDO percorrendo o wizard com o serviço de WhatsApp fora do ar: a
@@ -216,7 +305,9 @@ export function ConnectWhatsappClient({
     };
   }, [forma, wahaConfigured, sessionName, t]);
 
-  // 2) Poll status every 3 seconds until WORKING/FAILED.
+  // 2) Consulta o estado a cada 3 segundos até WORKING/FAILED. O GET não
+  // repete o UUID devolvido pelo POST; por isso cada leitura preserva a
+  // referência canônica já observada em vez de substituir o estado inteiro.
   //
   // Também preso à escolha: sem isto, quem escolheu outra forma seguiria
   // batendo de 3 em 3 segundos numa sessão que nunca subiu — e a tela do lado
@@ -230,7 +321,10 @@ export function ConnectWhatsappClient({
         const res = await fetch("/api/v1/onboarding/whatsapp/session");
         const json = (await res.json()) as { data?: SessionInfo };
         if (json.data) {
-          setInfo(json.data);
+          setInfo((antes) => ({
+            ...json.data!,
+            channel_session_id: json.data!.channel_session_id ?? antes.channel_session_id,
+          }));
           if (json.data.status === "SCAN_QR_CODE") setQrTick((t) => t + 1);
         }
         // Falha de leitura durante a espera NÃO é transitória quando se
@@ -253,6 +347,63 @@ export function ConnectWhatsappClient({
     }, 3000);
     return () => clearInterval(id);
   }, [forma, wahaConfigured, status, sessionName, t]);
+
+  // O transporte chegou a WORKING: uma única tentativa automática entrega o
+  // UUID ao escritor canônico. Falha fica parada e visível; só o botão da
+  // pessoa tenta novamente, evitando um laço de mutações/erros.
+  useEffect(() => {
+    const channelSessionId = info.channel_session_id;
+    if (forma !== "qr" || status !== "WORKING" || !channelSessionId) return;
+    if (tentativasAutomaticas.current.has(channelSessionId)) return;
+    tentativasAutomaticas.current.add(channelSessionId);
+    void confirmarCanal(channelSessionId);
+  }, [confirmarCanal, forma, info.channel_session_id, status]);
+
+  async function conferirCanaisConectados() {
+    setConferindo(true);
+    setErroDaConfirmacao(null);
+    try {
+      const response = await fetch("/api/v1/channel-sessions");
+      const json = (await response.json()) as {
+        data?: Array<{ id?: unknown; display_name?: unknown; phone_number?: unknown }>;
+      };
+      if (!response.ok || !Array.isArray(json.data)) throw new Error("channel_list_failed");
+      const encontrados = json.data.flatMap((canal) => {
+        if (typeof canal.id !== "string") return [];
+        return [{
+          id: canal.id,
+          nome: nomeDoCanal({
+            display_name: typeof canal.display_name === "string" ? canal.display_name : null,
+            phone_number: typeof canal.phone_number === "string" ? canal.phone_number : null,
+          }, t),
+        }];
+      });
+      setCanais(encontrados);
+      setCanalSelecionado(encontrados[0]?.id ?? "");
+      setMostrarSelecao(encontrados.length > 1);
+      if (encontrados.length === 0) {
+        setErroDaConfirmacao("Nenhum canal conectado foi encontrado. Conecte um canal e tente novamente.");
+        return;
+      }
+      if (encontrados.length === 1) await confirmarCanal(encontrados[0]!.id);
+    } catch (error) {
+      relancarInterrupcaoDoNext(error);
+      setErroDaConfirmacao("Não foi possível carregar os canais conectados. Recarregue a página e tente novamente.");
+    } finally {
+      setConferindo(false);
+    }
+  }
+
+  const confirmacaoDoPasso = <ConfirmacaoDoPasso
+    conferindo={conferindo}
+    canais={canais}
+    canalSelecionado={canalSelecionado}
+    mostrarSelecao={mostrarSelecao}
+    erro={status === "WORKING" ? null : erroDaConfirmacao}
+    onConferir={() => void conferirCanaisConectados()}
+    onSelecionar={setCanalSelecionado}
+    onConfirmar={() => void confirmarCanal(canalSelecionado)}
+  />;
 
   // Derruba a sessão morta e sobe outra. O polling volta sozinho porque `status`
   // sai de FAILED e o efeito que o observa roda de novo.
@@ -310,7 +461,7 @@ export function ConnectWhatsappClient({
             />
           </div>
         </fieldset>
-        <Saidas />
+        {confirmacaoDoPasso}
       </div>
     );
   }
@@ -338,7 +489,7 @@ export function ConnectWhatsappClient({
             contra o outro lado ANTES de gravar — e duas cópias divergem. */}
         {forma === "oficial" ? <CanalOficialClient /> : <CanalParceiroClient />}
 
-        <Saidas />
+        {confirmacaoDoPasso}
       </div>
     );
   }
@@ -408,9 +559,14 @@ export function ConnectWhatsappClient({
           )}
 
           {status === "WORKING" && (
-            <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-              ✓ {t("Conectado! Avançando…")}
-            </p>
+            <div className="mt-3 space-y-2">
+              {erroDaConfirmacao ? <>
+                <p role="alert" className="text-sm text-destructive">{t(erroDaConfirmacao)}</p>
+                {info.channel_session_id ? <Button type="button" size="sm" variant="outline" disabled={conferindo} onClick={() => void confirmarCanal(info.channel_session_id!)}>{t("Tentar confirmar novamente")}</Button> : null}
+              </> : <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                ✓ {t(info.channel_session_id ? "Confirmando conexão no servidor…" : "Conexão detectada. Confira os canais conectados para continuar.")}
+              </p>}
+            </div>
           )}
 
           {status === "FAILED" && (
@@ -448,7 +604,7 @@ export function ConnectWhatsappClient({
         </div>
       )}
 
-      <Saidas />
+      {confirmacaoDoPasso}
     </div>
   );
 }

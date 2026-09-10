@@ -37,6 +37,18 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Conferindo canais…": { es: "Comprobando canales…" },
+  "Canal conectado": { es: "Canal conectado" },
+  "Confirmar este canal": { es: "Confirmar este canal" },
+  "Não foi possível confirmar a conexão no servidor. Aguarde alguns segundos e tente confirmar novamente.": { es: "No se pudo confirmar la conexión en el servidor. Espera unos segundos e intenta confirmarla de nuevo." },
+  "Não foi possível confirmar este canal. Recarregue a página, confira seu acesso e tente novamente.": { es: "No se pudo confirmar este canal. Recarga la página, revisa tu acceso e inténtalo de nuevo." },
+  "Nenhum canal conectado foi encontrado. Conecte um canal e tente novamente.": { es: "No se encontró ningún canal conectado. Conecta un canal e inténtalo de nuevo." },
+  "Não foi possível carregar os canais conectados. Recarregue a página e tente novamente.": { es: "No se pudieron cargar los canales conectados. Recarga la página e inténtalo de nuevo." },
+  "Tentar confirmar novamente": { es: "Intentar confirmar de nuevo" },
+  "Confirmando conexão no servidor…": { es: "Confirmando la conexión en el servidor…" },
+  "Conexão detectada. Confira os canais conectados para continuar.": { es: "Conexión detectada. Comprueba los canales conectados para continuar." },
+  "Adiar IA e continuar": { es: "Posponer la IA y continuar" },
+  "Continuar configuração": { es: "Continuar la configuración" },
   "Ensaiar a configuração no onboarding": { es: "Ensayar la configuración inicial" },
   "Gera uma resposta de prévia com o provedor, o modelo e a credencial escolhidos no onboarding, sem usar ferramentas nem enviar mensagem ao cliente.": { es: "Genera una respuesta de vista previa con el proveedor, el modelo y la credencial elegidos en la configuración inicial, sin usar herramientas ni enviar mensajes al cliente." },
   "Usa a seleção do próprio ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; para testar outra combinação, escolha outro provedor, modelo ou credencial no onboarding e execute um novo ensaio.": { es: "Usa la selección del propio ensayo, capturada antes de la llamada. Una elección de este panel no la sustituye; para probar otra combinación, elija otro proveedor, modelo o credencial en la configuración inicial y ejecute un nuevo ensayo." },

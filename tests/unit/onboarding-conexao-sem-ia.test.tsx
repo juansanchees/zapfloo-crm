@@ -3,7 +3,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import type { OnboardingState } from "@/lib/schemas/onboarding";
 import { proximoPasso } from "@/lib/onboarding/passos";
 
-const f = vi.hoisted(() => ({ read: vi.fn(), channels: vi.fn() }));
+const f = vi.hoisted(() => ({ read: vi.fn(), channels: vi.fn(), client: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: (to: string) => { throw new Error(`REDIRECT:${to}`); } }));
 vi.mock("@/lib/auth/server", () => ({ requireAuth: async () => ({ id: "user", idioma: "pt-BR" }), resolveActiveOrg: async () => ({ orgId: "org" }) }));
 vi.mock("@/lib/onboarding/jornada", () => ({ lerJornada: f.read }));
@@ -13,9 +13,8 @@ vi.mock("@/lib/channels/meta/webhook", () => ({ metaPodeReceber: () => false }))
 vi.mock("@/lib/waha/client", () => ({ getWahaClient: () => null }));
 // As integrações/clientes têm seus testes próprios. Aqui o servidor decide
 // se a pessoa sequer chega a eles; o redirect era anterior ao primeiro render.
-vi.mock("@/app/onboarding/connect-whatsapp/_client", () => ({ ConnectWhatsappClient: () => <div data-testid="formas-de-conexao" /> }));
+vi.mock("@/app/onboarding/connect-whatsapp/_client", () => ({ ConnectWhatsappClient: (props: unknown) => { f.client(props); return <div data-testid="formas-de-conexao" />; } }));
 vi.mock("@/app/onboarding/connect-whatsapp/_autorizacao", () => ({ AutorizacaoRestrita: () => <div data-testid="ativacao-restrita" /> }));
-vi.mock("@/app/onboarding/_components/ExplorarCrm", () => ({ ExplorarCrm: () => <button>Explorar o CRM</button> }));
 import Page from "@/app/onboarding/connect-whatsapp/page";
 
 const welcome: OnboardingState["welcome"] = { accepted_at: "2026-09-10", display_name: "Empresa de teste", timezone: "UTC" };
@@ -28,7 +27,7 @@ it("sem IA chega à escolha de conexão, sem oferecer ativação sem revisão", 
   render(await Page());
   expect(screen.getByTestId("formas-de-conexao")).toBeInTheDocument();
   expect(screen.queryByTestId("ativacao-restrita")).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Explorar o CRM" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Explorar o CRM" })).not.toBeInTheDocument();
 });
 it("quem adiou IA também pode conectar sem revisão", async () => {
   f.read.mockResolvedValue({ state: { welcome, ai: { agent_id: "", skipped: true } }, context: "context" });
@@ -44,6 +43,13 @@ it("erro ao consultar canais é visível e não vira lista vazia silenciosa", as
   f.channels.mockRejectedValue(new Error("indisponível"));
   render(await Page());
   expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível carregar os canais");
+});
+it("entrega ao cliente somente a projeção segura dos canais autenticados", async () => {
+  f.channels.mockResolvedValue([{ id: "11111111-1111-4111-8111-111111111111", display_name: "Vendas", phone_number: "+5511999999999", status: "STARTING", ai_access_mode: "pre_go_live", ai_test_phone_count: 0 }]);
+  render(await Page());
+  expect(f.client).toHaveBeenCalledWith(expect.objectContaining({
+    canaisIniciais: [{ id: "11111111-1111-4111-8111-111111111111", nome: "Vendas" }],
+  }));
 });
 it("revisão válida continua oferecendo ativação restrita sem alterar o estado", async () => {
   const state: OnboardingState = { welcome, ai: {

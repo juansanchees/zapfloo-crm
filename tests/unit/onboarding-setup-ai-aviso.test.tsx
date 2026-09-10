@@ -19,7 +19,7 @@ it.each(["draft_model_unavailable", "draft_credential_unavailable"])("%s conserv
   fireEvent.click(screen.getByRole("button", { name: "Preparar ensaio" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(error === "draft_model_unavailable" ? "Este modelo não está disponível" : "Esta credencial não está disponível");
   expect(screen.getByLabelText("Mensagem de exemplo")).toHaveValue("Pergunta sintética QA");
-  expect(screen.getByRole("button", { name: "Continuar para conexão" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Explorar o CRM" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Continuar configuração" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "Explorar o CRM" })).not.toBeInTheDocument();
   expect(f.confirm).not.toHaveBeenCalled();
 });

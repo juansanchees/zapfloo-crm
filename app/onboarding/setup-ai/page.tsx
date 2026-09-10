@@ -10,6 +10,7 @@ import { lerRascunho } from "@/app/actions/onboarding/rascunho";
 import { lerEnsaio } from "@/app/actions/onboarding/ensaio";
 import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
 import { configurarChaveDoOnboarding, gerenciarAgenteDoOnboarding } from "@/app/actions/onboarding/explorar";
+import { skipAi } from "@/app/actions/onboarding/createDefaultAgent";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,9 @@ export default async function SetupAiPage() {
           o default da organização nem disparar a prova automática do card legado. */}
       <form action={configurarChaveDoOnboarding}>
         <button className="text-sm underline underline-offset-4">{traduzir("Configurar chave de IA", idioma)}</button>
+      </form>
+      <form action={skipAi}>
+        <button className="rounded-md border px-4 py-2 text-sm font-medium">{traduzir("Adiar IA e continuar", idioma)}</button>
       </form>
       <SetupAiForm key={activeOrg.orgId} negocio={state.welcome.display_name} capacidades={capacidades} conferencias={conferencias} rascunhoInicial={rascunho} ensaioInicial={ensaio} />
     </div>

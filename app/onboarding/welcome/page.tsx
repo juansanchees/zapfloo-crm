@@ -7,7 +7,6 @@ import { lerRetratoDaInstalacao } from "@/lib/instalacao/retrato";
 import { JaEstaPronto } from "../_components/JaEstaPronto";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
-import { ExplorarCrm } from "../_components/ExplorarCrm";
 import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +33,6 @@ export default async function WelcomePage() {
       </header>
       <div className="flex flex-wrap items-center gap-3">
         <a href="#seu-negocio" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{traduzir("Criar meu agente", idioma)}</a>
-        <ExplorarCrm />
       </div>
 
       <JaEstaPronto retrato={retrato} idioma={idioma} />

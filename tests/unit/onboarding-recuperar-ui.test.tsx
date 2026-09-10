@@ -31,6 +31,6 @@ describe("saída visível para preparação arquivada", () => {
     fireEvent.click(screen.getByRole("button", { name: "Preparar ensaio" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("nome");
     expect(f.prepare).toHaveBeenLastCalledWith(expect.objectContaining({ expected_version_id: null }));
-    expect(screen.getByRole("button", { name: "Continuar para conexão" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Continuar configuração" })).toBeDisabled();
   });
 });

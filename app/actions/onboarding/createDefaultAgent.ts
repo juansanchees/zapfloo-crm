@@ -508,8 +508,12 @@ export async function createDefaultAgent(formData: FormData): Promise<CreateAgen
 
 export async function skipAi(): Promise<void> {
   const ctx = await requireOnboardingCtx();
+  const { state } = await loadOnboardingState(ctx.orgId);
   await patchOnboardingState(ctx.orgId, {
-    ai: { agent_id: "", prompt_template: "skipped", skipped: true },
+    // Adiar muda somente o progresso do wizard. Agente, rascunho, revisão,
+    // recibo de ativação e políticas dos canais continuam exatamente como
+    // estavam; em particular, esta ação não publica nem desativa runtime.
+    ai: { agent_id: "", ...state.ai, skipped: true },
   });
   redirect("/onboarding");
 }

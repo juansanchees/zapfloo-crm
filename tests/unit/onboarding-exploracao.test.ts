@@ -49,7 +49,12 @@ describe("explorar não conclui nem ativa a organização", () => {
     expect(mocks.set).toHaveBeenCalledOnce();
     const [nome, valor, opcoes] = mocks.set.mock.calls[0]!;
     expect(nome).toBe("onboarding_explore");
-    expect(opcoes).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
+    expect(opcoes).toMatchObject({
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
     expect(opcoes.secure).toBe(true);
     expect(exploracaoPertenceA(valor, "user-local", "org-local")).toBe(true);
     expect(exploracaoPertenceA(valor, "outro-user", "org-local")).toBe(false);

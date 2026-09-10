@@ -20,7 +20,7 @@ beforeEach(() => { vi.clearAllMocks(); f.prepare.mockResolvedValue({ ok: true, .
 describe("ensaio integrado na tela", () => {
   it("continuação separada exige revisão corrente e sucesso confirmado sem criar agente legado", async () => {
     setup(true);
-    const continuar = screen.getByRole("button", { name: "Continuar para conexão" });
+    const continuar = screen.getByRole("button", { name: "Continuar configuração" });
     expect(continuar).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Revisar resposta" }));
     await waitFor(() => expect(continuar).toBeEnabled());
@@ -36,7 +36,7 @@ describe("ensaio integrado na tela", () => {
     fireEvent.click(screen.getByRole("button", { name: "Revisar resposta" }));
     await screen.findByText("Resposta revisada. Nenhum atendimento foi ativado.");
     fireEvent.change(screen.getByLabelText("Objetivo do agente"), { target: { value: "Qualificar orçamentos" } });
-    expect(screen.getByRole("button", { name: "Continuar para conexão" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Continuar configuração" })).toBeDisabled();
     expect(screen.getByRole("complementary", { name: "Resumo do agente" })).toHaveTextContent("Qualificar orçamentos");
   });
   it("sem escolha automática, prepara explicitamente e exige revisão separada", async () => {
@@ -68,5 +68,17 @@ describe("ensaio integrado na tela", () => {
     fireEvent.change(screen.getByLabelText("Modelo do ensaio"), { target: { value: "" } });
     expect(screen.getByRole("button", { name: "Revisar resposta" })).toBeDisabled();
     expect(screen.getByLabelText("Mensagem de exemplo")).toHaveValue("Olá");
+  });
+  it("confirma a revisão e deixa o roteador escolher o próximo passo já não cumprido", async () => {
+    setup(true);
+    fireEvent.click(screen.getByRole("button", { name: "Revisar resposta" }));
+    const continuar = await screen.findByRole("button", { name: "Continuar configuração" });
+    await waitFor(() => expect(continuar).toBeEnabled());
+    f.confirm.mockResolvedValueOnce({ ok: true });
+
+    fireEvent.click(continuar);
+
+    await waitFor(() => expect(f.push).toHaveBeenCalledWith("/onboarding"));
+    expect(f.push).not.toHaveBeenCalledWith("/onboarding/connect-whatsapp");
   });
 });

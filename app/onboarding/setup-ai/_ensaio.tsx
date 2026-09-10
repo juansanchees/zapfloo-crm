@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { prepararRascunho } from "@/app/actions/onboarding/prepararRascunho";
 import { recuperarPreparacao } from "@/app/actions/onboarding/recuperarPreparacao";
 import { iniciarEnsaio, revisarEnsaio, lerEnsaio } from "@/app/actions/onboarding/ensaio";
-import { ExplorarCrm } from "@/app/onboarding/_components/ExplorarCrm";
 import type { LeituraEnsaio, ProvaEnsaio } from "@/lib/onboarding/ensaio";
 
 export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
@@ -137,9 +136,8 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
       if (!selection || !current?.reviewed) return;
       const result = await confirmarAgenteRevisado({ expected_context: context, expected_revision: revision, expected_version_id: selection.version_id, run_id: current.run_id });
       if (!result.ok) { setProof(null); setError(failure(result.error)); return; }
-      router.push("/onboarding/connect-whatsapp"); router.refresh();
-    })}>{t("Continuar para conexão")}</Button>
+      router.push("/onboarding"); router.refresh();
+    })}>{t("Continuar configuração")}</Button>
     {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
-    <div className="border-t pt-4"><p className="mb-2 text-sm">{t("Continuar depois")}</p><ExplorarCrm /></div>
   </section>;
 }
