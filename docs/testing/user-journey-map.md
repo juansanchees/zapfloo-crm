@@ -79,6 +79,17 @@ com cookie de 30 dias, e não substitui conclusão.
   `observador-qr-fresco.spec.ts` em SPECS_PARTE_2: 2 passed na repetição do root;
   sabotagens sem cancelamento e com attachment body reprovam. É prova do harness,
   não de pareamento. Evidência `harness-fix3.md` no pacote desta correção.
+- Revisão integrada corrigiu contexto A→B no adiamento, perda de UUID em erros
+  do polling, alerta oculto ao sair do QR e dados pessoais nos erros do preflight.
+  GovR7 isolado:exit0,755arquivos/7922testes,0erros/310avisos. E2ER5 isolado:
+  **19passed/2skipped preexistentes**,2.6min; inclui recuperação A→B pela tela,
+  medição390px, auditoria+1 somente após a ação correta e rascunho preservado.
+  Sabotagens e re-review estão no report final da execução. Rodada concorrente
+  anterior vermelha foi preservada; bancoR3 isolado:exit0,167arquivos,
+  1374testes passados/1skip preexistente,438.06s, install/update aprovados.
+  Não foi isolada a causa das falhas da rodada concorrente. Ver
+  `retomada-sem-celular.md`, sem atribuir esses
+  resultados ao pareamento real ou à suíte inteira do CI.
 
 ## Convenções
 
