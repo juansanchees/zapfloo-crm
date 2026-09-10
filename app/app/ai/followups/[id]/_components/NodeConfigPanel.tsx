@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ interface Props {
   onChange: (patch: Partial<RFNodeData>) => void;
   /** Ramos deste nó que já têm aresta — quem sabe isso é o canvas, que é dono do grafo. */
   ramosLigados?: string[];
+  triggerSettings?: ReactNode;
 }
 
 /**
@@ -34,7 +35,7 @@ interface Props {
  * quando o candidato passa no schema — senão mostra erro inline e o canvas
  * mantém a última config válida (nunca um valor pela metade rio acima).
  */
-export function NodeConfigPanel({ node, onChange, ramosLigados }: Props) {
+export function NodeConfigPanel({ node, onChange, ramosLigados, triggerSettings }: Props) {
   const t = useT();
   const type = node.type as FlowNode["type"];
   const visual = NODE_VISUALS[type];
@@ -62,7 +63,9 @@ export function NodeConfigPanel({ node, onChange, ramosLigados }: Props) {
           {t(visual.paletteLabel)}
         </h2>
         <p className="text-sm text-text-muted">
-          {t("Alterações aplicam no rascunho ao digitar — salve na barra de publicação.")}
+          {t(node.type === "trigger"
+            ? "O rótulo faz parte do desenho. Salve o gatilho no botão próprio abaixo."
+            : "Alterações aplicam no rascunho ao digitar — salve na barra de publicação.")}
         </p>
       </div>
 
@@ -80,11 +83,10 @@ export function NodeConfigPanel({ node, onChange, ramosLigados }: Props) {
       <div className="space-y-4 border-t border-border pt-4">
         {type === "trigger" && (
           <p className="text-sm text-text-muted">
-            {t(
-              "Início do fluxo — sem configuração adicional. O disparo (manual, mudança de etapa, silêncio ou fim de conversa) é definido nas configurações do fluxo.",
-            )}
+            {t("Escolha abaixo o que inicia este fluxo. O gatilho é salvo separadamente do desenho do fluxo.")}
           </p>
         )}
+        {type === "trigger" && triggerSettings}
         {type === "wait" && (
           <WaitForm config={node.data.config as ConfigOf<"wait">} onChange={(config) => onChange({ config })} />
         )}

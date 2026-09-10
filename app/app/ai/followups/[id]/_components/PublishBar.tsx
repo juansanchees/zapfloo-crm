@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
+import type { ComponentProps } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ interface Props {
   onSaved: (graph: FlowGraph) => void;
   onPublishErrors: (errorsByNode: Record<string, string[]>) => void;
   onPublishSuccess: () => void;
+  triggerDraftState?: ComponentProps<typeof TriggerConfigControl>["draftState"];
 }
 
 const HANDOFF_LABEL: Record<FollowupFlowDetailRow["handoff_policy"], string> = {
@@ -44,7 +46,7 @@ const HANDOFF_LABEL: Record<FollowupFlowDetailRow["handoff_policy"], string> = {
   allow: "Permitir durante handoff",
 };
 
-export function PublishBar({ flowId, flow, graph, dirty, onSaved, onPublishErrors, onPublishSuccess }: Props) {
+export function PublishBar({ flowId, flow, graph, dirty, onSaved, onPublishErrors, onPublishSuccess, triggerDraftState }: Props) {
   const t = useT();
   const save = useSaveFollowupFlowDraft(flowId);
   const publish = usePublishFollowupFlow(flowId);
@@ -109,7 +111,7 @@ export function PublishBar({ flowId, flow, graph, dirty, onSaved, onPublishError
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <TriggerConfigControl flowId={flowId} triggerConfig={flow.trigger_config} />
+        <TriggerConfigControl flowId={flowId} triggerConfig={flow.trigger_config} draftState={triggerDraftState} />
 
         <Select value={flow.handoff_policy} onValueChange={(v) => handoffPolicy.mutate(v as FollowupFlowDetailRow["handoff_policy"])}>
           <SelectTrigger className="w-56" aria-label={t("Política de handoff")}>
