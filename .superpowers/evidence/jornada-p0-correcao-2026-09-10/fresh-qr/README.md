@@ -33,6 +33,13 @@ Pendente: scan, avanço real por WORKING, adiamento da IA, funil, convite sem
 Resend, conclusão em `onboarded_at`, MFA e reentrada na mesma instalação.
 Não declarar a spec fresca verde nem inferir essas etapas a partir do QR.
 
+O observador de atualização também revelou um defeito do harness: ao desaparecer
+a imagem em `FAILED`, `getAttribute` sem timeout pode prender a Promise aguardada
+no `finally`, estendendo o encerramento de10 até o limite total de16min. Foi
+confirmado por leitura do cliente e do Playwright instalado; não foi corrigido
+durante a execução viva. A retomada deve limitar essas operações e provar a
+limpeza no erro, além de persistir os JSONs numéricos.
+
 ## Correção do próprio preflight
 
 A primeira tentativa falhou antes de login por `HEAD select=id` em
