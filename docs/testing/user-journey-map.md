@@ -8,6 +8,36 @@
 > Persona: **usuário leigo** que rodou o `install.sh` numa VPS e abriu o navegador.
 > Ambiente de referência: banco 100% zerado + `bootstrap-owner.ts` (o que o kit faz).
 
+## J1.38 — Conexão sem IA antes do atendimento humano (10/set/2026)
+
+**PASS no recorte, não na jornada P0 inteira:** Playwright dirigiu o build de
+produção local, com Supabase PostgreSQL 15 novo, extensões do instalador,
+`baseline.sql` e `bootstrap-owner.ts`. Chaves opcionais de IA, e-mail e retorno
+oficial ausentes. As variáveis obrigatórias do transporte/Redis apontaram para
+endpoints locais indisponíveis; não houve simulação de envio bem-sucedido.
+
+Login do dono → confirmação do negócio → escolha de conexão **sem agente/chave/
+ensaio** → aviso de retorno oficial indisponível → erro visível ao tentar QR →
+entrada em Conversas por `explorarCrm`. A organização permaneceu sem agentes e
+com `onboarded_at=null`. O canal criado na tentativa ficou `STARTING`, em
+`pre_go_live` com lista vazia, sem ativação. Não confundir tentativa com pareamento.
+
+`getBoundingClientRect`/`getComputedStyle` registrados em 1440, 768 e 390 px;
+`documentElement.scrollWidth` foi, respectivamente, 1440, 768 e 390. Elementos
+medidos do conteúdo ficaram dentro da largura. Screenshots e prova reproduzível
+arquivados em `.superpowers/evidence/jornada-p0-2026-09-10/`.
+
+**PASS adicional, comportamento existente:** pelo Inbox → Automações → Novo fluxo,
+a geração sem credencial mostrou erro persistente dentro do diálogo e links para
+revisar configuração, preservou nome/descrição e não criou fluxo (contagem 0 → 0).
+O diálogo também foi medido em 1440/768/390 px, sem transbordo interno horizontal.
+Isso prova a falha clara, não geração bem-sucedida por IA.
+
+**PENDENTE / NÃO MEDIDO:** pareamento e primeira mensagem reais, compreensão de
+áudio, geração de fluxos com credencial válida, cadastro com confirmação de e-mail e a suíte E2E inteira.
+Não houve inventário das três organizações de produção nem prova de todos os
+layouts do Inbox. Ver [política e limites do recorte](jornada-p0-sem-ia.md).
+
 ## Convenções
 
 - `[P0]` primeira impressão — bug aqui é vergonha pública; prioridade máxima.
