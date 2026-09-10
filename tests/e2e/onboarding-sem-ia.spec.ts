@@ -10,6 +10,8 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { exigirCleanupCompleto } from "./utils/seguranca-da-prova-fresca";
+
 const SENHA = "OnboardingSemIa-2026!";
 const CHAVES_OPCIONAIS = [
   "RESEND_API_KEY",
@@ -146,7 +148,9 @@ test("sessão recusada permite adiar IA e explorar sem fingir conclusão", async
       await reentrada.close();
     }
   } finally {
-    await svc.from("organizations").delete().eq("id", organizationId);
-    if (userId) await svc.auth.admin.deleteUser(userId);
+    await exigirCleanupCompleto([
+      () => svc.from("organizations").delete().eq("id", organizationId),
+      ...(userId ? [() => svc.auth.admin.deleteUser(userId)] : []),
+    ]);
   }
 });

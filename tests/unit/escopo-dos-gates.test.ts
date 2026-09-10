@@ -13,7 +13,7 @@ function carregarConfigFresh(env: Record<string, string>) {
   const configUrl = pathToFileURL(join(RAIZ, "playwright.fresh.config.ts")).href;
   return spawnSync(process.execPath, [
     "--import", "tsx", "--input-type=module", "--eval",
-    `const m=await import(${JSON.stringify(configUrl)});const c=m.default.default??m.default;process.stdout.write(JSON.stringify({testMatch:c.testMatch,webServer:c.webServer,globalSetup:c.globalSetup,use:c.use,outputDir:c.outputDir}))`,
+    `const m=await import(${JSON.stringify(configUrl)});const c=m.default.default??m.default;process.stdout.write(JSON.stringify({testMatch:c.testMatch,webServer:c.webServer,globalSetup:c.globalSetup,use:c.use,outputDir:c.outputDir,noCopyPrompt:process.env.PLAYWRIGHT_NO_COPY_PROMPT}))`,
   ], {
     cwd: RAIZ,
     env: { PATH: process.env.PATH ?? "", NODE_ENV: "test", ...env },
@@ -106,6 +106,7 @@ describe("escopo dos gates locais", () => {
       globalSetup?: unknown;
       use: { trace: string; screenshot: string; video: string; baseURL: string };
       outputDir: string;
+      noCopyPrompt?: string;
     };
     expect(config).toMatchObject({
       testMatch: "vps-fresh-onboarding.spec.ts",
@@ -119,5 +120,6 @@ describe("escopo dos gates locais", () => {
     expect(config.webServer).toBeUndefined();
     expect(config.globalSetup).toBeUndefined();
     expect(config.outputDir).toContain("zapfloo-playwright-fresh");
+    expect(config.noCopyPrompt).toBe("1");
   });
 });
