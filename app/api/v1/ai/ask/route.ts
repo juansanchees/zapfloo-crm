@@ -16,7 +16,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { env } from "@/lib/env";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { validateRequest } from "@/lib/schemas";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -68,7 +68,9 @@ export async function POST(request: NextRequest): Promise<Response> {
         idioma: authz.user.idioma,
         question: input.question,
         history: input.history,
-        supabase: createAdminClient(),
+        // Entrada por sessão: as ferramentas compartilham a RLS da tela.
+        // O ingresso MCP por api_token mantém seu cliente de integração próprio.
+        supabase: await createClient(),
       },
       {
         pool: getRequestPool(),

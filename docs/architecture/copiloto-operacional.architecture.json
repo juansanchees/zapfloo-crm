@@ -23,7 +23,7 @@
   ],
   "edges": [
     { "id": "e1", "from": "page", "to": "ask_api", "label": "pergunta + até seis mensagens" },
-    { "id": "e2", "from": "ask_api", "to": "runner", "label": "identidade, organização e idioma confiáveis" },
+    { "id": "e2", "from": "ask_api", "to": "runner", "label": "identidade, organização e idioma confiáveis; cliente da sessão preserva RLS" },
     { "id": "e3", "from": "runner", "to": "tools", "label": "até oito passos, sem mutação" },
     { "id": "e4", "from": "tools", "to": "sources", "label": "execuções reais produzem evidências" },
     { "id": "e5", "from": "sources", "to": "page", "label": "resposta, sources e consulted_tools" },
