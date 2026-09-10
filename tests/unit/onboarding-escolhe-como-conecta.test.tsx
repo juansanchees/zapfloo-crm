@@ -207,7 +207,7 @@ describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
     expect(fetch).toHaveBeenCalledWith("/api/v1/channel-sessions");
   });
 
-  it("com mais de um canal exige escolha explícita e confirma o UUID selecionado", async () => {
+  it("com mais de um canal inicia vazio e não confirma antes da escolha explícita", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -220,9 +220,16 @@ describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /conferir canais conectados/i }));
     const seletor = await screen.findByLabelText("Canal conectado");
+    const confirmar = screen.getByRole("button", { name: "Confirmar este canal" });
+    expect(seletor).toHaveValue("");
+    expect(screen.getByRole("option", { name: "Selecione um canal" })).toBeDisabled();
+    expect(confirmar).toBeDisabled();
+    fireEvent.click(confirmar);
     expect(markWhatsappConfigured).not.toHaveBeenCalled();
+
     fireEvent.change(seletor, { target: { value: "66666666-6666-4666-8666-666666666666" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar este canal" }));
+    expect(confirmar).toBeEnabled();
+    fireEvent.click(confirmar);
 
     await waitFor(() => expect(markWhatsappConfigured).toHaveBeenCalledWith({
       channel_session_id: "66666666-6666-4666-8666-666666666666",

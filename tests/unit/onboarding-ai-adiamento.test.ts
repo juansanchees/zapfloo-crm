@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 describe("adiamento explícito da IA", () => {
-  it("preserva agente, rascunho, revisão e ativação existentes sem tocar no runtime", async () => {
+  it("preserva a IA e audita o adiamento somente depois de persistir", async () => {
     const ai = {
       agent_id: receipt.agent_id,
       prompt_template: "support_minimal",
@@ -61,7 +61,18 @@ describe("adiamento explícito da IA", () => {
 
     expect(mocks.patch).toHaveBeenCalledWith("org", { ai: { ...ai, skipped: true } });
     expect(mocks.admin).not.toHaveBeenCalled();
-    expect(mocks.audit).not.toHaveBeenCalled();
+    expect(mocks.audit).toHaveBeenCalledOnce();
+    expect(mocks.audit).toHaveBeenCalledWith({
+      action: "onboarding.ai_skipped",
+      actorUserId: "user",
+      organizationId: "org",
+    });
+    expect(mocks.patch.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.audit.mock.invocationCallOrder[0]!,
+    );
+    expect(mocks.audit.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.redirect.mock.invocationCallOrder[0]!,
+    );
   });
 
   it("erro ao persistir não marca a etapa nem navega", async () => {

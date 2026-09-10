@@ -515,5 +515,10 @@ export async function skipAi(): Promise<void> {
     // estavam; em particular, esta ação não publica nem desativa runtime.
     ai: { agent_id: "", ...state.ai, skipped: true },
   });
+  await audit({
+    action: "onboarding.ai_skipped",
+    actorUserId: ctx.userId,
+    organizationId: ctx.orgId,
+  });
   redirect("/onboarding");
 }
