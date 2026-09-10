@@ -26,6 +26,14 @@ remotos desta revisão. Sem deploy, merge, alteração de main ou acesso à VPS.
   Não apresentar isso como repetição do aceite histórico do checkout principal.
 - Dump independente com os valores numéricos exatos de layout: as asserções DOM
   executaram, mas os anexos JSON em memória não foram persistidos pelo reporter.
+- Aviso do GitHub no push:4 vulnerabilidades na branch padrão (1 alta/3 moderadas).
+  Não houve triagem da validade ou aplicabilidade nesta leva; não atribuir esse
+  aviso à branch P0 nem interpretar gates verdes como auditoria dessas dependências.
+
+O E2E fresco terminou com **exit1/1 failed/16.0m**. O diretório temporário do QR
+foi removido pelo cleanup; conferência posterior confirmou sua ausência.
+Os commits de implementação, o snapshot parcial e o backup anterior ao rebase
+foram salvos no remoto. Nenhum PR novo foi aberto.
 
 ## Decisões tomadas na execução
 

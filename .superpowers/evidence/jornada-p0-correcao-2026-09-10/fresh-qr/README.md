@@ -40,6 +40,11 @@ confirmado por leitura do cliente e do Playwright instalado; não foi corrigido
 durante a execução viva. A retomada deve limitar essas operações e provar a
 limpeza no erro, além de persistir os JSONs numéricos.
 
+Encerramento medido: processo **exit1**, **1 failed**, duração **16.0m**;
+`waitForURL` excedeu600000ms e o limite total excedeu960000ms. Após a saída,
+o diretório privado do QR já não existia: cleanup confirmado por leitura do
+filesystem. O QR expirado não ficou salvo nos artefatos versionados.
+
 ## Correção do próprio preflight
 
 A primeira tentativa falhou antes de login por `HEAD select=id` em
