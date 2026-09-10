@@ -16,6 +16,15 @@
 - Resultado: `PASS` / `FAIL(bug#)` / `WARN` (funciona mas UX ruim).
 - Evidência: screenshot/trace em `.superpowers/evidence/vps-qa/`.
 
+### Contraste da navegação autenticada `[P0]` — 10/set/2026
+
+`rbac-roles.spec.ts` intacta, executada nos temas claro/escuro: 8/8 passaram.
+Medição adicional da shell em 1440px e 390px, versão instalada e aviso de nova
+versão: menor contraste dos textos corrigidos 6,99:1. Sabotagem `/60` → `/40`
+reprovou os dois casos de acessibilidade RBAC nos dois temas (4/4), sem alterar
+as specs. Detalhes, limites e reprodução em `docs/testing/contraste-shell.md`;
+evidências em `.superpowers/evidence/contraste-shell/`.
+
 ### Prazo de teste e espaço do atendimento `[P0]`
 
 `tests/e2e/periodo-de-testes.spec.ts`: login de empresa com cadastro conhecido →

@@ -1,0 +1,334 @@
+[WebServer] (node:4720) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:4721) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+[WebServer] Invalid Sentry Dsn: off
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+Running 2 tests using 1 worker
+
+(node:4777) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:27:08.325Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+  ✘  1 [chromium] › tests/e2e/rbac-roles.spec.ts:118:7 › rbac role matrix (spec 13 §4) › admin acessa api-tokens e billing (login com MFA TOTP) (6.1s)
+(node:4855) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:27:16.396Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+  ✘  2 [chromium] › tests/e2e/rbac-roles.spec.ts:131:7 › rbac role matrix (spec 13 §4) › agent vê inbox e kanban (5.3s)
+
+
+  1) [chromium] › tests/e2e/rbac-roles.spec.ts:118:7 › rbac role matrix (spec 13 §4) › admin acessa api-tokens e billing (login com MFA TOTP) 
+
+    Error: [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "tags": [
+          "cat.color",
+          "wcag2aa",
+          "wcag143",
+          "TTv5",
+          "TT13.c",
+          "EN-301-549",
+          "EN-9.1.4.3",
+          "ACT",
+          "RGAAv4",
+          "RGAA-3.2.1"
+        ],
+        "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+        "nodes": [
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "fgColor": "#717176",
+                  "bgColor": "#12131a",
+                  "contrastRatio": 3.81,
+                  "fontSize": "7.5pt (10px)",
+                  "fontWeight": "normal",
+                  "messageKey": null,
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<aside class=\"sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-white/10 bg-shell text-white shadow-xl transition-[width] duration-200 w-60\">",
+                    "target": [
+                      ".z-30"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<h2 class=\"px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40\">Crescimento</h2>",
+            "target": [
+              "h2"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        ]
+      }
+    ]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 58
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+    +     "help": "Elements must meet minimum color contrast ratio thresholds",
+    +     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+    +     "id": "color-contrast",
+    +     "impact": "serious",
+    +     "nodes": Array [
+    +       Object {
+    +         "all": Array [],
+    +         "any": Array [
+    +           Object {
+    +             "data": Object {
+    +               "bgColor": "#12131a",
+    +               "contrastRatio": 3.81,
+    +               "expectedContrastRatio": "4.5:1",
+    +               "fgColor": "#717176",
+    +               "fontSize": "7.5pt (10px)",
+    +               "fontWeight": "normal",
+    +               "messageKey": null,
+    +             },
+    +             "id": "color-contrast",
+    +             "impact": "serious",
+    +             "message": "Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1",
+    +             "relatedNodes": Array [
+    +               Object {
+    +                 "html": "<aside class=\"sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-white/10 bg-shell text-white shadow-xl transition-[width] duration-200 w-60\">",
+    +                 "target": Array [
+    +                   ".z-30",
+    +                 ],
+    +               },
+    +             ],
+    +           },
+    +         ],
+    +         "failureSummary": "Fix any of the following:
+    +   Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1",
+    +         "html": "<h2 class=\"px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40\">Crescimento</h2>",
+    +         "impact": "serious",
+    +         "none": Array [],
+    +         "target": Array [
+    +           "h2",
+    +         ],
+    +       },
+    +     ],
+    +     "tags": Array [
+    +       "cat.color",
+    +       "wcag2aa",
+    +       "wcag143",
+    +       "TTv5",
+    +       "TT13.c",
+    +       "EN-301-549",
+    +       "EN-9.1.4.3",
+    +       "ACT",
+    +       "RGAAv4",
+    +       "RGAA-3.2.1",
+    +     ],
+    +   },
+    + ]
+
+       98 |     ["serious", "critical"].includes(v.impact ?? ""),
+       99 |   );
+    > 100 |   expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+          |                                                       ^
+      101 | }
+      102 |
+      103 | test.describe("rbac role matrix (spec 13 §4)", () => {
+        at expectNoBlockingA11y (/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/contraste-shell/tests/e2e/rbac-roles.spec.ts:100:55)
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/contraste-shell/tests/e2e/rbac-roles.spec.ts:124:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/rbac-roles-rbac-role-matri-b7942-billing-login-com-MFA-TOTP--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/rbac-roles-rbac-role-matri-b7942-billing-login-com-MFA-TOTP--chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/rbac-roles-rbac-role-matri-b7942-billing-login-com-MFA-TOTP--chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/rbac-roles-rbac-role-matri-b7942-billing-login-com-MFA-TOTP--chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/e2e/rbac-roles.spec.ts:131:7 › rbac role matrix (spec 13 §4) › agent vê inbox e kanban 
+
+    Error: [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "tags": [
+          "cat.color",
+          "wcag2aa",
+          "wcag143",
+          "TTv5",
+          "TT13.c",
+          "EN-301-549",
+          "EN-9.1.4.3",
+          "ACT",
+          "RGAAv4",
+          "RGAA-3.2.1"
+        ],
+        "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+        "nodes": [
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "fgColor": "#717176",
+                  "bgColor": "#12131a",
+                  "contrastRatio": 3.81,
+                  "fontSize": "7.5pt (10px)",
+                  "fontWeight": "normal",
+                  "messageKey": null,
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<aside class=\"sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-white/10 bg-shell text-white shadow-xl transition-[width] duration-200 w-60\">",
+                    "target": [
+                      ".z-30"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<h2 class=\"px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40\">Crescimento</h2>",
+            "target": [
+              "h2"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        ]
+      }
+    ]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 58
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+    +     "help": "Elements must meet minimum color contrast ratio thresholds",
+    +     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+    +     "id": "color-contrast",
+    +     "impact": "serious",
+    +     "nodes": Array [
+    +       Object {
+    +         "all": Array [],
+    +         "any": Array [
+    +           Object {
+    +             "data": Object {
+    +               "bgColor": "#12131a",
+    +               "contrastRatio": 3.81,
+    +               "expectedContrastRatio": "4.5:1",
+    +               "fgColor": "#717176",
+    +               "fontSize": "7.5pt (10px)",
+    +               "fontWeight": "normal",
+    +               "messageKey": null,
+    +             },
+    +             "id": "color-contrast",
+    +             "impact": "serious",
+    +             "message": "Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1",
+    +             "relatedNodes": Array [
+    +               Object {
+    +                 "html": "<aside class=\"sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-white/10 bg-shell text-white shadow-xl transition-[width] duration-200 w-60\">",
+    +                 "target": Array [
+    +                   ".z-30",
+    +                 ],
+    +               },
+    +             ],
+    +           },
+    +         ],
+    +         "failureSummary": "Fix any of the following:
+    +   Element has insufficient color contrast of 3.81 (foreground color: #717176, background color: #12131a, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1",
+    +         "html": "<h2 class=\"px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40\">Crescimento</h2>",
+    +         "impact": "serious",
+    +         "none": Array [],
+    +         "target": Array [
+    +           "h2",
+    +         ],
+    +       },
+    +     ],
+    +     "tags": Array [
+    +       "cat.color",
+    +       "wcag2aa",
+    +       "wcag143",
+    +       "TTv5",
+    +       "TT13.c",
+    +       "EN-301-549",
+    +       "EN-9.1.4.3",
+    +       "ACT",
+    +       "RGAAv4",
+    +       "RGAA-3.2.1",
+    +     ],
+    +   },
+    + ]
+
+       98 |     ["serious", "critical"].includes(v.impact ?? ""),
+       99 |   );
+    > 100 |   expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+          |                                                       ^
+      101 | }
+      102 |
+      103 | test.describe("rbac role matrix (spec 13 §4)", () => {
+        at expectNoBlockingA11y (/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/contraste-shell/tests/e2e/rbac-roles.spec.ts:100:55)
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/contraste-shell/tests/e2e/rbac-roles.spec.ts:140:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/rbac-roles-rbac-role-matri-e1e6a--§4-agent-vê-inbox-e-kanban-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/rbac-roles-rbac-role-matri-e1e6a--§4-agent-vê-inbox-e-kanban-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/rbac-roles-rbac-role-matri-e1e6a--§4-agent-vê-inbox-e-kanban-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/rbac-roles-rbac-role-matri-e1e6a--§4-agent-vê-inbox-e-kanban-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/e2e/rbac-roles.spec.ts:118:7 › rbac role matrix (spec 13 §4) › admin acessa api-tokens e billing (login com MFA TOTP) 
+    [chromium] › tests/e2e/rbac-roles.spec.ts:131:7 › rbac role matrix (spec 13 §4) › agent vê inbox e kanban 
