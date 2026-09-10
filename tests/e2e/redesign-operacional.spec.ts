@@ -140,11 +140,14 @@ test("o painel salva, reaplica e restaura a personalização", async ({ page }) 
   await page.screenshot({ path: path.join(EVIDENCE, "painel-personalizavel.png"), fullPage: true });
 });
 
-test("Pergunte à IA é alcançável, responde com fontes e permanece somente leitura", async ({
+test("Pergunte à IA aguarda 12 segundos, responde com fontes e não repete a consulta", async ({
   page,
 }) => {
+  let consultas = 0;
   await page.route("**/api/v1/ai/ask", async (route) => {
+    consultas += 1;
     expect(route.request().method()).toBe("POST");
+    await new Promise((resolve) => setTimeout(resolve, 12_000));
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -167,12 +170,13 @@ test("Pergunte à IA é alcançável, responde com fontes e permanece somente le
   await expect(page.getByText("Somente leitura")).toBeVisible();
 
   await page.getByRole("button", { name: "Quais clientes precisam de atenção hoje?" }).click();
-  await expect(page.getByText(/três oportunidades abertas/)).toBeVisible();
+  await expect(page.getByText(/três oportunidades abertas/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("link", { name: "Oportunidades" })).toHaveAttribute(
     "href",
     "/app/kanban",
   );
   await expect(page.getByRole("link", { name: "Radar" })).toHaveAttribute("href", "/app/radar");
+  expect(consultas).toBe(1);
   await expect(page.getByRole("button", { name: /mover oportunidade/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /enviar mensagem/i })).toHaveCount(0);
 

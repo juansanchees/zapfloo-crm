@@ -52,10 +52,19 @@ export function CopilotPage() {
     setSending(true);
     setError(null);
     try {
-      const response = await apiClient.post<ApiResult>("/api/v1/ai/ask", {
-        question: clean,
-        history,
-      });
+      const response = await apiClient.post<ApiResult>(
+        "/api/v1/ai/ask",
+        {
+          question: clean,
+          history,
+        },
+        {
+          // O modelo pode levar 30s e a rota até 45s. Não abandone nem
+          // repita uma consulta custosa que pode consumir créditos de IA.
+          timeoutMs: 50_000,
+          retry: false,
+        },
+      );
       setMessages((current) => [
         ...current,
         {
