@@ -15,8 +15,11 @@
 
 Ruling: cookie de exploração terá 30 dias, seguindo a preferência de organização ativa existente em app/actions/shell/setActiveOrg.ts — é preferência autenticada, não token de autorização — se inadequado, custo é alterar a validade, sem migração.
 Ruling: o comando de rebase pedido prevalece sobre a regra geral de atualizar por merge — preservado backup codex/jornada-p0-backup-20260910 em 301530677, remoto original igual — publicação exigirá force-with-lease exato para não sobrescrever trabalho concorrente.
+Ruling: o dono não consegue parear agora e autorizou avançar; corrigir o harness e revisar o código sem consumir outra instalação fresca nem simular conexão. O custo é manter o aceite positivo de pareamento/conclusão pendente até haver aparelho disponível.
 
 ## Estado
+
+- Retomada autorizada: HEAD 8f6851533372d23ad7f7626432ab82d61abce426, worktree limpo. Task3 reaberta somente para fix round3/5: parada limitada do observador após remoção do QR e persistência JSON das medições. Nenhum novo pareamento, reset, mensagem, PR, merge ou deploy nesta retomada.
 
 - Rebase concluído: d721083e7 sobre ce973b4a0. Commit duplicado dos gates reconhecido; único conflito em i18n resolvido preservando ambas as listas.
 - Branch limpa antes do plano; root contém somente alteração do dono em .codex/config.toml, intocada.
