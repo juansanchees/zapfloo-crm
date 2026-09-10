@@ -22,6 +22,7 @@ Ruling: a regressão Chromium do observador fica em `tests/e2e/observador-qr-fre
 
 - Retomada autorizada: HEAD 8f6851533372d23ad7f7626432ab82d61abce426, worktree limpo. Task3 reaberta somente para fix round3/5: parada limitada do observador após remoção do QR e persistência JSON das medições. Nenhum novo pareamento, reset, mensagem, PR, merge ou deploy nesta retomada.
 - Task3 fix round3/5 complete em 6bea483ef: re-review p0_review_specs aprovou os dois findings, sem nova quebra. Chromium do executor 2/2 verde; sabotagens sem signal e attachment body reprovaram e foram restauradas. Repetição root exit0/2passed3.6s, JSON e cópia attachment0600. GovR5 em execução; nenhuma prova positiva de pareamento foi retomada.
+- GovR5 terminou exit0:755files7914tests408.91s, typecheck/lints0errors310warnings. Revisão integrada ce973b4a0..d8a657030 NOT READY: contexto do adiamento entre abas, UUID perdido em erro do polling, registros pessoais em falha de preflight e alerta oculto fora do QR. Onda final estreita conforme final-fix-brief.md; nenhum outro lote reaberto. Pareamento/CI continuam pendentes independentemente dessas correções.
 
 - Rebase concluído: d721083e7 sobre ce973b4a0. Commit duplicado dos gates reconhecido; único conflito em i18n resolvido preservando ambas as listas.
 - Branch limpa antes do plano; root contém somente alteração do dono em .codex/config.toml, intocada.

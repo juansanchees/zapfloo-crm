@@ -43,3 +43,16 @@ Typecheck e lints passaram, mantendo 0 erros/310 avisos. Esta rodada inclui a
 regressão nova de preflight. Produto/testes em `af20e4b27`, com documentação de
 evidência do root em andamento. Nenhum teste de banco, E2E ou CI remoto está
 implicitamente incluído nesse comando.
+
+## Retomada sem aparelho — R5
+
+Após restaurar as duas sabotagens do harness em `6bea483ef`, comando completo
+`corepack pnpm gov:verify > /tmp/zapfloo-p0-gov-final-r5.log 2>&1`: **exit0**,
+**755 arquivos / 7914 testes passed**, duração Vitest **408,91s**. Typecheck e
+todos os lints passaram; ESLint0 erros/310 avisos e lint:channels62 arquivos de
+dívida conhecida, nenhum novo. A nova spec Chromium é E2E, não contada aqui.
+
+Checkout medido continua `.worktrees/jornada-p0`, Node22.23.2/corepack pnpm9.15.9.
+Código/testes congelados durante a execução; commits de documentação do root
+não alteraram o comportamento medido. Pareamento, test:db e CI não são partes
+implícitas deste comando. Uma correção posterior exige sua própria verificação.
