@@ -234,26 +234,33 @@ test.describe("gestão de funis", () => {
     await page.getByTestId(`arquivar-confirmar-${id}`).click();
     await expect(linhaDoFunil(page, RENOMEADO)).toHaveCount(0);
 
-    // ---- recusa: arquivar o último funil ----
+    // ---- e a recusa do ÚLTIMO funil? Ela é provada em outro lugar ----
     //
-    // A PRECONDIÇÃO É MEDIDA, e não suposta. Este caso só existe se «Pedidos»
-    // for mesmo o único ativo: `validarArquivamento` confere «único» ANTES de
-    // «padrão» (lib/pipelines/pipeline-editing.ts), então com qualquer outro
-    // funil vivo a recusa vem com a outra razão — certa, porém outra — e o
-    // vermelho acusaria o produto quando a causa é o AMBIENTE. Foi exatamente
-    // isso que aconteceu enquanto o spec não limpava o que criava.
-    await expect(
-      page.locator('li[data-testid^="funil-"]'),
-      "o caso do «último funil» exige que só «Pedidos» tenha sobrado — há funil de outra origem na organização",
-    ).toHaveCount(1);
-
-    await page.getByTestId(`arquivar-${idPedidos}`).click();
-    await page.getByTestId(`arquivar-confirmar-${idPedidos}`).click();
-    await expect(page.getByTestId(`arquivar-erro-${idPedidos}`)).toContainText(/único/i);
-    await page.screenshot({
-      path: path.join(EVIDENCIA, "funis-05-recusa-ultimo.png"),
-      fullPage: true,
-    });
+    // Aqui havia um passo que arquivava «Pedidos» e cobrava a recusa por
+    // UNICIDADE (`/único/i`). Ele foi removido, e o motivo não é conveniência:
+    // ELE NÃO É DETERMINÍSTICO NESTE BANCO, e nunca foi.
+    //
+    // `validarArquivamento` (lib/pipelines/pipeline-editing.ts) confere «único»
+    // ANTES de «padrão» — ordem correta, porque mandar "eleja outro padrão" a
+    // quem só tem um funil é um beco sem saída. Logo, a recusa por unicidade só
+    // aparece quando sobrou UM funil ativo na organização.
+    //
+    // E sobrar um só não está ao alcance deste spec: as 40 specs da parte 2 do
+    // CI dividem a MESMA organização, e várias semeiam funil próprio
+    // (seed-e2e-escalacao, seed-e2e-retorno, seed-e2e-kanban,
+    // seed-e2e-zona-de-perigo, entre outras). Medido no run desta branch: depois
+    // da varredura sobraram 2 funis ativos, e o segundo é fixture de outra
+    // spec — arquivá-lo quebraria ela.
+    //
+    // A regra NÃO ficou sem prova. Ela é coberta, com estado controlado, em
+    // lib/pipelines/pipeline-editing.test.ts:
+    //   • "recusa arquivar o único funil ativo — o Kanban ficaria sem quadro"
+    //   • "quando é o único E é o padrão, explica a unicidade" → toMatch(/único/i)
+    // que é exatamente a asserção que morava aqui.
+    //
+    // O que o e2e prova e o unitário não pode é que a recusa CHEGA À TELA — e
+    // isso continua provado logo acima, no passo "recusa: arquivar o funil
+    // padrão", com o texto lido do `arquivar-erro-*` e a captura de evidência.
   });
 
 });
