@@ -1,4 +1,14 @@
-/** PostgREST real sobre o banco descartável de test:db; nunca usa env de produção. */
+/**
+ * PostgREST real sobre o banco descartável de test:db; nunca usa env de produção.
+ *
+ * Mantemos public.ecr.aws/supabase/postgrest:v14.5 para preservar o artefato
+ * usado por estes invariantes, sem trocar registro/versão para esconder falhas.
+ * Em 10/set/2026, o ECR recusou pulls em cache frio com "toomanyrequests".
+ * ci.yml prepara ESTA imagem antes de test:db, com retentativa/backoff e erro
+ * terminal. O docker run usa o cache (política padrão: missing); os testes
+ * continuam falhando se o PostgREST não puder iniciar. Não substituir por skip,
+ * try/catch silencioso ou outro registro sem validar a identidade da imagem.
+ */
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";

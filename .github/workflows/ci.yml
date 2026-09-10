@@ -90,5 +90,25 @@ jobs:
         # aceita `timeout-minutes`. Razão e medições: o cabeçalho da action.
         timeout-minutes: 5
 
+      # O cache frio no ECR já derrubou o setup de dois invariantes críticos
+      # com toomanyrequests. Preparar aqui evita pulls implícitos nos testes.
+      - name: Prepare PostgREST image (retry with backoff)
+        id: pull-postgrest
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          imagem='public.ecr.aws/supabase/postgrest:v14.5'
+          for tentativa in 1 2 3 4 5; do
+            echo "Pull do PostgREST: tentativa ${tentativa}/5"
+            if docker pull "$imagem"; then
+              exit 0
+            fi
+            if [ "$tentativa" -lt 5 ]; then
+              sleep "$((10 * (2 ** (tentativa - 1))))"
+            fi
+          done
+          echo "::error::Não foi possível preparar a imagem PostgREST após 5 tentativas." >&2
+          exit 1
+
       - name: RLS isolation + governance invariants
         run: pnpm test:db
