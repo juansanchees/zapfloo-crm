@@ -22,6 +22,9 @@ import type { ProvaEnsaio } from "./ensaio";
 /** A marca de navegação não substitui a prova corrente relida no servidor. */
 export function progressoRevisado(state: OnboardingState, proof: ProvaEnsaio | null): OnboardingState {
   const ai = state.ai;
+  // Adiar é uma escolha explícita e persistida. Ela não depende de um recibo
+  // de ensaio ainda estar disponível para continuar valendo na próxima sessão.
+  if (ai?.skipped) return state;
   if (ai?.flow !== "reviewed_draft_v2" || ai.restricted_activation) return state;
   if (proof?.reviewed && proof.status === "completed" && proof.revision === ai.revision && proof.version_id === ai.version_id && proof.run_id === ai.run_id) return state;
   return { ...state, ai: undefined };
@@ -71,7 +74,7 @@ export const PASSOS: readonly PassoDoOnboarding[] = [
     // reaproveita a saída do wizard, sem marcar a organização como concluída.
     rotulo: "Conectar número",
     existe: () => true,
-    cumprido: (s) => s.ai?.flow === "reviewed_draft_v2" ? Boolean(s.ai.restricted_activation) : marcado(s.whatsapp),
+    cumprido: (s) => marcado(s.whatsapp),
     pulado: (s) => foiPulado(s.whatsapp),
   },
   {

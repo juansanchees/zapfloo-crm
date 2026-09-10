@@ -48,11 +48,11 @@ describe("passos visíveis", () => {
 });
 
 describe("próximo passo", () => {
-  it("confirmação antiga volta ao agente sem apagar estado persistido; recibo é histórico", () => {
+  it("revisão sem recibo corrente volta à IA sem apagar estado persistido", () => {
     const state: OnboardingState = { welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" }, ai: { agent_id: "a", flow: "reviewed_draft_v2", revision: 1, version_id: "v", run_id: "r" }, whatsapp: { status: "WORKING" } };
     expect(proximoPasso(progressoRevisado(state, null), SEM_LOJA)?.segmento).toBe("setup-ai");
     expect(state.ai?.flow).toBe("reviewed_draft_v2");
-    expect(proximoPasso(state, SEM_LOJA)?.segmento).toBe("connect-whatsapp");
+    expect(proximoPasso(state, SEM_LOJA)?.segmento).toBe("funil");
   });
   it("primeiro acesso conecta antes de oferecer IA e não exige ensaio publicado", () => {
     const state: OnboardingState = { welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" } };
@@ -72,6 +72,56 @@ describe("próximo passo", () => {
     };
     expect(proximoPasso(s, SEM_LOJA)?.segmento).toBe("setup-ai");
     expect(proximoPasso(s, COM_LOJA)?.segmento).toBe("setup-ai");
+  });
+
+  it("WhatsApp conectado sem IA segue para configurar a IA opcional", () => {
+    const state: OnboardingState = {
+      welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" },
+      whatsapp: { status: "WORKING" },
+    };
+    expect(proximoPasso(state, SEM_LOJA)?.segmento).toBe("setup-ai");
+  });
+
+  it("IA adiada após conexão segue para o próximo passo restante", () => {
+    const state: OnboardingState = {
+      welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" },
+      whatsapp: { status: "WORKING" },
+      ai: { agent_id: "adiado", skipped: true },
+    };
+    expect(proximoPasso(state, SEM_LOJA)?.segmento).toBe("funil");
+  });
+
+  it("adiamento explícito preserva revisão sem recibo corrente e não reabre a IA", () => {
+    const state: OnboardingState = {
+      welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" },
+      whatsapp: { status: "WORKING" },
+      ai: {
+        agent_id: "revisado",
+        skipped: true,
+        flow: "reviewed_draft_v2",
+        revision: 1,
+        version_id: "v",
+        run_id: "r",
+      },
+    };
+    const revisado = progressoRevisado(state, null);
+    expect(revisado.ai).toEqual(state.ai);
+    expect(proximoPasso(revisado, SEM_LOJA)?.segmento).toBe("funil");
+  });
+
+  it("IA revisada sem ativação não reabre conexão já cumprida", () => {
+    const state: OnboardingState = {
+      welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" },
+      whatsapp: { status: "WORKING" },
+      ai: {
+        agent_id: "revisado",
+        flow: "reviewed_draft_v2",
+        revision: 1,
+        version_id: "v",
+        run_id: "r",
+      },
+    };
+    expect(proximoPasso(state, SEM_LOJA)?.segmento).toBe("funil");
   });
 
   it("passo PULADO conta como resolvido — senão o wizard entra em laço", () => {
