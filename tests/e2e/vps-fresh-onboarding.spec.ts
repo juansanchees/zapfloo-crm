@@ -6,7 +6,7 @@
  * responsabilidade externa. O banco é usado somente como leitura de prova.
  * O scan manual acontece neste mesmo teste/contexto que gerou o QR.
  */
-import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { criarArquivoTemporarioPrivado } from "./utils/seguranca-da-prova-fresca";
@@ -102,13 +102,23 @@ async function limparEntradaTotp(page: Page): Promise<void> {
   for (let i = 0; i < 6; i += 1) await page.keyboard.press("Backspace");
 }
 
+async function esperarVisivelSemSnapshot(page: Page, locator: Locator, timeout: number): Promise<boolean> {
+  const limite = Date.now() + timeout;
+  while (Date.now() < limite) {
+    if (await locator.isVisible()) return true;
+    await page.waitForTimeout(200);
+  }
+  return false;
+}
+
 async function confirmarEnrollTotp(page: Page, secret: string): Promise<void> {
   for (let tentativa = 0; tentativa < 3; tentativa += 1) {
     await preencherTotp(page, secret);
-    const chegou = await expect(page.getByRole("heading", { name: "Códigos de recuperação", exact: true }))
-      .toBeVisible({ timeout: 8_000 })
-      .then(() => true)
-      .catch(() => false);
+    const chegou = await esperarVisivelSemSnapshot(
+      page,
+      page.getByRole("heading", { name: "Códigos de recuperação", exact: true }),
+      8_000,
+    );
     if (chegou) return;
     if (tentativa === 2) throw new Error("MFA enroll não chegou aos códigos de recuperação após 3 tentativas.");
     await limparEntradaTotp(page);
@@ -227,7 +237,7 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   for (const width of [1440, 768, 390]) {
     await medirConexao(page, testInfo, width);
   }
-  let limparQrTemporario = () => undefined;
+  let limparQrTemporario: () => void = () => undefined;
   try {
     const qrTemporario = criarArquivoTemporarioPrivado("qr-whatsapp.png");
     limparQrTemporario = qrTemporario.limpar;
@@ -275,9 +285,14 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   const emailConvidado = "atendente-fresco@example.test";
   await page.locator("#emails").fill(emailConvidado);
   await page.getByRole("button", { name: "Enviar convites", exact: true }).click();
-  await expect(page.getByText(/convite\(s\) não puderam ser enviados por email/i)).toBeVisible();
+  const avisoSemEmail = await esperarVisivelSemSnapshot(
+    page,
+    page.getByText(/convite\(s\) não puderam ser enviados por email/i),
+    30_000,
+  );
+  expect(avisoSemEmail, "o fallback sem Resend precisa ficar visível").toBe(true);
   const convite = page.locator("code", { hasText: /team\/accept-invite/ });
-  await expect(convite).toHaveCount(1);
+  expect((await convite.count()) === 1, "precisa existir exatamente um link de aceite").toBe(true);
   const conviteEmMemoria = (await convite.innerText()).trim();
   expect(/\/team\/accept-invite\/.+/.test(conviteEmMemoria), "o fallback precisa produzir um link de aceite").toBe(true);
   await screenshotMascarado(page, testInfo, "convite-sem-resend");
@@ -319,13 +334,19 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   await page.getByRole("button", { name: "Ativar", exact: true }).click();
   await page.getByRole("button", { name: "Iniciar configuração", exact: true }).click();
   const qrMfa = page.locator('img[alt="QR code para configurar autenticador"]');
-  await expect(qrMfa).toBeVisible();
+  expect(
+    await esperarVisivelSemSnapshot(page, qrMfa, 30_000),
+    "o QR de MFA precisa ficar visível",
+  ).toBe(true);
   await page.getByText(/não consegue escanear/i).click();
   const secretTotp = (await page.locator("code").innerText()).trim();
   expect(secretTotp.length > 15, "o segredo TOTP precisa existir apenas em memória").toBe(true);
   await screenshotMascarado(page, testInfo, "mfa-qr-mascarado");
   await confirmarEnrollTotp(page, secretTotp);
-  await expect(page.getByRole("dialog").locator(".font-mono")).toHaveCount(10);
+  expect(
+    (await page.getByRole("dialog").locator(".font-mono").count()) === 10,
+    "a tela precisa conter dez códigos de recuperação",
+  ).toBe(true);
   await screenshotMascarado(page, testInfo, "mfa-recovery-mascarado");
   await page.getByText(/salvei meus códigos em local seguro/i).click();
   await page.getByRole("button", { name: "Concluir", exact: true }).click();
