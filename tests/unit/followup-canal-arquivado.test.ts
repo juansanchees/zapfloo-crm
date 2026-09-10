@@ -24,6 +24,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type * as InboundTurnModule from "@/lib/agent-engine/agent/inbound-turn";
+import type * as FollowupTurnModule from "@/lib/agent-engine/agent/followup-turn";
 import type { JobRow } from "@/lib/agent-engine/queue/queue";
 
 const runAgentTurn = vi.fn(async () => undefined);
@@ -117,7 +118,7 @@ const ctx = { workerId: "w1" };
  * folga sobre o custo medido sem esconder travamento: quem trava continua
  * reprovando.
  */
-let criarHandler: typeof import("@/lib/agent-engine/agent/followup-turn").createFollowupTurnHandler;
+let criarHandler: typeof FollowupTurnModule.createFollowupTurnHandler;
 
 beforeAll(async () => {
   ({ createFollowupTurnHandler: criarHandler } = await import(
@@ -191,5 +192,89 @@ describe("followup_turn — canal arquivado", () => {
 
     await run(job(), pool, ctx);
     expect(runAgentTurn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("followup_turn — conversa de origem do fluxo", () => {
+  const ENROLLMENT = "a3c05013-3a13-4dab-b5c7-7ed8f4a2c881";
+  const ORIGEM = "conversa-origem";
+  const CHIP_ORIGEM = "chip-origem";
+
+  function fluxoJob() {
+    return job({ payload: { followup_enrollment_id: ENROLLMENT, node_id: "enviar", purpose: "send_message" } });
+  }
+
+  function poolDoFluxo(opts: {
+    conversationId?: string | null;
+    enrollmentAusente?: boolean;
+    conversaAusente?: boolean;
+    canalAusente?: boolean;
+    archivedAt?: string | null;
+    status?: string;
+  } = {}) {
+    const query = vi.fn(async (sql: string, params: unknown[] = []) => {
+      if (sql.includes("from followup_enrollments")) {
+        // O enrollment tem de pertencer à mesma organização E contato do job.
+        expect(params).toEqual([ORG, LEAD, ENROLLMENT]);
+        expect(sql).toMatch(/organization_id\s*=\s*\$1/);
+        expect(sql).toMatch(/contact_id\s*=\s*\$2/);
+        return { rows: opts.enrollmentAusente ? [] : [{ conversation_id: opts.conversationId === undefined ? ORIGEM : opts.conversationId }] };
+      }
+      if (sql.includes("from conversations")) {
+        const pinada = params.includes(ORIGEM);
+        if (pinada) {
+          // Sem estes predicados, um ponteiro corrompido cruza contato/tenant.
+          expect(sql).toMatch(/c\.organization_id\s*=\s*\$1/);
+          expect(sql).toMatch(/c\.contact_id\s*=\s*\$2/);
+          expect(sql).toMatch(/c\.id\s*=\s*\$3/);
+        }
+        if (pinada && opts.conversaAusente) return { rows: [] };
+        return { rows: [{
+          id: pinada ? ORIGEM : CONVERSA,
+          channel_session_id: opts.canalAusente ? null : pinada ? CHIP_ORIGEM : CANAL,
+          channel_archived_at: opts.archivedAt ?? null,
+          channel_status: opts.status ?? "WORKING",
+        }] };
+      }
+      throw new Error(`Consulta não prevista no teste: ${sql}`);
+    });
+    return { pool: { query } as never, query };
+  }
+
+  function fluxoHandler() {
+    return criarHandler({
+      completeFollowupTurn: vi.fn(async () => undefined),
+      log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    } as never);
+  }
+
+  it("não troca o chip de um caso pela conversa mais recente do contato", async () => {
+    runAgentTurn.mockClear();
+    const { pool } = poolDoFluxo();
+    await fluxoHandler()(fluxoJob(), pool, ctx);
+    expect(runAgentTurn).toHaveBeenCalledWith(expect.anything(), expect.anything(), pool, ctx,
+      expect.objectContaining({ conversationId: ORIGEM, channelSessionId: CHIP_ORIGEM }));
+  });
+
+  it.each([
+    { nome: "enrollment inexistente ou de outro contato/tenant", opts: { enrollmentAusente: true }, erro: /inscrição.*não encontrada/i },
+    { nome: "conversa inexistente ou de outro contato/tenant", opts: { conversaAusente: true }, erro: /conversa de origem.*inválida/i },
+    { nome: "conversa sem canal", opts: { canalAusente: true }, erro: /conversa de origem.*canal/i },
+    { nome: "canal arquivado", opts: { archivedAt: "2026-09-01T10:00:00Z" }, erro: /canal arquivado/i },
+    { nome: "canal desconectado", opts: { status: "STOPPED" }, erro: /canal de origem.*indisponível/i },
+  ])("recusa $nome sem escolher outro chip", async ({ opts, erro }) => {
+    runAgentTurn.mockClear();
+    const { pool, query } = poolDoFluxo(opts);
+    await expect(fluxoHandler()(fluxoJob(), pool, ctx)).rejects.toThrow(erro);
+    expect(runAgentTurn).not.toHaveBeenCalled();
+    expect(query.mock.calls.some(([sql]) => sql.includes("from channel_sessions"))).toBe(false);
+  });
+
+  it("enrollment sem conversa pinada mantém a última conversa do contato", async () => {
+    runAgentTurn.mockClear();
+    const { pool } = poolDoFluxo({ conversationId: null });
+    await fluxoHandler()(fluxoJob(), pool, ctx);
+    expect(runAgentTurn).toHaveBeenCalledWith(expect.anything(), expect.anything(), pool, ctx,
+      expect.objectContaining({ conversationId: CONVERSA, channelSessionId: CANAL }));
   });
 });

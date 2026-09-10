@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api/types";
 import { ensureConversation, sessaoProntaParaEnvio } from "@/lib/automation/start-conversation";
 import { decidirElegibilidadeDaConversaViaSupabase } from "@/lib/ai/elegibilidade/consulta-supabase";
 import { ttlDaAutorizacaoMs } from "@/lib/ai/elegibilidade/gate";
+import { queryTolerantToMissingArchived } from "@/lib/channels/archived";
 import { createSupabaseAdminClient, type FollowupJobRequest } from "@/lib/followup/engine";
 import type { EnrollmentRow } from "@/lib/followup/node-handlers";
 import { completeTurnForEnrollment, type TurnBridgeAdminClient } from "@/lib/followup/turn-bridge";
@@ -64,28 +65,60 @@ export async function enviarTextoFixoPendente(
     if (!claimed) continue;
 
     try {
-      const { data: enr } = await admin
+      const { data: enr, error: enrollmentErr } = await admin
         .from("followup_enrollments")
-        .select("current_node_id")
+        .select("current_node_id, conversation_id")
         .eq("id", enrollmentId)
         .eq("organization_id", job.organization_id as string)
+        .eq("contact_id", contactId)
         .maybeSingle();
+      if (enrollmentErr) throw new Error(enrollmentErr.message);
       if (!enr || enr.current_node_id !== nodeId) {
         await admin.from("job_queue").update({ status: "done" }).eq("id", job.id);
         continue;
       }
-      const sessionId = await sessaoProntaParaEnvio(admin, job.organization_id as string);
-      if (!sessionId) {
-        logger.warn("[dev.pipeline] sem sessão de canal — job volta pra pending");
-        await admin.from("job_queue").update({ status: "pending" }).eq("id", job.id);
-        continue;
+      let conversationId = enr.conversation_id;
+      if (conversationId) {
+        // Mesmo vínculo que o worker 24/7 honra: a resposta a um caso não pode
+        // sair por outro chip só porque ele aparece primeiro na organização.
+        const { data: conversa, error: conversationErr } = await admin
+          .from("conversations")
+          .select("id, channel_session_id")
+          .eq("id", conversationId)
+          .eq("organization_id", job.organization_id as string)
+          .eq("contact_id", contactId)
+          .eq("is_group", false)
+          .maybeSingle();
+        if (conversationErr) throw new Error(conversationErr.message);
+        if (!conversa?.channel_session_id) {
+          throw new Error("Conversa de origem inválida ou sem canal para este contato na organização.");
+        }
+        const canal = (columns: "id, status, archived_at" | "id, status") => admin
+          .from("channel_sessions")
+          .select(columns)
+          .eq("id", conversa.channel_session_id!)
+          .eq("organization_id", job.organization_id as string)
+          .maybeSingle();
+        const { data: sessao, error: sessionErr } = await queryTolerantToMissingArchived(
+          () => canal("id, status, archived_at"),
+          () => canal("id, status"),
+        );
+        if (sessionErr) throw new Error(sessionErr.message);
+        const estado = sessao as { status: string; archived_at?: string | null } | null;
+        if (!estado || estado.archived_at || estado.status !== "WORKING") {
+          throw new Error("Canal de origem indisponível ou arquivado — reconecte o mesmo número antes de retomar.");
+        }
+      } else {
+        // Fluxos que nunca tiveram conversa vinculada preservam a resolução
+        // anterior, inclusive o primeiro outbound de uma captação por webhook.
+        const sessionId = await sessaoProntaParaEnvio(admin, job.organization_id as string);
+        if (!sessionId) {
+          logger.warn("[dev.pipeline] sem sessão de canal — job volta pra pending");
+          await admin.from("job_queue").update({ status: "pending" }).eq("id", job.id);
+          continue;
+        }
+        conversationId = await ensureConversation(admin, job.organization_id as string, contactId, sessionId);
       }
-      const conversationId = await ensureConversation(
-        admin,
-        job.organization_id as string,
-        contactId,
-        sessionId,
-      );
 
       // GATE DE ELEGIBILIDADE — este envio inline BYPASSA `executarTurnoDoAgente`
       // (é o atalho "sem cron e sem agent-worker"), então precisa da checagem

@@ -242,7 +242,7 @@ export function createFollowupTurnHandler(deps: FollowupTurnDeps) {
     }
     const payload = followupTurnPayloadSchema.parse(job.payload);
 
-    const target = await resolveSendTarget(pool, tenantId, leadId);
+    const target = await resolveSendTarget(pool, tenantId, leadId, payload.followup_enrollment_id);
 
     const clock = deps.clock ?? ((): Date => new Date());
 
@@ -315,26 +315,54 @@ async function resolveSendTarget(
   pool: pg.Pool,
   tenantId: string,
   contactId: string,
+  enrollmentId?: string,
 ): Promise<ReentrySendTarget> {
+  // Caso aberto já fixa sua conversa no enrollment. Uma conversa mais recente
+  // do mesmo contato pode pertencer a OUTRO número: não pode substituir essa
+  // origem. Manual/silêncio/legado sem vínculo conservam o fallback abaixo.
+  let conversationId: string | null = null;
+  if (enrollmentId !== undefined) {
+    const enrollment = await pool.query<{ conversation_id: string | null }>(
+      `select conversation_id from followup_enrollments
+        where organization_id = $1 and contact_id = $2 and id = $3`,
+      [tenantId, contactId, enrollmentId],
+    );
+    if (!enrollment.rows[0]) {
+      throw new Error('followup_turn: inscrição não encontrada para este contato na organização');
+    }
+    conversationId = enrollment.rows[0].conversation_id;
+  }
   const { rows } = await pool.query<{
     id: string;
     channel_session_id: string | null;
     channel_archived_at: string | null;
+    channel_status: string | null;
   }>(
     `select c.id,
             c.channel_session_id,
-            to_jsonb(cs) ->> 'archived_at' as channel_archived_at
+            to_jsonb(cs) ->> 'archived_at' as channel_archived_at,
+            cs.status as channel_status
        from conversations c
        left join channel_sessions cs
          on cs.id = c.channel_session_id and cs.organization_id = c.organization_id
       where c.organization_id = $1 and c.contact_id = $2 and c.is_group = false
+        ${conversationId !== null ? 'and c.id = $3' : ''}
       order by c.last_message_at desc nulls last limit 1`,
-    [tenantId, contactId],
+    conversationId !== null ? [tenantId, contactId, conversationId] : [tenantId, contactId],
   );
   const conv = rows[0];
+  if (conversationId !== null && conv === undefined) {
+    throw new Error('followup_turn: conversa de origem inválida para este contato na organização');
+  }
+  if (conversationId !== null && conv?.channel_session_id == null) {
+    throw new Error('followup_turn: conversa de origem sem canal — reconecte o número de origem');
+  }
   if (conv !== undefined && conv.channel_session_id !== null) {
     if (conv.channel_archived_at !== null) {
       throw new Error('followup_turn para canal arquivado — o número foi excluído da Central de Conexões');
+    }
+    if (conversationId !== null && conv.channel_status !== 'WORKING') {
+      throw new Error('followup_turn: canal de origem indisponível — reconecte o mesmo número antes de retomar');
     }
     return {
       tenantId,
