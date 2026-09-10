@@ -36,8 +36,8 @@ describe("passos visíveis", () => {
   it("a ordem é a mesma nos dois casos, menos o passo que não existe", () => {
     expect(passosVisiveis(SEM_LOJA).map((p) => p.segmento)).toEqual([
       "welcome",
-      "setup-ai",
       "connect-whatsapp",
+      "setup-ai",
       // O quadro de clientes vem DEPOIS de treinar: a sugestão sai da chave que
       // a pessoa acabou de confirmar funcionando, e é o mesmo modelo que vai
       // atender. Pedi-lo antes obrigaria a montá-lo no escuro.
@@ -54,9 +54,9 @@ describe("próximo passo", () => {
     expect(state.ai?.flow).toBe("reviewed_draft_v2");
     expect(proximoPasso(state, SEM_LOJA)?.segmento).toBe("connect-whatsapp");
   });
-  it("primeiro acesso ensaia antes de conectar e não repete teste que exige publicação", () => {
+  it("primeiro acesso conecta antes de oferecer IA e não exige ensaio publicado", () => {
     const state: OnboardingState = { welcome: { accepted_at: "x", timezone: "UTC", display_name: "QA" } };
-    expect(proximoPasso(state, COM_LOJA)?.segmento).toBe("setup-ai");
+    expect(proximoPasso(state, COM_LOJA)?.segmento).toBe("connect-whatsapp");
     expect(passosVisiveis(COM_LOJA).map(p => p.segmento)).not.toContain("testar");
   });
   it("começa no primeiro", () => {
@@ -115,12 +115,9 @@ describe("resumo final", () => {
     expect(porSegmento.get("setup-ai")).toMatchObject({ feito: false, pulado: false });
   });
 
-  it("os rótulos nomeiam PEÇAS do funcionário, não telas do sistema", () => {
-    // A moldura do redesenho. Um passo chamado "IA" não diz o que vai
-    // acontecer ali; "Treinar" diz.
+  it("os rótulos distinguem conectar de configurar IA opcional", () => {
     const rotulos = resumoDoOnboarding(VAZIO, SEM_LOJA).map((i) => i.rotulo);
-    expect(rotulos).toContain("O telefone dele");
-    expect(rotulos).toContain("Treinar");
-    expect(rotulos).not.toContain("IA");
+    expect(rotulos).toContain("Conectar número");
+    expect(rotulos).toContain("IA (opcional)");
   });
 });

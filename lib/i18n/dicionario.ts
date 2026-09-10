@@ -37,6 +37,15 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Conexão pronta. Você já pode abrir as conversas para atender manualmente. A IA continua com a política atual do canal.": { es: "Conexión lista. Ya puedes abrir las conversaciones para atender manualmente. La IA mantiene la política actual del canal." },
+  "Conecte seu WhatsApp": { es: "Conecta tu WhatsApp" },
+  "Conectar número": { es: "Conectar número" },
+  "IA (opcional)": { es: "IA (opcional)" },
+  "Configurar IA (opcional)": { es: "Configurar IA (opcional)" },
+  "Conecte um número para sua equipe atender. Não precisa configurar IA para conectar.": { es: "Conecta un número para que tu equipo atienda. No necesitas configurar IA para conectar." },
+  "Novos canais começam em modo de teste, sem números autorizados para IA. Conectar não ativa a IA nem altera as políticas dos canais existentes.": { es: "Los canales nuevos comienzan en modo de prueba, sin números autorizados para IA. Conectar no activa la IA ni cambia las políticas de los canales existentes." },
+  "Atendimento humano primeiro": { es: "Atención humana primero" },
+  "Você pode abrir as conversas agora. Para enviar e receber pelo WhatsApp, o número precisa estar conectado. A configuração restante pode ser retomada depois.": { es: "Puedes abrir las conversaciones ahora. Para enviar y recibir por WhatsApp, el número debe estar conectado. Puedes retomar el resto de la configuración después." },
   "Configurar gatilho": { es: "Configurar disparador" },
   "Escolha abaixo o que inicia este fluxo. O gatilho é salvo separadamente do desenho do fluxo.": { es: "Elige abajo qué inicia este flujo. El disparador se guarda por separado del diseño del flujo." },
   "Salvar gatilho altera a configuração do fluxo, inclusive se ele já estiver publicado.": { es: "Guardar el disparador cambia la configuración del flujo, incluso si ya está publicado." },
