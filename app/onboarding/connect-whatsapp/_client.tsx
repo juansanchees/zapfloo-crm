@@ -79,7 +79,7 @@ function explicacaoDoEstado(s: Status, t: (texto: string) => string): string {
     case "INIT":
       return t("Isso leva alguns segundos. O código aparece aqui sozinho.");
     case "WORKING":
-      return t("Conexão pronta. Autorize os números de teste e confirme a ativação abaixo.");
+      return t("Conexão pronta. Você já pode abrir as conversas para atender manualmente. A IA continua com a política atual do canal.");
     case "FAILED":
       return t("É normal — ele vale poucos minutos. Dá para gerar outro.");
     default:

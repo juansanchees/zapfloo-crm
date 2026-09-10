@@ -102,7 +102,7 @@ describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
     vi.mocked(fetch).mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { status: "WORKING", session: "org_teste", channel_session_id: "11111111-1111-4111-8111-111111111111" } }) } as Response);
     montar();
     fireEvent.click(screen.getByTestId("forma-qr").querySelector("input")!);
-    await screen.findByText("Conexão pronta. Autorize os números de teste e confirme a ativação abaixo.");
+    await screen.findByText("Conexão pronta. Você já pode abrir as conversas para atender manualmente. A IA continua com a política atual do canal.");
     expect(markWhatsappConfigured).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Conectei em outro lugar" })).toBeNull();
   });

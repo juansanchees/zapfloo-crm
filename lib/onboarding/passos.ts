@@ -66,20 +66,20 @@ export const PASSOS: readonly PassoDoOnboarding[] = [
     pulado: () => false,
   },
   {
-    segmento: "setup-ai",
-    rotulo: "Treinar",
-    existe: () => true,
-    cumprido: (s) => marcado(s.ai),
-    pulado: (s) => foiPulado(s.ai),
-  },
-  {
     segmento: "connect-whatsapp",
-    // O telefone é a primeira peça concreta do funcionário, e é o passo que
-    // pede o celular na mão — o instalador já avisa para deixá-lo aberto.
-    rotulo: "O telefone dele",
+    // Conectar é independente de preparar/ativar IA. O acesso às conversas
+    // reaproveita a saída do wizard, sem marcar a organização como concluída.
+    rotulo: "Conectar número",
     existe: () => true,
     cumprido: (s) => s.ai?.flow === "reviewed_draft_v2" ? Boolean(s.ai.restricted_activation) : marcado(s.whatsapp),
     pulado: (s) => foiPulado(s.whatsapp),
+  },
+  {
+    segmento: "setup-ai",
+    rotulo: "IA (opcional)",
+    existe: () => true,
+    cumprido: (s) => marcado(s.ai),
+    pulado: (s) => foiPulado(s.ai),
   },
   {
     segmento: "connect-nuvemshop",
