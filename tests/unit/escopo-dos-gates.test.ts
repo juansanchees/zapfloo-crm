@@ -9,13 +9,15 @@ import { describe, expect, it } from "vitest";
 const RAIZ = process.cwd();
 
 describe("escopo dos gates locais", () => {
-  it("lint ignora checkouts aninhados, mas continua medindo fonte própria", async () => {
+  it("lint ignora checkouts aninhados e evidências locais, mas continua medindo fonte própria", async () => {
     const raiz = mkdtempSync(join(tmpdir(), "gate-lint-"));
     try {
       const lint = new ESLint({ cwd: raiz, overrideConfigFile: join(RAIZ, "eslint.config.mjs") });
       expect(await lint.isPathIgnored(join(raiz, "app/page.tsx"))).toBe(false);
+      expect(await lint.isPathIgnored(join(raiz, "scripts/helper.cjs"))).toBe(false);
       expect(await lint.isPathIgnored(join(raiz, ".claude/worktrees/outro/app/page.tsx"))).toBe(true);
       expect(await lint.isPathIgnored(join(raiz, ".worktrees/outro/app/page.tsx"))).toBe(true);
+      expect(await lint.isPathIgnored(join(raiz, ".superpowers/evidence/sessao/helper.cjs"))).toBe(true);
     } finally {
       rmSync(raiz, { recursive: true, force: true });
     }
