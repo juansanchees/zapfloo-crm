@@ -28,6 +28,31 @@ test.beforeEach(async ({ page }) => {
   creds = await loginComoAdmin(page, creds);
 });
 
+test("a barra lateral permanece fixa enquanto somente o conteúdo rola", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  const aside = page.locator("aside").first();
+  const main = page.locator("main").first();
+  const topoAntes = await aside.evaluate((element) => element.getBoundingClientRect().top);
+
+  await main.evaluate((element) => {
+    element.scrollTop = Math.min(500, element.scrollHeight - element.clientHeight);
+  });
+
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  const medida = await page.evaluate(() => ({
+    pagina: window.scrollY,
+    topoDaBarra: document.querySelector("aside")?.getBoundingClientRect().top ?? -1,
+  }));
+
+  expect(medida.pagina, "a página não deve rolar fora da casca do app").toBe(0);
+  expect(medida.topoDaBarra, "a barra deve continuar encostada no topo").toBe(topoAntes);
+});
+
 async function usarIdioma(page: Page, idioma: "pt-BR" | "es"): Promise<void> {
   const curto = idioma === "es" ? "ES" : "PT";
   const seletor = page.getByTestId("seletor-de-idioma");
