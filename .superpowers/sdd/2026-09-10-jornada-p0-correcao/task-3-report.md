@@ -16,7 +16,7 @@ A prova fresca real **não foi executada** por esta task. Nenhum QR real foi ger
   - ausência de chave do provedor selecionado e de e-mail no processo Next por `/api/v1/system/instalacao`, sem `?provar=1`;
   - ordem real welcome → conexão QR real → IA adiada → funil → convite → done;
   - medições com `getBoundingClientRect`, `getComputedStyle`, overflow e QR carregado (`naturalWidth`/`naturalHeight`) em 1440/768/390 antes de liberar o scan;
-  - screenshots persistidos sempre mascaram QR/telefone/TOTP/recovery/link; o QR escaneável usa um único PNG transitório em `/tmp`, atualizado quando o código gira, reemite `QR_PRONTO` e é removido no `finally`;
+  - screenshots persistidos sempre mascaram QR/telefone/TOTP/recovery/link; o QR escaneável usa um único PNG transitório em diretório privado criado por `mkdtemp` (`0700`, arquivo `0600`), atualizado quando o código gira, reemite `QR_PRONTO` e é removido no `finally`;
   - fallback de convite sem Resend comprova um único link, mantido só em memória;
   - MFA opcional comprova QR, dez códigos de recuperação mascarados e fator verificado, mantendo o secret TOTP só em memória;
   - novo contexto sem `onboarding_explore` passa pelo desafio MFA, entra no Inbox e não reabre o onboarding.
@@ -83,3 +83,49 @@ Esses itens permanecem sob coordenação do root. Escrever a spec, listá-la e p
 - Bloqueio restante de evidência: executar a fresh no perfil isolado real com WAHA/Redis e scan do aparelho autorizado. Até isso ocorrer, o comportamento positivo de pareamento, as medições com QR real, o fallback de convite e MFA/reentrada da mesma instalação permanecem **não comprovados em runtime fresco**.
 - O QR transitório é sobrescrito quando a imagem gira e removido inclusive em timeout; o operador deve acompanhar o último marcador `QR_PRONTO` enquanto o teste está vivo.
 - Os artefatos automáticos da configuração fresh ficam desligados. Só screenshots explicitamente mascarados vão ao output temporário; o PNG escaneável nunca usa diretório versionável.
+
+## Fix round 1/5 — proteção do artefato e cleanup
+
+Implementação: commits `9f43b79e2` (`test(onboarding): proteger artefatos da prova fresca`) e `a47a69823` (`test(onboarding): evitar snapshots em fases sensiveis`).
+
+### Achados corrigidos
+
+- O QR escaneável agora nasce dentro de `mkdtemp` exclusivo, com diretório `0700` e placeholder `0600`. A criação possui cleanup interno em erro, e o lifecycle externo começa antes da criação/primeira captura; remove o diretório inteiro em avanço, timeout ou qualquer erro.
+- O cleanup de `onboarding-sem-ia` passou a validar os resultados de delete da organização e do usuário. O agregador tenta todas as operações mesmo quando uma falha, lança erro apenas com a contagem e nunca repete o detalhe potencialmente sensível.
+- Retry TOTP limitado a três tentativas foi restaurado somente no enroll/login fresco, aguardando a próxima janela quando necessário; a suíte continua com `retries: 0`.
+- A config fresh ativa `PLAYWRIGHT_NO_COPY_PROMPT=1`. Em Playwright 1.62.1 isso impede `page.ariaSnapshot()` automático; `error-context.md` ainda pode existir com erro/source, mas sem snapshot DOM.
+- O novo gate executa o corpo real de `_takePageSnapshot` da versão instalada com marcador gerado em runtime. O controle sabotado comprova captura/vazamento sem o guard; o caminho protegido comprova ausência do marcador no `buildErrorContext`. Todas as asserções sobre o marcador são booleanas.
+- Durante link de convite, secret TOTP e recovery codes no DOM, a fresh não usa matchers de Locator: espera/conta por sondas booleanas. Isso também evita o `error.errorContext` próprio de matchers, que não passa pelo guard do snapshot automático.
+
+### RED
+
+Comando:
+
+```bash
+pnpm exec vitest run \
+  tests/unit/escopo-dos-gates.test.ts \
+  tests/unit/e2e-prova-fresca-seguranca.test.ts \
+  --reporter=verbose
+```
+
+Resultado: `exit 1`; 2 arquivos falharam. O gate de config recebeu `undefined` em vez de `"1"`, e a nova suíte não encontrou `tests/e2e/utils/seguranca-da-prova-fresca`. Falhas coerentes com as proteções ainda ausentes.
+
+### GREEN e sabotagem integrada
+
+- Mesmo comando após implementação: `exit 0`; **2 arquivos / 7 testes passed**.
+- Matriz final com `escopo-dos-gates`, `e2e-prova-fresca-seguranca`, `e2e-cobertura-completa` e `e2e-nao-escolhe-a-primeira-linha`: `exit 0`; **4 arquivos / 16 testes passed**.
+- Controle sabotado integrado: o método real, executado sem `PLAYWRIGHT_NO_COPY_PROMPT`, captura o marcador runtime e o `buildErrorContext` o contém; com o guard, ambos os booleanos de vazamento ficam falsos. O valor nunca aparece em source/assert/output.
+- `pnpm typecheck`: a primeira execução acusou a diferença correta entre `Promise` e o `PromiseLike` do PostgREST; após tipar o helper pela interface awaitable real, `exit 0`.
+- ESLint focado nos seis arquivos: `exit 0`.
+- Fresh `--list` com ambiente local fictício: `exit 0`; **1 teste em 1 arquivo**.
+- `git diff --check`: `exit 0`.
+
+### Provas runtime coordenadas pelo root
+
+- Sonda Chromium real do guard: `exit 0`. Sem o guard, a falha deliberada terminou em `exit 1`, criou um `error-context.md` e capturou o marcador fictício gerado em runtime; com o guard, também terminou em `exit 1` e criou um `error-context.md`, mas o marcador ficou ausente. A sonda não usou banco, app nem credencial real e registrou somente booleanos. Fonte local não versionada: `.superpowers/fresh-p0-correcao/provar-dom.mjs`; log: `/tmp/zapfloo-p0-dom-real.log`.
+- Negativa B após o hardening do cleanup: `exit 0`; **1 passed**, 36,8 s (caso 25,5 s). Log: `/tmp/zapfloo-p0-e2e-negative-fix1.log`.
+
+### Não executado nesta rodada
+
+- A fresh real continuou intocada; nenhum login/QR foi consumido.
+- A prova positiva fresh ainda não foi executada; o perfil A continuou sem login/QR durante esta rodada de correção.
