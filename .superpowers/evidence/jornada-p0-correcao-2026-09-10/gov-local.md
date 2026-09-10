@@ -56,3 +56,25 @@ Checkout medido continua `.worktrees/jornada-p0`, Node22.23.2/corepack pnpm9.15.
 Código/testes congelados durante a execução; commits de documentação do root
 não alteraram o comportamento medido. Pareamento, test:db e CI não são partes
 implícitas deste comando. Uma correção posterior exige sua própria verificação.
+
+## Após a onda final — R6 interrompida e R7 integral
+
+R6 (`/tmp/zapfloo-p0-gov-final-r6.log`) foi iniciada junto com banco e E2E.
+Houve timeouts nos unitários e o root interrompeu seu próprio Vitest com SIGINT:
+**exit130**, sem rodapé consolidado. Não usar essa rodada como sucesso.
+
+R7 rodou sem os outros gates concorrentes, com produto/testes em
+`247017a41`/`bee9e8ff0`/`7ad671bd2` e documentação até`ed96e8848`:
+
+```text
+corepack pnpm gov:verify > /tmp/zapfloo-p0-gov-final-r7.log 2>&1
+exit0
+Test Files  755 passed (755)
+     Tests  7922 passed (7922)
+  Duration  310.43s
+```
+
+Typecheck, lint:channels e lint:role-rank passaram; ESLint **0 erros/310 avisos**.
+A suíte é o `vitest run` completo. Nenhum teste ou timeout foi alterado para
+essa repetição. Este resultado inclui as regressões dos quatro findings finais;
+não é execução no checkout principal nem prova de banco/CI/pareamento.
