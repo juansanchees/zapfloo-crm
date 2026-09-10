@@ -393,6 +393,7 @@ jobs:
         agenda-ver-na-agenda.spec.ts
         agenda-escopo-da-organizacao.spec.ts
         troca-de-organizacao-tem-volta.spec.ts
+        observador-qr-fresco.spec.ts
         onboarding-sem-ia.spec.ts
         onboarding-ativacao-restrita.spec.ts
         agenda-caminho-ate-os-horarios.spec.ts

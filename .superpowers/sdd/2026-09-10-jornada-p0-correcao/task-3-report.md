@@ -153,3 +153,40 @@ Resultado: `exit 1`; 2 arquivos falharam. O gate de config recebeu `undefined` e
 - Sonda contra o perfil A com a coluna corrigida: `exit 0`; todas as cinco consultas `HEAD select=organization_id` responderam `200` com `count=0`, inclusive `onboarding_drafts`. Também confirmou estado `{}`, `onboarded=false`, um dono, uma organização e zero MFA. Log: `/tmp/zapfloo-p0-fresh-preflight-coluna.log`.
 - A sonda não alterou banco e a jornada continuou antes de welcome/login/QR, portanto o perfil fresco permaneceu apto à reexecução positiva.
 - `gov:verify` R3 do root terminou em `exit 0`, com **754 arquivos / 7912 testes**, typecheck/lints sem erros e 310 warnings preexistentes. Como a coleta começou antes da criação do gate desta rodada, esse resultado não é atribuído ao novo teste; a evidência dele é o RED/GREEN focado acima.
+
+## Fix round 3/5 — watcher abortável e medições persistidas
+
+Base recebida: `8f6851533372d23ad7f7626432ab82d61abce426`. A prova positiva permaneceu pendente: esta rodada não abriu o perfil A, não acessou backend/banco/env real e não gerou nem escaneou QR real.
+
+### Causas confirmadas
+
+- A execução fresh R2 chegou ao QR real e às medições 1440/768/390, mas o transporte terminou em `FAILED` sem scan. O produto desmonta a imagem fora de `SCAN_QR_CODE`; o watcher ficou dentro de um locator sem limite e o `finally` passou a aguardar essa promise. O teste só encerrou no timeout total de 16 minutos. Log: `/tmp/zapfloo-p0-fresh-proof-r2.log`.
+- Na API instalada do Playwright 1.62.1, `actionTimeout` é `0` por padrão. `Locator.getAttribute`, o terceiro argumento de `Locator.evaluate` e `Locator.screenshot` aceitam `timeout` e `AbortSignal`; a correção usa exatamente essas assinaturas locais, sem presumir API.
+- `testInfo.attach(..., { body })` mantém o Buffer no resultado entregue ao reporter. O reporter `list` não materializa esse body em arquivo, portanto as três medições ficaram apenas em memória.
+
+### Implementação
+
+- `tests/e2e/utils/observador-qr.ts` limita todas as capturas/leituras do QR a 2 segundos, compartilha um `AbortSignal`, usa espera abortável entre ticks e oferece `encerrar()` idempotente. O `finally` da fresh aborta e aguarda esse observador antes de remover o diretório privado.
+- A spec fresca continua sobrescrevendo um único PNG transitório privado e emitindo `QR_PRONTO` a cada fonte nova; o helper não inventa `WORKING` nem muda a lógica do produto.
+- `tests/e2e/utils/evidencia-fresca.ts` coleta apenas identificador neutro `tag:índice`, geometria, estilo necessário e dimensões naturais. Não persiste texto, `src`, QR, telefone ou segredo.
+- Cada medição agora é escrita em `testInfo.outputPath(...json)`, forçada para modo `0600` e anexada por `path`. A cópia real do attachment também preservou `0600` na prova local.
+- `tests/e2e/observador-qr-fresco.spec.ts` usa fixtures reais do Playwright com `page.setContent`: remove uma imagem fictícia durante a leitura e comprova parada/cleanup limitados; também injeta marcador sensível somente em runtime e comprova JSON real sanitizado, modo `0600` e attachment real por path.
+- A nova regressão foi adicionada somente a `SPECS_PARTE_2` do workflow existente. Não há job, config, seed ou skip novo; `test:unit` continua sem depender de Chromium instalado.
+
+### RED / GREEN / sabotagens restauradas
+
+1. RED inicial: `pnpm exec vitest run tests/unit/e2e-observador-qr.test.ts --reporter=verbose` terminou em `exit 1` porque o helper desejado ainda não existia. A prova foi então movida para Playwright E2E, pois o job `verify` não instala Chromium.
+2. RED E2E isolado: `pnpm exec playwright test --config=.superpowers/fix3/playwright.observador.config.ts` terminou em `exit 1` primeiro sem `evidencia-fresca` e depois sem `observador-qr`. A config era temporária/ignorada, sem `webServer`, backend ou env.
+3. RED de coleta: `pnpm exec vitest run tests/unit/e2e-cobertura-completa.test.ts --reporter=verbose` terminou em `exit 1`; acusou `observador-qr-fresco.spec.ts` fora de todas as listas. A entrada única em `SPECS_PARTE_2` restaurou o gate.
+4. GREEN Chromium inicial: após os helpers, **2 passed** em 2,4 s. A primeira tentativa sem permissão de processo falhou ao lançar Chromium no sandbox macOS; a mesma execução autorizada foi a prova válida.
+5. Sabotagem watcher: removido temporariamente o `signal` das operações, a parada levou 953,9 ms e o teste falhou contra o limite de 250 ms; resultado **1 failed / 1 passed**. O `signal` foi restaurado.
+6. Sabotagem attachment: trocado temporariamente `path` por `body`, o teste encontrou o Buffer e falhou em `attachment.body` ausente; resultado **1 failed / 1 passed**. O attachment por `path` foi restaurado.
+7. GREEN Chromium final, com ambas restaurações: **2 passed** em 3,8 s; watcher 1,2 s, JSON 246 ms. O arquivo original e a cópia em `attachments/` existiram em disco com modo `0600`; o marcador runtime ficou ausente do payload.
+8. Gate de cobertura final: `exit 0`; **1 arquivo / 5 testes passed**.
+9. ESLint focado na fresh, regressão e dois helpers: `exit 0`.
+10. `git diff --check`: `exit 0`.
+
+### Não medido nesta rodada
+
+- Nenhum typecheck/suíte completa foi iniciado localmente após o freeze; o root coordena o `gov:verify` consolidado para evitar execução concorrente e registrará o resultado separadamente.
+- A regressão não prova WAHA, scan, `WORKING` nem conclusão do onboarding. Ela prova somente o lifecycle do observador em Chromium real com DOM fictício e a persistência segura das medições.
