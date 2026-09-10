@@ -5,9 +5,15 @@ titulo: Conecte um número antes de configurar a IA
 ---
 
 O primeiro acesso oferece a conexão do WhatsApp depois de confirmar o negócio,
-sem exigir agente, chave de IA ou ensaio revisado. A partir dessa tela é possível
-abrir as conversas e deixar o restante da configuração para depois; isso não
-marca a organização como concluída nem ativa atendimento automático.
+sem exigir agente, chave de IA ou ensaio revisado. A confirmação do número no
+servidor conclui a etapa de conexão e permite avançar. A IA pode ser adiada
+explicitamente para continuar com o funil e a equipe, sem publicar um agente.
+Falhas de confirmação ficam visíveis e permitem tentar novamente.
+
+Há uma única saída para explorar o CRM e retomar depois, com preferência de
+30 dias por usuário e organização. Explorar continua diferente de concluir:
+não simula conexão nem marca a organização como configurada. O adiamento da IA
+e a conexão confirmada deixam registros separados na auditoria.
 
 A revisão continua obrigatória para a ativação restrita do agente. Novos canais
 reutilizam o modo de teste existente, inicialmente sem números autorizados para

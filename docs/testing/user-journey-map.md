@@ -10,7 +10,7 @@
 
 ## J1.38 — Conexão sem IA antes do atendimento humano (10/set/2026)
 
-**PASS no recorte, não na jornada P0 inteira:** Playwright dirigiu o build de
+**Histórico do recorte anterior, não aprovação da P0:** Playwright dirigiu o build de
 produção local, com Supabase PostgreSQL 15 novo, extensões do instalador,
 `baseline.sql` e `bootstrap-owner.ts`. Chaves opcionais de IA, e-mail e retorno
 oficial ausentes. As variáveis obrigatórias do transporte/Redis apontaram para
@@ -37,6 +37,39 @@ Isso prova a falha clara, não geração bem-sucedida por IA.
 áudio, geração de fluxos com credencial válida, cadastro com confirmação de e-mail e a suíte E2E inteira.
 Não houve inventário das três organizações de produção nem prova de todos os
 layouts do Inbox. Ver [política e limites do recorte](jornada-p0-sem-ia.md).
+
+### Correção adversarial de J1.38 — em validação
+
+O `onboarded_at=null` do recorte acima escondia um defeito: faltava o escritor de
+produto para concluir a conexão sem ativar IA. Não era uma limitação deliberada.
+Em `codex/jornada-p0`, o servidor agora confirma o canal da organização pela saúde
+real do transporte antes de gravar `whatsapp`; a tela conserva o UUID durante o
+polling, solicita confirmação em WORKING e permite retry explícito na falha.
+Adiar IA preserva a configuração anterior e audita a decisão. Explorar é único,
+com cookie de 30 dias, e não substitui conclusão.
+
+- Servidor e UI: testes dirigidos e sabotagens de escritor, autoavanço, UUID,
+  seleção explícita, adiamento, auditoria, saída única e validade executados;
+  revisões das Tasks1–2 aprovadas até `c407b3525`.
+- Banco: `corepack pnpm test:db`, exit0, 167 arquivos / 1374 testes passados,
+  um skip pré-existente; baseline install/update aprovados.
+- E2E dirigidos da nova ordem: normal 12 passed; ativação sintética 3 passed;
+  quatro casos de troca de organização passados; negativa após hardening 1 passed.
+  São fronteiras controladas, não prova de pareamento.
+- Gate consolidado local R4: exit0, 755 arquivos / 7913 testes passados, lint
+  0 erros/310 avisos, incluindo a regressão de preflight.
+- **QR REAL ALCANÇADO:** build fresco sem chaves opcionais, baseline + bootstrap,
+  transporte e Redis ativos; login → welcome → QR carregado. Asserções de
+  `getBoundingClientRect`/`getComputedStyle` e limites horizontais passaram em
+  1440/768/390. PNGs persistidos mascaram o QR; o escaneável foi exibido ao dono
+  apenas como arquivo temporário privado.
+- **PENDENTE:** scan, autoavanço real, conclusão persistida, convite/MFA/reentrada
+  da mesma instalação e cinco checks do CI desta branch. A sessão chegou a
+  `FAILED`; o transporte registrou `QR refs attempts ended`. Geração de QR
+  não equivale a conexão concluída.
+- Evidência desta correção: `.superpowers/evidence/jornada-p0-correcao-2026-09-10/`.
+  O perfil de pareamento é outro banco recém-bootstrapado, com WAHA e Redis vivos;
+  a preparação da infraestrutura sozinha não comprova a jornada.
 
 ## Convenções
 
@@ -99,10 +132,12 @@ A spec completa `redesign-operacional.spec.ts` passou quatro cenários, incluind
 
 Contexto do código: primeiro usuário nasce do `scripts/bootstrap-owner.ts`
 (install.sh); quem é convidado e ainda não tem conta entra por `/signup?invite=`.
-Wizard: welcome → whatsapp → (nuvemshop se `NUVEMSHOP_ENABLED`) → setup-ai →
-**testar** → invite-team → done. A ordem, os rótulos e o resumo final saem de uma
-fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Gate:
-`organizations.onboarded_at`. MFA obrigatório pra admin logo após o wizard.
+Wizard: welcome → connect-whatsapp → setup-ai **opcional** →
+(connect-nuvemshop se `NUVEMSHOP_ENABLED`) → funil → invite-team → done.
+A ordem, os rótulos e o resumo final saem de `lib/onboarding/passos.ts`.
+O ensaio revisado fica dentro de setup-ai, não é etapa obrigatória para quem
+adiou IA. Gate: `organizations.onboarded_at`. MFA depende da política existente;
+num bootstrap com política opcional, o dono pode ativá-lo em Segurança.
 
 | # | Caso | Expectativa |
 |---|------|-------------|
@@ -111,11 +146,11 @@ fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Ga
 | J1.3 | Welcome: termos não aceitos | botão avança desabilitado |
 | J1.4 | Welcome: nome da org + timezone salvos | grava `display_name`/`timezone`, avança pro WhatsApp |
 | J1.5 | Connect WhatsApp: WAHA ativo → QR aparece | sessão criada, QR renderiza via proxy, poll de status roda |
-| J1.6 | Connect WhatsApp: "Pular por enquanto" | avança pro step correto (setup-ai quando Nuvemshop off) |
-| J1.7 | Setup IA: criar agente default | `ai_agents` criado **e a versão publicada aponta para o provedor que a instalação escolheu**, com o modelo curado DAQUELE provedor; avança |
+| J1.6 | QR escaneado / confirmar canal existente | confirmação real no servidor grava `whatsapp` e avança para o próximo passo, sem exigir ativação de IA |
+| J1.7 | Setup IA opcional: adiar explicitamente | preserva configuração existente, grava decisão auditada e avança ao funil quando a loja está desabilitada; não cria/publica agente |
 | J1.8 | Invite team: enviar convite SEM Resend configurado (realidade da VPS fresca) | UI **não mente**: mostra que email não saiu + oferece `accept_url` copiável |
 | J1.9 | Done: "Ir para o Inbox" | seta `onboarded_at`, cai no `/app/inbox` |
-| J1.10 | Gate MFA pós-onboarding | blocker aparece; enrolar TOTP + ver/salvar recovery codes funciona de ponta a ponta |
+| J1.10 | MFA por escolha em Configurações › Segurança | ativar TOTP, ver/salvar recovery codes e provar o fator na próxima entrada; não impor etapa invisível com política opcional |
 | J1.11 | Abandonar no meio e voltar (fecha browser no step 3) | retoma exatamente no step pendente |
 | J1.12 | Tentar `/app/inbox` antes de concluir | redirect pro onboarding, sem loop |
 | J1.13 | Reabrir `/onboarding` depois de concluído | redirect pro app (wizard não reabre) |
@@ -130,7 +165,7 @@ fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Ga
 | J1.22 | Convidado que **ainda não tem conta** | a tela de aceite oferece "Ainda não tenho conta", o signup recebe o convite, não pede nome de empresa e trava o e-mail; ao confirmar, a pessoa vai para o aceite em vez de ganhar uma organização própria — antes ela virava **admin de uma empresa fantasma**, com wizard alheio e MFA de administrador · **PASS** (`lib/auth/convite-no-signup.test.ts`, `tests/e2e/invite-lifecycle.spec.ts` casos 10–12) |
 | J1.23 | Convite expirado ou emitido para outro e-mail, no signup | falha FECHADA: não provisiona organização nenhuma e explica no login. Cair no provisionamento aqui devolveria o defeito de J1.22 para quem demorasse entre criar a conta e confirmar o e-mail · **PASS** (`lib/auth/convite-no-signup.test.ts`) |
 
-| J1.24 | Ver o funcionário atender antes de terminar | passo novo entre treinar e chamar o time: ensaio com o runtime real (`is_dry_run`), nada enviado pelo WhatsApp. Trata os três estados — sem agente, agente em rascunho, e o caso normal — e o erro aparece aqui, não com o primeiro cliente de verdade · **PASS** (`tests/e2e/vps-fresh-onboarding.spec.ts`, `lib/onboarding/passos.test.ts`) |
+| J1.24 | Ensaio de IA escolhido, sem envio | preparar, testar texto e revisar dentro de setup-ai; não é requisito para o caminho sem IA. A antiga etapa `/testar` não pertence mais a `PASSOS`; seus testes legados não provam conclusão fresca. Ver seção de ensaio abaixo e `onboarding-ativacao-restrita.spec.ts`. |
 | J1.24a | Entender o limite do teste legado | Todas as ferramentas retornam recusa antes dos handlers; eventos operacionais suprimidos, registro técnico mantido. `runtime-dry-run-isolado.test.ts` e `test-panel-isolamento.test.tsx`; prova HTTP sintética no caso de ensaio de `troca-de-organizacao-tem-volta.spec.ts` (opt-in local). Não comprova ferramentas nem transporte reais. |
 | J1.25 | O passo 1 mostra o que a instalação já trouxe | provedor contratado, WhatsApp pronto, funil criado — cada linha MEDIDA. E o campo de nome vem vazio quando a organização ainda está com o "Minha Empresa" do instalador, em vez de obrigar a pessoa a apagá-lo · **PASS** (`lib/instalacao/ambiente.test.ts`) |
 | J1.26 | O quadro de clientes deixa de nascer de e-commerce | passo novo entre treinar e ver ele atender. `trg_seed_default_pipeline_for_org` semeia "Carrinho abandonado / Em separação / Enviado" em TODA organização, e a clínica abria o quadro dela e lia isso. A sugestão sai do MESMO modelo que vai atender — se ela falha, o dono descobre agora e não com o primeiro cliente · **PASS** (`tests/e2e/wizard-do-funcionario.spec.ts`, `lib/onboarding/proposta-de-funil.test.ts`) |
@@ -146,9 +181,9 @@ fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Ga
 
 > **Cobertura em camadas (J1.22/J1.23):** a decisão de *não provisionar* é provada por unitário, porque é uma função pura e roda no gate obrigatório. O caso de tela cobre o caminho visível (CTA → signup com o token → campos certos). O que **não** está coberto ponta a ponta é a volta do link de confirmação de e-mail: exigiria caixa de e-mail no e2e, e a spec que faria isso é a de instalação fresca, que está fora do CI.
 
-> **A jornada J1 passou a ter GATE.** `tests/e2e/wizard-do-funcionario.spec.ts` roda no CI (SPECS_PARTE_1) e cobre o wizard inteiro pela tela — do login ao "Começar a usar" — criando a PRÓPRIA organização, porque o seed compartilhado entrega uma já onboardada e zerá-la mandaria as specs seguintes para dentro do onboarding. Fica de fora só o ensaio com resposta real, que exige chave de IA com saldo. `vps-fresh-onboarding.spec.ts` continua fora do gate (depende de WAHA, Redis, Resend e Nuvemshop) e segue sendo a prova mais completa, para rodar à mão.
+> **O gate automático não equivale à instalação fresca inteira.** `wizard-do-funcionario.spec.ts` cria sua própria organização e guarda os passos que não precisam de pareamento externo; as specs afetadas pela nova ordem foram atualizadas e executadas nesta leva. A prova positiva `vps-fresh-onboarding.spec.ts` exige WAHA/Redis reais e scan manual de aparelho autorizado. Resend e Nuvemshop ausentes são pré-condições da prova, não serviços necessários para aprová-la. Conferir o resultado efetivo desta leva em J1.38, sem reaproveitar um PASS histórico como resultado atual.
 
-> **Achado ABERTO (não é regressão, é primeira impressão):** percorrendo o wizard inteiro num tenant fresco, o botão "Começar a usar" entrega o dono no Inbox e a PRIMEIRA coisa que ele vê é um modal bloqueante de verificação em duas etapas — um sétimo passo que a barra de progresso do wizard nunca anunciou. O MFA obrigatório para `admin` é decisão de produto e está correto; o que está errado é ele aparecer como surpresa depois de seis passos que se apresentaram como o caminho completo. Conserto natural: virar passo do wizard, ou ao menos ser anunciado na tela final. Fora do escopo da frente do quadro de clientes.
+> **Achado histórico de MFA:** o bloqueador inesperado descrito nesta seção foi tratado pela política opcional registrada em J1.33–J1.35. Não é correto tratá-lo como aberto sem revalidar a política da instalação; ter fator já cadastrado continua exigindo prová-lo.
 
 > **J1.21 — FECHADA.** O agente do onboarding nascia `kind='rag_bot'` (o default do banco, de quando o produto só tinha o formato antigo), abria no editor legado — Temperature, Top K, Similarity threshold — e as capacidades que ele recebia ligadas ficavam **invisíveis** para o dono: funcionavam no runtime e não tinham superfície de configuração, que é o invariante 6 do Sistema Vivo quebrado.
 >
