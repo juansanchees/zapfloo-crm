@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
-import { compactAreaForPath, compactAreas } from "@/lib/navigation/registry";
+import { compactAreaForPath, compactAreas, compactTabForPath } from "@/lib/navigation/registry";
 import { cn } from "@/lib/utils";
 
 /** Segunda camada do menu compacto: aparece apenas onde há escolhas irmãs. */
@@ -18,13 +18,7 @@ export function AreaNavigation() {
 
   if (!area || area.tabs.length < 2) return null;
 
-  const tabAtiva = [...area.tabs]
-    .filter((tab) => {
-      // "Visão geral" é o hub da área e só fica ativo na sua própria URL.
-      if (tab.label === "Visão geral") return pathname === tab.href;
-      return pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-    })
-    .sort((a, b) => b.href.length - a.href.length)[0];
+  const tabAtiva = compactTabForPath(pathname, area.tabs);
 
   return (
     <div className="border-b bg-surface/90 px-4 backdrop-blur md:px-6">

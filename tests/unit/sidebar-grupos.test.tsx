@@ -66,7 +66,7 @@ describe("Sidebar compacto", () => {
 
     expect(screen.queryByRole("link", { name: "Radar" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Tarefas" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute("href", "/app/kanban");
+    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute("href", "/app/leads");
     expect(screen.getByRole("link", { name: "Automações" })).toHaveAttribute(
       "href",
       "/app/ai/followups",
@@ -115,6 +115,14 @@ describe("Sidebar compacto", () => {
       "page",
     );
     expect(screen.getByRole("link", { name: "Leads" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("mantém Leads ativo dentro do quadro de oportunidades", () => {
+    comoPapel("agent");
+    pathRef.current = "/app/pipelines/funil-1";
+    render(<Sidebar collapsed={false} />);
+
+    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute("aria-current", "page");
   });
 
   it("não mostra Agentes de IA abaixo de manager", () => {

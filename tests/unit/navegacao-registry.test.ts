@@ -115,7 +115,7 @@ describe("sidebarGroups", () => {
     // calado no sidebar e reabrir a mesma corrida por pixel.
     const crm = sidebarGroups(true, null).find((g) => g.group.id === "crm");
     expect(crm?.items.map((i) => i.href)).toEqual([
-      "/app/kanban",
+      "/app/leads",
       "/app/contacts",
       "/app/tasks",
     ]);
@@ -152,7 +152,7 @@ describe("compactAreas", () => {
       ["main", "Conversas", "/app/inbox"],
       ["main", "Calendário", "/app/agenda"],
       ["main", "Contatos", "/app/contacts"],
-      ["main", "Leads", "/app/kanban"],
+      ["main", "Leads", "/app/leads"],
       ["main", "Agentes de IA", "/app/ai"],
       ["main", "Automações", "/app/ai/followups"],
       ["main", "Relatórios", "/app/analise"],
@@ -171,7 +171,8 @@ describe("compactAreas", () => {
       ["Respostas rápidas", "/app/templates"],
     ]);
     expect(abas("Leads")).toEqual([
-      ["Meus funis", "/app/kanban"],
+      ["Leads", "/app/leads"],
+      ["Funis", "/app/kanban"],
       ["Produtos", "/app/products"],
       ["Etapas do funil", "/app/settings/tenant/pipelines"],
     ]);
@@ -203,13 +204,14 @@ describe("compactAreas", () => {
 });
 
 describe("hubSections", () => {
-  it("o hub do CRM é inventário: as cinco telas do grupo, nas duas seções", () => {
+  it("o hub do CRM é inventário: operação e gestão acessíveis nas duas seções", () => {
     // As seções são a régua do sidebar escrita por extenso — o que se abre todo
     // dia contra o que se define uma vez. Lista EXATA: `toContain` deixaria uma
     // tela nova entrar sem que ninguém decidisse de que lado dela ela cai.
     const secoes = hubSections("crm", true, null);
     expect(secoes.map((s) => s.section)).toEqual(["O dia a dia da venda", "Preparar a venda"]);
     expect(secoes.flatMap((s) => s.items.map((i) => i.href))).toEqual([
+      "/app/leads",
       "/app/kanban",
       "/app/contacts",
       "/app/tasks",

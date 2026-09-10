@@ -20,6 +20,24 @@ afterEach(() => {
 });
 
 describe("navegação contextual da área", () => {
+  it("abre a operação de Leads e mantém a gestão de Funis em uma aba separada", () => {
+    pathRef.current = "/app/pipelines/funil-1";
+    render(<AreaNavigation />);
+
+    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Funis" })).toHaveAttribute("href", "/app/kanban");
+    expect(screen.getByRole("link", { name: "Funis" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("deixa a troca de funil disponível para viewer sem oferecer configuração de etapas", () => {
+    pathRef.current = "/app/pipelines/funil-1";
+    authRef.activeOrg = { orgId: "org-1", name: "Org", role: "viewer" };
+    render(<AreaNavigation />);
+
+    expect(screen.getByRole("link", { name: "Funis" })).toHaveAttribute("href", "/app/kanban");
+    expect(screen.queryByRole("link", { name: "Etapas do funil" })).toBeNull();
+  });
+
   it("reúne Radar e Respostas rápidas dentro de Conversas", () => {
     render(<AreaNavigation />);
 

@@ -217,12 +217,13 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
   {
     id: "funis",
     label: "Leads",
-    href: "/app/kanban",
+    href: "/app/leads",
     icon: Kanban,
     position: "main",
     section: "operacao",
     tabs: [
-      { href: "/app/kanban", label: "Meus funis" },
+      { href: "/app/leads", label: "Leads" },
+      { href: "/app/kanban", label: "Funis" },
       { href: "/app/products" },
       { href: "/app/settings/tenant/pipelines" },
     ],
@@ -361,6 +362,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
 
   // ---- CRM — o funil ----
   {
+    href: "/app/leads",
+    label: "Leads",
+    description: "Acompanhe oportunidades e organize cada etapa da venda.",
+    icon: Kanban,
+    group: "crm",
+    section: "O dia a dia da venda",
+    sidebar: true,
+  },
+  {
     // ⚠️ ERA "Kanban", e a URL continua sendo. O nome saiu da interface porque o
     // produto tinha CINCO vocabulários para a mesma coisa — "Kanban" no menu,
     // "Pipelines" no título desta tela, "Funis" no menu ao lado, "funil" em todo
@@ -377,7 +387,6 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: Kanban,
     group: "crm",
     section: "O dia a dia da venda",
-    sidebar: true,
   },
   {
     href: "/app/contacts",
@@ -977,8 +986,19 @@ const AREA_PADRAO_POR_GRUPO: Record<NavGroupId, CompactAreaId> = {
 };
 
 function pathPertence(pathname: string, href: string): boolean {
+  // O quadro tem ID no caminho, mas pertence à entrada operacional de Leads.
+  if (href === "/app/leads" && pathname.startsWith("/app/pipelines/")) return true;
   if (href === "/app") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Mesma resolução de rota usada pelo sidebar e pelas abas contextuais. */
+export function compactTabForPath(pathname: string, tabs: CompactAreaTab[]): CompactAreaTab | undefined {
+  return [...tabs]
+    .filter((tab) => tab.label === "Visão geral"
+      ? pathname === tab.href
+      : pathPertence(pathname, tab.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
 }
 
 /** Área pai da rota atual. Abas explícitas vencem o grupo canônico. */

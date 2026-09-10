@@ -154,10 +154,11 @@ test.describe("navegação compacta", () => {
     // /pipelines/, que casa com as duas.
     //
     await sidebar(page).getByRole("link", { name: "Leads" }).click();
-    await page.waitForURL(/\/app\/kanban/);
+    await page.waitForURL(/\/app\/pipelines\//);
     const opcoes = page.getByRole("navigation", { name: /Leads.*Opções da área/ });
     await expect(opcoes.getByRole("link")).toHaveText([
-      "Meus funis",
+      "Leads",
+      "Funis",
       "Produtos",
       "Etapas do funil",
     ]);
@@ -176,7 +177,7 @@ test.describe("navegação compacta", () => {
     await expect(sidebar(page).getByRole("link", { name: "Produtos" })).toHaveCount(0);
 
     await sidebar(page).getByRole("link", { name: "Leads" }).click();
-    await page.waitForURL(/\/app\/kanban/);
+    await page.waitForURL(/\/app\/pipelines\//);
     await page
       .getByRole("navigation", { name: /Leads.*Opções da área/ })
       .getByRole("link", { name: "Produtos" })
@@ -187,6 +188,9 @@ test.describe("navegação compacta", () => {
   test("e a lista de funis é o item vizinho, com nome próprio", async ({ page }) => {
     await loginAdmin(page);
     await sidebar(page).getByRole("link", { name: "Leads", exact: true }).click();
+    await page.waitForURL(/\/app\/pipelines\//);
+    await page.getByRole("navigation", { name: /Leads.*Opções da área/ })
+      .getByRole("link", { name: "Funis", exact: true }).click();
     await page.waitForURL(/\/app\/kanban/);
     await expect(page.getByRole("heading", { name: "Funis", level: 1 })).toBeVisible({
       timeout: 30_000,
@@ -303,7 +307,7 @@ test.describe("navegação compacta", () => {
       });
 
       await sidebar(page).getByRole("link", { name: "Leads", exact: true }).click();
-      await page.waitForURL(/\/app\/kanban/);
+      await page.waitForURL(/\/app\/pipelines\//);
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expectSemOverflowHorizontal(page, "shell mobile após navegar pelo drawer");
 
