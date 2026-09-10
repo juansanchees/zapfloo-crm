@@ -158,6 +158,52 @@ describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
     vi.useRealTimers();
   });
 
+  it.each([
+    {
+      falha: "HTTP 503",
+      configurar: () => vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({ error: { code: "upstream_unavailable" } }),
+      } as Response),
+    },
+    {
+      falha: "rejeição de rede",
+      configurar: () => vi.mocked(fetch).mockRejectedValueOnce(new Error("rede indisponível")),
+    },
+  ])("preserva o UUID durante $falha e confirma uma vez quando o polling recupera", async ({ configurar }) => {
+    vi.useFakeTimers();
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        data: {
+          status: "STARTING",
+          session: "org_teste",
+          channel_session_id: "77777777-7777-4777-8777-777777777777",
+        },
+      }),
+    } as Response);
+    configurar();
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { status: "WORKING", session: "org_teste" } }),
+    } as Response);
+
+    montar();
+    fireEvent.click(screen.getByTestId("forma-qr").querySelector("input")!);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    await act(async () => { vi.advanceTimersByTime(3_000); await Promise.resolve(); await Promise.resolve(); });
+    expect(markWhatsappConfigured).not.toHaveBeenCalled();
+    await act(async () => { vi.advanceTimersByTime(3_000); await Promise.resolve(); await Promise.resolve(); });
+
+    expect(markWhatsappConfigured).toHaveBeenCalledOnce();
+    expect(markWhatsappConfigured).toHaveBeenCalledWith({
+      channel_session_id: "77777777-7777-4777-8777-777777777777",
+    });
+  });
+
   it("falha de confirmação interrompe o avanço automático e oferece tentativa manual", async () => {
     vi.mocked(markWhatsappConfigured).mockResolvedValue({ ok: false, error: "upstream_unavailable" });
     vi.mocked(fetch).mockResolvedValue({
@@ -182,6 +228,35 @@ describe("o passo do telefone pergunta como a pessoa já usa o número", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /tentar confirmar novamente/i }));
     await waitFor(() => expect(markWhatsappConfigured).toHaveBeenCalledTimes(2));
+  });
+
+  it.each([
+    { forma: "oficial", marcador: "dublê-oficial" },
+    { forma: "parceiro", marcador: "dublê-parceiro" },
+  ])("mantém o erro de Conferir visível ao sair do QR WORKING para o caminho $forma", async ({ forma, marcador }) => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          status: "WORKING",
+          session: "org_teste",
+          channel_session_id: "88888888-8888-4888-8888-888888888888",
+        },
+      }),
+    } as Response);
+
+    montar();
+    fireEvent.click(screen.getByTestId("forma-qr").querySelector("input")!);
+    await waitFor(() => expect(markWhatsappConfigured).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByTestId("voltar-para-escolha"));
+    fireEvent.click(screen.getByTestId(`forma-${forma}`).querySelector("input")!);
+    await screen.findByTestId(marcador);
+
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("rede indisponível"));
+    fireEvent.click(screen.getByRole("button", { name: /conferir canais conectados/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível carregar os canais conectados/i);
   });
 
   it("Conferir canais consulta a lista autenticada e confirma o único canal pelo mesmo escritor", async () => {

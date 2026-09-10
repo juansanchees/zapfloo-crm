@@ -21,6 +21,9 @@ vi.mock("@/app/actions/onboarding/_shared", () => ({
 }));
 
 import { skipAi } from "@/app/actions/onboarding/createDefaultAgent";
+import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
+
+const contexto = contextoDoRascunho("user", "org");
 
 const receipt = {
   draft_revision: 3,
@@ -57,7 +60,7 @@ describe("adiamento explícito da IA", () => {
     };
     mocks.load.mockResolvedValue({ state: { ai }, onboardedAt: null });
 
-    await expect(skipAi()).rejects.toThrow("REDIRECT:/onboarding");
+    await expect(skipAi({ expected_context: contexto })).rejects.toThrow("REDIRECT:/onboarding");
 
     expect(mocks.patch).toHaveBeenCalledWith("org", { ai: { ...ai, skipped: true } });
     expect(mocks.admin).not.toHaveBeenCalled();
@@ -79,9 +82,24 @@ describe("adiamento explícito da IA", () => {
     mocks.load.mockResolvedValue({ state: {}, onboardedAt: null });
     mocks.patch.mockRejectedValue(new Error("db_error"));
 
-    await expect(skipAi()).rejects.toThrow("db_error");
+    await expect(skipAi({ expected_context: contexto })).rejects.toThrow("db_error");
 
     expect(mocks.patch).toHaveBeenCalledOnce();
+    expect(mocks.audit).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(mocks.admin).not.toHaveBeenCalled();
+  });
+
+  it("formulário da organização A não adia IA na organização B do cookie", async () => {
+    const contextoDaOrganizacaoA = contextoDoRascunho("user", "org-a");
+
+    await expect(skipAi({ expected_context: contextoDaOrganizacaoA })).resolves.toEqual({
+      ok: false,
+      error: "draft_context_changed",
+    });
+
+    expect(mocks.load).not.toHaveBeenCalled();
+    expect(mocks.patch).not.toHaveBeenCalled();
     expect(mocks.audit).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();
     expect(mocks.admin).not.toHaveBeenCalled();
