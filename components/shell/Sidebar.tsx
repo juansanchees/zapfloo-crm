@@ -154,7 +154,7 @@ export function SidebarContent({
         {crescimento.length > 0 && (
           <div className="mt-4 space-y-1">
             {!collapsed && (
-              <h2 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+              <h2 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
                 {t("Crescimento")}
               </h2>
             )}
