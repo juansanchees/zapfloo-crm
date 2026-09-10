@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
 import { AreaNavigation } from "@/components/shell/AreaNavigation";
@@ -10,9 +11,13 @@ import { useNotifyOpenFromServiceWorker } from "@/lib/notifications/notify_open"
 interface AppShellProps {
   sidebarCollapsed: boolean;
   children: ReactNode;
+  notice?: ReactNode;
+  onboardingNotice?: ReactNode;
 }
 
-export function AppShell({ sidebarCollapsed, children }: AppShellProps) {
+export function AppShell({ sidebarCollapsed, children, notice, onboardingNotice }: AppShellProps) {
+  const pathname = usePathname();
+  const isInbox = pathname === "/app/inbox" || pathname.startsWith("/app/inbox/");
   useInboundMessageAlerts();
   useCrmAlerts();
   useNotifyOpenFromServiceWorker();
@@ -41,9 +46,13 @@ export function AppShell({ sidebarCollapsed, children }: AppShellProps) {
         cima da lista.
       */}
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        {notice}
         <TopBar />
         <AreaNavigation />
-        <main className="flex-1 overflow-auto bg-workspace p-4 md:p-6">
+        <main className={isInbox
+          ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-workspace p-2 md:p-4"
+          : "min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6"}>
+          {onboardingNotice}
           {children}
         </main>
       </div>

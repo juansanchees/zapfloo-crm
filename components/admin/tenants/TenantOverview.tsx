@@ -9,6 +9,9 @@ import type {
   TenantIntegrations,
 } from "@/hooks/useTenantDetail";
 import { useT } from "@/hooks/i18n/useT";
+import { PeriodoDeTeste } from "@/components/billing/PeriodoDeTeste";
+import { fimDoPeriodoDeTeste } from "@/lib/billing/periodo-de-teste";
+import { useState } from "react";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,6 +97,7 @@ interface TenantOverviewProps {
 // ---------------------------------------------------------------------------
 
 export function TenantOverview({ organization, counts, integrations }: TenantOverviewProps) {
+  const [agora] = useState(() => Date.now());
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
   const plan = (organization.settings as { plan?: string } | null)?.plan ?? "—";
@@ -110,6 +114,7 @@ export function TenantOverview({ organization, counts, integrations }: TenantOve
 
   return (
     <div className="space-y-6">
+      <PeriodoDeTeste key={organization.id} fim={fimDoPeriodoDeTeste(organization.created_at)} agora={agora} />
       {/* Info card */}
       <div className="rounded-lg border bg-card p-5">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">

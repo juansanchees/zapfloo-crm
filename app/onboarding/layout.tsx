@@ -10,6 +10,7 @@ import { ExplorarCrm } from "./_components/ExplorarCrm";
 import { passosVisiveis } from "@/lib/onboarding/passos";
 import { env } from "@/lib/env";
 import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
+import { PeriodoDeTesteDaOrganizacao } from "@/components/billing/PeriodoDeTesteDaOrganizacao";
 
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAuth();
@@ -42,6 +43,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
 
   return (
     <IdiomaProvider locale={user.locale}>
+      <PeriodoDeTesteDaOrganizacao organizationId={activeOrg.orgId} />
       <OnboardingFrame orgName={activeOrg.name} passos={passos} controls={
             <>
               <ExplorarCrm />

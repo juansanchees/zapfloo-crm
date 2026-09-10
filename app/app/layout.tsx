@@ -25,6 +25,9 @@ import { listarConexoesCaidas, type ConexaoCaida } from "@/lib/channels/health";
 import { COOKIE_EXPLORACAO, exploracaoPertenceA } from "@/lib/onboarding/exploracao";
 import { OnboardingPendenteBanner } from "@/components/app/OnboardingPendenteBanner";
 import { requireRole } from "@/lib/auth/require-role";
+import { PeriodoDeTeste } from "@/components/billing/PeriodoDeTeste";
+import { fimDoPeriodoDeTeste } from "@/lib/billing/periodo-de-teste";
+import { instanteDoServidor } from "@/lib/billing/relogio-servidor";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
@@ -33,6 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let activeOrg = await resolveActiveOrg(user);
   const store = await cookies();
   let onboardingPendente = false;
+  let fimDoTeste: string | null = null;
 
   /**
    * A cor desta organização, serializada, ou `null` quando ela não tem uma.
@@ -50,10 +54,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const admin = createAdminClient();
     const { data: orgRow } = await admin
       .from("organizations")
-      .select("onboarded_at, status, settings")
+      .select("onboarded_at, status, settings, created_at")
       .eq("id", activeOrg.orgId)
       .maybeSingle();
     if (orgRow?.status === "suspended") redirect("/account-suspended");
+    fimDoTeste = fimDoPeriodoDeTeste(orgRow?.created_at);
     // A configuração é administrativa: membros convidados não podem concluí-la
     // e não devem ficar presos entre o CRM e o wizard.
     onboardingPendente = Boolean(orgRow && !orgRow.onboarded_at && activeOrg.role === "admin");
@@ -172,8 +177,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     user.id,
     activeOrg?.orgId,
   );
-  const shell = <AppShell sidebarCollapsed={collapsed}>
-    {onboardingPendente ? <OnboardingPendenteBanner /> : null}
+  const shell = <AppShell sidebarCollapsed={collapsed}
+    notice={activeOrg ? <PeriodoDeTeste fim={fimDoTeste} agora={instanteDoServidor()} /> : null}
+    onboardingNotice={onboardingPendente ? <OnboardingPendenteBanner /> : null}>
     {children}
   </AppShell>;
 
