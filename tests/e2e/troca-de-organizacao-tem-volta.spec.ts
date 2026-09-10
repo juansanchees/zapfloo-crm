@@ -203,7 +203,7 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
   } finally { if (synthetic) await new Promise<void>((resolve, reject) => receiver.close(error => error ? reject(error) : resolve())); }
 });
 
-test("rascunho retoma os campos e protege contra outra aba sem ativar atendimento", async ({ page }) => {
+test("rascunho retoma os campos e protege contra outra aba sem ativar atendimento", async ({ page }, testInfo) => {
   const creds = lerCreds();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   if (!["127.0.0.1", "localhost"].includes(new URL(url).hostname)) throw new Error("Fixture permitido apenas no banco local.");
@@ -267,6 +267,56 @@ test("rascunho retoma os campos e protege contra outra aba sem ativar atendiment
   await page.getByLabel("Como ele vai se chamar").fill("Campos da empresa A");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "organização ou a sessão mudou" })).toBeVisible();
+  const { data: estadoBAntes, error: estadoBAntesError } = await svc
+    .from("organizations")
+    .select("onboarding_state")
+    .eq("id", orgB)
+    .single();
+  if (estadoBAntesError) throw estadoBAntesError;
+  const { count: auditoriasBAntes, error: auditoriasBAntesError } = await svc
+    .from("api_audit_log")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgB)
+    .eq("action", "onboarding.ai_skipped");
+  if (auditoriasBAntesError) throw auditoriasBAntesError;
+
+  await page.getByRole("button", { name: "Adiar IA e continuar", exact: true }).click();
+  const alertaDeContexto = page.getByRole("alert").filter({
+    hasText: "A organização ativa mudou. Recarregue esta etapa antes de adiar a IA.",
+  });
+  await expect(alertaDeContexto).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await alertaDeContexto.scrollIntoViewIfNeeded();
+  const medidasDoAlerta = await alertaDeContexto.evaluate((elemento) => {
+    const caixa = elemento.getBoundingClientRect();
+    return {
+      left: caixa.left,
+      right: caixa.right,
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  expect(medidasDoAlerta.left).toBeGreaterThanOrEqual(-1);
+  expect(medidasDoAlerta.right).toBeLessThanOrEqual(391);
+  expect(medidasDoAlerta.scrollWidth).toBeLessThanOrEqual(medidasDoAlerta.viewportWidth + 1);
+  await page.screenshot({ path: testInfo.outputPath("adiar-ia-contexto-antigo-celular.png"), fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  const { data: estadoBDepois, error: estadoBDepoisError } = await svc
+    .from("organizations")
+    .select("onboarding_state")
+    .eq("id", orgB)
+    .single();
+  if (estadoBDepoisError) throw estadoBDepoisError;
+  const { count: auditoriasBDepois, error: auditoriasBDepoisError } = await svc
+    .from("api_audit_log")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgB)
+    .eq("action", "onboarding.ai_skipped");
+  if (auditoriasBDepoisError) throw auditoriasBDepoisError;
+  expect(estadoBDepois.onboarding_state).toEqual(estadoBAntes.onboarding_state);
+  expect(auditoriasBDepois).toBe(auditoriasBAntes);
+
   const { data: draftB, error: readBError } = await svc.from("onboarding_drafts").select("revision,configuration").eq("organization_id", orgB).single();
   if (readBError) throw readBError;
   expect(draftB).toEqual({ revision: 1, configuration: { name: "Nome exclusivo B", prompt_template: "support_minimal", regras_da_casa: "Regra B" } });

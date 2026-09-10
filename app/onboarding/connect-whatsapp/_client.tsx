@@ -334,14 +334,14 @@ export function ConnectWhatsappClient({
         if (!res.ok) {
           setInfo((antes) =>
             antes.status === "INIT" || antes.status === "STARTING"
-              ? { status: "ERROR", session: sessionName, error: `o servidor respondeu ${res.status}` }
+              ? { ...antes, status: "ERROR", session: sessionName, error: `o servidor respondeu ${res.status}` }
               : antes,
           );
         }
       } catch {
         setInfo((antes) =>
           antes.status === "INIT" || antes.status === "STARTING"
-            ? { status: "ERROR", session: sessionName, error: "não consegui falar com o servidor" }
+            ? { ...antes, status: "ERROR", session: sessionName, error: "não consegui falar com o servidor" }
             : antes,
         );
       }
@@ -400,7 +400,7 @@ export function ConnectWhatsappClient({
     canais={canais}
     canalSelecionado={canalSelecionado}
     mostrarSelecao={mostrarSelecao}
-    erro={status === "WORKING" ? null : erroDaConfirmacao}
+    erro={forma === "qr" && status === "WORKING" ? null : erroDaConfirmacao}
     onConferir={() => void conferirCanaisConectados()}
     onSelecionar={setCanalSelecionado}
     onConfirmar={() => void confirmarCanal(canalSelecionado)}

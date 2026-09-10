@@ -12,6 +12,7 @@ import { listSelectableChannels, type SelectableChannel } from "@/lib/channels/s
 import { createAdminClient } from "@/lib/supabase/admin";
 import { aiAgentDefaultSchema } from "@/lib/schemas/onboarding";
 import { promptDoOnboarding } from "@/lib/onboarding/prompt";
+import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
 import { capacidadesPadraoDoOnboarding } from "@/lib/ai/agents/capacidades-padrao";
 import { publicarMemoriaDaOrg } from "@/lib/ai/memoria-da-org";
 import { escolherModeloDoProvedor } from "@/lib/ai/agents/escolher-modelo";
@@ -506,8 +507,19 @@ export async function createDefaultAgent(formData: FormData): Promise<CreateAgen
   redirect("/onboarding");
 }
 
-export async function skipAi(): Promise<void> {
+export type SkipAiResult = { ok: false; error: "draft_context_changed" };
+
+export async function skipAi(input: unknown): Promise<void | SkipAiResult> {
   const ctx = await requireOnboardingCtx();
+  const expectedContext = typeof input === "object" && input !== null && "expected_context" in input
+    ? (input as { expected_context?: unknown }).expected_context
+    : undefined;
+  // Detector de formulário antigo, não autorização: usuário, tenant e papel
+  // continuam vindo da sessão revalidada acima. A comparação acontece antes
+  // de qualquer leitura ou escrita para uma aba da org A nunca alterar a B.
+  if (expectedContext !== contextoDoRascunho(ctx.userId, ctx.orgId)) {
+    return { ok: false, error: "draft_context_changed" };
+  }
   const { state } = await loadOnboardingState(ctx.orgId);
   await patchOnboardingState(ctx.orgId, {
     // Adiar muda somente o progresso do wizard. Agente, rascunho, revisão,
