@@ -53,7 +53,9 @@ export function AppShell({ sidebarCollapsed, children, notice, onboardingNotice 
           ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-workspace p-2 md:p-4"
           : "min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6"}>
           {onboardingNotice}
-          {children}
+          {/* Altura automática para as raízes h-full não comprimirem seus filhos.
+              O piso preenche telas curtas; a rolagem continua pertencendo ao main. */}
+          {isInbox ? children : <div className="flex min-h-full flex-col">{children}</div>}
         </main>
       </div>
     </div>
