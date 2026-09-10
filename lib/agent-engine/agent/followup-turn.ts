@@ -361,7 +361,11 @@ async function resolveSendTarget(
     if (conv.channel_archived_at !== null) {
       throw new Error('followup_turn para canal arquivado — o número foi excluído da Central de Conexões');
     }
-    if (conversationId !== null && conv.channel_status !== 'WORKING') {
+    // O LEFT JOIN pode não encontrar o canal (inclusive se for de outra org).
+    // Isso continua sendo recusa. Reconexão, porém, não invalida a origem:
+    // o pin chega ao sink, que grava queued; o session-reconciler reenvia
+    // quando a sessão volta a WORKING, sem gastar tentativas deste job.
+    if (conversationId !== null && conv.channel_status === null) {
       throw new Error('followup_turn: canal de origem indisponível — reconecte o mesmo número antes de retomar');
     }
     return {

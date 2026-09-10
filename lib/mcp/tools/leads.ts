@@ -38,7 +38,7 @@ async function enrichLeads(
   if (leads.length === 0) return leads;
 
   const names = await resolveUserNames(
-    ctx.supabase,
+    ctx,
     leads.map((l) => l.owner_user_id as string | null),
   );
 

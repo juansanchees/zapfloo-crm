@@ -17,7 +17,8 @@ export interface McpContext {
   actor: Actor;
   apiTokenId: string;
   requestId: string;
-  /** Service-role admin client. Tools devem filtrar `organization_id` em toda query. */
+  /** Cliente da sessão no copiloto; service role no ingresso por api_token.
+   * Tools devem filtrar `organization_id` em toda query e preservar este client. */
   supabase: SupabaseClient;
 }
 

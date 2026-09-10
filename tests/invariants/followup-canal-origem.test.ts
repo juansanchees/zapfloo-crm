@@ -99,8 +99,12 @@ describe("follow-up preserva número de origem — SQL de produção", () => {
 
   it("número de origem desconectado não é substituído pelo outro número WORKING", async () => {
     await pool.query("update channel_sessions set status = 'STOPPED' where id = $1", [canalOrigem]);
-    await expect(executar()).rejects.toThrow(/canal de origem.*indisponível/i);
-    expect(runAgentTurn).not.toHaveBeenCalled();
+    // O pin garante a origem; desconexão fica sob custódia da fila de mensagens.
+    // O throw anterior codificava o descarte. followup-reconexao prova o sink
+    // real, o job concluído e o redrive, sem substituir o modelo de envio.
+    await executar();
+    expect(runAgentTurn).toHaveBeenCalledWith(expect.anything(), expect.anything(), pool, expect.anything(),
+      expect.objectContaining({ conversationId: origem, channelSessionId: canalOrigem }));
   });
 
   it("sem conversa pinada conserva a conversa mais recente", async () => {

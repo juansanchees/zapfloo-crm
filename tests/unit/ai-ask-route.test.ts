@@ -5,11 +5,13 @@ import { NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth/require-role";
 import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { runCopilot } from "@/lib/ai/copilot/run";
+import { createClient } from "@/lib/supabase/server";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/ai/dispatcher/rate-limit", () => ({ checkRateLimit: vi.fn() }));
 vi.mock("@/lib/ai/copilot/run", () => ({ runCopilot: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({})) }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ session: true })) }));
 vi.mock("@/lib/agent-engine/db/request-pool", () => ({ getRequestPool: vi.fn(() => ({})) }));
 vi.mock("@/lib/agent-engine/edge/llm/credentials", async (original) => {
   const actual = await original<typeof import("@/lib/agent-engine/edge/llm/credentials")>();
@@ -60,6 +62,15 @@ beforeEach(() => {
 });
 
 describe("POST /api/v1/ai/ask", () => {
+  it("entrega às ferramentas o cliente da sessão, nunca privilégios administrativos", async () => {
+    const { POST } = await import("@/app/api/v1/ai/ask/route");
+    const response = await POST(request({ question: "Liste todas as conversas", history: [] }));
+    expect(response.status).toBe(200);
+    expect(runCopilot).toHaveBeenCalledWith(
+      expect.objectContaining({ supabase: await createClient() }),
+      expect.anything(),
+    );
+  });
   it("exige papel de agente, limita por organização+pessoa e responde pelo wrapper", async () => {
     const { POST } = await import("@/app/api/v1/ai/ask/route");
     const response = await POST(request({ question: "Quantas oportunidades?", history: [] }));
