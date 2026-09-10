@@ -74,6 +74,11 @@ com cookie de 30 dias, e não substitui conclusão.
 - Retomada autorizada sem celular: corrigir o harness e revisar a branch enquanto
   o scan não está disponível. Nenhuma nova tentativa de pareamento é prova desta
   retomada; a preparação da infraestrutura sozinha não comprova a jornada.
+- Harness corrigido em `6bea483ef`: observador abortável após remoção da imagem e
+  medidas sanitizadas persistidas em JSON0600 por path. Nova regressão Chromium
+  `observador-qr-fresco.spec.ts` em SPECS_PARTE_2: 2 passed na repetição do root;
+  sabotagens sem cancelamento e com attachment body reprovam. É prova do harness,
+  não de pareamento. Evidência `harness-fix3.md` no pacote desta correção.
 
 ## Convenções
 
