@@ -16,6 +16,25 @@
 - Resultado: `PASS` / `FAIL(bug#)` / `WARN` (funciona mas UX ruim).
 - Evidência: screenshot/trace em `.superpowers/evidence/vps-qa/`.
 
+### Prazo de teste e espaço do atendimento `[P0]`
+
+`tests/e2e/periodo-de-testes.spec.ts`: login de empresa com cadastro conhecido →
+onboarding com vencimento em cadastro + 168 horas → recarga sem renovar o prazo →
+explorar CRM → abrir conversa em 1440×900, 768×1024 e 390×844. O aviso mantém a
+mesma data, o composer cabe na tela e não há overflow horizontal do documento.
+Cadastro vencido da fixture mostra o término sem bloquear atendimento. Prova
+local contra Supabase e build de produção; não equivale à validação na VPS.
+Evidência: `.superpowers/evidence/periodo-de-testes/`.
+
+### Editor de fluxos: contraste e recuperação de erro `[P1]`
+
+`tests/e2e/fluxo-controles-contraste.spec.ts`: cores dos controles com contraste
+>=4,5:1 nos dois temas, botões clicáveis, enquadramento e ausência de sobreposição
+com “Adicionar nó” em 390px. Recusa controlada da credencial apresenta links de
+revisão sem apagar o texto nem repetir o POST. Este último teste valida a UX de
+falha, não a geração por um provedor real. Capturas em
+`.superpowers/evidence/fluxo-controles/`.
+
 ---
 
 ## J1 — Onboarding do primeiro usuário `[P0]`
@@ -1848,6 +1867,15 @@ COLUMN`, `UPDATE`, `ALTER COLUMN`, um bloco `DO` com `pg_constraint`), e
 `scripts/test-db.sh` já sobe `pgvector/pgvector:pg15` — os `pnpm test:db`
 anteriores desta sessão já corriam contra o piso certo, mesmo antes deste
 achado.
+## Fluxos e Leads — correções de 2026-09-09
+
+- `tests/e2e/fluxo-gatilho-no-editor.spec.ts`: abrir nó inicial → escolher gatilho → salvar → conferir banco → recarregar; seletor e gravação acessíveis em 1440/768/390 px.
+- `tests/e2e/leads-navegacao.spec.ts`: Leads → quadro padrão da organização → Funis → troca; fallback sem padrão/sem ativo e papel viewer.
+- `tests/invariants/followup-canal-origem.test.ts`: duas conversas em canais distintos → worker preserva origem; recusa vínculo incompatível, outra organização e canal desconectado.
+
+Relatório e limites: `docs/superpowers/reports/2026-09-09-fluxos-leads-canais.md`.
+Fixtures locais, sem mensagens externas nem publicação de fluxo de cliente.
+
 # Visão geral — redesign de 2026-09-09
 
 Prova local: `tests/e2e/navegacao.spec.ts`, caso “visão geral usa dados locais reais e preserva navegação no desktop e celular”. Entrar → Visão geral → conferir contagem contra API autenticada → abrir fila → voltar → abrir tarefas em celular. Menu em 1280×900 e gaveta em 390 px também aprovados. Evidências e limites em `docs/testing/dashboard-redesign.md`. Nenhum envio WhatsApp ou publicação.

@@ -273,6 +273,10 @@ jobs:
     # e devolvem ~9 min de relógio a cada uma.
     env:
       SPECS_PARTE_1: >-
+        periodo-de-testes.spec.ts
+        fluxo-controles-contraste.spec.ts
+        fluxo-gatilho-no-editor.spec.ts
+        leads-navegacao.spec.ts
         pre-go-live-whatsapp.spec.ts
         auth.spec.ts error-pages.spec.ts
         password-recovery.spec.ts
