@@ -9,6 +9,7 @@
 import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import type { Database } from "../../lib/database.types";
 import { criarArquivoTemporarioPrivado } from "./utils/seguranca-da-prova-fresca";
 import { generateTotp, msUntilNextTotpWindow } from "./utils/totp";
 
@@ -155,7 +156,7 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
     expect(ausente, `${chave} precisa estar ausente no runner fresco`).toBe(true);
   }
 
-  const svc = createClient(
+  const svc = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
@@ -189,8 +190,8 @@ test("bootstrap novo conecta QR real, conclui sem IA e preserva convite, MFA e r
   if (vinculos.error) throw vinculos.error;
   expect(vinculos.data).toEqual([{ user_id: dono.id, organization_id: org.id, role: "admin", revoked_at: null }]);
   for (const tabela of ["ai_agents", "ai_agent_versions", "ai_provider_credentials", "channel_sessions", "onboarding_drafts"] as const) {
-    const leitura = await svc.from(tabela).select("id", { count: "exact", head: true }).eq("organization_id", org.id);
-    if (leitura.error) throw leitura.error;
+    const leitura = await svc.from(tabela).select("organization_id", { count: "exact", head: true }).eq("organization_id", org.id);
+    if (leitura.error) throw new Error(`preflight ${tabela} falhou (status ${leitura.status})`);
     expect(leitura.count, `${tabela} precisa começar vazia`).toBe(0);
   }
   const fatoresAntes = await svc.auth.admin.mfa.listFactors({ userId: dono.id });

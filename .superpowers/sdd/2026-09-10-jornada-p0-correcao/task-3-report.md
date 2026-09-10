@@ -129,3 +129,27 @@ Resultado: `exit 1`; 2 arquivos falharam. O gate de config recebeu `undefined` e
 
 - A fresh real continuou intocada; nenhum login/QR foi consumido.
 - A prova positiva fresh ainda não foi executada; o perfil A continuou sem login/QR durante esta rodada de correção.
+
+## Fix round 2/5 — coluna válida no preflight fresco
+
+### Causa raiz e correção
+
+- A primeira execução fresh terminou em 2,5 s, antes de login/QR, com erro sem mensagem no preflight. A sonda read-only do root isolou a quinta contagem: `onboarding_drafts` respondia `400` ao `HEAD select=id`, enquanto auth, organização, quatro tabelas anteriores e MFA respondiam `200`.
+- `onboarding_drafts` tem `organization_id` como chave primária e não possui `id` (`supabase/migrations/20260908175114_0221_onboarding_draft_save.sql:3-8`; `lib/database.types.ts:5635-5648`). As outras quatro tabelas da iteração também possuem `organization_id`.
+- A única consulta foi corrigida para `select("organization_id", { count: "exact", head: true })`, preservando o filtro explícito por organização e a asserção de contagem zero. O client da spec passou a carregar `Database` para manter a consulta ligada aos tipos gerados.
+- Se uma dessas leituras falhar novamente, a exceção informa somente tabela e status HTTP; não repete mensagem, detalhe ou hint retornado pelo banco.
+
+### RED / GREEN / sabotagem restaurada
+
+- RED focado com a spec ainda em `select("id")`: `pnpm exec vitest run tests/unit/e2e-preflight-fresco.test.ts --reporter=verbose` terminou em `exit 1`; recebeu `id` quando o contrato exigia `organization_id`.
+- O gate novo usa a AST TypeScript da consulta real e das `Row` em `lib/database.types.ts`; comprova que a mesma coluna selecionada existe nas cinco tabelas. Não depende de regex nem acessa banco.
+- GREEN após a troca: mesmo comando em `exit 0`; **1 arquivo / 1 teste passed**. O estado com `id` foi a sabotagem observada e foi restaurado para `organization_id` antes do commit.
+- `pnpm typecheck`: `exit 0` após corrigir um narrowing no próprio gate.
+- ESLint focado na spec e no gate: `exit 0`.
+- `git diff --check`: `exit 0`.
+
+### Prova real read-only coordenada pelo root
+
+- Sonda contra o perfil A com a coluna corrigida: `exit 0`; todas as cinco consultas `HEAD select=organization_id` responderam `200` com `count=0`, inclusive `onboarding_drafts`. Também confirmou estado `{}`, `onboarded=false`, um dono, uma organização e zero MFA. Log: `/tmp/zapfloo-p0-fresh-preflight-coluna.log`.
+- A sonda não alterou banco e a jornada continuou antes de welcome/login/QR, portanto o perfil fresco permaneceu apto à reexecução positiva.
+- `gov:verify` R3 do root terminou em `exit 0`, com **754 arquivos / 7912 testes**, typecheck/lints sem erros e 310 warnings preexistentes. Como a coleta começou antes da criação do gate desta rodada, esse resultado não é atribuído ao novo teste; a evidência dele é o RED/GREEN focado acima.
