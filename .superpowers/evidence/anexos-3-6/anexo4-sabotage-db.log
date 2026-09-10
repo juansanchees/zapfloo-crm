@@ -1,0 +1,108 @@
+
+> deskcomm-crm@0.1.0 test:db /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> bash scripts/test-db.sh tests/invariants/onboarding-recuperar-preparacao.test.ts
+
+==> subindo pgvector/pgvector:pg15 como deskcomm-test-db-38699 (worktree /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos, branch codex/correcoes-anexos)
+    ✓ publicado em 127.0.0.1:32808
+==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)
+==> conferindo que o banco efêmero é o do PRODUTO (antes do baseline)
+    ✓ definer nova nasce com grant direto a anon (armadilha do produto reproduzida)
+==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1
+ set_config 
+------------
+ 
+(1 row)
+
+psql:<stdin>:5007: WARNING:  wal_level is insufficient to publish logical changes
+HINT:  Set wal_level to "logical" before creating subscriptions.
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ install ok
+==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)
+ set_config 
+------------
+ 
+(1 row)
+
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ update ok (zero erro na re-aplicação)
+==> banco `postgres` a partir do molde (o setupFile o recria a cada arquivo)
+==> invariantes: vitest (tests/invariants) — banco novo por ARQUIVO, ordem sorteada
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.db.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+      Running tests with seed "1789049857879"
+
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts (6 tests | 3 failed) 525ms
+     × arquivar → recuperar → salvar outro nome → preparar permite continuar sem reativar o arquivado 155ms
+     × exclusão do agente limpa a preparação órfã e permite preparar de novo 64ms
+     × exclusão somente da versão também tem recuperação 77ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > arquivar → recuperar → salvar outro nome → preparar permite continuar sem reativar o arquivado
+AssertionError: expected { prepared_agent_id: null, …(5) } to deeply equal { prepared_agent_id: null, …(5) }
+
+- Expected
++ Received
+
+  {
+    "prepared_agent_id": null,
+    "prepared_request": null,
+-   "prepared_revision": null,
++   "prepared_revision": 1,
+    "prepared_snapshot": null,
+    "prepared_version_id": null,
+    "rehearsal": null,
+  }
+
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:33:8
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > exclusão do agente limpa a preparação órfã e permite preparar de novo
+error: draft_unavailable
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.0/node_modules/pg-pool/index.js:45:11
+ ❯ prepare tests/invariants/onboarding-recuperar-preparacao.test.ts:22:11
+     20| }
+     21| async function prepare(f: { org: string; user: string }, revision = 1)…
+     22|   return (await db.query("select fn_prepare_onboarding_draft($1,$2,$3,…
+       |           ^
+     23| }
+     24| async function recover(f: { org: string; user: string }, previous: str…
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:45:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > exclusão somente da versão também tem recuperação
+error: draft_unavailable
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.0/node_modules/pg-pool/index.js:45:11
+ ❯ prepare tests/invariants/onboarding-recuperar-preparacao.test.ts:22:11
+     20| }
+     21| async function prepare(f: { org: string; user: string }, revision = 1)…
+     22|   return (await db.query("select fn_prepare_onboarding_draft($1,$2,$3,…
+       |           ^
+     23| }
+     24| async function recover(f: { org: string; user: string }, previous: str…
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:52:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 3 passed (6)
+   Start at  11:17:37
+   Duration  1.14s (transform 28ms, setup 415ms, import 45ms, tests 525ms, environment 0ms)
+
+==> teardown: removendo container deskcomm-test-db-38699
+ ELIFECYCLE  Command failed with exit code 1.

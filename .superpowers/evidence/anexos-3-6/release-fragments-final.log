@@ -1,0 +1,33 @@
+
+> deskcomm-crm@0.1.0 release:conferir /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> tsx scripts/cortar-release.ts
+
+1.17.0 + minor = 1.18.0  (26 fragmento(s))
+  nada_mudou       corrigido   Agenda em andamento e pedidos para parar respeitam o estado correto
+  nada_mudou       corrigido   Teste do agente bloqueia ferramentas reais
+  nada_mudou       corrigido   Configuração inicial respeita permissões e a marca da instalação
+  capacidade_nova  adicionado  Ativação segura do agente revisado no primeiro acesso
+  capacidade_nova  adicionado  Ensaio de texto antes de ativar o agente
+  capacidade_nova  adicionado  Explore o CRM e retome a configuração depois
+  capacidade_nova  adicionado  Primeiro acesso do negócio à ativação restrita
+  capacidade_nova  adicionado  Base de preparação inativa do agente
+  nada_mudou       corrigido   Retentativa do onboarding respeita o estado da versão
+  capacidade_nova  adicionado  Salve a configuração inicial sem ativar atendimento
+  capacidade_nova  adicionado  Visão geral reúne atendimento e próximos passos
+  capacidade_nova  adicionado  Navegação compacta por área de trabalho
+  capacidade_nova  adicionado  Pergunte à IA consulta o CRM sem alterar dados
+  capacidade_nova  alterado    Interface operacional ganha hierarquia consistente
+  nada_mudou       corrigido   Publicação do redesign reforça respostas e transporte seguros
+  capacidade_nova  adicionado  Superfícies grafite e identidade visual integrada
+  nada_mudou       corrigido   Ensaio do onboarding aparece no inventário de IA
+  nada_mudou       corrigido   Copiloto aguarda a análise sem duplicar consumo
+  nada_mudou       corrigido   Copiloto respeita a visibilidade de quem pergunta
+  nada_mudou       corrigido   Gatilhos acessíveis e follow-ups preservando o número de origem
+  nada_mudou       corrigido   Geração de fluxos sem repetição automática e zoom legível
+  nada_mudou       corrigido   Retomadas aguardam a reconexão do número de origem
+  nada_mudou       corrigido   Leads abre diretamente o quadro de oportunidades
+  nada_mudou       corrigido   Rascunho do agente respeita o limite do prompt antes de salvar
+  nada_mudou       corrigido   Preparação do onboarding tem saída após arquivar ou remover o agente
+  capacidade_nova  adicionado  Período de testes e vencimento visíveis no CRM
+
+(conferência: nada foi escrito — use --escrever)

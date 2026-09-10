@@ -1,0 +1,32 @@
+[
+  {
+    "name": "medidas-recuperacao-390",
+    "value": {
+      "viewport": 390,
+      "width": 170.140625,
+      "fontSize": "14px",
+      "documentScrollWidth": 390,
+      "innerWidth": 390
+    }
+  },
+  {
+    "name": "medidas-recuperacao-768",
+    "value": {
+      "viewport": 768,
+      "width": 170.140625,
+      "fontSize": "14px",
+      "documentScrollWidth": 768,
+      "innerWidth": 768
+    }
+  },
+  {
+    "name": "medidas-recuperacao-1440",
+    "value": {
+      "viewport": 1440,
+      "width": 170.140625,
+      "fontSize": "14px",
+      "documentScrollWidth": 1440,
+      "innerWidth": 1440
+    }
+  }
+]

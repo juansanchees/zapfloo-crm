@@ -39,6 +39,12 @@ falha, não a geração por um provedor real. Capturas em
 
 ## J1 — Onboarding do primeiro usuário `[P0]`
 
+### Adendo medido — auditoria anexos 3–6, 10/set/2026
+
+`codex/correcoes-anexos`: banco fresco local via `baseline.sql` + bootstrap-owner, sem Resend. O caso novo em `onboarding-ativacao-restrita.spec.ts` provou arquivar → recuperar → preparar novamente pela tela sem chave de IA, preservando rascunho e agente anterior inativo. DOM validado em 1440, 768 e 390 px (sem overflow horizontal, botão >44px, fonte ≥12px). A spec completa passou seus três cenários; as jornadas PT-BR/ES usam HTTP de IA sintético local, não fornecedor/WhatsApp real. Detalhes e limitações: [anexos-3-6.md](anexos-3-6.md).
+
+A spec completa `redesign-operacional.spec.ts` passou quatro cenários, incluindo resposta controlada do Copiloto após 12 segundos com um único POST. Isto não mede cobrança real. O primeiro teste de recuperação precisou corrigir o seletor do próprio harness (`Email`), não a tela.
+
 Contexto do código: primeiro usuário nasce do `scripts/bootstrap-owner.ts`
 (install.sh); quem é convidado e ainda não tem conta entra por `/signup?invite=`.
 Wizard: welcome → whatsapp → (nuvemshop se `NUVEMSHOP_ENABLED`) → setup-ai →

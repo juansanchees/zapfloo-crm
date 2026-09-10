@@ -1,0 +1,16 @@
+[
+  {
+    "file": "20260910141154_0228_onboarding_recover_preparation.sql",
+    "baseline_identical": true,
+    "before_anon_guard": true,
+    "manifest": true,
+    "sha256": "44c6548fd0424b3c11ac00aea10973161cf735c26ed17df4bb3d3741ba435e73"
+  },
+  {
+    "file": "20260910141734_0229_limite_exato_prompt_onboarding.sql",
+    "baseline_identical": true,
+    "before_anon_guard": true,
+    "manifest": true,
+    "sha256": "45b1ae95da458edf48a451fcc7662402c45c18396ef5bdf21923507e67dff952"
+  }
+]

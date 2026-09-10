@@ -1,0 +1,137 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+
+stderr | tests/unit/onboarding-recuperar-action.test.ts
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+ ❯ tests/unit/onboarding-recuperar-action.test.ts (5 tests | 5 failed) 9ms
+     × projeta argumentos da sessão e CAS e aceita ponteiro removido 5ms
+     × forbidden recusa antes da RPC 1ms
+     × mfa_required recusa antes da RPC 1ms
+     × outra aba/tenant e IDs injetados não chegam à RPC 0ms
+     × conflito é visível e erro arbitrário nunca vaza conteúdo 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/onboarding-recuperar-action.test.ts > recuperação usa identidade confiável e falha explícita > projeta argumentos da sessão e CAS e aceita ponteiro removido
+AssertionError: expected { ok: false, error: 'db_error' } to deeply equal { ok: true, revision: 1 }
+
+- Expected
++ Received
+
+  {
+-   "ok": true,
+-   "revision": 1,
++   "error": "db_error",
++   "ok": false,
+  }
+
+ ❯ tests/unit/onboarding-recuperar-action.test.ts:16:80
+     14| describe("recuperação usa identidade confiável e falha explícita", () …
+     15|   it("projeta argumentos da sessão e CAS e aceita ponteiro removido", …
+     16|     expect(await recuperarPreparacao({ ...input, expected_version_id: …
+       |                                                                                ^
+     17|     expect(f.rpc).toHaveBeenCalledWith("fn_recuperar_preparacao_onboar…
+     18|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/unit/onboarding-recuperar-action.test.ts > recuperação usa identidade confiável e falha explícita > forbidden recusa antes da RPC
+AssertionError: expected { ok: false, error: 'db_error' } to deeply equal { ok: false, error: 'forbidden' }
+
+- Expected
++ Received
+
+  {
+-   "error": "forbidden",
++   "error": "db_error",
+    "ok": false,
+  }
+
+ ❯ tests/unit/onboarding-recuperar-action.test.ts:21:46
+     19|   it.each(["forbidden", "mfa_required"] as const)("%s recusa antes da …
+     20|     f.ctx.mockRejectedValue(new OnboardingError(code, "QA"));
+     21|     expect(await recuperarPreparacao(input)).toEqual({ ok: false, erro…
+       |                                              ^
+     22|     expect(f.rpc).not.toHaveBeenCalled();
+     23|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/unit/onboarding-recuperar-action.test.ts > recuperação usa identidade confiável e falha explícita > mfa_required recusa antes da RPC
+AssertionError: expected { ok: false, error: 'db_error' } to deeply equal { ok: false, error: 'mfa_required' }
+
+- Expected
++ Received
+
+  {
+-   "error": "mfa_required",
++   "error": "db_error",
+    "ok": false,
+  }
+
+ ❯ tests/unit/onboarding-recuperar-action.test.ts:21:46
+     19|   it.each(["forbidden", "mfa_required"] as const)("%s recusa antes da …
+     20|     f.ctx.mockRejectedValue(new OnboardingError(code, "QA"));
+     21|     expect(await recuperarPreparacao(input)).toEqual({ ok: false, erro…
+       |                                              ^
+     22|     expect(f.rpc).not.toHaveBeenCalled();
+     23|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/unit/onboarding-recuperar-action.test.ts > recuperação usa identidade confiável e falha explícita > outra aba/tenant e IDs injetados não chegam à RPC
+AssertionError: expected { ok: false, error: 'db_error' } to deeply equal { ok: false, error: 'invalid_input' }
+
+- Expected
++ Received
+
+  {
+-   "error": "invalid_input",
++   "error": "db_error",
+    "ok": false,
+  }
+
+ ❯ tests/unit/onboarding-recuperar-action.test.ts:25:75
+     23|   });
+     24|   it("outra aba/tenant e IDs injetados não chegam à RPC", async () => {
+     25|     expect(await recuperarPreparacao({ ...input, organization_id: org …
+       |                                                                           ^
+     26|     f.ctx.mockResolvedValue({ orgId: user, userId: user });
+     27|     expect(await recuperarPreparacao(input)).toEqual({ ok: false, erro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/unit/onboarding-recuperar-action.test.ts > recuperação usa identidade confiável e falha explícita > conflito é visível e erro arbitrário nunca vaza conteúdo
+AssertionError: expected { ok: false, error: 'db_error' } to deeply equal { ok: false, error: 'draft_conflict' }
+
+- Expected
++ Received
+
+  {
+-   "error": "draft_conflict",
++   "error": "db_error",
+    "ok": false,
+  }
+
+ ❯ tests/unit/onboarding-recuperar-action.test.ts:32:46
+     30|   it("conflito é visível e erro arbitrário nunca vaza conteúdo", async…
+     31|     f.rpc.mockResolvedValueOnce({ data: null, error: { message: "draft…
+     32|     expect(await recuperarPreparacao(input)).toEqual({ ok: false, erro…
+       |                                              ^
+     33|     f.rpc.mockResolvedValueOnce({ data: null, error: { message: "conte…
+     34|     expect(await recuperarPreparacao(input)).toEqual({ ok: false, erro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  11:27:46
+   Duration  2.60s (transform 390ms, setup 221ms, import 628ms, tests 9ms, environment 1.49s)
+

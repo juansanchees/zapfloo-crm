@@ -1,0 +1,38 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+
+ ❯ tests/unit/pontos-de-ia-completude.test.ts (14 tests | 1 failed) 579ms
+     × o instrumento acusa purpose desconhecido escrito com aspas duplas 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/pontos-de-ia-completude.test.ts > registro de pontos de IA × código > o instrumento acusa purpose desconhecido escrito com aspas duplas
+AssertionError: expected [] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+- [
+-   "ponto_nao_registrado (emitido em lib/exemplo.ts)",
+- ]
++ []
+
+ ❯ tests/unit/pontos-de-ia-completude.test.ts:152:43
+    150|     );
+    151|
+    152|     expect(purposesSemRegistro(emitidos)).toEqual([
+       |                                           ^
+    153|       "ponto_nao_registrado (emitido em lib/exemplo.ts)",
+    154|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 passed (14)
+   Start at  11:08:42
+   Duration  2.77s (transform 129ms, setup 295ms, import 127ms, tests 579ms, environment 1.31s)
+

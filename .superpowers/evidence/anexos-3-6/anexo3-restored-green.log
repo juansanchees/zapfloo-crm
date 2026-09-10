@@ -1,0 +1,16 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+
+ ✓ tests/unit/copilot-page.test.tsx > Pergunte à IA > envia pelo teclado, mostra resposta e fontes consultadas 264ms
+ ✓ tests/unit/copilot-page.test.tsx > Pergunte à IA > não oferece nenhuma ação de escrita no CRM 16ms
+ ✓ tests/unit/copilot-page.test.tsx > Pergunte à IA > mostra uma resposta que leva 12 segundos sem abortar nem repetir o POST 17ms
+ ✓ tests/unit/copilot-page.test.tsx > Pergunte à IA > não repete o POST quando o provedor de IA está indisponível 18ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  11:10:54
+   Duration  3.99s (transform 297ms, setup 211ms, import 2.46s, tests 317ms, environment 836ms)
+

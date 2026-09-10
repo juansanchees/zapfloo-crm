@@ -1,0 +1,38 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+
+ ❯ tests/unit/pontos-de-ia-completude.test.ts (15 tests | 1 failed) 3553ms
+     × todo purpose emitido no código está no registro 758ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/pontos-de-ia-completude.test.ts > registro de pontos de IA × código > todo purpose emitido no código está no registro
+AssertionError: purpose que o código emite mas a tela de provedores não mostra — ponto oculto, que é justamente o que este registro existe para acabar: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "sabotagem_desconhecida (emitido em lib/ai/pontos/__sabotagem_anexo5.ts)",
++ ]
+
+ ❯ tests/unit/pontos-de-ia-completude.test.ts:166:7
+    164|       "purpose que o código emite mas a tela de provedores não mostra …
+    165|         "ponto oculto, que é justamente o que este registro existe par…
+    166|     ).toEqual([]);
+       |       ^
+    167|   });
+    168|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 passed (15)
+   Start at  11:13:51
+   Duration  5.56s (transform 136ms, setup 292ms, import 346ms, tests 3.55s, environment 1.21s)
+

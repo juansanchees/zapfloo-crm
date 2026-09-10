@@ -1,0 +1,4 @@
+
+> deskcomm-crm@0.1.0 typecheck /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> tsc --noEmit -p tsconfig.typecheck.json
+
