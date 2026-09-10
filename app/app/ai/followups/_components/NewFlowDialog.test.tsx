@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewFlowDialog } from "./NewFlowDialog";
+import { ApiError } from "@/lib/api/types";
 
 const criar = vi.fn();
 const gerar = vi.fn();
@@ -50,6 +51,22 @@ describe("NewFlowDialog — o POST que falha não pode sumir", () => {
   beforeEach(() => {
     criar.mockReset();
     gerar.mockReset();
+  });
+
+  it("credencial recusada oferece revisão em outra aba sem perder a descrição", async () => {
+    gerar.mockImplementation((_input: unknown, opts: OpcoesDeMutacao) => {
+      opts.onError?.(new ApiError(503, "ai_credential_error", undefined, "fixture", "Revise a credencial do provedor de IA."));
+    });
+    const user = userEvent.setup({ delay: null });
+    montar();
+    await user.type(screen.getByLabelText("Nome"), "Boas-vindas");
+    const description = "Envie uma mensagem após trinta minutos e encerre.";
+    await user.type(screen.getByLabelText("Descreva o fluxo"), description);
+    await user.click(screen.getByRole("button", { name: "Gerar rascunho" }));
+    const link = screen.getByRole("link", { name: "Revisar chaves de IA" });
+    expect(link).toHaveAttribute("href", "/app/ai/credentials");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.getByLabelText("Descreva o fluxo")).toHaveValue(description);
   });
 
   it("mostra a mensagem do servidor e mantém o nome digitado", async () => {

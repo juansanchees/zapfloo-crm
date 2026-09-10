@@ -9,6 +9,8 @@ export type RequestOpts = {
   schema?: ZodSchema<unknown>;
   idempotencyKey?: string;
   timeoutMs?: number;
+  /** Não repetir mutações custosas sem idempotência implementada no servidor. */
+  retry?: false;
   headers?: Record<string, string>;
   signal?: AbortSignal;
 };
@@ -120,10 +122,11 @@ async function request<T>(
   const serializedBody =
     body === undefined || body === null ? undefined : JSON.stringify(body);
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const maxAttempts = opts.retry === false ? 1 : MAX_ATTEMPTS;
 
   let lastError: unknown;
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const timeoutController = new AbortController();
     const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
     const signal = combineSignals([timeoutController.signal, opts.signal]);
@@ -148,7 +151,7 @@ async function request<T>(
       }
 
       // Retry on 429/503
-      if (RETRYABLE_STATUSES.has(res.status) && attempt < MAX_ATTEMPTS) {
+      if (RETRYABLE_STATUSES.has(res.status) && attempt < maxAttempts) {
         const retryAfter = parseRetryAfterSeconds(res.headers.get("Retry-After"));
         const delay = retryAfter !== null ? retryAfter * 1000 : backoffMs(attempt);
         await sleep(delay, opts.signal);
@@ -187,7 +190,7 @@ async function request<T>(
       }
       // Network error / timeout — retry
       lastError = err;
-      if (attempt < MAX_ATTEMPTS) {
+      if (attempt < maxAttempts) {
         await sleep(backoffMs(attempt), opts.signal);
         continue;
       }

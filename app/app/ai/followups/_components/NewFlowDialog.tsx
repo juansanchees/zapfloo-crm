@@ -2,6 +2,7 @@
 
 import { useT } from "@/hooks/i18n/useT";
 import { useState } from "react";
+import { ApiError } from "@/lib/api/types";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,10 +32,12 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
   const generate = useGenerateFollowupFlow();
 
   const [erro, setErro] = useState<string | null>(null);
+  const [erroDeConfiguracao, setErroDeConfiguracao] = useState(false);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
+    setErroDeConfiguracao(false);
     const callbacks = {
       onSuccess: () => {
         setName("");
@@ -47,6 +50,8 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
       // erro fica DENTRO do diálogo (não num toast que some) porque é ali que
       // ele está olhando, e o diálogo NÃO fecha — fechar apagaria o nome digitado.
       onError: (err: unknown) => {
+        setErroDeConfiguracao(err instanceof ApiError &&
+          ["ai_credential_error", "ai_not_configured"].includes(err.code));
         setErro(
           err instanceof Error && err.message
             ? t(err.message)
@@ -135,9 +140,16 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
             </div>
           )}
           {erro && (
-            <p role="alert" data-testid="new-flow-error" className="text-sm text-error-fg">
-              {erro}
-            </p>
+            <div role="alert" data-testid="new-flow-error" className="space-y-2 text-sm">
+              <p className="text-error-fg">{erro}</p>
+              {erroDeConfiguracao && <>
+                <p className="text-text-muted">{t("Revise a chave e o modelo em outra aba. Seu texto continua aqui para tentar novamente.")}</p>
+                <div className="flex flex-wrap gap-4">
+                  <a href="/app/ai/credentials" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("Revisar chaves de IA")}</a>
+                  <a href="/app/ai/providers" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("Revisar modelo de IA")}</a>
+                </div>
+              </>}
+            </div>
           )}
           <DialogFooter>
             <Button
