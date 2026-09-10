@@ -125,10 +125,23 @@ test.describe("webhooks & automações — fluxo completo", () => {
     let pipelineId: string | undefined;
 
     try {
-      // --- Step 1: login como manager; sidebar mostra "Webhooks" ---
+      // --- Step 1: login como manager; a porta de webhooks existe na tela ---
+      // O redesenho tirou "Webhooks" da nav principal: a barra lateral desenha
+      // oito ÁREAS, e `/app/webhooks` virou a aba "Entradas e webhooks" da área
+      // Automações (`lib/navigation/registry.ts`, área `automacoes`, que exige
+      // `manager` — que é o papel deste login).
       await login(page, creds.users.manager!.email);
-      await expect(page.getByRole("link", { name: "Webhooks" })).toBeVisible();
-      await page.getByRole("link", { name: "Webhooks" }).click();
+      const automacoes = page
+        .getByRole("navigation", { name: "Navegação principal" })
+        .getByRole("link", { name: "Automações", exact: true });
+      await expect(automacoes).toBeVisible();
+      await automacoes.click();
+      await page.waitForURL(/\/app\/ai\/followups/);
+      const abaWebhooks = page
+        .getByRole("navigation", { name: /Opções da área/ })
+        .getByRole("link", { name: "Entradas e webhooks" });
+      await expect(abaWebhooks).toBeVisible();
+      await abaWebhooks.click();
       await page.waitForURL(/\/app\/webhooks/);
 
       // --- Step 2: aba "Receber dados" — criar fonte ---
@@ -351,7 +364,24 @@ test.describe("webhooks & automações — fluxo completo", () => {
       const agentPage = await agentContext.newPage();
       try {
         await login(agentPage, creds.users.agent!.email);
-        await expect(agentPage.getByRole("link", { name: "Webhooks" })).toHaveCount(0);
+
+        // ⚠️ A asserção que morava aqui era VÁCUA — não podia falhar. Ela contava
+        // links chamados "Webhooks", e desde o redesenho não existe link com esse
+        // nome para NINGUÉM: o próprio manager, oito passos acima, chegou a
+        // `/app/webhooks` pela aba "Entradas e webhooks". Zero era o resultado
+        // garantido, com RBAC ligado ou desligado.
+        //
+        // Quem fecha a porta para o `agent` é o `minRole: "manager"` da área
+        // Automações (`lib/navigation/registry.ts`). E por isso o CONTROLE
+        // POSITIVO vem primeiro: provado que a nav principal pintou de verdade
+        // para este usuário, o zero de "Automações" passa a significar ausência
+        // por papel — e não nav que não renderizou.
+        const navDoAgente = agentPage.getByRole("navigation", { name: "Navegação principal" });
+        await expect(navDoAgente.getByRole("link", { name: "Conversas", exact: true })).toBeVisible();
+        await expect(navDoAgente.getByRole("link", { name: "Automações", exact: true })).toHaveCount(
+          0,
+        );
+
         await agentPage.goto(`${APP_URL}/app/webhooks`);
         await agentPage.waitForURL(/\/app\/inbox/);
         expect(agentPage.url()).toMatch(/\/app\/inbox/);

@@ -119,9 +119,35 @@ test.describe("gestão de funis", () => {
     await page.getByTestId(`salvar-nome-${id}`).click();
     await expect(linhaDoFunil(page, RENOMEADO)).toBeVisible();
 
-    // ---- reordenar: sobe para o topo ----
+    // ---- reordenar: sobe UMA posição ----
+    //
+    // ⚠️ Esta asserção exigia que UM clique levasse ao TOPO, e isso só valeria
+    // com o funil na segunda linha. O botão não promete isso: `subir` troca com
+    // o VIZINHO de cima (`vizinhoAoMover(funis, i, "subir")`, em
+    // app/app/kanban/_client.tsx:240) e nasce `disabled` quando `i === 0`. Como
+    // o funil criado aqui entra no FIM da lista
+    // (`posicaoEntre(funis[funis.length - 1]?.position ?? null, null)`, em
+    // app/api/v1/pipelines/route.ts:116) e a organização já tem outros, um
+    // clique move uma casa e o topo segue sendo outro.
+    //
+    // Medir o DESLOCAMENTO é o que o botão realmente promete — e, ao contrário
+    // do "é o primeiro", não passa por acaso quando a lista tem tamanho 2.
+    const linhas = page.locator('li[data-testid^="funil-"]');
+    const posicaoDoFunil = async (): Promise<number> => {
+      const ids = await linhas.evaluateAll((els) =>
+        els.map((el) => el.getAttribute("data-testid") ?? ""),
+      );
+      return ids.indexOf(`funil-${id}`);
+    };
+
+    const antes = await posicaoDoFunil();
+    expect(antes, "o funil recém-criado precisa aparecer na lista").toBeGreaterThan(0);
+
     await page.getByTestId(`subir-${id}`).click();
-    await expect(page.locator('li[data-testid^="funil-"]').first()).toContainText(RENOMEADO);
+    await expect
+      .poll(posicaoDoFunil, { timeout: 15_000 })
+      .toBe(antes - 1);
+    await expect(linhaDoFunil(page, RENOMEADO)).toBeVisible();
 
     // ---- tornar padrão ----
     await page.getByTestId(`padrao-${id}`).click();
