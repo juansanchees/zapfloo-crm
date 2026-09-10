@@ -1,7 +1,7 @@
 # Jornada P0 — fechamento parcial de 10/set/2026
 
 Branch: `codex/jornada-p0`, rebase sobre `codex/altura-shell` (`ce973b4a0`).
-Implementação e correções dirigidas até `af20e4b27`. **Não está declarada pronta
+Implementação e correções dirigidas até `6bea483ef`. **Não está declarada pronta
 para merge:** a prova fresca não completou o pareamento e não há cinco checks
 remotos desta revisão. Sem deploy, merge, alteração de main ou acesso à VPS.
 
@@ -11,7 +11,7 @@ remotos desta revisão. Sem deploy, merge, alteração de main ou acesso à VPS.
 | `corepack pnpm test:db`: exit0, **167 arquivos/1374 testes passados**, 1 skip preexistente. Baseline install/update aprovados. | Nenhuma mudança de schema nesta leva: diff contra altura-shell vazio em migrations/baseline/MANIFEST. Não requer nova tripla. | Nenhum bloqueio de banco observado. |
 | E2E da nova ordem: normal12 passados; ativação sintética3 passados; troca4 passados; negativa pós-hardening1 passado. Specs em `tests/e2e/`; negativa registrada no CI. | Cinco checks remotos da branch e revisão final integrada. CI base PR7 tinha27 falhas/248 passados/8 skips; detalhes em `ci-base.md`, sem atribuir todos os vermelhos a esta leva. | Não é alegado bloqueio atual por cobrança; nenhum PR novo foi aberto nesta etapa. |
 | `node .superpowers/fresh-p0-correcao/run.mjs proof` alcançou **QR real sem chave IA**, com WAHA/Redis vivos e banco fresco; asserções DOM em1440/768/390 passaram antes de exibir o QR. Evidência visual mascarada em `fresh-qr/`. | Scan → WORKING → avanço → adiar IA → funil → convite sem Resend → done/onboarded → MFA e reentrada no mesmo cenário. A spec positiva não foi aprovada por alcançar somente o QR. | Retomada assistida depende de disponibilidade simultânea do dono com o aparelho de teste e de um QR válido. |
-| Proteção do QR temporário0700/0600, validação de cleanup e bloqueio de snapshots sensíveis; sonda Chromium real comprovou captura sem guard e ausência com guard. Preflight corrigido400→200, com gate AST/schema e re-review. | Dois defeitos de harness confirmados para corrigir antes de nova tentativa: JSONs de medidas não são persistidos pelo reporter list; observador do QR usa ações sem timeout e pode segurar o finally até16min quando a imagem some após FAILED. | Nenhum segredo/QR bruto está incluído nos artefatos versionáveis. |
+| Proteção do QR temporário0700/0600 e de snapshots sensíveis; preflight400→200. Em `6bea483ef`, watcher abortável e JSON0600 anexado por path: duas regressões Chromium passaram, inclusive repetição root (exit0, 3,6s); as duas sabotagens reprovaram e foram restauradas. Re-review aprovado. | Nova execução positiva, incluindo medições numéricas persistidas. Os JSONs antigos não foram recuperados nem inventados. | Nenhum segredo/QR bruto está incluído nos artefatos versionáveis. |
 
 ## O QUE NÃO FOI MEDIDO
 
