@@ -35,12 +35,13 @@
 
 ## Task 2: Avanço visível, IA adiável e saída única persistente
 
-**Files:** `app/onboarding/connect-whatsapp/_client.tsx`, `page.tsx`, `app/onboarding/setup-ai/{page,_form,_ensaio}.tsx`, `app/actions/onboarding/{explorar,createDefaultAgent}.ts`, `lib/i18n/dicionario.ts`, testes unitários de conexão/saídas/exploração/ensaio.
+**Files:** `app/onboarding/connect-whatsapp/_client.tsx`, `page.tsx`, `app/onboarding/setup-ai/{page,_form,_ensaio}.tsx`, `app/onboarding/welcome/page.tsx` (cópia da mesma saída), `app/actions/onboarding/{explorar,createDefaultAgent}.ts`, `lib/onboarding/jornada.ts` se necessário para preservar adiamento, `lib/i18n/dicionario.ts`, testes unitários de conexão/saídas/exploração/ensaio. Componente auxiliar focado na confirmação permitido dentro de `connect-whatsapp/` se reduzir a duplicação entre as três formas de conectar.
 
 **Interfaces:** consumir escritor da Task 1 ao observar conexão; redirecionar pelo roteador após confirmação. Reaproveitar `skipAi` por escolha explícita e preservar configuração ativa/revisada ao adiar, sem apagar rascunhos. Um único `ExplorarCrm` permanece no layout comum; sem `.last()` para contornar duplicação.
 
 - [ ] Teste UI de WORKING chama confirmação e avança; erro de confirmação mostra falha acionável e não promete avanço infinito. Sabotar removendo o efeito e confirmar vermelho.
 - [ ] Atualizar docstring para descrever o estado real; botão Conferir deve confirmar canal existente, não só recarregar sem efeito. Mesma semântica com IA e sem IA.
+- [ ] Preservar `channel_session_id` quando o POST traz o id e o polling GET só traz status; testar essa sequência completa. Para conexões existentes, escolher id da lista autenticada e confirmar pelo mesmo escritor, sem confiar no status do navegador.
 - [ ] Expor adiamento explícito da IA para alcançar funil e convite sem credencial; ao confirmar revisão navegar pelo roteador, sem voltar compulsoriamente à conexão já cumprida.
 - [ ] Remover as duas cópias de Explorar da tela de conexão e testar composição com layout: exatamente um botão.
 - [ ] Cookie de exploração dura 30 dias (`60 * 60 * 24 * 30`), alinhado à preferência existente de organização ativa; mantém httpOnly, sameSite, secure, path e vínculo usuário/tenant. Testar expiração positiva e sabotar sua remoção.
