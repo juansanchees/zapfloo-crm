@@ -210,7 +210,7 @@ describe("followup_turn — conversa de origem do fluxo", () => {
     conversaAusente?: boolean;
     canalAusente?: boolean;
     archivedAt?: string | null;
-    status?: string;
+    status?: string | null;
   } = {}) {
     const query = vi.fn(async (sql: string, params: unknown[] = []) => {
       if (sql.includes("from followup_enrollments")) {
@@ -233,7 +233,7 @@ describe("followup_turn — conversa de origem do fluxo", () => {
           id: pinada ? ORIGEM : CONVERSA,
           channel_session_id: opts.canalAusente ? null : pinada ? CHIP_ORIGEM : CANAL,
           channel_archived_at: opts.archivedAt ?? null,
-          channel_status: opts.status ?? "WORKING",
+          channel_status: opts.status === undefined ? "WORKING" : opts.status,
         }] };
       }
       throw new Error(`Consulta não prevista no teste: ${sql}`);
@@ -261,13 +261,24 @@ describe("followup_turn — conversa de origem do fluxo", () => {
     { nome: "conversa inexistente ou de outro contato/tenant", opts: { conversaAusente: true }, erro: /conversa de origem.*inválida/i },
     { nome: "conversa sem canal", opts: { canalAusente: true }, erro: /conversa de origem.*canal/i },
     { nome: "canal arquivado", opts: { archivedAt: "2026-09-01T10:00:00Z" }, erro: /canal arquivado/i },
-    { nome: "canal desconectado", opts: { status: "STOPPED" }, erro: /canal de origem.*indisponível/i },
+    { nome: "canal ausente ou de outra organização", opts: { status: null }, erro: /canal de origem.*indisponível/i },
   ])("recusa $nome sem escolher outro chip", async ({ opts, erro }) => {
     runAgentTurn.mockClear();
     const { pool, query } = poolDoFluxo(opts);
     await expect(fluxoHandler()(fluxoJob(), pool, ctx)).rejects.toThrow(erro);
     expect(runAgentTurn).not.toHaveBeenCalled();
     expect(query.mock.calls.some(([sql]) => sql.includes("from channel_sessions"))).toBe(false);
+  });
+
+  // STOPPED não autoriza trocar de chip, mas também não deve impedir o sink
+  // de custodiar a mensagem em queued. A entrega real é coberta no invariante
+  // followup-reconexao: exigir throw aqui congelava o descarte por reconexão.
+  it.each(["STOPPED", "STARTING", "SCAN_QR_CODE"])("mantém a origem em %s para o sink decidir o envio", async (status) => {
+    runAgentTurn.mockClear();
+    const { pool } = poolDoFluxo({ status });
+    await fluxoHandler()(fluxoJob(), pool, ctx);
+    expect(runAgentTurn).toHaveBeenCalledWith(expect.anything(), expect.anything(), pool, ctx,
+      expect.objectContaining({ conversationId: ORIGEM, channelSessionId: CHIP_ORIGEM }));
   });
 
   it("enrollment sem conversa pinada mantém a última conversa do contato", async () => {
