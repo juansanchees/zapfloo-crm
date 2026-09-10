@@ -9,6 +9,9 @@ sem exigir agente, chave de IA ou ensaio revisado. A confirmação do número no
 servidor conclui a etapa de conexão e permite avançar. A IA pode ser adiada
 explicitamente para continuar com o funil e a equipe, sem publicar um agente.
 Falhas de confirmação ficam visíveis e permitem tentar novamente.
+Uma falha temporária ao consultar a conexão preserva o número que está sendo
+confirmado. Se a organização ativa mudar em outra aba, adiar a IA pede para
+recarregar a etapa antes de alterar qualquer configuração.
 
 Há uma única saída para explorar o CRM e retomar depois, com preferência de
 30 dias por usuário e organização. Explorar continua diferente de concluir:
