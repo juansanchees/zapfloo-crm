@@ -1,0 +1,38 @@
+{
+  "source": ".superpowers/leva-final/sabotagem/followup-builder-followup--afaeb-formulário-longo-em-390×720-chromium/gatilho-alcance.json",
+  "measurement": {
+    "before": {
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "panel": {
+        "x": 0,
+        "y": 322,
+        "width": 320,
+        "height": 504,
+        "top": 322,
+        "right": 320,
+        "bottom": 826,
+        "left": 0
+      },
+      "button": {
+        "x": 17,
+        "y": 841,
+        "width": 286,
+        "height": 44,
+        "top": 841,
+        "right": 303,
+        "bottom": 885,
+        "left": 17
+      },
+      "disabled": false,
+      "clientHeight": 502,
+      "scrollHeight": 578,
+      "scrollTop": 0,
+      "overflowY": "auto",
+      "availableHeight": "398px",
+      "hit": false
+    }
+  }
+}

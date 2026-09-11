@@ -1,0 +1,13 @@
+{
+  "log": "/tmp/zapfloo-leva-final-db.log",
+  "exit": 0,
+  "sha256": "12c68626729417556a2fd0c196316747975e35c5d330a653239356a14d8e0b32",
+  "resumo": [
+    "==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1",
+    "==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)",
+    " Test Files  167 passed (167)",
+    "      Tests  1374 passed | 1 skipped (1375)",
+    "   Duration  324.11s (transform 4.14s, setup 50.02s, import 13.73s, tests 238.91s, environment 9ms)",
+    "==> test:db verde"
+  ]
+}

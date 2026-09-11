@@ -16,6 +16,36 @@
 - Resultado: `PASS` / `FAIL(bug#)` / `WARN` (funciona mas UX ruim).
 - Evidência: screenshot/trace em `.superpowers/evidence/vps-qa/`.
 
+### Leva final: gatilhos, agente e perda de atualizações `[P0/P1]` — 10/set/2026
+
+Em `codex/altura-shell`, os sete casos nomeados pelo dono passaram junto
+com as provas de alcance do popover e altura do editor/Agenda: **21 passed**,
+zero skips, exit 0. Popover medido em 1280×720 e 390×720; Salvar recebe clique
+antes/depois da rolagem e persiste o gatilho após reload. Caso e etapa geram
+enrollment pelo evento e dreno existentes; resolver o caso cancela. A causa
+reproduzida era alcance do botão, não `!dirty` nem falha do motor.
+
+Agente novo oferece os dois próximos passos no próprio formulário. A régua
+de espanhol exclui apenas a inicial decorativa derivada da empresa, e preserva
+rótulos reais; PT retorna byte a byte na mesma tela. Nome do negócio usa o
+destino `setup-ai` desta branch e identidade no aside; isso não valida toda J1.
+A execução adicional do wizard inteiro terminou com 3 passes, 1 falha no
+próximo caso (espera telefone, recebe IA) e 9 não executados pela sequência
+serial. A jornada completa segue pendente; não se importou a ordem da P0.
+
+No quadro, a chave estável deixa o detector de 45s trabalhar entre renders.
+Browser provou entrega saudável, assinatura `subscribed`, duas entregas
+suprimidas, divergência 0→1, dado recuperado e aviso visível. Removeu-se
+`test.fail`: falha de pré-condição agora reprova. A predição histórica de JR
+abaixo não deve ser tomada como estado atual desta spec; esta rodada mediu-a.
+Não é prova de degradação do Inbox/dossiê.
+
+Sabotagem em produto reprovou os sete casos e as duas geometrias; sabotagens
+unitárias guardam também a cadência e a régua. Harness preserva a asserção
+original quando a limpeza falha. Evidências, limites, gates e pendências:
+[`leva-final-e2e.md`](leva-final-e2e.md) e
+`.superpowers/evidence/leva-final/`. Sem schema, deploy ou medição de produção.
+
 ### Altura da shell e Agenda `[P0]` — 10/set/2026
 
 `codex/altura-shell`: contêiner não-Inbox com altura automática e piso

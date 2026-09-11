@@ -1,0 +1,71 @@
+{
+  "source": ".superpowers/leva-final/final/followup-builder-followup--f34cf-ormulário-longo-em-1280×720-chromium/gatilho-alcance.json",
+  "measurement": {
+    "before": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "panel": {
+        "x": 68,
+        "y": 286,
+        "width": 320,
+        "height": 426,
+        "top": 286,
+        "right": 388,
+        "bottom": 712,
+        "left": 68
+      },
+      "button": {
+        "x": 81,
+        "y": 667,
+        "width": 294,
+        "height": 32,
+        "top": 667,
+        "right": 375,
+        "bottom": 699,
+        "left": 81
+      },
+      "disabled": false,
+      "clientHeight": 424,
+      "scrollHeight": 424,
+      "scrollTop": 0,
+      "overflowY": "hidden",
+      "availableHeight": "426px",
+      "hit": true
+    },
+    "after": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "panel": {
+        "x": 68,
+        "y": 286,
+        "width": 320,
+        "height": 426,
+        "top": 286,
+        "right": 388,
+        "bottom": 712,
+        "left": 68
+      },
+      "button": {
+        "x": 81,
+        "y": 667,
+        "width": 294,
+        "height": 32,
+        "top": 667,
+        "right": 375,
+        "bottom": 699,
+        "left": 81
+      },
+      "disabled": false,
+      "clientHeight": 424,
+      "scrollHeight": 424,
+      "scrollTop": 0,
+      "overflowY": "hidden",
+      "availableHeight": "426px",
+      "hit": true
+    }
+  }
+}
