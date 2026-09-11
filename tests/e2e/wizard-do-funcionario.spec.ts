@@ -121,16 +121,15 @@ test.describe("o wizard monta um funcionário", () => {
     await page.locator("#display_name").fill("Clínica Bem Viver");
     await page.locator('input[type="checkbox"]').check();
     await page.getByRole("button", { name: /^continuar$/i }).click();
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 30_000 });
+    // Nesta branch PASSOS põe Treinar após welcome. jornada-p0 muda essa
+    // ordem; não importar sua decisão de produto junto do locator abaixo.
+    await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
 
-    // O layout do wizard é compartilhado entre os passos e não re-renderizava:
-    // o cabeçalho seguia dizendo "Minha Empresa" o onboarding inteiro, mesmo
-    // com o banco já gravado.
-    // `.first()`: há dois <header> na página — o do wizard (com a marca e o
-    // nome do negócio) e o do passo. O do layout é o que congelava.
-    const cabecalho = page.locator("header").first();
-    await expect(cabecalho).toContainText("Clínica Bem Viver");
-    await expect(cabecalho).not.toContainText("Minha Empresa");
+    // A identidade persistente agora mora no aside do wizard; o header contém
+    // marca e controles. Medir o h1 evita um falso positivo no body genérico.
+    const identidade = page.locator("aside").getByRole("heading", { level: 1 });
+    await expect(identidade).toHaveText("Clínica Bem Viver");
+    await expect(identidade).not.toHaveText("Minha Empresa");
   });
 
   test("o passo do telefone pergunta COMO se conecta antes de assumir o código", async ({
