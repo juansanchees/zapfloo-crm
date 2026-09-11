@@ -159,35 +159,37 @@ test.describe("o wizard monta um funcionário", () => {
   // apareceram. Consertar um revela o próximo; é o comportamento esperado de uma
   // suíte serial, não um efeito colateral do conserto.
 
-  test("treinar mostra o cérebro dele — e sem chave não é um beco", async ({ page }) => {
-    // Vale nos dois mundos pela mesma razão do caso do quadro (ver lá): no CI
-    // não há chave de provedor e o bloco vira o formulário para colar uma; na
-    // máquina de quem desenvolve, `next start` carrega o `.env.local` e ele vira
-    // o veredito sobre a chave que existe.
+  test("treinar não é um beco: a chave de IA tem caminho na própria tela", async ({ page }) => {
+    // ⚠️ ESTE CASO MEDIA UM CARD QUE SAIU DA TELA — de propósito.
     //
-    // O que NÃO varia: a tela nunca deixa a pessoa sabendo que falta a chave sem
-    // dizer o que fazer. Antes o passo 1 escrevia "Falta a chave da inteligência
-    // artificial" e o assunto morria ali — diagnóstico certo, saída nenhuma.
+    // Ele cobrava `/cérebro/i`, `#api_key_da_ia`, `#provedor_da_ia`, "guardar a
+    // chave" e "guardada cifrada". Tudo isso é de `InteligenciaDele`
+    // (app/onboarding/setup-ai/_inteligencia.tsx), que
+    // app/onboarding/setup-ai/page.tsx DEIXOU DE RENDERIZAR — o comentário de lá
+    // diz o porquê com todas as letras: "não diagnosticar o default da
+    // organização nem disparar a prova automática do card legado". No lugar
+    // ficou um caminho explícito, `configurarChaveDoOnboarding`.
+    //
+    // O componente ainda existe no repositório, então `grep` por "cérebro"
+    // encontra e engana: ele não chega mais a ESTA tela. E "guardada cifrada"
+    // hoje só vive em app/admin/(protected)/google/_form.tsx, que é outra tela
+    // inteira — a asserção mirava em nada.
+    //
+    // O QUE NÃO MUDOU é o que este caso sempre quis guardar, e que segue valendo:
+    // a tela nunca deixa a pessoa sabendo que falta a chave sem dizer o que
+    // fazer. Antes o passo escrevia "Falta a chave da inteligência artificial" e
+    // o assunto morria ali — diagnóstico certo, saída nenhuma. Então a asserção
+    // passa a ser a SAÍDA, que é o invariante "nenhuma demanda sem próximo
+    // passo" da doutrina do Sistema Vivo. Medir o texto do card velho era medir
+    // a implementação; medir a saída é medir a promessa.
     await login(page);
     await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
 
-    const corpo = page.locator("body");
-    await expect(corpo).toContainText(/cérebro/i);
-
-    const semChave = await page.locator("#api_key_da_ia").count();
-    if (semChave > 0) {
-      // O beco vira saída: o campo está aqui, no passo em que a chave importa.
-      await expect(page.locator("#provedor_da_ia")).toBeVisible();
-      await expect(page.getByRole("button", { name: /guardar a chave/i })).toBeDisabled();
-      await expect(corpo).toContainText(/guardada cifrada/i);
-    } else {
-      // Com chave, o passo DIZ qual é e confere o crédito — "validada" nunca
-      // significou "funciona": o validador bate num endpoint de listagem, que
-      // responde 200 com a conta zerada.
-      await expect(corpo).toContainText(
-        /Conferindo se a chave tem crédito|Testei agora|não passou|Não consegui testar/i,
-      );
-    }
+    await expect(page.getByRole("heading", { name: /treine seu funcionário/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /configurar chave de ia/i }),
+      "o passo exige chave de IA e precisa dizer ONDE se consegue uma",
+    ).toBeVisible();
   });
 
   test("treinar: pede as regras da casa e mostra o que ele já sabe fazer", async ({ page }) => {
