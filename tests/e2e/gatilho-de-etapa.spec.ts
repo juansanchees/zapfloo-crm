@@ -400,8 +400,10 @@ test.describe("gatilho de etapa do funil", () => {
         // Limpeza é best-effort: o vermelho do teste tem que ser o do teste,
         // nunca o do teardown.
       }
-      if (flowId) await page.request.post(`/api/v1/ai/followup-flows/${flowId}/disable`, { data: {} });
-      if (agentId) await page.request.delete(`/api/v1/ai/agents/${agentId}`);
+      // Uma exceção no finally substituiria a falha original. Só a limpeza é
+      // best-effort; as asserções e requisições do corpo continuam reprovando.
+      if (flowId) await page.request.post(`/api/v1/ai/followup-flows/${flowId}/disable`, { data: {} }).catch(() => undefined);
+      if (agentId) await page.request.delete(`/api/v1/ai/agents/${agentId}`).catch(() => undefined);
     }
   });
 });

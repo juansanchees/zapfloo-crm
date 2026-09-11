@@ -860,7 +860,9 @@ test.describe("followup flow builder — controle de gatilho na PublishBar (Task
       // O fluxo nunca foi publicado (fica em 'draft') — nenhum enrollment
       // possível daqui. Desativa mesmo assim (doutrina da task: qualquer
       // fluxo criado pelo spec sai desativado, sem depender de estar 'active').
-      await page.request.post(`/api/v1/ai/followup-flows/${flow.id}/disable`, { data: {} });
+      // Uma exceção no finally substituiria a falha original. Só a limpeza é
+      // best-effort; as asserções e requisições do corpo continuam reprovando.
+      await page.request.post(`/api/v1/ai/followup-flows/${flow.id}/disable`, { data: {} }).catch(() => undefined);
     }
   });
 });
