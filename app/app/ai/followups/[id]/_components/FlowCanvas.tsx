@@ -278,7 +278,9 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
           </SheetContent>
         </Sheet>
 
-        <div className={`${styles.canvas} relative h-full min-w-0 flex-1`} data-testid="flow-canvas" onDragOver={onDragOver} onDrop={onDrop}>
+        {/* Stretch usa a altura útil da linha, depois da barra de publicação.
+            Não encadear aqui outro h-full dependente da altura dos wrappers. */}
+        <div className={`${styles.canvas} relative min-w-0 flex-1`} data-testid="flow-canvas" onDragOver={onDragOver} onDrop={onDrop}>
           <ReactFlow
             nodes={nodes}
             edges={edgesForRender}

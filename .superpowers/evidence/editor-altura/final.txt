@@ -1,0 +1,30 @@
+Build de produção limpo: exit 0. Execução final conjunta: exit 0.
+Node 22.23.2, pnpm 9.15.9, Chromium, um worker, zero retries.
+Base 224db7953 + conserto do editor; AppShell e Agenda sem diff.
+As duas sabotagens foram restauradas antes desta compilação.
+
+  ✓   1 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:145:5 › clicar num bloco livre abre a marcação NAQUELE horário (7.1s)
+  ✓   2 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:206:5 › arrastar um card remarca — e o horário novo sobrevive ao reload (11.5s)
+  ✓   3 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:369:5 › arrastar para fora da disponibilidade é RECUSADO e o card volta (6.8s)
+  ✓   4 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:38:7 › a Agenda como o dono do produto a usa › chego na Agenda CLICANDO no menu, não digitando a URL (2.6s)
+  ✓   5 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:62:7 › a Agenda como o dono do produto a usa › as pessoas da equipe são REAIS — o filtro deixou de ser invisível (2.7s)
+  ✓   6 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:125:7 › a Agenda como o dono do produto a usa › o histórico está NA TELA DO PRODUTO, com as quatro abas (76ms)
+  ✓   7 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:135:7 › a Agenda como o dono do produto a usa › a tela declara de onde veio o que ela mostra — e nunca de mentira (40ms)
+  ✓   8 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:162:7 › a Agenda como o dono do produto a usa › as três visões desenham, e a régua do agora existe — NO PRODUTO (421ms)
+  ✓   9 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:194:7 › a Agenda como o dono do produto a usa › o filtro por pessoa ISOLA de verdade — clicando, no produto (190ms)
+  ✓  10 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:221:7 › a Agenda como o dono do produto a usa › evidência visual da tela do produto (1.4s)
+  ✓  11 [chromium] › tests/e2e/editor-e-agenda-altura.spec.ts:335:7 › 1280x720: o canvas aceita zoom e a Agenda conserva altura (8.1s)
+  ✓  12 [chromium] › tests/e2e/editor-e-agenda-altura.spec.ts:335:7 › 390x720: o canvas aceita zoom e a Agenda conserva altura (7.1s)
+  ✓  13 [chromium] › tests/e2e/fluxo-controles-contraste.spec.ts:6:5 › zoom legível, clicável e sem sobrepor adicionar nó nos dois temas (7.5s)
+  ✓  14 [chromium] › tests/e2e/fluxo-gatilho-no-editor.spec.ts:6:5 › clicar no gatilho permite escolher e persistir o disparo sem sair do nó (7.7s)
+  ✓  15 [chromium] › tests/e2e/followup-builder.spec.ts:230:7 › followup flow builder — canvas visual (Task 6.2) › manager cria um fluxo, clica na linha e o canvas React Flow abre (6.1s)
+  ✓  16 [chromium] › tests/e2e/followup-builder.spec.ts:255:7 › followup flow builder — canvas visual (Task 6.2) › adiciona os 4 nós via paleta e conecta trigger→wait→action→end (6.7s)
+  ✓  17 [chromium] › tests/e2e/followup-builder.spec.ts:303:7 › followup flow builder — canvas visual (Task 6.2) › clica no nó Aguardar e configura 10min; clica no nó Ação e configura o prompt_hint (4.8s)
+  ✓  18 [chromium] › tests/e2e/followup-builder.spec.ts:348:7 › followup flow builder — canvas visual (Task 6.2) › fluxo completo: montar, publicar incompleto (422 ancorado), corrigir, publicar, recarregar, rollback desabilitado (12.5s)
+  ✓  19 [chromium] › tests/e2e/followup-builder.spec.ts:521:7 › followup flow builder — editor de condição de aresta / ai_classify (Task 6.3) › ai_classify só publica depois de configurar class_match/no_reply/always nas arestas de saída (18.4s)
+  ✓  20 [chromium] › tests/e2e/followup-journey.spec.ts:224:7 › followup — jornada completa (Task 8.3) › silêncio → enroll → trigger→wait→action→classify → resposta → outcome → fila (45.4s)
+  ✓  21 [chromium] › tests/e2e/followup-linguagem.spec.ts:84:7 › construtor de follow-up — a tela não fala em código (W2-LINGUAGEM) › nenhum valor de wire e nenhum UUID aparecem no painel de nenhum tipo de nó (6.8s)
+  ✓  22 [chromium] › tests/e2e/followup-publicado-abre-no-construtor.spec.ts:77:5 › o fluxo publicado por fora do construtor abre com os nós que estão no ar (2.9s)
+  ✓  23 [chromium] › tests/e2e/followup-ramos.spec.ts:120:7 › condição com várias regras — uma bolinha por regra › duas regras dão duas saídas separadas, e dois leads seguem caminhos diferentes (13.8s)
+  ✓  24 [chromium] › tests/e2e/followup-tempo-adaptativo.spec.ts:142:7 › nó de espera — o modo Adaptativo tem de decidir de verdade › a espera configurada como Adaptativa não pode agendar o máximo (17.7s)
+  24 passed (3.5m)

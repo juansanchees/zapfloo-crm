@@ -29,6 +29,33 @@ reprovou o piso de Plano. Sem o contêiner, três casos reprovaram na repetiçã
 Limites, comandos e evidências: [altura-shell.md](altura-shell.md) e
 `.superpowers/evidence/altura-shell/`. Não equivale a QA completo das 12 telas.
 
+### Editor de follow-up ocupa o espaço útil `[P0]` — 10/set/2026 — UI validada
+
+O canvas zerado foi reproduzido em 1280×720 e 390×720 sem derrubar a Agenda.
+Remover seu `h-full` recuperou o paint; arrastes além dos 539px restantes ainda
+acionavam auto-pan e tiravam nós anteriores da área clicável. FIX3 (`h-dvh`)
+foi rejeitado com 2 falhas/22 passes. FIX4, medindo a altura útil do `main`,
+passou o recorte de 24 casos, mas a regressão sintética 180→240px provou que um
+irmão interno podia deixar a medida obsoleta sem resize do `main`: 1 falha/1
+passe, deltas 180/240px. FIX5 observa `main`, irmãos anteriores e mudanças de
+`childList`; build e geometria passaram (2/2 em 41,0s), inclusive com delta
+inferior 0px nos estímulos e em 767↔768. O alcance comprovado é a estrutura DOM
+atual; a rodada final combinada é registrada abaixo.
+
+A prova usa wheel real, hit-test e escala `DOMMatrix`; 390px continua sendo
+Chromium desktop estreito, não toque. As specs antigas mantêm seus próprios
+viewports. O bloco sintético é somente estímulo geométrico, não aviso/evento de
+negócio. Ao remover o FIX5, falharam os 12 casos antigos do editor e as 2 sondas,
+enquanto os 10 casos da Agenda passaram. Ao remover o wrapper do AppShell com
+FIX5 retido, as 2 sondas e 3/4 casos antigos alvo reprovaram; o quarto passou e
+quatro casos seguintes não rodaram pela cascata serial existente. Portanto, a
+prova exata 4/4 não foi atingida. Após restaurar ambas as sabotagens, build limpo
+e os 24 casos combinados passaram sem skips. Canvas mediu 539/389px, a grade
+752/752px, o histórico 128/154px e o overflow horizontal 0px; zoom e gatilho
+foram acionados de verdade. `gov:verify` e `test:db` também passaram localmente.
+CI, P0 completa, VPS, WhatsApp e toque em aparelho não foram provados. Detalhes:
+[`editor-altura.md`](editor-altura.md).
+
 ### Contraste da navegação autenticada `[P0]` — 10/set/2026
 
 `rbac-roles.spec.ts` intacta, executada nos temas claro/escuro: 8/8 passaram.

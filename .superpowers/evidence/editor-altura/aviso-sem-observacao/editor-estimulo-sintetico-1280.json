@@ -1,0 +1,294 @@
+{
+  "stimulus": "synthetic-layout-only",
+  "businessEvent": false,
+  "alto-1280": {
+    "viewport": {
+      "width": 1280,
+      "height": 1200
+    },
+    "stimulus": {
+      "kind": "synthetic-layout-only",
+      "businessEvent": false,
+      "box": null
+    },
+    "main": {
+      "top": 174,
+      "bottom": 1200,
+      "clientHeight": 1026,
+      "scrollHeight": 1071,
+      "scrollTop": 0
+    },
+    "workspace": {
+      "box": {
+        "top": 243,
+        "bottom": 1200,
+        "width": 992,
+        "height": 957
+      },
+      "inlineHeight": "957px"
+    },
+    "canvasRow": {
+      "top": 304,
+      "bottom": 1200,
+      "width": 992,
+      "height": 896
+    },
+    "canvas": {
+      "top": 304,
+      "bottom": 1200,
+      "width": 768,
+      "height": 896
+    },
+    "bottomDelta": 0
+  },
+  "breakpoint-767": {
+    "viewport": {
+      "width": 767,
+      "height": 1200
+    },
+    "stimulus": {
+      "kind": "synthetic-layout-only",
+      "businessEvent": false,
+      "box": null
+    },
+    "main": {
+      "top": 170,
+      "bottom": 1200,
+      "clientHeight": 1030,
+      "scrollHeight": 1075,
+      "scrollTop": 0
+    },
+    "workspace": {
+      "box": {
+        "top": 231,
+        "bottom": 1200,
+        "width": 735,
+        "height": 969
+      },
+      "inlineHeight": "969px"
+    },
+    "canvasRow": {
+      "top": 390,
+      "bottom": 1200,
+      "width": 735,
+      "height": 810
+    },
+    "canvas": {
+      "top": 390,
+      "bottom": 1200,
+      "width": 735,
+      "height": 810
+    },
+    "bottomDelta": 0
+  },
+  "breakpoint-768": {
+    "viewport": {
+      "width": 768,
+      "height": 1200
+    },
+    "stimulus": {
+      "kind": "synthetic-layout-only",
+      "businessEvent": false,
+      "box": null
+    },
+    "main": {
+      "top": 198,
+      "bottom": 1200,
+      "clientHeight": 1002,
+      "scrollHeight": 1099,
+      "scrollTop": 0
+    },
+    "workspace": {
+      "box": {
+        "top": 319,
+        "bottom": 1200,
+        "width": 480,
+        "height": 881
+      },
+      "inlineHeight": "881px"
+    },
+    "canvasRow": {
+      "top": 478,
+      "bottom": 1200,
+      "width": 480,
+      "height": 722
+    },
+    "canvas": {
+      "top": 478,
+      "bottom": 1200,
+      "width": 480,
+      "height": 722
+    },
+    "bottomDelta": 0
+  },
+  "alto-restaurado": {
+    "viewport": {
+      "width": 1280,
+      "height": 1200
+    },
+    "stimulus": {
+      "kind": "synthetic-layout-only",
+      "businessEvent": false,
+      "box": null
+    },
+    "main": {
+      "top": 174,
+      "bottom": 1200,
+      "clientHeight": 1026,
+      "scrollHeight": 1071,
+      "scrollTop": 0
+    },
+    "workspace": {
+      "box": {
+        "top": 243,
+        "bottom": 1200,
+        "width": 992,
+        "height": 957
+      },
+      "inlineHeight": "957px"
+    },
+    "canvasRow": {
+      "top": 304,
+      "bottom": 1200,
+      "width": 992,
+      "height": 896
+    },
+    "canvas": {
+      "top": 304,
+      "bottom": 1200,
+      "width": 768,
+      "height": 896
+    },
+    "bottomDelta": 0
+  },
+  "estimulo-180": {
+    "viewport": {
+      "width": 1280,
+      "height": 1200
+    },
+    "stimulus": {
+      "kind": "synthetic-layout-only",
+      "businessEvent": false,
+      "box": {
+        "top": 243,
+        "bottom": 423,
+        "width": 992,
+        "height": 180
+      }
+    },
+    "main": {
+      "top": 174,
+      "bottom": 1200,
+      "clientHeight": 1026,
+      "scrollHeight": 1251,
+      "scrollTop": 0
+    },
+    "workspace": {
+      "box": {
+        "top": 423,
+        "bottom": 1380,
+        "width": 992,
+        "height": 957
+      },
+      "inlineHeight": "957px"
+    },
+    "canvasRow": {
+      "top": 484,
+      "bottom": 1380,
+      "width": 992,
+      "height": 896
+    },
+    "canvas": {
+      "top": 484,
+      "bottom": 1380,
+      "width": 768,
+      "height": 896
+    },
+    "bottomDelta": 180
+  },
+  "estimulo-240": {
+    "viewport": {
+      "width": 1280,
+      "height": 1200
+    },
+    "stimulus": {
+      "kind": "synthetic-layout-only",
+      "businessEvent": false,
+      "box": {
+        "top": 243,
+        "bottom": 483,
+        "width": 992,
+        "height": 240
+      }
+    },
+    "main": {
+      "top": 174,
+      "bottom": 1200,
+      "clientHeight": 1026,
+      "scrollHeight": 1311,
+      "scrollTop": 0
+    },
+    "workspace": {
+      "box": {
+        "top": 483,
+        "bottom": 1440,
+        "width": 992,
+        "height": 957
+      },
+      "inlineHeight": "957px"
+    },
+    "canvasRow": {
+      "top": 544,
+      "bottom": 1440,
+      "width": 992,
+      "height": 896
+    },
+    "canvas": {
+      "top": 544,
+      "bottom": 1440,
+      "width": 768,
+      "height": 896
+    },
+    "bottomDelta": 240
+  },
+  "estimulo-removido": {
+    "viewport": {
+      "width": 1280,
+      "height": 1200
+    },
+    "stimulus": {
+      "kind": "synthetic-layout-only",
+      "businessEvent": false,
+      "box": null
+    },
+    "main": {
+      "top": 174,
+      "bottom": 1200,
+      "clientHeight": 1026,
+      "scrollHeight": 1071,
+      "scrollTop": 0
+    },
+    "workspace": {
+      "box": {
+        "top": 243,
+        "bottom": 1200,
+        "width": 992,
+        "height": 957
+      },
+      "inlineHeight": "957px"
+    },
+    "canvasRow": {
+      "top": 304,
+      "bottom": 1200,
+      "width": 992,
+      "height": 896
+    },
+    "canvas": {
+      "top": 304,
+      "bottom": 1200,
+      "width": 768,
+      "height": 896
+    },
+    "bottomDelta": 0
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useLayoutEffect, useRef } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FollowupFlowDetailRow } from "@/hooks/followup/useFollowupFlow";
@@ -25,8 +26,45 @@ interface Props {
 }
 
 export function FlowBuilder({ flowId, initialData }: Props) {
+  const workspaceRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const workspace = workspaceRef.current;
+    const main = workspace?.closest("main");
+    if (!workspace || !main) return;
+
+    // A shell tem wrappers de altura automática. Medir o espaço restante evita
+    // porcentagens cíclicas e não pressupõe a altura das barras/avisos da instalação.
+    const resize = () => {
+      const offset = workspace.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop;
+      workspace.style.height = `${Math.max(0, main.clientHeight - offset)}px`;
+      // O piso anterior de 600px continua rolando em janelas curtas. Em janelas
+      // maiores, não criar rolagem só pelo padding inferior externo ao editor.
+      workspace.style.marginBottom = `-${parseFloat(getComputedStyle(main).paddingBottom) || 0}px`;
+    };
+    const observer = new ResizeObserver(resize);
+    const observeAvailableSpace = () => {
+      observer.disconnect();
+      observer.observe(main);
+      // Avisos podem aparecer, crescer ou sumir sem redimensionar o main.
+      // Não observar o wrapper do editor: sua altura depende deste cálculo.
+      for (const sibling of main.children) {
+        if (sibling.contains(workspace)) break;
+        observer.observe(sibling);
+      }
+      resize();
+    };
+    observeAvailableSpace();
+    const notices = new MutationObserver(observeAvailableSpace);
+    notices.observe(main, { childList: true });
+    return () => {
+      observer.disconnect();
+      notices.disconnect();
+    };
+  }, []);
+
   return (
-    <div className="flex h-full min-h-[600px] flex-1 flex-col" data-testid="flow-builder-shell">
+    <div ref={workspaceRef} className="flex min-h-[600px] shrink-0 flex-col" data-testid="flow-builder-shell">
       <FlowCanvas flowId={flowId} initialData={initialData} />
     </div>
   );

@@ -1,0 +1,17 @@
+AppShell: wrapper automático removido temporariamente; editor FIX5 mantido.
+Build inicial exit 1 ENOTEMPTY antes de executar testes. Nova compilação sem alteração de fonte: exit 0.
+Execução r1: exit 1. Quatro casos posteriores ao histórico não rodaram por cascata do bloco serial já existente.
+Não foram adicionados skips nem alteradas expectativas das specs originais.
+Os três casos antigos reprovados não equivalem aos quatro pedidos: clique continuou passando.
+
+  ✓   1 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:145:5 › clicar num bloco livre abre a marcação NAQUELE horário (7.6s)
+  ✘   2 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:206:5 › arrastar um card remarca — e o horário novo sobrevive ao reload (11.5s)
+  ✘   3 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:369:5 › arrastar para fora da disponibilidade é RECUSADO e o card volta (11.3s)
+  ✓   4 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:38:7 › a Agenda como o dono do produto a usa › chego na Agenda CLICANDO no menu, não digitando a URL (3.2s)
+  ✓   5 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:62:7 › a Agenda como o dono do produto a usa › as pessoas da equipe são REAIS — o filtro deixou de ser invisível (2.1s)
+  ✘   6 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:125:7 › a Agenda como o dono do produto a usa › o histórico está NA TELA DO PRODUTO, com as quatro abas (1.0m)
+  ✘  11 [chromium] › tests/e2e/editor-e-agenda-altura.spec.ts:335:7 › 1280x720: o canvas aceita zoom e a Agenda conserva altura (10.0s)
+  ✘  12 [chromium] › tests/e2e/editor-e-agenda-altura.spec.ts:335:7 › 390x720: o canvas aceita zoom e a Agenda conserva altura (6.7s)
+  5 failed
+  4 did not run
+  3 passed (2.1m)
