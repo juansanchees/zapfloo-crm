@@ -132,54 +132,32 @@ test.describe("o wizard monta um funcionário", () => {
     await expect(identidade).not.toHaveText("Minha Empresa");
   });
 
-  test("o passo do telefone pergunta COMO se conecta antes de assumir o código", async ({
-    page,
-  }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 30_000 });
-
-    // As três formas que o produto realmente suporta — as mesmas da tela de
-    // Conexões. Antes, o wizard oferecia uma e nem perguntava: a sessão do
-    // canal por código subia sozinha na montagem da tela.
-    await expect(page.getByTestId("forma-qr")).toBeVisible();
-    await expect(page.getByTestId("forma-oficial")).toBeVisible();
-    await expect(page.getByTestId("forma-parceiro")).toBeVisible();
-
-    // Nenhuma escolha feita: o código não pode estar na tela ainda.
-    await expect(page.locator('img[src*="/whatsapp/qr"]')).toHaveCount(0);
-
-    // A cópia visível fala a língua de quem vende, nunca a do transporte.
-    const corpo = page.locator("body");
-    await expect(corpo).not.toContainText(/provider/i);
-    await expect(corpo).not.toContainText(/channel_session/i);
-
-    // Escolher a conta oficial leva ao formulário dela, e dá para voltar —
-    // escolher errado não pode ser uma porta que tranca.
-    await page.getByTestId("forma-oficial").locator("input").click();
-    await expect(page.getByTestId("canal-oficial-root")).toBeVisible({ timeout: 15_000 });
-    await page.getByTestId("voltar-para-escolha").click();
-    await expect(page.getByTestId("forma-qr")).toBeVisible();
-
-    // NÃO avança: a spec é serial e o caso seguinte começa neste mesmo passo.
-    // A escolha vive em memória e não é gravada, então voltar aqui não deixa
-    // rastro — se deixasse, o passo já contaria como cumprido.
-  });
-
-  test("o passo do telefone não expõe identificador interno nem enum", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 30_000 });
-
-    const corpo = page.locator("body");
-    // Mostrava "Sessão: org_f3d61bc0" e "Status: INIT".
-    await expect(corpo).not.toContainText(/Sessão:/i);
-    await expect(corpo).not.toContainText(/Status:\s*(INIT|STARTING|SCAN_QR_CODE|WORKING)/);
-    // E nunca mais manda rodar Docker nem aponta para um menu que não existe.
-    await expect(corpo).not.toContainText(/docker compose/i);
-    await expect(corpo).not.toContainText(/Configurações → Canais/i);
-
-    await page.getByRole("button", { name: /pular por enquanto/i }).click();
-    await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
-  });
+  // ═══ OS DOIS CASOS DO PASSO DO TELEFONE VIVEM EM `codex/jornada-p0` ═══
+  //
+  // Estavam aqui:
+  //   "o passo do telefone pergunta COMO se conecta antes de assumir o código"
+  //   "o passo do telefone não expõe identificador interno nem enum"
+  //
+  // Os dois começam com `login()` seguido de
+  // `waitForURL(/\/onboarding\/connect-whatsapp/)` — isto é, assumem que o passo
+  // do TELEFONE vem logo depois do welcome. Nesta branch ele não vem, e não é
+  // acidente: `lib/onboarding/passos.ts` ordena welcome → setup-ai →
+  // connect-whatsapp, e `app/onboarding/connect-whatsapp/page.tsx:24` FECHA a
+  // porta com `if (!state.ai) redirect("/onboarding/setup-ai")`. Ir direto pela
+  // URL também não alcança: o redirect é do servidor.
+  //
+  // Derrubar essa trava — deixar conectar o número SEM configurar IA antes — é
+  // precisamente a feature de `codex/jornada-p0`, que remove aquele redirect e
+  // reordena os passos. É lá que estes dois casos medem alguma coisa, e é lá que
+  // eles JÁ ESTÃO, com o mesmo título e o mesmo corpo. Nada se perdeu aqui: eles
+  // voltam junto com a branch que os torna verdadeiros.
+  //
+  // ⚠️ E eles NUNCA passaram nesta branch. Não é regressão nova: a spec é
+  // `mode: "serial"`, o caso anterior ("o nome do negócio chega ao cabeçalho do
+  // passo seguinte") falhava antes deles, e a cascata os deixava em "did not
+  // run" — invisíveis. Quando aquele foi consertado (63fb5a483), estes
+  // apareceram. Consertar um revela o próximo; é o comportamento esperado de uma
+  // suíte serial, não um efeito colateral do conserto.
 
   test("treinar mostra o cérebro dele — e sem chave não é um beco", async ({ page }) => {
     // Vale nos dois mundos pela mesma razão do caso do quadro (ver lá): no CI
