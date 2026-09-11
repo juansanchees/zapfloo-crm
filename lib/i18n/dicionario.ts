@@ -37,6 +37,8 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Cadastrar credencial de IA": { es: "Registrar credencial de IA" },
+  "Conectar número de WhatsApp": { es: "Conectar un número de WhatsApp" },
   "Ensaiar a configuração no onboarding": { es: "Ensayar la configuración inicial" },
   "Gera uma resposta de prévia com o provedor, o modelo e a credencial escolhidos no onboarding, sem usar ferramentas nem enviar mensagem ao cliente.": { es: "Genera una respuesta de vista previa con el proveedor, el modelo y la credencial elegidos en la configuración inicial, sin usar herramientas ni enviar mensajes al cliente." },
   "Usa a seleção do próprio ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; para testar outra combinação, escolha outro provedor, modelo ou credencial no onboarding e execute um novo ensaio.": { es: "Usa la selección del propio ensayo, capturada antes de la llamada. Una elección de este panel no la sustituye; para probar otra combinación, elija otro proveedor, modelo o credencial en la configuración inicial y ejecute un nuevo ensayo." },
