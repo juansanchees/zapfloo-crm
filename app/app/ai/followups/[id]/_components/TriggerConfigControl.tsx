@@ -362,6 +362,9 @@ export function TriggerConfigControl({ flowId, triggerConfig, variant = "popover
             />
           </div>
 
+        </div>
+  );
+  const saveButton = (
           <Button
             type="button"
             size="sm"
@@ -372,12 +375,11 @@ export function TriggerConfigControl({ flowId, triggerConfig, variant = "popover
           >
             {update.isPending ? t("Salvando…") : t("Salvar gatilho")}
           </Button>
-        </div>
   );
 
   // Um único formulário/contrato: o mesmo controle também vive no nó inicial,
   // onde o usuário procura o disparo, sem duplicar lógica de persistência.
-  if (variant === "inline") return <section aria-label={t("Configurar gatilho")}>{fields}</section>;
+  if (variant === "inline") return <section className="space-y-3" aria-label={t("Configurar gatilho")}>{fields}{saveButton}</section>;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -386,8 +388,12 @@ export function TriggerConfigControl({ flowId, triggerConfig, variant = "popover
           {summaryLabel(triggerConfig, etapaSalva ?? null, t)}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="max-h-[70dvh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto" align="end" data-testid="trigger-config-panel">
-        {fields}
+      {/* O limite também respeita o espaço abaixo/acima do disparador. Só os
+          campos rolam; a ação permanece dentro da área pintada, mesmo quando
+          o formulário é maior que a viewport disponível. */}
+      <PopoverContent className="flex max-h-[min(70dvh,var(--radix-popover-content-available-height))] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-0" align="end" collisionPadding={8} data-testid="trigger-config-panel">
+        <div className="min-h-0 overflow-y-auto p-4">{fields}</div>
+        <div className="shrink-0 border-t border-border p-3">{saveButton}</div>
       </PopoverContent>
     </Popover>
   );
