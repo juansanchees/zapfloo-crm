@@ -1,6 +1,6 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ehEcoLocal } from "@/lib/kanban/local-echo";
 import { useRealtimeChannel } from "@/hooks/realtime/useRealtimeChannel";
 import { useRefetchDeSeguranca } from "@/hooks/realtime/useRefetchDeSeguranca";
@@ -49,7 +49,9 @@ function idDoEvento(payload: unknown): string | null {
 
 export function useBoard(pipelineId: string | null) {
   const qc = useQueryClient();
-  const queryKey = ["board", pipelineId] as const;
+  // Identidade estável enquanto o pipeline não muda: `useRefetchDeSeguranca`
+  // depende desta chave e recriar o array em todo render reinicia seu intervalo.
+  const queryKey = useMemo(() => ["board", pipelineId] as const, [pipelineId]);
 
   /**
    * Cards que acabaram de mudar POR EVENTO REMOTO — o pulso da Wave 3.

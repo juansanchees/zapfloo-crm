@@ -37,6 +37,7 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Uma atualização não chegou em tempo real. Recuperamos os dados pela verificação de segurança; novas alterações podem demorar para aparecer.": { es: "Una actualización no llegó en tiempo real. Recuperamos los datos mediante la verificación de seguridad; los nuevos cambios pueden tardar en aparecer." },
   "Cadastrar credencial de IA": { es: "Registrar credencial de IA" },
   "Conectar número de WhatsApp": { es: "Conectar un número de WhatsApp" },
   "Ensaiar a configuração no onboarding": { es: "Ensayar la configuración inicial" },

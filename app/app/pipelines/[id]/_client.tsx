@@ -88,6 +88,11 @@ export function PipelinePageClient({
           <Plus size={16} className="mr-2" /> {t("Novo Lead")}
         </Button>
       </header>
+      {seguranca.divergencias > 0 && (
+        <p role="status" className="rounded-lg border border-warning/30 bg-warning-bg p-3 text-sm text-warning-fg">
+          {t("Uma atualização não chegou em tempo real. Recuperamos os dados pela verificação de segurança; novas alterações podem demorar para aparecer.")}
+        </p>
+      )}
       {data && (
         <NewLeadDialog
           open={newOpen}
