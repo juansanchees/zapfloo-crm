@@ -186,12 +186,15 @@ test("Pergunte à IA aguarda 12 segundos, responde com fontes e não repete a co
 test("o sistema operacional preserva hierarquia em temas, idiomas e viewports", async ({
   page,
 }) => {
+  // O SO só dirige o tema quando a pessoa escolheu "system"; o padrão é claro.
+  await page.addInitScript(() => localStorage.setItem("deskcomm-theme", "system"));
   try {
     await usarIdioma(page, "pt-BR");
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/app/contacts");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(page.getByRole("heading", { name: "Contatos", level: 1 })).toBeVisible();
     await expect(page.locator(".animate-pulse")).toHaveCount(0, { timeout: 30_000 });
     await expectSemOverflowHorizontal(page);
@@ -203,6 +206,7 @@ test("o sistema operacional preserva hierarquia em temas, idiomas e viewports", 
     await page.setViewportSize({ width: 820, height: 1180 });
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/app/kanban");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(page.getByRole("heading", { name: "Funis", level: 1 })).toBeVisible({
       timeout: 30_000,
     });
@@ -216,6 +220,7 @@ test("o sistema operacional preserva hierarquia em temas, idiomas e viewports", 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/app/ai/agents");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(page.getByText("AUTOMATIZACIÓN INTELIGENTE")).toBeVisible();
     await expectSemOverflowHorizontal(page);
     await page.screenshot({
@@ -226,6 +231,7 @@ test("o sistema operacional preserva hierarquia em temas, idiomas e viewports", 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/app/ai/ask");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(page.getByRole("heading", { name: "Pregúntale a la IA" })).toBeVisible();
     await expectSemOverflowHorizontal(page);
     await page.screenshot({

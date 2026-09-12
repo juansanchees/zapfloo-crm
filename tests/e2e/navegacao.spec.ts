@@ -83,8 +83,11 @@ test.describe.configure({ timeout: 120_000 });
 
 test.describe("navegação compacta", () => {
   test("visão geral usa dados locais reais e preserva navegação no desktop e celular", async ({ page }) => {
+    // Esta jornada mede o tema escuro; seguir o SO agora exige uma escolha explícita.
+    await page.addInitScript(() => localStorage.setItem("deskcomm-theme", "system"));
     await page.emulateMedia({ colorScheme: "dark" });
     await loginAdmin(page);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await page.setViewportSize({ width: 1280, height: 900 });
     await sidebar(page).getByRole("link", { name: "Painel de controle", exact: true }).click();
     // Esta rota é um Server Component que consulta o banco. O timeout padrão

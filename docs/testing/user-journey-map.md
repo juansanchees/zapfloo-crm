@@ -16,6 +16,25 @@
 - Resultado: `PASS` / `FAIL(bug#)` / `WARN` (funciona mas UX ruim).
 - Evidência: screenshot/trace em `.superpowers/evidence/vps-qa/`.
 
+### Tema claro no primeiro acesso `[P0]` — 12/set/2026
+
+`codex/tema-claro-padrao`: navegador novo com SO escuro abre claro; escolhas
+salvas `light`, `dark` e `system` continuam respeitadas, sem gravar um padrão
+no armazenamento. Seletor real → escuro → reload, forçar `dark`, apagar escolha
+e voltar a claro, escolher `system` e alternar o SO passaram. O script foi
+provado antes da primeira pintura, inclusive com chunks de hidratação bloqueados.
+Chromium 1280×720: 239 quadros medidos sem troca de tema/fundo; oito casos E2E
+passaram junto com navegação e redesign em desktop, tablet e 390px. A sidebar
+conservou seus dois tons escuros preexistentes, sem alteração de CSS.
+
+Teste real de hidratação reproduziu seletor com rótulo incorreto após reload;
+retirar a guarda da hidratação voltou a escrever claro sobre escuro e reprovou
+o teste. Restaurada: 18 testes específicos e 7.888 da suíte completa passaram.
+Banco local reutilizado, não instalação fresca completa; sem prova em produção,
+outros navegadores ou CI remoto. Evidências em `.superpowers/evidence/tema-padrao/`;
+comandos, medições e limites em
+[`relatório de tema`](../superpowers/reports/2026-09-12-tema-claro-padrao.md).
+
 ### Leva final: gatilhos, agente e perda de atualizações `[P0/P1]` — 10/set/2026
 
 Em `codex/altura-shell`, os sete casos nomeados pelo dono passaram junto

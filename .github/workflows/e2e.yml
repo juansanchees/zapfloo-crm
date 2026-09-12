@@ -273,6 +273,7 @@ jobs:
     # e devolvem ~9 min de relógio a cada uma.
     env:
       SPECS_PARTE_1: >-
+        tema-padrao.spec.ts
         periodo-de-testes.spec.ts
         fluxo-controles-contraste.spec.ts
         editor-e-agenda-altura.spec.ts
