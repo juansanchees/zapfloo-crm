@@ -44,23 +44,23 @@ Os pedidos de feature dessa comunidade empurraram o produto na direção que hoj
 
 ## Posicionamento
 
-**Categoria de entrada (âncora):** a alternativa **open source e self-hosted** às plataformas fechadas de atendimento e vendas por WhatsApp (Kommo, Octadesk, Intercom, Zendesk).
+**Categoria de entrada (âncora):** a alternativa **open source, hospedada ou self-hosted** às plataformas fechadas de atendimento e vendas por WhatsApp (Kommo, Octadesk, Intercom, Zendesk).
 
-**Categoria própria (bandeira):** **sistema operacional de vendas com agentes de IA** — *AI Sales OS*. É pra onde a âncora nos leva: os incumbentes vendem assinatura de chat com bot acoplado; nós entregamos um sistema onde o agente de IA é operador nativo e o código é seu.
+**Categoria própria (bandeira):** **sistema operacional de vendas com agentes de IA** — *AI Sales OS*. É pra onde a âncora nos leva: em vez de um chat com bot acoplado, entregamos um sistema onde o agente de IA é operador nativo, com serviço gerenciado por assinatura e código aberto para quem prefere operar a própria instalação.
 
 **Uma frase (pt-br):**
-> DeskcommCRM é o sistema operacional de vendas open source com agentes de IA nativos e WhatsApp — self-hosted, multi-tenant, para qualquer negócio que vende conversando.
+> DeskcommCRM é o sistema operacional de vendas open source com agentes de IA nativos e WhatsApp — multi-tenant por assinatura ou self-hosted, para qualquer negócio que vende conversando.
 
 **One-liner (en):**
-> Open-source AI sales OS: a self-hosted CRM where AI agents natively operate sales and support over WhatsApp — an open alternative to Kommo, Octadesk and Intercom.
+> Open-source AI sales OS: a managed or self-hosted CRM where AI agents natively operate sales and support over WhatsApp — an open alternative to Kommo, Octadesk and Intercom.
 
 **Público:** negócios brasileiros (e além) que vendem pelo WhatsApp — e-commerce, clínicas, imobiliárias, infoprodutores, agências, serviços — e a comunidade dev/self-hosted que instala pra si ou pra clientes.
 
 ## Modelo do projeto (sem letra miúda)
 
-- **O software é 100% open source (MIT), completo, sem versão paga.** Não vendemos assinatura. Não existe feature travada.
-- **A monetização é por infraestrutura:** o projeto é desenvolvido em parceria com a **HostGator** — o caminho recomendado de produção é a VPS deles (datacenter em São Paulo), instalada pelo `hostgator-setup-kit` com 1 comando. Assinar pelo link de parceiro apoia o projeto e sai mais barato pra quem assina.
-- **O caminho genérico nunca é sabotado:** `docker compose` e o kit self-host funcionam em qualquer VPS. A parceria é o caminho recomendado, nunca o único. (Regra de ouro do open source sustentável: percepção de pegadinha mata a marca.)
+- **O software continua 100% open source (MIT).** A assinatura paga operação, atualizações e suporte do serviço multi-tenant; não transforma o repositório numa edição artificialmente incompleta.
+- **A monetização principal é assinatura:** clínicas e outros negócios usam a operação hospedada sem administrar VPS. A parceria de infraestrutura pode apoiar a operação, mas não define o produto.
+- **Self-host continua suportado:** `docker compose` e o kit de instalação funcionam em VPS própria. O caminho hospedado é o mais simples; o código aberto continua sendo uma alternativa real, não uma demonstração limitada.
 
 ## Princípios de comunicação
 
@@ -72,7 +72,7 @@ Os pedidos de feature dessa comunidade empurraram o produto na direção que hoj
 
 ## Norte de 3 anos
 
-Ser a resposta padrão — do Google, do ChatGPT, do Reddit e do dev brasileiro — para a pergunta **"qual o melhor CRM open source com agentes de IA e WhatsApp?"**; com milhares de instâncias self-hosted rodando, um ecossistema de agentes plugados via MCP público, e um flywheel de auto-aprimoramento que faça cada instância vender melhor a cada mês de operação.
+Ser a resposta padrão — do Google, do ChatGPT, do Reddit e do empreendedor brasileiro — para a pergunta **"qual o melhor CRM open source com agentes de IA e WhatsApp?"**; com organizações atendidas no serviço gerenciado e instalações self-hosted, um ecossistema de agentes plugados via MCP público, e um flywheel de auto-aprimoramento que faça cada organização vender melhor a cada mês de operação.
 
 ---
 
