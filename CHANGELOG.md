@@ -8,6 +8,148 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.18.0] — 2026-09-11
+
+### Adicionado
+
+- **Ativação segura do agente revisado no primeiro acesso** - Confirmar a revisão passa a guardar a prova exata do ensaio atual sem ativar, publicar ou conectar o agente.
+  - Uma ação explícita separada publica o mesmo agente e a mesma versão ensaiada somente quando o canal escolhido está conectado e fechado em modo de teste por lista de telefones autorizados.
+  - Repetir a ativação não duplica publicação nem auditoria. Se agente, versão ou canal forem alterados depois, a repetição falha sem desfazer a escolha posterior.
+  - A transação não chama IA, ferramentas, WhatsApp, HTTP nem cria eventos de contato proativo. O recibo guarda apenas identificadores, hash, modo de acesso e quantidade de testadores — nunca telefones, resposta, prompt ou chave.
+
+- **Ensaio de texto antes de ativar o agente** - A configuração salva pode preparar um modelo explicitamente escolhido, ensaiar uma mensagem sintética e registrar a revisão da resposta sem conectar canal ou ativar atendimento.
+  - Falhas, respostas vazias ou interrompidas e alterações na configuração não produzem uma prova revisável. A última execução e seleção podem ser retomadas.
+  - O teste pode consumir API e respeita o orçamento canônico. Limites técnicos da prévia: mensagem de até 4.000 caracteres, saída de até 1.200 tokens e 12.000 caracteres, timeout de rede de 30s, lease de 60s e contador compartilhado de 6 tentativas por minuto por organização (fallback por processo quando Redis indisponível).
+  - Migration 0223 aditiva no baseline. Esta prévia não valida ferramentas, memória, WhatsApp nem a jornada completa de instalação.
+
+- **Explore o CRM e retome a configuração depois** Administradores podem sair da configuração inicial para explorar o CRM sem marcar a organização como concluída. Um aviso mantém o caminho de retomada visível. A preferência vale para o usuário e a organização neste navegador, preservando permissões e verificação de MFA. Nenhum agente ou atendimento é ativado ao explorar.
+
+- **Primeiro acesso do negócio à ativação restrita** - O primeiro acesso agora segue negócio, agente e ensaio revisado, conexão e autorização explícita dos números de teste. Conectar o WhatsApp não ativa o agente.
+  - Nome, descrição, segmento, fuso e consentimento do negócio são retomáveis. Objetivo e tom do agente aparecem no resumo contextual; alterações em objetivo ou segmento invalidam a revisão anterior.
+  - O último botão ativa exatamente a versão revisada apenas para os números autorizados. O wizard não oferece liberação para o público e preserva canais que já tenham outra política.
+  - Recibo histórico retomável, bloqueios de rotas diretas e contexto entre organizações evitam conclusões falsas ou uma segunda criação legada. O ensaio não envia mensagens nem testa o transporte WhatsApp.
+
+- **Base de preparação inativa do agente** - Contrato backend para transformar configuração salva em versão draft sem canal, com agente inativo e sem substituir o padrão existente.
+  - Seleção explícita de IA e proteção contra revisão antiga, mudança de organização e edição da versão por outro caminho.
+  - Migration 0222 aditiva. Este lote não adiciona botão de ensaio, não valida chave/modelo por chamada externa e não libera atendimento; integração visual e revisão continuam pendentes.
+
+- **Salve a configuração inicial sem ativar atendimento** - A etapa de treinamento permite salvar nome, jeito de falar e regras e retomar após recarregar, sem chave de IA ou criação de atendimento.
+  - Uma aba antiga não sobrescreve o rascunho salvo por outra; falhas de leitura bloqueiam a gravação até recarregar.
+  - Migration 0221 e apêndice idempotente do baseline: configuração isolada por organização, revisão e auditoria sem conteúdo do formulário.
+  - Não substitui ainda o fluxo legado de criação. Ensaio e revisão antes da ativação pertencem ao próximo recorte; não houve publicação remota.
+
+- **Visão geral reúne atendimento e próximos passos** O menu ganha Visão geral, com contagens reais de conversas, tarefas pendentes e acesso direto ao atendimento. Cada pessoa pode reorganizar, ocultar e redimensionar os widgets permitidos, salvar a preferência ou restaurar o padrão. Falhas de leitura preservam um painel utilizável e oferecem nova tentativa, sem inventar números. A atualização cria automaticamente a tabela isolada por organização e usuário; não exige configuração manual.
+
+- **Navegação compacta por área de trabalho** O menu lateral passa a ter oito portas: Início, Conversas, Funis, Contatos,
+  Agentes de IA, Relatórios, Agenda e Configurações. Radar, respostas rápidas,
+  produtos, tarefas, conexões e demais telas continuam disponíveis na barra
+  contextual da área, nos hubs e na busca global, sempre respeitando as permissões
+  existentes. Nenhuma configuração ou migration é necessária.
+
+- **Pergunte à IA consulta o CRM sem alterar dados** A nova área Pergunte à IA resume e compara informações acessíveis de conversas,
+  contatos, oportunidades, agenda, equipe, produtos e clientes em risco. A resposta
+  mostra as fontes internas realmente consultadas e oferece atalhos para conferência.
+  Nesta primeira versão, o copiloto é somente leitura e o histórico permanece apenas
+  na página aberta; ele não envia mensagens nem modifica o CRM.
+
+- **Superfícies grafite e identidade visual integrada** - Temas claro e escuro com superfícies neutras, textos secundários legíveis e cantos consistentes.
+  - Navegação e conversa selecionadas preservam a cor configurada pela instalação; compositor e páginas de acesso ganham contornos próprios.
+  - A instalação Zapfloo pode usar a logo vetorial fornecida pelo proprietário sem substituir o resolvedor de marca nem as personalizações por organização.
+
+- **Formulário do agente indica os próximos passos** Ao criar ou editar um agente, o formulário passa a oferecer caminhos diretos
+  para cadastrar uma credencial de IA e conectar um número de WhatsApp. Os dois
+  atalhos continuam disponíveis quando as listas estão vazias e não exigem
+  configuração adicional após atualizar.
+
+- **Período de testes e vencimento visíveis no CRM** O CRM, o onboarding e os detalhes administrativos de cada empresa mostram o período gratuito de sete dias desde o cadastro, com data de término em horário de Brasília e tempo restante. O contador não reinicia ao entrar novamente. Ao vencer, informa que o período terminou; cobrança e suspensão automática não são executadas. A tela de conversas passa a ocupar a altura disponível, incluindo os avisos, mantendo o campo de mensagem dentro da tela.
+
+### Alterado
+
+- **Interface operacional ganha hierarquia consistente** A navegação passa a usar uma moldura grafite compacta, enquanto as telas de
+  trabalho adotam workspace, painéis, cabeçalhos, filtros e controles consistentes.
+  A cor principal continua sendo a marca configurada pela instalação ou organização;
+  nenhuma identidade visual fica fixa na imagem distribuída.
+
+### Corrigido
+
+- **Agenda em andamento e pedidos para parar respeitam o estado correto** - A agenda mantém compromissos em andamento em Próximos até o horário de término.
+  - O pedido para parar cancela também follow-ups pausados manualmente. Mensagens comuns e abertura/fechamento de atendimento humano preservam a pausa manual.
+
+- **Teste do agente bloqueia ferramentas reais** - O teste legado bloqueia todas as ferramentas antes dos handlers, inclusive leitura e transferência, e registra a recusa no histórico. Não emite eventos operacionais de início/fim.
+  - A tela esclarece que o resultado não comprova operações reais. Consumo do modelo e registros técnicos continuam; atendimento normal não muda.
+  - O histórico mostra também chamadas agrupadas pelo runtime, incluindo a recusa, sem perder compatibilidade com registros planos antigos.
+  - O painel de teste respeita a largura do celular; detalhes longos ficam com rolagem interna.
+
+- **Configuração inicial respeita permissões e a marca da instalação** - Ações de configuração inicial exigem administrador e a verificação de sessão aplicável. A sugestão de funil usa somente a organização autorizada da sessão.
+  - Membros sem permissão administrativa entram no CRM sem ficarem presos no assistente de configuração.
+  - A estrutura visual da configuração ganha painel lateral responsivo e usa a logo e o nome resolvidos da instalação. A ordem das etapas permanece inalterada neste lote.
+
+- **Retentativa do onboarding respeita o estado da versão** Ao repetir a configuração, uma versão inicial em rascunho, arquivada ou substituída não é mais confundida com uma versão publicada. A recuperação do ponteiro continua disponível quando a primeira publicação realmente terminou.
+
+- **Publicação do redesign reforça respostas e transporte seguros** A geração assistida de fluxos deixa de expor detalhes internos do banco quando uma
+  gravação falha. A aplicação também passa a enviar HSTS no domínio HTTPS e atualiza
+  uma dependência transitiva vulnerável, sem alterar dados ou exigir configuração.
+
+- **Calendário e conteúdo das telas deixam de ser comprimidos** Corrigido o contêiner das telas para a grade do Calendário e seu histórico não
+  sumirem em janelas baixas ou estreitas. A barra lateral permanece no lugar e o
+  conteúdo rola dentro da área principal, sem exigir configuração após atualizar.
+  O espaço de atendimento em Conversas mantém seu comportamento próprio.
+
+- **Ensaio do onboarding aparece no inventário de IA** O inventário de pontos de IA passa a incluir o ensaio de texto do onboarding.
+  Ele continua usando o provedor, o modelo e a credencial escolhidos no próprio
+  ensaio, sem oferecer no painel uma configuração que o runtime ignoraria. O
+  consumo e as falhas permanecem registrados nas execuções de IA e sujeitos ao
+  orçamento existente.
+
+- **Títulos e versão legíveis na barra lateral** Corrigido o contraste dos títulos de grupo, da versão instalada e do aviso de
+  atualização na barra lateral, inclusive na navegação mobile. Os textos permanecem
+  legíveis nos temas claro e escuro, sem configuração adicional após atualizar.
+
+- **Copiloto aguarda a análise sem duplicar consumo** O copiloto deixa de abandonar respostas que levam mais de dez segundos e passa a
+  aguardar a janela completa da rota de IA. A mesma pergunta não é repetida
+  automaticamente em falhas ou indisponibilidade do provedor, evitando consumo
+  duplicado de créditos. Não é necessário alterar a configuração da instalação.
+
+- **Copiloto respeita a visibilidade de quem pergunta** As consultas do copiloto passam a respeitar as mesmas permissões de dados da
+  sessão do usuário. Atendentes não recebem conversas e oportunidades de outros
+  responsáveis quando a visibilidade da organização restringe esse acesso.
+  Gerentes, administradores e integrações com token continuam com o acesso
+  autorizado para cada caminho. Não é necessário alterar a configuração da instalação.
+
+- **Editor de fluxos preserva a área de edição em janelas baixas** Corrigida a altura do construtor de fluxos para os nós e controles de zoom
+  continuarem alcançáveis, inclusive no celular, sem comprimir a grade do Calendário.
+  Não exige configuração adicional após atualizar.
+
+- **Gatilhos acessíveis e follow-ups preservando o número de origem** - O nó inicial do editor oferece a configuração do gatilho, com caminhos para números conectados, agente e regra de entrada; distingue salvar gatilho de salvar desenho.
+  - Follow-ups com conversa vinculada preservam o canal de origem no worker e no envio inline. Canal inválido, arquivado ou desconectado interrompe a tentativa, sem substituí-lo silenciosamente por outro número.
+  - Cobertura de regressão inclui persistência do gatilho pelo navegador e isolamento/roteamento do canal em PostgreSQL real.
+
+- **Geração de fluxos sem repetição automática e zoom legível** A geração assistida aguarda o processamento da IA sem o timeout prematuro de dez segundos e não repete automaticamente uma operação que pode consumir créditos. Falhas de configuração oferecem acesso às chaves e modelos em outra aba, preservando a descrição. Os controles do editor usam cores do tema, foco visível e área de toque maior, separados do botão de adicionar nó no celular.
+
+- **Retomadas aguardam a reconexão do número de origem** As retomadas vinculadas a uma conversa voltam a guardar a mensagem na fila
+  quando o número está reconectando ou aguardando leitura do QR. Quando a sessão
+  volta a funcionar, o resgate existente envia pelo mesmo número de origem,
+  sem esgotar as tentativas do trabalho de retomada durante essa espera.
+  Canais excluídos, inexistentes ou de outra organização continuam recusados.
+  Não é necessário alterar a configuração da instalação.
+
+- **Funil verifica e avisa quando uma atualização ao vivo se perde** A verificação de segurança do quadro não é mais adiada pelos redesenhos da tela.
+  Quando ela recupera uma mudança que não chegou em tempo real, o quadro mostra um
+  aviso ao operador. Usa a verificação periódica existente, sem exigir configuração
+  adicional após atualizar; não promete detecção instantânea de uma perda.
+
+- **Configuração do gatilho mantém o botão Salvar ao alcance** O painel de configuração dos gatilhos agora limita o formulário ao espaço
+  disponível e mantém Salvar separado da área rolável, inclusive em telas estreitas.
+  Não altera gatilhos já salvos nem exige configuração adicional após atualizar.
+
+- **Leads abre diretamente o quadro de oportunidades** O menu Leads abre o quadro do funil padrão da organização ativa. A aba Funis continua disponível para escolher outro quadro, importar leads e gerenciar os funis conforme as permissões. Sem funil ativo, a entrada mostra o estado vazio com a ação de criação para quem pode gerenciar.
+
+- **Rascunho do agente respeita o limite do prompt antes de salvar** O onboarding recusa objetivo e regras que fariam o prompt completo passar de
+  20.000 caracteres. A validação considera também o negócio, o segmento e o jeito
+  de falar escolhido, sem cortar silenciosamente o texto do operador.
+
+- **Preparação do onboarding tem saída após arquivar ou remover o agente** O painel de ensaio permite recuperar a preparação quando seu agente foi arquivado ou removido. O texto do rascunho permanece salvo; o agente anterior não é reativado e a resposta antiga deixa de servir como aprovação. Se o nome estiver ocupado, a tela orienta a escolher outro antes de preparar novamente.
+
 ## [1.17.0] — 2026-09-08
 
 ### Adicionado
@@ -3146,7 +3288,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.17.0...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.18.0...HEAD
+[1.18.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.16.1...v1.17.0
 [1.16.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.15.1...v1.16.0
