@@ -1983,6 +1983,18 @@ O Playwright intercepta apenas a chamada do modelo para produzir uma resposta
 determinística, sem consumir crédito nem expor dado real; autenticação, rota,
 navegação, persistência do dashboard e renderização continuam reais. A suíte não
 prova qualidade semântica de um provedor externo nem autoriza ações de escrita.
+### Ensaio inicial sem escolhas técnicas `[P0]` — 12/set/2026
+
+O passo de ensaio escolhe automaticamente `openai/gpt-5.6-luna`, com o identificador
+centralizado em `lib/onboarding/ensaio.ts`, e envia `credential_id = null` para o
+resolvedor já existente escolher a chave válida da organização ou da instalação.
+Se o padrão não estiver no catálogo ativo, usa o primeiro modelo devolvido; catálogo
+vazio mostra indisponibilidade e mantém “Explorar o CRM” como saída. A sequência
+preparar → testar → revisar → continuar não mudou. Cobertura: unitários de seleção e
+componente; Playwright em banco fresco pelo `baseline.sql`, incluindo retirada
+temporária e reversível do padrão, PT-BR/ES e medidas em 1280×720 e 390×720.
+Medição final: as duas specs tocadas terminaram com `8 passed`; a suíte unitária
+completa terminou com `754` arquivos e `7.875` casos verdes em Node 22.
 
 ## Saída segura do onboarding e primeira impressão `[P0]` — 12/set/2026
 
