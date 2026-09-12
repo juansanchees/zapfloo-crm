@@ -659,6 +659,13 @@ export const DICIONARIO: Traducoes = {
     es: "Cuando más de un agente pueda atender la misma conversación, el de número mayor lo intenta primero. Si solo tienes un agente, puedes dejarlo como está.",
   },
   "A inteligência que ele usa": { es: "La inteligencia que usa" },
+  "Escolha técnica da inteligência": { es: "Elección técnica de la inteligencia" },
+  "Limites técnicos": { es: "Límites técnicos" },
+  "Formato das respostas": { es: "Formato de las respuestas" },
+  "Disparo e fuso": { es: "Activación y zona horaria" },
+  "Herdado da organização. Altere somente se este agente atender em outro fuso.": {
+    es: "Heredado de la organización. Cámbialo solo si este agente atiende en otra zona horaria.",
+  },
   "Empresa de inteligência artificial": { es: "Empresa de inteligencia artificial" },
   "Credencial selecionada está com status": {
     es: "La credencial seleccionada tiene el estado",
@@ -688,6 +695,30 @@ export const DICIONARIO: Traducoes = {
   },
   "Tamanho máximo por bolha (80–4000)": { es: "Tamaño máximo por burbuja (80–4000)" },
   "O que o agente pode fazer": { es: "Lo que el agente puede hacer" },
+  "ligadas": { es: "activadas" },
+  "teto de": { es: "límite de" },
+  "disponíveis": { es: "disponibles" },
+  "Configuração pronta para clínica": { es: "Configuración lista para clínica" },
+  "Atende, registra o interesse, agenda horários e acompanha o cliente usando o pacote já validado pelo sistema.": {
+    es: "Atiende, registra el interés, agenda horarios y acompaña al cliente usando el paquete ya validado por el sistema.",
+  },
+  "Ocultar prévia": { es: "Ocultar vista previa" },
+  "Ver o que será ligado": { es: "Ver qué se activará" },
+  "Estas ações não serão ligadas pelo pacote. Você decide uma a uma no modo avançado:": {
+    es: "Estas acciones no serán activadas por el paquete. Tú decides una por una en el modo avanzado:",
+  },
+  "Aplicar configuração de clínica": { es: "Aplicar configuración de clínica" },
+  "A configuração de clínica não cabe no limite atual. Desligue uma capacidade antes.": {
+    es: "La configuración de clínica no cabe en el límite actual. Desactiva una capacidad antes.",
+  },
+  "Ajustar por objetivo": { es: "Ajustar por objetivo" },
+  "Falta concluir a configuração da inteligência": {
+    es: "Falta completar la configuración de la inteligencia",
+  },
+  "Esta instalação não encontrou automaticamente um modelo e uma chave compatíveis.": {
+    es: "Esta instalación no encontró automáticamente un modelo y una clave compatibles.",
+  },
+  "Abrir configuração avançada": { es: "Abrir configuración avanzada" },
   "Ligue por jornada de trabalho. O agente só consegue fazer o que estiver ligado aqui — e o que estiver ligado, ele fará sozinho durante o atendimento.": {
     es: "Actívalo según la jornada de trabajo. El agente solo puede hacer lo que esté activado aquí — y lo que esté activado, lo hará solo durante la atención.",
   },
