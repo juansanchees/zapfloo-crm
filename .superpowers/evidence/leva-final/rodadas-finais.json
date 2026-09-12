@@ -1,0 +1,159 @@
+[
+  {
+    "rodada": "build-final",
+    "log": "/tmp/zapfloo-leva-final-build-final.log",
+    "exit": 0,
+    "sha256": "c4ba3f943d75234a9e10122f4f4ac38a857a6375c4a61360e25a41f6cc4a7a4b",
+    "resumo": []
+  },
+  {
+    "rodada": "sabotagem-browser",
+    "log": "/tmp/zapfloo-leva-final-sabotagem.log",
+    "exit": 1,
+    "sha256": "f60611c0dc00181deffcc04add137680e9d3515b5487bf18f062b68f97f1d169",
+    "resumo": [
+      "  ✘  1 [chromium] › tests/e2e/agente-novo-e-uso.spec.ts:132:7 › Criar um agente pela tela › a tela oferece caminho para o que ela exige, sem exigir que o usuário adivinhe (6.5s)",
+      "  ✘  2 [chromium] › tests/e2e/degradacao-silenciosa.spec.ts:97:7 › degradação silenciosa do tempo real › com a entrega morta, a tela avisa que pode estar desatualizada (1.6m)",
+      "  ✘  3 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 1280×720 (6.9s)",
+      "  ✘  4 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 390×720 (3.0s)",
+      "  ✘  5 [chromium] › tests/e2e/followup-builder.spec.ts:859:7 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › operador arma o gatilho de Silêncio (threshold) pela UI; oferece só os kinds com motor; PATCH round-trips (20.6s)",
+      "  ✘  6 [chromium] › tests/e2e/gatilho-de-caso.spec.ts:154:7 › gatilho de caso aberto › o caso aberto pelo agente arma o follow-up, e resolvê-lo o cancela (22.7s)",
+      "  ✘  7 [chromium] › tests/e2e/gatilho-de-etapa.spec.ts:140:7 › gatilho de etapa do funil › o negócio movido no quadro para a etapa escolhida arma o follow-up sozinho (26.0s)",
+      "  ✘  8 [chromium] › tests/e2e/i18n-espanhol-na-tela.spec.ts:265:7 › o idioma escolhido chega à tela › espanhol cobre a interface, e o português volta byte a byte (54.5s)",
+      "  ✘  9 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:117:7 › o wizard monta um funcionário › o nome do negócio chega ao cabeçalho do passo seguinte (8.8s)",
+      "  9 failed"
+    ]
+  },
+  {
+    "rodada": "e2e-final-conjunto",
+    "log": "/tmp/zapfloo-leva-final-final.log",
+    "exit": 0,
+    "sha256": "bae68e7580271006bbcf9c133f666cf14037a77016b86d34934b08fd1e819e6f",
+    "resumo": [
+      "  ✓   1 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:145:5 › clicar num bloco livre abre a marcação NAQUELE horário (8.6s)",
+      "  ✓   2 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:206:5 › arrastar um card remarca — e o horário novo sobrevive ao reload (11.3s)",
+      "  ✓   3 [chromium] › tests/e2e/agenda-grade-interativa.spec.ts:369:5 › arrastar para fora da disponibilidade é RECUSADO e o card volta (8.7s)",
+      "  ✓   4 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:38:7 › a Agenda como o dono do produto a usa › chego na Agenda CLICANDO no menu, não digitando a URL (7.2s)",
+      "  ✓   5 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:62:7 › a Agenda como o dono do produto a usa › as pessoas da equipe são REAIS — o filtro deixou de ser invisível (1.5s)",
+      "  ✓   6 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:125:7 › a Agenda como o dono do produto a usa › o histórico está NA TELA DO PRODUTO, com as quatro abas (64ms)",
+      "  ✓   7 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:135:7 › a Agenda como o dono do produto a usa › a tela declara de onde veio o que ela mostra — e nunca de mentira (28ms)",
+      "  ✓   8 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:162:7 › a Agenda como o dono do produto a usa › as três visões desenham, e a régua do agora existe — NO PRODUTO (220ms)",
+      "  ✓   9 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:194:7 › a Agenda como o dono do produto a usa › o filtro por pessoa ISOLA de verdade — clicando, no produto (134ms)",
+      "  ✓  10 [chromium] › tests/e2e/agenda-tela-do-produto.spec.ts:221:7 › a Agenda como o dono do produto a usa › evidência visual da tela do produto (1.0s)",
+      "  ✓  11 [chromium] › tests/e2e/agente-novo-e-uso.spec.ts:132:7 › Criar um agente pela tela › a tela oferece caminho para o que ela exige, sem exigir que o usuário adivinhe (7.8s)",
+      "  ✓  12 [chromium] › tests/e2e/degradacao-silenciosa.spec.ts:97:7 › degradação silenciosa do tempo real › com a entrega morta, a tela avisa que pode estar desatualizada (1.6m)",
+      "  ✓  13 [chromium] › tests/e2e/editor-e-agenda-altura.spec.ts:335:7 › 1280x720: o canvas aceita zoom e a Agenda conserva altura (11.6s)",
+      "  ✓  14 [chromium] › tests/e2e/editor-e-agenda-altura.spec.ts:335:7 › 390x720: o canvas aceita zoom e a Agenda conserva altura (5.5s)",
+      "  ✓  15 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 1280×720 (7.8s)",
+      "  ✓  16 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 390×720 (6.8s)",
+      "  ✓  17 [chromium] › tests/e2e/followup-builder.spec.ts:859:7 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › operador arma o gatilho de Silêncio (threshold) pela UI; oferece só os kinds com motor; PATCH round-trips (6.5s)",
+      "  ✓  18 [chromium] › tests/e2e/gatilho-de-caso.spec.ts:154:7 › gatilho de caso aberto › o caso aberto pelo agente arma o follow-up, e resolvê-lo o cancela (16.7s)",
+      "  ✓  19 [chromium] › tests/e2e/gatilho-de-etapa.spec.ts:140:7 › gatilho de etapa do funil › o negócio movido no quadro para a etapa escolhida arma o follow-up sozinho (16.4s)",
+      "  ✓  20 [chromium] › tests/e2e/i18n-espanhol-na-tela.spec.ts:265:7 › o idioma escolhido chega à tela › espanhol cobre a interface, e o português volta byte a byte (1.4m)",
+      "  ✓  21 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:117:7 › o wizard monta um funcionário › o nome do negócio chega ao cabeçalho do passo seguinte (11.8s)",
+      "  21 passed (5.4m)"
+    ]
+  },
+  {
+    "rodada": "wizard-completo",
+    "log": "/tmp/zapfloo-leva-final-wizard-completo.log",
+    "exit": 1,
+    "sha256": "b1930e46e3f185e1b19b984188565f844ab23c0be4d98807aa5491b4deee4606",
+    "resumo": [
+      "  ✓   1 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:94:7 › o wizard monta um funcionário › abre mostrando o que a instalação já trouxe, e não pede o nome de novo (3.7s)",
+      "  ✓   2 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:109:7 › o wizard monta um funcionário › o aceite de termos leva a documentos que EXISTEM (184ms)",
+      "  ✓   3 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:117:7 › o wizard monta um funcionário › o nome do negócio chega ao cabeçalho do passo seguinte (2.5s)",
+      "  ✘   4 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:135:7 › o wizard monta um funcionário › o passo do telefone pergunta COMO se conecta antes de assumir o código (30.9s)",
+      "  1 failed",
+      "  9 did not run",
+      "  3 passed (44.8s)"
+    ]
+  },
+  {
+    "rodada": "gov-verify",
+    "log": "/tmp/zapfloo-leva-final-gov.log",
+    "exit": 0,
+    "sha256": "dd10db6f56bf6757f4b5c8e9d90ff2e1482ada79acd85ceb28d63ff38881b39f",
+    "resumo": [
+      "✖ 309 problems (0 errors, 309 warnings)",
+      " Test Files  753 passed (753)",
+      "      Tests  7900 passed (7900)",
+      "   Duration  280.73s (transform 46.04s, setup 207.55s, import 404.00s, tests 200.50s, environment 965.96s)"
+    ]
+  },
+  {
+    "rodada": "release-conferir",
+    "log": "/tmp/zapfloo-leva-final-release.log",
+    "exit": 0,
+    "sha256": "9021b25b1b310cc270a711d7930bbf52947be39379ccfde0ea90c5de0fc8d7cc",
+    "resumo": [
+      "(conferência: nada foi escrito — use --escrever)"
+    ]
+  },
+  {
+    "rodada": "i18n-unit-red",
+    "log": "/tmp/zapfloo-i18n-unit-red.log",
+    "exit": 1,
+    "sha256": "1e2585855cd2290cdbb9ecf70557dd6a5f0e0ae521d89d161ace5f0b16c2dbf8",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  4 failed | 8 passed (12)",
+      "   Duration  1.58s (transform 54ms, setup 0ms, import 81ms, tests 258ms, environment 1.06s)"
+    ]
+  },
+  {
+    "rodada": "i18n-unit-green",
+    "log": "/tmp/zapfloo-i18n-unit-green.log",
+    "exit": 0,
+    "sha256": "a11e3acee6fc6b1a5b4e8d427b2614be711145dcff94c46c0a3b5d6d28d467d4",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  12 passed (12)",
+      "   Duration  1.60s (transform 35ms, setup 0ms, import 54ms, tests 137ms, environment 1.27s)"
+    ]
+  },
+  {
+    "rodada": "i18n-unit-sabotagem",
+    "log": "/tmp/zapfloo-i18n-unit-sabotagem.log",
+    "exit": 1,
+    "sha256": "27ead0d9e9722a7030023d7bc4a9fec5734e55fee43d20f000036fed7db5e05d",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  5 failed | 7 passed (12)",
+      "   Duration  1.53s (transform 61ms, setup 0ms, import 78ms, tests 127ms, environment 1.16s)"
+    ]
+  },
+  {
+    "rodada": "i18n-unit-restaurado",
+    "log": "/tmp/zapfloo-i18n-unit-restaurado.log",
+    "exit": 0,
+    "sha256": "fa90069f434b2e913646ab45b113cd2071318f4cd636dd73e3bbd2454c88d43c",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  12 passed (12)",
+      "   Duration  903ms (transform 29ms, setup 0ms, import 40ms, tests 153ms, environment 569ms)"
+    ]
+  },
+  {
+    "rodada": "i18n-unit-rotulo-red",
+    "log": "/tmp/zapfloo-i18n-unit-rotulo-red.log",
+    "exit": 1,
+    "sha256": "67d9ac17c196f813e57f22730fb811eb5939d2e86c7769a37ae058f661d6f753",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  3 failed | 10 passed (13)",
+      "   Duration  1.36s (transform 29ms, setup 0ms, import 42ms, tests 192ms, environment 963ms)"
+    ]
+  },
+  {
+    "rodada": "i18n-unit-final",
+    "log": "/tmp/zapfloo-i18n-unit-final.log",
+    "exit": 0,
+    "sha256": "abba9b783c29f14b153fdc12bb173b5210aa54eb927aa8be709a85f63d4da132",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  13 passed (13)",
+      "   Duration  1.32s (transform 34ms, setup 0ms, import 51ms, tests 142ms, environment 755ms)"
+    ]
+  }
+]

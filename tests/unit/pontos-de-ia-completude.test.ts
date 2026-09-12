@@ -23,10 +23,12 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
   PONTOS_DE_IA,
+  pontosConfiguraveis,
   pontosPorPapel,
   type PontoDeIa,
 } from "@/lib/ai/pontos/registro";
@@ -36,25 +38,196 @@ import { arquivosDeCodigo, RAIZ_DO_REPO } from "./helpers/varrer-codigo";
 /**
  * Os purposes que o código REALMENTE passa a `runModelCall`.
  *
- * Casa `purpose: 'x'` em arquivo de produção. Não casa declaração de tipo
- * (`purpose: 'a' | 'b'`) nem leitura (`purpose: payload.purpose`) — só o
- * literal único, que é a forma de quem está emitindo de fato.
+ * Casa uma propriedade `purpose` com string literal em arquivo de produção.
+ * Não casa declaração de tipo (`purpose: 'a' | 'b'`) nem leitura
+ * (`purpose: payload.purpose`) — só o literal único, que é a forma de quem
+ * está emitindo de fato. O AST torna aspas simples e duplas equivalentes e
+ * ignora exemplos escritos em comentários.
  */
+function purposesEmitidosNaFonte(conteudo: string, arquivoRelativo: string): Map<string, string[]> {
+  const encontrados = new Map<string, string[]>();
+  const fonte = ts.createSourceFile(
+    arquivoRelativo,
+    conteudo,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const declaracoesPorEscopo = new Map<
+    ts.Node,
+    Map<string, ts.VariableDeclaration[]>
+  >();
+  const aliasesImportadosDoSeam = new Set<string>();
+
+  const desembrulhar = (expressao: ts.Expression): ts.Expression => {
+    let atual = expressao;
+    while (
+      ts.isParenthesizedExpression(atual) ||
+      ts.isAsExpression(atual) ||
+      ts.isSatisfiesExpression(atual) ||
+      ts.isNonNullExpression(atual)
+    ) {
+      atual = atual.expression;
+    }
+    return atual;
+  };
+
+  const ehEscopoLexico = (no: ts.Node): boolean =>
+    ts.isSourceFile(no) ||
+    ts.isBlock(no) ||
+    ts.isModuleBlock(no) ||
+    ts.isCaseBlock(no) ||
+    ts.isCatchClause(no) ||
+    ts.isForStatement(no) ||
+    ts.isForInStatement(no) ||
+    ts.isForOfStatement(no);
+
+  const escopoMaisProximo = (no: ts.Node): ts.Node => {
+    let atual: ts.Node | undefined = no;
+    while (atual !== undefined && !ehEscopoLexico(atual)) atual = atual.parent;
+    return atual ?? fonte;
+  };
+
+  const indexar = (no: ts.Node): void => {
+    if (ts.isImportSpecifier(no)) {
+      const importado = no.propertyName?.text ?? no.name.text;
+      if (importado === "runModelCall") aliasesImportadosDoSeam.add(no.name.text);
+    }
+    if (
+      ts.isVariableDeclaration(no) &&
+      ts.isIdentifier(no.name) &&
+      no.initializer !== undefined
+    ) {
+      const escopo = escopoMaisProximo(no);
+      const porNome = declaracoesPorEscopo.get(escopo) ?? new Map();
+      const declaracoes = porNome.get(no.name.text) ?? [];
+      declaracoes.push(no);
+      porNome.set(no.name.text, declaracoes);
+      declaracoesPorEscopo.set(escopo, porNome);
+    }
+    ts.forEachChild(no, indexar);
+  };
+  indexar(fonte);
+
+  const declaracaoVisivel = (identificador: ts.Identifier): ts.VariableDeclaration | null => {
+    let escopo: ts.Node | null = escopoMaisProximo(identificador);
+    while (escopo !== null) {
+      const candidatas = declaracoesPorEscopo.get(escopo)?.get(identificador.text) ?? [];
+      const anteriores = candidatas.filter(
+        (declaracao) => declaracao.getStart(fonte) < identificador.getStart(fonte),
+      );
+      const encontrada = anteriores.at(-1);
+      if (encontrada !== undefined) return encontrada;
+      const pai: ts.Node | undefined = escopo.parent;
+      escopo = pai === undefined ? null : escopoMaisProximo(pai);
+    }
+    return null;
+  };
+
+  const referenciaOSeam = (
+    expressao: ts.Expression,
+    visitadas = new Set<ts.VariableDeclaration>(),
+  ): boolean => {
+    const atual = desembrulhar(expressao);
+    if (ts.isIdentifier(atual)) {
+      const declaracao = declaracaoVisivel(atual);
+      if (declaracao !== null) {
+        if (visitadas.has(declaracao)) return false;
+        const proximas = new Set(visitadas);
+        proximas.add(declaracao);
+        return referenciaOSeam(declaracao.initializer!, proximas);
+      }
+      return atual.text === "runModelCall" || aliasesImportadosDoSeam.has(atual.text);
+    }
+    if (ts.isPropertyAccessExpression(atual)) return atual.name.text === "runModelCall";
+    if (ts.isBinaryExpression(atual)) {
+      return referenciaOSeam(atual.left, new Set(visitadas)) ||
+        referenciaOSeam(atual.right, new Set(visitadas));
+    }
+    if (ts.isConditionalExpression(atual)) {
+      return referenciaOSeam(atual.whenTrue, new Set(visitadas)) ||
+        referenciaOSeam(atual.whenFalse, new Set(visitadas));
+    }
+    return false;
+  };
+
+  const nomeDaPropriedade = (nome: ts.PropertyName): string | null => {
+    if (ts.isIdentifier(nome) || ts.isStringLiteral(nome)) return nome.text;
+    return null;
+  };
+
+  const adicionar = (purpose: string): void => {
+    if (!/^[a-z_]+$/.test(purpose)) return;
+    const lista = encontrados.get(purpose) ?? [];
+    lista.push(arquivoRelativo);
+    encontrados.set(purpose, lista);
+  };
+
+  const colherDaEntrada = (
+    expressao: ts.Expression,
+    visitadas = new Set<ts.VariableDeclaration>(),
+  ): void => {
+    const atual = desembrulhar(expressao);
+    if (ts.isIdentifier(atual)) {
+      const declaracao = declaracaoVisivel(atual);
+      if (declaracao === null || visitadas.has(declaracao)) return;
+      const proximas = new Set(visitadas);
+      proximas.add(declaracao);
+      colherDaEntrada(declaracao.initializer!, proximas);
+      return;
+    }
+    if (ts.isObjectLiteralExpression(atual)) {
+      for (const propriedade of atual.properties) {
+        if (ts.isSpreadAssignment(propriedade)) {
+          colherDaEntrada(propriedade.expression, visitadas);
+          continue;
+        }
+        if (!ts.isPropertyAssignment(propriedade)) continue;
+        const valor = desembrulhar(propriedade.initializer);
+        if (nomeDaPropriedade(propriedade.name) === "purpose" && ts.isStringLiteral(valor)) {
+          adicionar(valor.text);
+        }
+      }
+      return;
+    }
+    if (ts.isConditionalExpression(atual)) {
+      colherDaEntrada(atual.whenTrue, new Set(visitadas));
+      colherDaEntrada(atual.whenFalse, new Set(visitadas));
+    }
+  };
+
+  const visitar = (no: ts.Node): void => {
+    if (ts.isCallExpression(no) && referenciaOSeam(no.expression)) {
+      for (const argumento of no.arguments) colherDaEntrada(argumento);
+    }
+    ts.forEachChild(no, visitar);
+  };
+
+  visitar(fonte);
+  return encontrados;
+}
+
 function purposesEmitidosNoCodigo(): Map<string, string[]> {
   const encontrados = new Map<string, string[]>();
-  const emissao = /purpose:\s*'([a-z_]+)'\s*[,}]/g;
 
   for (const arquivo of arquivosDeCodigo(["lib", "workers", "app"])) {
     const conteudo = readFileSync(arquivo, "utf8");
-    for (const m of conteudo.matchAll(emissao)) {
-      const purpose = m[1]!;
-      const rel = path.relative(RAIZ_DO_REPO, arquivo);
+    const rel = path.relative(RAIZ_DO_REPO, arquivo);
+    for (const [purpose, arquivos] of purposesEmitidosNaFonte(conteudo, rel)) {
       const lista = encontrados.get(purpose) ?? [];
-      lista.push(rel);
+      lista.push(...arquivos);
       encontrados.set(purpose, lista);
     }
   }
   return encontrados;
+}
+
+function purposesSemRegistro(
+  emitidos: ReadonlyMap<string, readonly string[]>,
+  registrados = new Set(PONTOS_DE_IA.map((p) => p.id)),
+): string[] {
+  return [...emitidos.entries()]
+    .filter(([purpose]) => !registrados.has(purpose))
+    .map(([purpose, arquivos]) => `${purpose} (emitido em ${arquivos.join(", ")})`);
 }
 
 /**
@@ -114,17 +287,69 @@ describe("registro de pontos de IA × código", () => {
 
   it("todo purpose emitido no código está no registro", () => {
     const emitidos = purposesEmitidosNoCodigo();
-    const registrados = new Set(PONTOS_DE_IA.map((p) => p.id));
-
-    const orfaos = [...emitidos.entries()]
-      .filter(([purpose]) => !registrados.has(purpose))
-      .map(([purpose, arquivos]) => `${purpose} (emitido em ${arquivos.join(", ")})`);
+    const orfaos = purposesSemRegistro(emitidos);
 
     expect(
       orfaos,
       "purpose que o código emite mas a tela de provedores não mostra — " +
         "ponto oculto, que é justamente o que este registro existe para acabar",
     ).toEqual([]);
+  });
+
+  it("o instrumento acusa purpose desconhecido escrito com aspas duplas", () => {
+    const emitidos = purposesEmitidosNaFonte(
+      `runModelCall(pool, cfg, { purpose: "ponto_nao_registrado", messages: [] });`,
+      "lib/exemplo.ts",
+    );
+
+    expect(purposesSemRegistro(emitidos)).toEqual([
+      "ponto_nao_registrado (emitido em lib/exemplo.ts)",
+    ]);
+  });
+
+  it("o instrumento segue o objeto intermediário passado a runModelCall", () => {
+    const emitidos = purposesEmitidosNaFonte(
+      `
+        const entrada = { purpose: "ponto_intermediario", messages: [] };
+        runModelCall(pool, cfg, entrada);
+      `,
+      "lib/intermediario.ts",
+    );
+
+    expect(purposesSemRegistro(emitidos)).toEqual([
+      "ponto_intermediario (emitido em lib/intermediario.ts)",
+    ]);
+  });
+
+  it("o instrumento aceita a chave purpose escrita entre aspas", () => {
+    const emitidos = purposesEmitidosNaFonte(
+      `runModelCall(pool, cfg, { "purpose": "ponto_com_chave_citada", messages: [] });`,
+      "lib/chave-citada.ts",
+    );
+
+    expect(purposesSemRegistro(emitidos)).toEqual([
+      "ponto_com_chave_citada (emitido em lib/chave-citada.ts)",
+    ]);
+  });
+
+  it("objetos intermediários com o mesmo nome resolvem no próprio escopo", () => {
+    const emitidos = purposesEmitidosNaFonte(
+      `
+        function primeiro() {
+          const input = { purpose: "ponto_do_primeiro_escopo", messages: [] };
+          runModelCall(pool, cfg, input);
+        }
+        function segundo() {
+          const input = { purpose: "agent_turn", messages: [] };
+          runModelCall(pool, cfg, input);
+        }
+      `,
+      "lib/dois-escopos.ts",
+    );
+
+    expect(purposesSemRegistro(emitidos)).toEqual([
+      "ponto_do_primeiro_escopo (emitido em lib/dois-escopos.ts)",
+    ]);
   });
 
   it("todo ponto do registro é emitido por algum código", () => {
@@ -246,5 +471,18 @@ describe("agrupamento por papel", () => {
       .filter(([, ps]) => ps.length === 0)
       .map(([papel]) => papel);
     expect(vazios).toEqual([]);
+  });
+
+  it("ensaio do onboarding aparece no inventário sem oferecer binding ignorado pelo runtime", () => {
+    const ensaio = PONTOS_DE_IA.find((p) => p.id === "onboarding_rehearsal");
+    const configuraveis = new Set(pontosConfiguraveis().map((p) => p.id));
+
+    expect(ensaio).toMatchObject({
+      exige: {},
+      emissor: "lib/onboarding/executar-ensaio.ts",
+      registraEm: "llm_calls",
+    });
+    expect(ensaio?.fixo?.razao).toContain("seleção do próprio ensaio");
+    expect(configuraveis.has("onboarding_rehearsal")).toBe(false);
   });
 });

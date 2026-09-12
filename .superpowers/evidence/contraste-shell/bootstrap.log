@@ -1,0 +1,10 @@
+[bootstrap] dono criado: 2a0d907d-5f1b-4887-bb37-17bb782f5a7f
+[bootstrap] org criada: 630af7e7-3929-4314-9a01-c23dc0c636e1
+[bootstrap] provedor de IA da organização: anthropic
+[bootstrap] dono associado como admin
+[bootstrap] dono promovido a super-admin de plataforma
+
+✅ Bootstrap completo.
+  dono: contraste-owner@example.test
+  org:  630af7e7-3929-4314-9a01-c23dc0c636e1
+  Faça login em http://localhost:3220 e conclua o onboarding.

@@ -1,0 +1,40 @@
+{
+  "phase": "sem-wrapper",
+  "states": 24,
+  "failures": [
+    "Agenda 1280: área da grade sem altura",
+    "Plano 1280: contêiner curto não preenche a área principal",
+    "Agenda 390: área da grade sem altura",
+    "Plano 390: contêiner curto não preenche a área principal"
+  ]
+}
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+AssertionError [ERR_ASSERTION]: A shell não pode colapsar a grade
++ actual - expected
+
++ [
++   'Agenda 1280: área da grade sem altura',
++   'Plano 1280: contêiner curto não preenche a área principal',
++   'Agenda 390: área da grade sem altura',
++   'Plano 390: contêiner curto não preenche a área principal'
++ ]
+- []
+
+    at main (/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/altura-shell/.superpowers/evidence/altura-shell/medir-altura.ts:108:10) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'Agenda 1280: área da grade sem altura',
+    'Plano 1280: contêiner curto não preenche a área principal',
+    'Agenda 390: área da grade sem altura',
+    'Plano 390: contêiner curto não preenche a área principal'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.23.2

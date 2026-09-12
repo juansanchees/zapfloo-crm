@@ -77,4 +77,22 @@ describe("AudioPlayer", () => {
 
     await waitFor(() => expect(screen.getByText(/mídia indisponível/i)).toBeInTheDocument());
   });
+
+  it("mostra a transcrição pronta e explica quando ela falhou", () => {
+    const { rerender } = render(
+      <AudioPlayer
+        messageId="m3"
+        isOutbound={false}
+        derivedStatus="ready"
+        derivedText="Quero saber o preço do plano Growth."
+      />,
+    );
+    fireEvent.click(screen.getByText("Ver transcrição"));
+    expect(screen.getByText("Quero saber o preço do plano Growth.")).toBeInTheDocument();
+
+    rerender(
+      <AudioPlayer messageId="m3" isOutbound={false} derivedStatus="failed" derivedText={null} />,
+    );
+    expect(screen.getByText(/não foi possível transcrever/i)).toBeInTheDocument();
+  });
 });

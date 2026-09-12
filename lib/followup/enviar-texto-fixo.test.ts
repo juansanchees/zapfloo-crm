@@ -37,14 +37,21 @@ const JOB = {
 const statusUpdates: string[] = [];
 
 /** Admin stub: job_queue (select pending / claim / status) + followup_enrollments. */
-function admin() {
+function admin(opts: {
+  conversationId?: string | null;
+  conversaAusente?: boolean;
+  canalAusente?: boolean;
+  status?: string;
+  archivedAt?: string | null;
+} = {}) {
   const make = (table: string) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const chain: any = {
       _table: table,
       _upd: null as Record<string, unknown> | null,
+      _filters: {} as Record<string, unknown>,
       select: () => chain,
-      eq: () => chain,
+      eq: (key: string, value: unknown) => { chain._filters[key] = value; return chain; },
       order: () => chain,
       limit: () => chain,
       update: (p: Record<string, unknown>) => {
@@ -55,7 +62,15 @@ function admin() {
       maybeSingle: () => {
         if (table === "job_queue" && chain._upd) return Promise.resolve({ data: { id: JOB.id }, error: null });
         if (table === "followup_enrollments")
-          return Promise.resolve({ data: { current_node_id: "node-1" }, error: null });
+          return Promise.resolve({ data: { current_node_id: "node-1", conversation_id: opts.conversationId ?? null }, error: null });
+        if (table === "conversations") {
+          expect(chain._filters).toMatchObject({ id: "conv-origem", organization_id: "org-1", contact_id: "contact-1", is_group: false });
+          return Promise.resolve({ data: opts.conversaAusente ? null : { id: "conv-origem", channel_session_id: opts.canalAusente ? null : "sess-origem" }, error: null });
+        }
+        if (table === "channel_sessions") {
+          expect(chain._filters).toMatchObject({ id: "sess-origem", organization_id: "org-1" });
+          return Promise.resolve({ data: { id: "sess-origem", status: opts.status ?? "WORKING", archived_at: opts.archivedAt ?? null }, error: null });
+        }
         return Promise.resolve({ data: null, error: null });
       },
       then: (r: (v: unknown) => unknown) => {
@@ -73,6 +88,31 @@ function admin() {
 beforeEach(() => {
   vi.clearAllMocks();
   statusUpdates.length = 0;
+});
+
+describe("enviarTextoFixoPendente · número de origem", () => {
+  it("texto fixo sai pela conversa vinculada mesmo com outra sessão disponível", async () => {
+    decidir.mockResolvedValue({ permite: true });
+    const enviados = await enviarTextoFixoPendente(admin({ conversationId: "conv-origem" }));
+    expect(enviados).toBe(1);
+    expect(sendMessageHandler).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+      expect.objectContaining({ conversation_id: "conv-origem" }));
+    expect(decidir).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ conversationId: "conv-origem" }));
+  });
+
+  it.each([
+    { nome: "conversa inexistente ou de outro contato", opts: { conversaAusente: true } },
+    { nome: "conversa sem canal", opts: { canalAusente: true } },
+    { nome: "canal desconectado", opts: { status: "STOPPED" } },
+    { nome: "canal arquivado", opts: { archivedAt: "2026-09-01T10:00:00Z" } },
+  ])("$nome: mantém job pendente sem enviar pelo outro chip", async ({ opts }) => {
+    decidir.mockResolvedValue({ permite: true });
+    const enviados = await enviarTextoFixoPendente(admin({ conversationId: "conv-origem", ...opts }));
+    expect(enviados).toBe(0);
+    expect(sendMessageHandler).not.toHaveBeenCalled();
+    expect(statusUpdates).toContain("pending");
+    expect(completeTurnForEnrollment).not.toHaveBeenCalled();
+  });
 });
 
 describe("enviarTextoFixoPendente · gate de elegibilidade", () => {

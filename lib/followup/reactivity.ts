@@ -60,7 +60,7 @@ import { idsDoContatoEGemeos } from "@/lib/channels/contato-por-telefone";
 /** Grace pós-resume (spec §4: "grace configurável, default 30min, knob"). */
 export const RESUME_GRACE_MS = 30 * 60_000;
 
-export const LIVE_STATUSES: readonly EnrollmentStatus[] = ["active", "waiting_reply", "paused_handoff"];
+export const LIVE_STATUSES: readonly EnrollmentStatus[] = ["active", "waiting_reply", "paused_handoff", "paused_manual"];
 
 export interface LiveEnrollmentRef {
   id: string;
@@ -272,6 +272,9 @@ async function reactToHandoffOpen(
   const live = await db.loadLiveEnrollmentsForContact(row.organization_id, contactId);
   let reacted = 0;
   for (const e of live) {
+    // Só o STOP cancela a pausa manual aqui. Convertê-la em pausa por handoff
+    // permitiria que o fechamento retomasse algo pausado pelo operador.
+    if (e.status === "paused_manual") continue;
     if (e.handoff_policy === "allow") continue;
 
     if (e.handoff_policy === "cancel") {

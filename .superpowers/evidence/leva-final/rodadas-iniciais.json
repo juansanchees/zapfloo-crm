@@ -1,0 +1,189 @@
+[
+  {
+    "rodada": "teardown-antes",
+    "log": "/tmp/zapfloo-leva-final-teardown-antes.log",
+    "sha256": "838d4b8853a7ea7e7710748d4044c27d181d4c20cd1e67a40108629876bbb8b1",
+    "resumo": [
+      "  ✘  1 [chromium] › tests/e2e/followup-builder.spec.ts:784:7 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › operador arma o gatilho de Silêncio (threshold) pela UI; oferece só os kinds com motor; PATCH round-trips (6.2s)",
+      "  1 failed"
+    ]
+  },
+  {
+    "rodada": "teardown-depois",
+    "log": "/tmp/zapfloo-leva-final-teardown-depois.log",
+    "sha256": "23ddc5442e80a69fb0cdc7df47160d89df880f7f5e3141072c8b01e725cdd177",
+    "resumo": [
+      "  ✘  1 [chromium] › tests/e2e/followup-builder.spec.ts:784:7 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › operador arma o gatilho de Silêncio (threshold) pela UI; oferece só os kinds com motor; PATCH round-trips (4.4s)",
+      "  1 failed"
+    ]
+  },
+  {
+    "rodada": "base",
+    "log": "/tmp/zapfloo-leva-final-base.log",
+    "sha256": "48d2a2a49b30e1330ab4e01101fd4c696e962a73d0e84c66ea757b75d97472f6",
+    "resumo": [
+      "  ✘  1 [chromium] › tests/e2e/agente-novo-e-uso.spec.ts:132:7 › Criar um agente pela tela › a tela oferece caminho para o que ela exige, sem exigir que o usuário adivinhe (5.5s)",
+      "  ✘  2 [chromium] › tests/e2e/degradacao-silenciosa.spec.ts:117:7 › degradação silenciosa do tempo real › com a entrega morta, a tela avisa que pode estar desatualizada (19.9s)",
+      "  ✘  3 [chromium] › tests/e2e/followup-builder.spec.ts:784:7 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › operador arma o gatilho de Silêncio (threshold) pela UI; oferece só os kinds com motor; PATCH round-trips (21.1s)",
+      "  ✘  4 [chromium] › tests/e2e/gatilho-de-caso.spec.ts:154:7 › gatilho de caso aberto › o caso aberto pelo agente arma o follow-up, e resolvê-lo o cancela (23.7s)",
+      "  ✘  5 [chromium] › tests/e2e/gatilho-de-etapa.spec.ts:140:7 › gatilho de etapa do funil › o negócio movido no quadro para a etapa escolhida arma o follow-up sozinho (23.5s)",
+      "  ✘  6 [chromium] › tests/e2e/i18n-espanhol-na-tela.spec.ts:282:7 › o idioma escolhido chega à tela › espanhol cobre a interface, e o português volta byte a byte (1.2m)",
+      "  ✘  7 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:117:7 › o wizard monta um funcionário › o nome do negócio chega ao cabeçalho do passo seguinte (41.4s)",
+      "  7 failed"
+    ]
+  },
+  {
+    "rodada": "geometria-base",
+    "log": "/tmp/zapfloo-leva-final-geometria-base.log",
+    "sha256": "051ed16d414ad5f8add86d2b0040904c3d33ade9aee5c3688aeb3e2276c7f748",
+    "resumo": [
+      "  ✘  1 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 1280×720 (13.1s)",
+      "  ✘  2 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 390×720 (13.4s)",
+      "  2 failed"
+    ]
+  },
+  {
+    "rodada": "degradacao-detector-base",
+    "log": "/tmp/zapfloo-leva-final-degradacao-detector-base.log",
+    "sha256": "693571a3e89801d04622d3911c9d116546c5483180734a76c243425a089ee5aa",
+    "resumo": [
+      "  ✘  1 [chromium] › tests/e2e/degradacao-silenciosa.spec.ts:117:7 › degradação silenciosa do tempo real › com a entrega morta, a tela avisa que pode estar desatualizada (1.1m)",
+      "  1 failed"
+    ]
+  },
+  {
+    "rodada": "links-red",
+    "log": "/tmp/zapfloo-leva-final-links-red.log",
+    "sha256": "8e6e04388f3433530fe174c162fd8e87df8fdd67139db66d0930da2d0c3154c0",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  4 failed (4)"
+    ]
+  },
+  {
+    "rodada": "links-green",
+    "log": "/tmp/zapfloo-leva-final-links-green.log",
+    "sha256": "82314e28ea05de3dfc232189308996a8c2389d2d28f9cb922599b94119e66ebc",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  4 passed (4)"
+    ]
+  },
+  {
+    "rodada": "links-sabotagem-credencial",
+    "log": "/tmp/zapfloo-leva-final-links-sabotagem-credencial.log",
+    "sha256": "839c30cc9a934661617517f4cdb999cad73d3a5cb287c57216c68e9d0be6a039",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  2 failed | 2 passed (4)"
+    ]
+  },
+  {
+    "rodada": "links-sabotagem-conexao",
+    "log": "/tmp/zapfloo-leva-final-links-sabotagem-conexao.log",
+    "sha256": "37696f092512515035bd76a4e643904eb5c9a401dce46c71916dc88b1d8f9cb4",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  2 failed | 2 passed (4)"
+    ]
+  },
+  {
+    "rodada": "links-readonly-red",
+    "log": "/tmp/zapfloo-leva-final-links-readonly-red.log",
+    "sha256": "d05ee57406c01d147a0b91315c195b2062bd7f68b91fc28697a83b83af810c16",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  1 failed | 4 passed (5)"
+    ]
+  },
+  {
+    "rodada": "links-readonly-green",
+    "log": "/tmp/zapfloo-leva-final-links-readonly-green.log",
+    "sha256": "12e71dcae02d35090cf60bbb9b33b16ce8cd183cd3ab6c7adf80d56455818f9a",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  5 passed (5)"
+    ]
+  },
+  {
+    "rodada": "board-refetch-red",
+    "log": "/tmp/zapfloo-leva-final-board-refetch-red.log",
+    "sha256": "3ecdeb247d538c0b1af74aa5667b19c9b89ac0692f7a82d21e29196ce496eff4",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  1 failed | 1 passed (2)"
+    ]
+  },
+  {
+    "rodada": "board-refetch-green",
+    "log": "/tmp/zapfloo-leva-final-board-refetch-green.log",
+    "sha256": "0910d43d3a81960dc421bc4dd58374ea79464c0981cf350cb0142c17203e1d51",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  2 passed (2)"
+    ]
+  },
+  {
+    "rodada": "board-refetch-sabotagem",
+    "log": "/tmp/zapfloo-leva-final-board-refetch-sabotagem.log",
+    "sha256": "a1cd9f9518271181c84321c3e57016aa07ecc9b92b9dc42b64aac355980f7253",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  1 failed | 1 passed (2)"
+    ]
+  },
+  {
+    "rodada": "board-refetch-final",
+    "log": "/tmp/zapfloo-leva-final-board-refetch-final.log",
+    "sha256": "b960d5c3d21bdc8f5480ae649c548774674bacdea7ffd92c833eac38f87999cd",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  2 passed (2)"
+    ]
+  },
+  {
+    "rodada": "aviso-red",
+    "log": "/tmp/zapfloo-leva-final-aviso-red.log",
+    "sha256": "3b4935204c8db752c7649410553e9551fb6c821f57541d65ed28d41a806808d1",
+    "resumo": [
+      " Test Files  1 failed (1)",
+      "      Tests  2 failed | 1 passed (3)"
+    ]
+  },
+  {
+    "rodada": "aviso-green",
+    "log": "/tmp/zapfloo-leva-final-aviso-green.log",
+    "sha256": "6109a4917c8d651acbd7644521a6645fb4996cfdd3251926bfd5e0a2c32e9708",
+    "resumo": [
+      " Test Files  1 passed (1)",
+      "      Tests  3 passed (3)"
+    ]
+  },
+  {
+    "rodada": "corrigido-1",
+    "log": "/tmp/zapfloo-leva-final-corrigido-1.log",
+    "sha256": "38de8a75d0ecf00b026ad7070a1489030ef8ba4cff79a8e24412c7c512e7d35d",
+    "resumo": [
+      "  ✓  1 [chromium] › tests/e2e/agente-novo-e-uso.spec.ts:132:7 › Criar um agente pela tela › a tela oferece caminho para o que ela exige, sem exigir que o usuário adivinhe (5.2s)",
+      "  ✓  2 [chromium] › tests/e2e/degradacao-silenciosa.spec.ts:97:7 › degradação silenciosa do tempo real › com a entrega morta, a tela avisa que pode estar desatualizada (1.6m)",
+      "  ✓  3 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 1280×720 (7.5s)",
+      "  ✓  4 [chromium] › tests/e2e/followup-builder.spec.ts:785:9 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › Salvar gatilho fica alcançável com o formulário longo em 390×720 (5.5s)",
+      "  ✓  5 [chromium] › tests/e2e/followup-builder.spec.ts:859:7 › followup flow builder — controle de gatilho na PublishBar (Task 8.5) › operador arma o gatilho de Silêncio (threshold) pela UI; oferece só os kinds com motor; PATCH round-trips (5.9s)",
+      "  ✓  6 [chromium] › tests/e2e/gatilho-de-caso.spec.ts:154:7 › gatilho de caso aberto › o caso aberto pelo agente arma o follow-up, e resolvê-lo o cancela (18.4s)",
+      "  ✓  7 [chromium] › tests/e2e/gatilho-de-etapa.spec.ts:140:7 › gatilho de etapa do funil › o negócio movido no quadro para a etapa escolhida arma o follow-up sozinho (18.5s)",
+      "  ✓  8 [chromium] › tests/e2e/i18n-espanhol-na-tela.spec.ts:265:7 › o idioma escolhido chega à tela › espanhol cobre a interface, e o português volta byte a byte (1.1m)",
+      "  ✘  9 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:117:7 › o wizard monta um funcionário › o nome do negócio chega ao cabeçalho do passo seguinte (33.3s)",
+      "  1 failed",
+      "  8 passed (4.5m)"
+    ]
+  },
+  {
+    "rodada": "wizard-corrigido",
+    "log": "/tmp/zapfloo-leva-final-wizard-corrigido.log",
+    "sha256": "5b448752785a4ac3f465f9f40eb3de1770b1f1ab51871865ab42fa899945e774",
+    "resumo": [
+      "  ✓  1 [chromium] › tests/e2e/wizard-do-funcionario.spec.ts:117:7 › o wizard monta um funcionário › o nome do negócio chega ao cabeçalho do passo seguinte (5.1s)",
+      "  1 passed (14.3s)"
+    ]
+  }
+]

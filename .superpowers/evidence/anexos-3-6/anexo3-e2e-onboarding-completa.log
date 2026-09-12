@@ -1,0 +1,46 @@
+[WebServer] (node:94748) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+
+[WebServer] Invalid Sentry Dsn: off
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+
+Running 3 tests using 1 worker
+
+(node:94760) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/3] [chromium] › tests/e2e/onboarding-ativacao-restrita.spec.ts:13:5 › preparação arquivada é recuperável pela tela sem chave de IA
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T14:51:11.345Z","error":"fetch failed","bucket":"auth:login:ip:12ca17b49af2289436f303e0166030a2"}
+
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '1142635435'
+[WebServer] }
+
+[2/3] [chromium] › tests/e2e/onboarding-ativacao-restrita.spec.ts:79:52 › jornada revisada até ativação restrita em pt-BR
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T14:51:18.934Z","error":"fetch failed","bucket":"auth:login:ip:12ca17b49af2289436f303e0166030a2"}
+
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T14:51:24.740Z","error":"fetch failed","bucket":"onboarding-rehearsal:ad481b3f-d3b5-4264-9929-6d7fec7f37a2"}
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+[3/3] [chromium] › tests/e2e/onboarding-ativacao-restrita.spec.ts:79:52 › jornada revisada até ativação restrita em es
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T14:51:36.247Z","error":"fetch failed","bucket":"auth:login:ip:12ca17b49af2289436f303e0166030a2"}
+
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T14:51:41.548Z","error":"fetch failed","bucket":"onboarding-rehearsal:03663537-b035-4c59-8f7e-652a45b555a1"}
+
+  3 passed (45.5s)
+
+exit=0

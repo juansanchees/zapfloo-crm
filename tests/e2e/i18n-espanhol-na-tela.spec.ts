@@ -22,8 +22,9 @@
  *
  * A régua aqui é derivada do próprio dicionário: se um texto renderizado na
  * tela em espanhol é EXATAMENTE uma chave que o dicionário sabe traduzir, então
- * aquele texto não passou por `t()` — nenhum dado de banco coincide com uma
- * chave de interface por acaso, e a chave que coincidisse estaria traduzida.
+ * aquele texto pode não ter passado por `t()`. Dados do tenant também podem
+ * coincidir com uma chave: a régua distingue a inicial decorativa pelo cartão
+ * da empresa e registra abaixo a exceção de nome de etapa já medida.
  * Zero lista para manter: chave nova entra na régua no dia em que é escrita.
  *
  * ─── A data, que era a dívida declarada, agora é medida aqui ───────────────
@@ -47,6 +48,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { credenciaisSupabaseDeTeste } from "../../scripts/lib/env-de-teste";
 import { DICIONARIO } from "../../lib/i18n/dicionario";
 import { lerCreds, loginComoAdmin } from "./helpers/login-admin";
+import { coletarTextosVisiveis } from "./helpers/i18n-textos-visiveis";
 
 const creds = lerCreds();
 const EVIDENCIA = path.join(process.cwd(), "evidence", "i18n-es");
@@ -74,12 +76,10 @@ const TELAS = ["/app/inbox", "/app/kanban", "/app/contacts", "/app/metrics", "/a
 /**
  * Textos que a régua acusa e NÃO são vazamento: são DADO, e dado não se traduz.
  *
- * O comentário do cabeçalho diz que nenhum dado de banco coincide com uma chave
- * de interface por acaso. Coincidiu: "Entregue" é nome de etapa do funil
+ * "Entregue" é nome de etapa do funil
  * (`crm_stages.name`) semeado pelo e2e, e o produto o mostra exatamente como o
- * tenant o cadastrou — traduzir seria o erro. A afirmação do cabeçalho fica,
- * porque continua verdadeira como regra; esta lista é a exceção medida, com o
- * nome de quem a produz.
+ * tenant o cadastrou — traduzir seria o erro. Esta lista registra a exceção
+ * medida, com o nome de quem a produz.
  *
  * Ela SÓ ENCOLHE, e entrada nova precisa nomear a COLUNA de onde o texto vem.
  */
@@ -116,24 +116,7 @@ function rotulosDeInterface(textos: string[]): string {
 
 /** Todo texto que a pessoa consegue LER nesta tela, normalizado. */
 async function textosVisiveis(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const saida: string[] = [];
-    const anda = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    for (let no = anda.nextNode(); no; no = anda.nextNode()) {
-      const texto = (no.textContent ?? "").replace(/\s+/g, " ").trim();
-      if (!texto) continue;
-      const pai = no.parentElement;
-      if (!pai) continue;
-      // `sr-only` conta: é texto que o leitor de tela fala, e traduzir a
-      // interface e deixar o leitor de tela em português seria acessibilidade
-      // de mentira. O que não conta é o que está escondido de TODO mundo.
-      const estilo = getComputedStyle(pai);
-      if (estilo.display === "none" || estilo.visibility === "hidden") continue;
-      if (pai.closest("script,style,noscript")) continue;
-      saida.push(texto);
-    }
-    return saida;
-  });
+  return page.evaluate(coletarTextosVisiveis);
 }
 
 /**
@@ -359,6 +342,10 @@ test.describe("o idioma escolhido chega à tela", () => {
     // não mudava. Um teste que só procura vazamento daria verde ali — não há
     // vazamento nenhum numa tela que continua 100% em português, porque todo o
     // texto dela é "dado" para quem não sabe o que esperar.
+    // O laço de datas termina em Configurações: comparar com o Inbox em PT
+    // mediria duas páginas diferentes, mesmo se a troca de idioma não funcionasse.
+    await page.goto(TELAS[0]!);
+    await page.waitForLoadState("networkidle", { timeout: PRAZO });
     const inboxEmEspanhol = await textosVisiveis(page);
     const inboxEmPortugues = antes.get(TELAS[0]!)!;
     expect(

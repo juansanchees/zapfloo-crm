@@ -53,6 +53,7 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Sidebar } from "@/components/shell/Sidebar";
 import type { ActiveOrg, AuthUser } from "@/lib/auth/types";
 import { MarcaDaInstalacaoProvider } from "@/lib/branding/contexto";
+import { OnboardingFrame, NomeDaInstalacao } from "@/app/onboarding/_components/OnboardingFrame";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/app/ai/agents" }));
 vi.mock("@/app/actions/shell/toggleSidebar", () => ({ toggleSidebar: vi.fn() }));
@@ -122,6 +123,13 @@ afterEach(() => {
 });
 
 describe("a marca não diverge entre o SSR e a hidratação", () => {
+  it("onboarding mantém logo e nome do contexto nos dois lados", () => {
+    const arvore = <OnboardingFrame orgName="Empresa QA" passos={[]}><NomeDaInstalacao /></OnboardingFrame>;
+    const servidor = renderComAmbiente(undefined, arvore);
+    expect(servidor).toBe(renderComAmbiente(PUBLIC_ENV_DO_NAVEGADOR, arvore));
+    expect(servidor).toContain(`src="${MARCA_DO_BANCO.logoUrl}"`);
+    expect(servidor).toContain(MARCA_DO_BANCO.name);
+  });
   it("a barra lateral renderiza IGUAL com e sem a marca no ambiente do navegador", () => {
     const noServidor = renderComAmbiente(undefined, <Sidebar collapsed={false} />);
     const noNavegador = renderComAmbiente(PUBLIC_ENV_DO_NAVEGADOR, <Sidebar collapsed={false} />);
@@ -236,11 +244,12 @@ describe("catraca: `branding()` é server-only", () => {
     // A guarda contra o erro NOVO que o corte por bloco introduz: se o regex de
     // `/* … */` engolisse código, esta lista esvaziaria e a catraca ficaria verde
     // por cegueira — o mesmo defeito que ela existe para impedir, do lado do
-    // instrumento. Estes quatro são servidores e DEVEM chamar `branding()`.
+    // instrumento. Quatro chamadas de servidor ainda existentes. Onboarding
+    // passou ao provider resolvido e não é mais controle positivo desta busca.
     const esperados = [
       "app/(public)/login/page.tsx",
       "app/(public)/signup/page.tsx",
-      "app/onboarding/layout.tsx",
+      "app/legal/layout.tsx",
       "lib/legal/operador.ts",
     ];
     const vistos = varridos.filter(chamaBranding).map((f) => relativoEmBarraNormal(RAIZ, f));

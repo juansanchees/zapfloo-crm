@@ -1,0 +1,35 @@
+[WebServer] (node:21411) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:21412) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+
+[WebServer] Invalid Sentry Dsn: off
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+
+Running 1 test using 1 worker
+
+(node:21422) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [chromium] › tests/e2e/periodo-de-testes.spec.ts:6:5 › prazo persistente no onboarding e CRM, com composer dentro da tela
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T16:28:51.227Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+  1 passed (19.1s)

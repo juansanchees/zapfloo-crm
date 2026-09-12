@@ -1,0 +1,1105 @@
+
+> deskcomm-crm@0.1.0 gov:verify /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> pnpm typecheck && pnpm lint && pnpm lint:channels && pnpm lint:role-rank && pnpm test:unit
+
+
+> deskcomm-crm@0.1.0 typecheck /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> tsc --noEmit -p tsconfig.typecheck.json
+
+
+> deskcomm-crm@0.1.0 lint /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> eslint .
+
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/actions/settings/updateTenant.ts
+  7:10  warning  'createClient' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/admin/(protected)/lgpd/_client.tsx
+  4:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/admin/(protected)/tenants/new/_form.tsx
+  145:21  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/admin/(protected)/tenants/new/_form.tsx:145:21
+  143 |   });
+  144 |
+> 145 |   const planValue = watch("plan");
+      |                     ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  146 |
+  147 |   return (
+  148 |     <div className="mx-auto max-w-2xl space-y-6">  react-hooks/incompatible-library
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/api/v1/ai/knowledge/chave/route.ts
+  22:14  warning  'fail' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/api/v1/conversations/[id]/media/route.ts
+  38:9  warning  'user' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/api/v1/products/import/route.ts
+   29:10  warning  'COLUNAS_DO_PRODUTO' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  245:9   warning  't' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/api/v1/system/instalacao/route.ts
+  19:10  warning  'fail' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/agenda/_client.tsx
+  160:5  warning  React Hook React.useMemo has unnecessary dependencies: 'marcando' and 'tipo.id'. Either exclude them or remove the dependency array                                                         react-hooks/exhaustive-deps
+  230:9  warning  The 'todos' logical expression could make the dependencies of useMemo Hook (at line 235) change on every render. To fix this, wrap the initialization of 'todos' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/agents/[id]/_components/AgentForm.tsx
+  379:6  warning  React Hook React.useMemo has a missing dependency: 'props.provedoresDaInstalacao'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/agents/[id]/_components/ModelPicker.tsx
+  14:1  warning  All imports in the declaration are only used as types. Use `import type`  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/agents/_components/AgentsList.tsx
+  27:9  warning  The 'agents' logical expression could make the dependencies of useMemo Hook (at line 38) change on every render. To fix this, wrap the initialization of 'agents' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/agents/_components/RenameAgentDialog.tsx
+  34:15  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/agents/_components/RenameAgentDialog.tsx:34:15
+  32 |
+  33 |   useEffect(() => {
+> 34 |     if (open) setName(agent.name);
+     |               ^^^^^^^ Avoid calling setState() directly within an effect
+  35 |   }, [open, agent.name]);
+  36 |
+  37 |   const onSubmit = (e: React.FormEvent) => {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/providers/_components/PainelDeProvedores.tsx
+  141:10  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/providers/_components/PainelDeProvedores.tsx:141:10
+  139 |
+  140 |   useEffect(() => {
+> 141 |     void carregar();
+      |          ^^^^^^^^ Avoid calling setState() directly within an effect
+  142 |   }, [carregar]);
+  143 |
+  144 |   const porPapel = useMemo(() => {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/runs/_components/ExecucoesDeIa.tsx
+  101:10  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/ai/runs/_components/ExecucoesDeIa.tsx:101:10
+   99 |
+  100 |   useEffect(() => {
+> 101 |     void carregar();
+      |          ^^^^^^^^ Avoid calling setState() directly within an effect
+  102 |   }, [carregar]);
+  103 |
+  104 |   if (erro) {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/templates/_components/TemplateFormDialog.tsx
+  73:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/templates/_components/TemplateFormDialog.tsx:73:5
+  71 |   React.useEffect(() => {
+  72 |     if (!open) return;
+> 73 |     setTitle(template?.title ?? "");
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  74 |     setBody(template?.body ?? "");
+  75 |     setShortcut(template?.shortcut ?? "");
+  76 |     setShared(template ? template.owner_user_id === null : false);  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/webhooks/_components/CreateSourceDialog.tsx
+  53:7  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/webhooks/_components/CreateSourceDialog.tsx:53:7
+  51 |   React.useEffect(() => {
+  52 |     if (!open) {
+> 53 |       setName("");
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  54 |       setPipelineId("");
+  55 |       setStageId("");
+  56 |       setRedirectTo("");  react-hooks/set-state-in-effect
+  61:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/webhooks/_components/CreateSourceDialog.tsx:61:5
+  59 |
+  60 |   React.useEffect(() => {
+> 61 |     setStageId("");
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  62 |   }, [pipelineId]);
+  63 |
+  64 |   const onSubmit = async (e: React.FormEvent) => {                  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/webhooks/_components/RuleEditor.tsx
+  116:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/app/webhooks/_components/RuleEditor.tsx:116:5
+  114 |   React.useEffect(() => {
+  115 |     if (!open) return;
+> 116 |     setName(rule?.name ?? "");
+      |     ^^^^^^^ Avoid calling setState() directly within an effect
+  117 |     setTriggerEvent((rule?.trigger_event as TriggerEvent) ?? "");
+  118 |     setConditions(
+  119 |       rule?.conditions.map((c) => ({ field: c.field, op: c.op, value: c.value })) ?? [],  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/design/lib/variant-context.tsx
+  114:9  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/design/lib/variant-context.tsx:114:9
+  112 |       if (raw) {
+  113 |         const parsed = JSON.parse(raw) as Partial<State>;
+> 114 |         setState((prev) => ({ ...prev, ...parsed }));
+      |         ^^^^^^^^ Avoid calling setState() directly within an effect
+  115 |       }
+  116 |     } catch {}
+  117 |     setHydrated(true);  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/global-error.tsx
+  20:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/app/global-error.tsx:20:5
+  18 |   useEffect(() => {
+  19 |     const id = Sentry.captureException(error);
+> 20 |     setEventId(id);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |   }, [error]);
+  22 |
+  23 |   const displayId = eventId ?? error.digest ?? "—";  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/agenda/AgendaInterativa.tsx
+  162:7  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/agenda/AgendaInterativa.tsx:162:7
+  160 |     const real = agendamentos.find((a) => a.id === otimista.id);
+  161 |     if (real && new Date(real.comeca).getTime() === new Date(otimista.comeca).getTime()) {
+> 162 |       setOtimista(null);
+      |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  163 |     }
+  164 |   }, [agendamentos, otimista]);
+  165 |  react-hooks/set-state-in-effect
+  203:6  warning  React Hook React.useCallback has a missing dependency: 'localeDaData'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react-hooks/exhaustive-deps
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/agenda/GradeDaAgenda.tsx
+  637:9  warning  't' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/agenda/PainelDeMarcacao.tsx
+  170:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/agenda/PainelDeMarcacao.tsx:170:5
+  168 |     if (!instanteInicial) return;
+  169 |     const d = new Date(instanteInicial);
+> 170 |     setDia(d);
+      |     ^^^^^^ Avoid calling setState() directly within an effect
+  171 |     setHorario({ instante: instanteInicial, rotulo: format(d, "HH:mm") });
+  172 |     setMes(startOfMonth(d));
+  173 |     setMarcado(null);  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/ai/AgentEditor.tsx
+  112:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/ai/AgentEditor.tsx:112:5
+  110 |   React.useEffect(() => {
+  111 |     if (!agent) return;
+> 112 |     setFormState((prev) => prev ?? buildFormState(agent));
+      |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  113 |     setBaselineState((prev) => prev ?? buildFormState(agent));
+  114 |   }, [agent]);
+  115 |  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/ai/BudgetCard.tsx
+  327:7  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/ai/BudgetCard.tsx:327:7
+  325 |   useEffect(() => {
+  326 |     if (open) {
+> 327 |       setLimitUsd((status.monthly_limit_cents / 100).toFixed(2));
+      |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  328 |       setThresholdPct(status.alarm_threshold_pct);
+  329 |       setModo(status.enforcement_mode);
+  330 |       setImediato(false);  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/ai/EditarFaqDialog.tsx
+  61:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/ai/EditarFaqDialog.tsx:61:5
+  59 |     if (!aberto) return;
+  60 |     let vivo = true;
+> 61 |     setCarregando(true);
+     |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  62 |     apiClient
+  63 |       .get<{ data: { items: ItemDaFaq[] } }>(`/api/v1/ai/knowledge/sources/${sourceId}`)
+  64 |       .then((res) => {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/auth/TOTPInput.tsx
+  40:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/auth/TOTPInput.tsx:40:5
+  38 |
+  39 |   useEffect(() => {
+> 40 |     setChars(Array.from({ length: LENGTH }, (_, i) => value[i] ?? ""));
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |   }, [value]);
+  42 |
+  43 |   useEffect(() => {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/connections/AntiBanSheet.tsx
+  79:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/connections/AntiBanSheet.tsx:79:5
+  77 |
+  78 |   useEffect(() => {
+> 79 |     setForm(item ? fromItem(item) : null);
+     |     ^^^^^^^ Avoid calling setState() directly within an effect
+  80 |   }, [item]);
+  81 |
+  82 |   const label = useMemo(() => {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/connections/CanalParceiroClient.tsx
+  101:10  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/connections/CanalParceiroClient.tsx:101:10
+   99 |
+  100 |   useEffect(() => {
+> 101 |     void carregar();
+      |          ^^^^^^^^ Avoid calling setState() directly within an effect
+  102 |   }, []);
+  103 |
+  104 |   const conectar = async () => {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/contacts/PropostasDeDado.tsx
+  74:10  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/contacts/PropostasDeDado.tsx:74:10
+  72 |
+  73 |   useEffect(() => {
+> 74 |     void carregar();
+     |          ^^^^^^^^ Avoid calling setState() directly within an effect
+  75 |   }, [carregar]);
+  76 |
+  77 |   async function decidir(id: string, decision: "accept" | "dismiss"): Promise<void> {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/feedback/SegmentError.tsx
+  25:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/feedback/SegmentError.tsx:25:5
+  23 |       tags: segment ? { segment } : undefined,
+  24 |     });
+> 25 |     setEventId(id);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  26 |   }, [error, segment]);
+  27 |
+  28 |   const displayId = eventId ?? error.digest ?? "—";  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/CRMSidePanel.tsx
+  386:7  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/CRMSidePanel.tsx:386:7
+  384 |     if (leadDialogOpen && defaultPipeline.isError) {
+  385 |       toast.error(t("Nenhum funil configurado nesta organização."));
+> 386 |       setLeadDialogOpen(false);
+      |       ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  387 |     }
+  388 |   }, [leadDialogOpen, defaultPipeline.isError, t]);
+  389 |  react-hooks/set-state-in-effect
+  392:7  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/CRMSidePanel.tsx:392:7
+  390 |   useEffect(() => {
+  391 |     if (!contactId) {
+> 392 |       setLeads(null);
+      |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  393 |       setOrders(null);
+  394 |       setActivities(null);
+  395 |       setDemandas(null);                                                                                    react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/composer/AttachmentPreviewDialog.tsx
+  22:19  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/composer/AttachmentPreviewDialog.tsx:22:19
+  20 |   const t = useT();
+  21 |   const [caption, setCaption] = useState("");
+> 22 |   useEffect(() => setCaption(""), [file]);
+     |                   ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  23 |
+  24 |   const objectUrl = useMemo(() => (file && /^(image|video)\//.test(file.type) ? URL.createObjectURL(file) : null), [file]);
+  25 |   useEffect(() => () => {  react-hooks/set-state-in-effect
+  41:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @next/next/no-img-element
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/composer/ContactPickerDialog.tsx
+  61:7   warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/composer/ContactPickerDialog.tsx:61:7
+  59 |   useEffect(() => {
+  60 |     if (!open) {
+> 61 |       setSearch("");
+     |       ^^^^^^^^^ Avoid calling setState() directly within an effect
+  62 |       setDebounced("");
+  63 |       setManualName("");
+  64 |       setManualPhone("");                                                react-hooks/set-state-in-effect
+  74:22  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/composer/ContactPickerDialog.tsx:74:22
+  72 |
+  73 |   useEffect(() => {
+> 74 |     if (searchPhone) setManualPhone(searchPhone);
+     |                      ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  75 |   }, [searchPhone]);
+  76 |
+  77 |   const list = useContactList({ search: debounced || undefined });  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/media/ImageMedia.tsx
+  45:9   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  50:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/inbox/media/StickerMedia.tsx
+  18:7  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/kanban/KanbanBoard.tsx
+  134:9  warning  The 'data' conditional could make the dependencies of useMemo Hook (at line 152) change on every render. To fix this, wrap the initialization of 'data' in its own useMemo() Hook      react-hooks/exhaustive-deps
+  134:9  warning  The 'data' conditional could make the dependencies of useCallback Hook (at line 218) change on every render. To fix this, wrap the initialization of 'data' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/kanban/LeadFieldsForm.tsx
+  74:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/kanban/LeadFieldsForm.tsx:74:5
+  72 |       expected_close_date: lead.expected_close_date ?? "",
+  73 |     });
+> 74 |     setCustomFields(lead.custom_fields ?? {});
+     |     ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  75 |     // eslint-disable-next-line react-hooks/exhaustive-deps
+  76 |   }, [lead.id]);
+  77 |  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/kanban/LeadTimeline.tsx
+  10:3  warning  'actorLabel' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/kanban/NewLeadDialog.tsx
+  141:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/kanban/NewLeadDialog.tsx:141:19
+  139 |   }
+  140 |
+> 141 |   const stageId = form.watch("stage_id");
+      |                   ^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  142 |
+  143 |   return (
+  144 |     <Dialog open={open} onOpenChange={onOpenChange}>  react-hooks/incompatible-library
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/components/kanban/OwnerBadge.tsx
+  3:10  warning  'Badge' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/evidence/ia-360-w4/medicao-vazamento/medir.ts
+   82:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   83:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   85:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   90:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   92:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  101:1  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  103:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  108:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/ai/useCredentials.ts
+  5:1  warning  All imports in the declaration are only used as types. Use `import type`  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/ai/useDebugToggle.ts
+  17:28  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/ai/useDebugToggle.ts:17:28
+  15 |     try {
+  16 |       const stored = window.localStorage.getItem(KEY);
+> 17 |       if (stored === null) setEnabled(defaultFor(role));
+     |                            ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  18 |       else setEnabled(stored === "1");
+  19 |     } catch {
+  20 |       /* SSR / disabled */  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/kanban/useBoard.ts
+  52:9  warning  The 'queryKey' array makes the dependencies of useCallback Hook (at line 111) change on every render. To fix this, wrap the initialization of 'queryKey' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/leads/useLeadTimeline.ts
+  68:9  warning  The 'queryKey' array makes the dependencies of useCallback Hook (at line 88) change on every render. To fix this, wrap the initialization of 'queryKey' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/notifications/useNotificationPermission.ts
+  67:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/notifications/useNotificationPermission.ts:67:5
+  65 |
+  66 |   useEffect(() => {
+> 67 |     setEnabledState(areAlertsEnabled());
+     |     ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  68 |   }, []);
+  69 |
+  70 |   const request = useCallback(async () => {  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/realtime/useRealtimeChannel.ts
+  105:7  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/hooks/realtime/useRealtimeChannel.ts:105:7
+  103 |   useEffect(() => {
+  104 |     if (!enabled) {
+> 105 |       setStatus("closed");
+      |       ^^^^^^^^^ Avoid calling setState() directly within an effect
+  106 |       return;
+  107 |     }
+  108 |     const supabase = createClient();  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/agenda/google/config.ts
+  107:3  warning  Unused eslint-disable directive (no problems were reported from 'no-var')
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/agent-engine/edge/llm/run-model-call.ts
+  138:17  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/agent-engine/guardrails/promise/engine.ts
+  93:65  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/ai/embed.test.ts
+  33:34  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/ai/provider-validators.ts
+  11:1  warning  All imports in the declaration are only used as types. Use `import type`  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/channels/atribuicao-de-anuncio-oficial.ts
+  8:36  warning  'Bruto' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/channels/meta/ingest.ts
+  29:28  warning  'phoneLookupVariants' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/contacts/csv.ts
+  92:3  warning  Unused eslint-disable directive (no problems were reported from 'no-control-regex')
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/followup/graph-schema.test.ts
+  2:1  warning  Imports "NodeType", "FlowGraph", "FlowNode" and "FlowEdge" are only used as type  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/i18n/IdiomaProvider.tsx
+  72:5  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/i18n/IdiomaProvider.tsx:72:5
+  70 |
+  71 |   useEffect(() => {
+> 72 |     setIdioma(doServidor);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  73 |   }, [doServidor]);
+  74 |
+  75 |   // O espelho de fora da árvore segue o idioma EM VIGOR, não o do servidor:  react-hooks/set-state-in-effect
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/leads/score-formula.ts
+  86:11  warning  'Parcela' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/logger.ts
+  28:5  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+  32:5  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/messaging/contact-card.test.ts
+  7:3  warning  'phoneToWhatsappId' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/lib/messaging/open-shared-contact-conversation.ts
+  9:10  warning  'phoneLookupVariants' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/loop/setup-claude-guard.mjs
+  49:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  56:1  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/loop/update-feature.ts
+  113:1  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/bootstrap-owner.ts
+   95:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  107:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  119:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  136:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  196:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  212:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  222:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  233:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  256:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  264:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/check-roles.ts
+  15:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/check-user.ts
+  11:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  13:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  16:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  18:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/create-test-user.ts
+  39:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  41:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  48:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  58:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  73:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  82:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  85:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  86:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  87:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  88:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  89:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/dbg-login.ts
+  10:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  20:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  21:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  24:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  25:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  27:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/e2e-followup-journey-helpers.ts
+  59:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/evidencia-webhooks.ts
+  71:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/inspect-source-schema.ts
+  12:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  13:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  24:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  35:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/observar-escalacao-turno-real.ts
+  38:7  warning  'NOME' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/probe-redirect.ts
+  22:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  46:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  47:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  48:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/provoke-agent-turn.ts
+   65:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   85:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  106:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  116:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  161:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  174:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/qa-wave-10.ts
+  64:10  warning  'utcDay' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/qa-wave-13-07.ts
+   9:13  warning  'fs' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  10:13  warning  'path' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/repro-automacao-nao-envia.ts
+  112:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  120:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  127:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  128:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  142:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  143:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  145:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  148:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  149:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  150:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  152:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  164:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/reset-user-onboarding.ts
+  22:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  44:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  48:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  50:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  60:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  69:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  71:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  72:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/revoke-sessions.ts
+  20:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/screenshot-ai-tabs.ts
+  53:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  58:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  63:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  78:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-crm-vivo.ts
+  251:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  271:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  312:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  410:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  428:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  489:19  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  570:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-acervo.ts
+  156:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  157:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-catalogo-openrouter.ts
+  105:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-credentials.ts
+   38:13  warning  'path' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+  127:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  144:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  153:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  165:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  182:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  192:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  203:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  231:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  284:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  292:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  324:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  357:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  358:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  359:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  360:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-followup-agent.ts
+  116:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-followup-promise.ts
+  119:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-funis.ts
+  148:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-invite.ts
+   76:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   93:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   99:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  108:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  113:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  118:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-kanban.ts
+   84:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  102:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  156:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-numero-conectado.ts
+   88:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  169:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-queue.ts
+  128:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  142:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  153:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/seed-e2e-system-update.ts
+   82:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   90:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   99:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  129:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  141:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  162:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  183:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/scripts/smoke-llm.ts
+   50:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  108:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  120:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  137:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  305:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/acervo-de-conhecimento.spec.ts
+  58:7  warning  'APP_URL' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/agenda-caminho-ate-os-horarios.spec.ts
+  50:29  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/agenda-escopo-da-organizacao.spec.ts
+  62:29  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+  75:38  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+  93:33  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/agenda-google-volta-do-consentimento.spec.ts
+  48:29  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/agenda-marcar-pela-tela.spec.ts
+   99:31  warning  `import()` type annotations are forbidden                                         @typescript-eslint/consistent-type-imports
+  150:9   warning  'antes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/agenda-remarcar-e-cancelar.spec.ts
+  74:29  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+  97:9   warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/agenda-tipos-de-agendamento.spec.ts
+  64:29  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/e2e/agente-novo-e-uso.spec.ts
+  23:29  warning  'Page' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/invariants/agent-no-credential.test.ts
+  41:36  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+  42:17  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+  43:24  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+  44:32  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/invariants/case-reply-turn.test.ts
+  19:46  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/invariants/lgpd-avatar-anonimizacao.test.ts
+  37:7  warning  'caminhoAvatar' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/invariants/reactivation-schema.test.ts
+  14:10  warning  'violacao' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/invariants/webhooks-bulk-events.test.ts
+  34:46  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-atrito-detalhe.ts
+  30:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-atrito-fase3.ts
+  40:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  41:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-atrito-regua.ts
+  13:53  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  33:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  42:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  52:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  53:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-atrito-tela.ts
+   18:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   22:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   30:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   39:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   44:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   52:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   53:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   58:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   60:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+   63:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  121:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  122:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  123:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  148:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-capacidade-radar-tela.ts
+  72:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  88:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  91:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-decisao-reativacao.ts
+  13:10  warning  'BASE' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-inbox-cabe-na-tela.ts
+  129:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  140:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  166:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  168:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  171:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-inbox-demandas-tela.ts
+   76:26  warning  `import()` type annotations are forbidden                                                @typescript-eslint/consistent-type-imports
+  162:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  205:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  237:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  272:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  275:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-overflow-controle.ts
+  19:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-radar-demandas.ts
+  10:69  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  42:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  43:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-radar-isolamento-orgs.ts
+  116:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  121:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-rede-de-seguranca.ts
+  33:20  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-rede-dossie.ts
+  29:20  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-split-na-tela.ts
+  38:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  49:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  54:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  70:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+  75:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-tailwind-4-antes-depois.ts
+  183:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-tailwind-4.ts
+  174:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error, info  no-console
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/sonda-tela-agente-move.ts
+  26:35  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/a-ia-sabe-o-que-a-clinica-atende.test.ts
+  38:38  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/agenda-emite-atividade.test.ts
+  83:38  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/agenda-google-sync-worker.test.ts
+  31:5  warning  'removidos' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/agent-stage-sync.test.ts
+  12:25  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/ai-ask-route.test.ts
+  17:40  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/appointment-stage-move.test.ts
+  10:25  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/camada-semantica-no-envio-fixo.test.ts
+  131:26  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/catalogo-nao-corta-cego.test.ts
+  42:32  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/channel-ingest-zernio.test.ts
+  2:44  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/cron-audita-so-quando-ha-efeito.test.ts
+  194:10  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/cron-contact-phones.test.ts
+  77:34  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/desfecho-de-agenda-e-sobre-o-passado.test.ts
+  46:38  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/editor-de-agente-salva-o-cadastro.test.tsx
+  335:45  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/handoff-stage-move.test.ts
+  10:25  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/instrumento-e-pre-voo-do-canal.test.ts
+  3:44  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/inventario-de-telas.test.ts
+  86:10  warning  'secoesNoArquivoBruto' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/lgpd-varredura-completa-a-cascata.test.ts
+  69:7  warning  'CONTATO' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/mcp-agendamento-tools.test.ts
+  32:38  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/o-fluxo-publicado-nao-abre-vazio.test.ts
+  1:32  warning  'vi' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/o-seam-higieniza-o-uuid-do-modelo.test.ts
+  40:38  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/onboarding-preparar-action.test.ts
+  5:91  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/onboarding-rascunho-action.test.ts
+  5:34  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/require-role-mfa.test.ts
+  22:44  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos/tests/unit/runtime-dry-run-isolado.test.ts
+  45:28  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+✖ 310 problems (0 errors, 310 warnings)
+  0 errors and 8 warnings potentially fixable with the `--fix` option.
+
+
+> deskcomm-crm@0.1.0 lint:channels /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> tsx scripts/lint-channels.ts
+
+lint-channels: ok (62 arquivos de dívida conhecida, nenhum novo)
+
+> deskcomm-crm@0.1.0 lint:role-rank /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> tsx scripts/lint-role-rank.ts
+
+lint-role-rank: ok (nenhum ROLE_RANK[ fora de lib/auth/ em app/api)
+
+> deskcomm-crm@0.1.0 test:unit /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+
+Not implemented: navigation to another Document
+{"ts":"2026-09-10T14:48:05.224Z","level":"warn","msg":"watchdog: redrive com erro transiente — mantida queued","message_id":"message-test","error":"banco indisponível"}
+
+ Test Files  748 passed (748)
+      Tests  7867 passed (7867)
+   Start at  11:45:36
+   Duration  303.28s (transform 54.95s, setup 211.27s, import 431.19s, tests 225.50s, environment 1055.77s)
+

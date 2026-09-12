@@ -89,7 +89,7 @@ A tabela `ai_models` é populada via seed. UI consulta `GET /api/v1/ai/providers
 - **D2**: Tenant BYO API keys, cifradas AES-GCM com KMS-managed key.
 - **D3**: Multi-agente por sessão, prioridade configurável, mas **1 dispara por mensagem** (top match).
 - **D4**: Handoff humano via tool MCP `request_human_handoff(reason, urgency)` + sentinela determinística em `prepareStep` para keywords críticas (`/falar com humano|atendente|pessoa real/i`).
-- **D5**: Test mode inline (UI Spec 12) com `dry_run=true` — não envia ao WAHA, retorna trace.
+- **D5**: Test mode inline (UI Spec 12) com `dry_run=true` — não envia ao WAHA, retorna trace. A flag persistida bloqueia todos os handlers MCP (inclusive leitura e handoff) com `dry_run_tool_blocked`/`executed: false`. Não emite eventos operacionais de início/fim; mantém auditoria e registro técnico. Consome modelo, mas não comprova operações reais.
 - **D6**: Sem streaming pro WhatsApp (não suporta). Streaming interno apenas para registro de steps em `ai_agent_runs`.
 - **D7**: Rate limit per-agent (1 reply/conv/5s) + per-tenant (default 60 runs/min, configurável).
 
@@ -835,7 +835,7 @@ Cada run emite, em JSON:
 - **Integration**:
   - Dispatch end-to-end com fixture WAHA event → run row criada
   - Publish atomic switch → previous version goes to superseded
-  - Test mode dry-run → `ai_agent_runs.is_dry_run=true`, sem outbound message
+  - Test mode dry-run → `ai_agent_runs.is_dry_run=true`, sem outbound message; nenhum handler MCP ou evento operacional executado. Recusa preservada no trace, controle normal executa (`tests/unit/runtime-dry-run-isolado.test.ts`).
   - Concurrency guard → 2 dispatches simultâneos para mesma conversation → só 1 vira `running`
 - **RLS isolation** (gate obrigatório):
   - Org A não vê agentes / versões / runs / credentials de Org B

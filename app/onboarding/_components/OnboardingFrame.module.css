@@ -1,0 +1,68 @@
+.frame {
+  min-height: 100dvh;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.header {
+  max-width: 1240px;
+  min-height: 88px;
+  margin: 0 auto;
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.brand { min-width: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.04em; }
+.logo { display: block; max-width: 160px; max-height: 40px; object-fit: contain; }
+.controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; min-width: 0; }
+.workspace {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 40px 32px 64px;
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  align-items: start;
+  gap: 40px;
+}
+
+.sidebar { min-width: 0; position: sticky; top: 24px; }
+.identity {
+  border: 1px solid #453257;
+  border-radius: 24px;
+  padding: 28px 24px;
+  color: #f5f2fb;
+  background: radial-gradient(ellipse at 0 0, #8250f238, transparent 75%),
+    radial-gradient(ellipse at 100% 100%, #f58a4620, transparent 65%), #19171f;
+}
+.eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #c5b4e6; }
+.title { margin-top: 14px; font-size: 26px; line-height: 1.2; font-weight: 650; letter-spacing: -0.04em; overflow-wrap: anywhere; }
+.description { margin-top: 16px; font-size: 14px; line-height: 1.6; color: #c9c2d3; }
+.progress { margin-top: 20px; }
+.content { min-width: 0; padding: 8px 0; }
+
+@media (min-width: 960px) {
+  .progress ol { flex-direction: column; align-items: stretch; gap: 18px; }
+  .progress li { flex-direction: row; justify-content: flex-start; gap: 12px; }
+  .progress li > div { flex-shrink: 0; }
+  .progress li > span { margin-top: 0; text-align: left; white-space: normal; }
+}
+
+@media (max-width: 959px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 24px 20px 40px; }
+  .sidebar { position: static; }
+  .identity { padding: 20px 24px; }
+  .description { max-width: 48ch; margin-top: 10px; }
+  .title { margin-top: 8px; }
+  .progress { margin-top: 12px; }
+}
+
+@media (max-width: 479px) {
+  .header { min-height: 72px; padding: 16px; gap: 12px; flex-wrap: wrap; }
+  .workspace { padding: 16px 12px 32px; }
+  .logo { max-width: 130px; max-height: 32px; }
+  .identity { border-radius: 18px; padding: 18px 20px; }
+}

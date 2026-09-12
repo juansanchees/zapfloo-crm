@@ -10,7 +10,8 @@ import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { listSelectableChannels, type SelectableChannel } from "@/lib/channels/selectable";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { aiAgentDefaultSchema, type PromptTemplate } from "@/lib/schemas/onboarding";
+import { aiAgentDefaultSchema } from "@/lib/schemas/onboarding";
+import { promptDoOnboarding } from "@/lib/onboarding/prompt";
 import { capacidadesPadraoDoOnboarding } from "@/lib/ai/agents/capacidades-padrao";
 import { publicarMemoriaDaOrg } from "@/lib/ai/memoria-da-org";
 import { escolherModeloDoProvedor } from "@/lib/ai/agents/escolher-modelo";
@@ -36,18 +37,7 @@ import {
  * que ele entendeu onde está. O ramo é o que o dono respondeu no primeiro passo;
  * quem não respondeu recebe a versão sem ele, e não uma inventada.
  */
-function ondeTrabalha(negocio: string, oQueFaz: string | undefined): string {
-  return oQueFaz ? `${negocio}, que é: ${oQueFaz}` : negocio;
-}
-
-const PROMPT_BODIES: Record<PromptTemplate, (onde: string) => string> = {
-  ecommerce_friendly: (n) =>
-    `Você atende os clientes de ${n}. Fale de forma calorosa e próxima, como alguém que gosta de ajudar. Cumprimente, entenda o que a pessoa precisa e ofereça opções claras. Confirme os detalhes antes de agir.`,
-  ecommerce_professional: (n) =>
-    `Você atende os clientes de ${n}. Fale de forma objetiva, cordial e profissional. Vá direto ao ponto, sem parecer frio, e sempre termine indicando o próximo passo.`,
-  support_minimal: (n) =>
-    `Você atende os clientes de ${n}. Responda em frases curtas, peça apenas o que for necessário e chame uma pessoa do time assim que a dúvida sair do seu alcance.`,
-};
+// Construtor compartilhado com a preparação inativa, sem alterar o texto legado.
 
 /** O agente padrão desta organização, do jeito que este passo precisa vê-lo. */
 interface AgenteDoOnboarding {
@@ -256,16 +246,16 @@ async function publishFirstVersion(
 
   let versionId = version?.id ?? null;
   if (!versionId && versionErr?.code === "23505") {
-    // A v1 já existe: uma passagem anterior gravou a versão e caiu antes de
-    // apontar o agente para ela. Repetir o passo passou a ser o que o usuário
-    // faz quando a tela pede — então ele não pode bater em "duplicate key"
-    // para sempre. Repontar é o conserto, não um novo INSERT.
+    // Só recuperar uma publicação já concluída cujo ponteiro não foi gravado.
+    // Colisão também pode ser um rascunho (inclusive sem canal), versão
+    // arquivada ou substituída: o número 1 não é prova de publicação.
     const { data: existente } = await admin
       .from("ai_agent_versions")
       .select("id")
       .eq("organization_id", orgId)
       .eq("agent_id", agent.id)
       .eq("version_number", 1)
+      .eq("status", "published")
       .maybeSingle();
     versionId = existente?.id ?? null;
   }
@@ -314,14 +304,14 @@ export type CreateAgentResult =
       /** As regras da casa não foram gravadas — o agente existe assim mesmo. */
       regras_nao_salvas?: string;
     }
-  | { ok: false; error: "auth_required" | "no_active_org" | "invalid_input" | "db_error"; details?: unknown };
+  | { ok: false; error: OnboardingError["code"] | "invalid_input"; details?: unknown };
 
 export async function createDefaultAgent(formData: FormData): Promise<CreateAgentResult> {
   let ctx;
   try {
     ctx = await requireOnboardingCtx();
   } catch (err) {
-    if (err instanceof OnboardingError) return { ok: false, error: err.code as never };
+    if (err instanceof OnboardingError) return { ok: false, error: err.code };
     throw err;
   }
 
@@ -354,7 +344,7 @@ export async function createDefaultAgent(formData: FormData): Promise<CreateAgen
     oQueFaz = undefined;
   }
 
-  const systemPrompt = PROMPT_BODIES[input.prompt_template](ondeTrabalha(ctx.orgName, oQueFaz));
+  const systemPrompt = promptDoOnboarding(input.prompt_template, ctx.orgName, oQueFaz);
 
   // O agente padrão do onboarding é UM por organização, e o banco já garante
   // isso: `ai_agents_one_default_per_org` é índice único parcial em

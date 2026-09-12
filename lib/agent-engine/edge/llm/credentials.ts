@@ -241,6 +241,8 @@ function causaDoBanco(err: unknown): string {
 export interface LlmResolveOverride {
   provider?: string;
   credentialId?: string | null;
+  /** Ensaios com seleção explícita não podem substituir uma chave revogada por fallback. */
+  strictCredential?: boolean;
 }
 
 export async function resolveOrgLlmConfig(
@@ -303,9 +305,10 @@ export async function resolveOrgLlmConfig(
         `select api_key_encrypted, api_key_iv, api_key_tag
          from ai_provider_credentials
          where organization_id = $1 and id = $2
+           and ($3::text is null or provider = $3)
            and is_active and validated_at is not null
          limit 1`,
-        [organizationId, override.credentialId],
+        [organizationId, override.credentialId, override.strictCredential ? provider : null],
       )
     : await db.query<{
         api_key_encrypted: unknown;
@@ -323,6 +326,9 @@ export async function resolveOrgLlmConfig(
 
   let apiKey: string;
   const cred = credRows[0];
+  if (override?.strictCredential && override.credentialId && cred === undefined) {
+    throw new LlmNotConfiguredError();
+  }
   if (cred !== undefined) {
     apiKey = decryptKey({
       ciphertext: byteaToBuffer(cred.api_key_encrypted),

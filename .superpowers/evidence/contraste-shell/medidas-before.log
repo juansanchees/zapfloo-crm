@@ -1,0 +1,288 @@
+{
+  "phase": "before",
+  "states": 8,
+  "failed": [
+    {
+      "footer": "installed",
+      "theme": "light",
+      "width": 215,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        18,
+        19,
+        26
+      ],
+      "foreground": [
+        112.8,
+        113.4,
+        117.6
+      ],
+      "ratio": 3.8271250648296116,
+      "fontSize": "10px",
+      "height": 19
+    },
+    {
+      "footer": "installed",
+      "theme": "light",
+      "width": 215,
+      "tag": "P",
+      "text": "versão 1.0.0",
+      "className": "px-3 py-1 text-[11px] text-muted-foreground",
+      "cssColor": "rgb(87, 81, 97)",
+      "background": [
+        18,
+        19,
+        26
+      ],
+      "foreground": [
+        87,
+        81,
+        97
+      ],
+      "ratio": 2.4297667083337493,
+      "fontSize": "11px",
+      "height": 24.5
+    },
+    {
+      "footer": "installed",
+      "theme": "light",
+      "width": 263,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        17,
+        24,
+        39
+      ],
+      "foreground": [
+        112.2,
+        116.4,
+        125.4
+      ],
+      "ratio": 3.8067735840272614,
+      "fontSize": "10px",
+      "height": 19
+    },
+    {
+      "footer": "installed",
+      "theme": "light",
+      "width": 263,
+      "tag": "P",
+      "text": "versão 1.0.0",
+      "className": "px-3 py-1 text-[11px] text-muted-foreground",
+      "cssColor": "rgb(87, 81, 97)",
+      "background": [
+        17,
+        24,
+        39
+      ],
+      "foreground": [
+        87,
+        81,
+        97
+      ],
+      "ratio": 2.3271405787145274,
+      "fontSize": "11px",
+      "height": 24.5
+    },
+    {
+      "footer": "installed",
+      "theme": "dark",
+      "width": 215,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        9,
+        10,
+        15
+      ],
+      "foreground": [
+        107.4,
+        108,
+        111
+      ],
+      "ratio": 3.7711481961221813,
+      "fontSize": "10px",
+      "height": 19
+    },
+    {
+      "footer": "installed",
+      "theme": "dark",
+      "width": 263,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        9,
+        13,
+        22
+      ],
+      "foreground": [
+        107.4,
+        109.8,
+        115.2
+      ],
+      "ratio": 3.7939261971092457,
+      "fontSize": "10px",
+      "height": 19
+    },
+    {
+      "footer": "update",
+      "theme": "light",
+      "width": 215,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        18,
+        19,
+        26
+      ],
+      "foreground": [
+        112.8,
+        113.4,
+        117.6
+      ],
+      "ratio": 3.8271250648296116,
+      "fontSize": "10px",
+      "height": 19
+    },
+    {
+      "footer": "update",
+      "theme": "light",
+      "width": 95.828125,
+      "tag": "SPAN",
+      "text": "Nova versão · 1.0.1",
+      "className": "truncate",
+      "cssColor": "rgb(36, 33, 44)",
+      "background": [
+        18,
+        19,
+        26
+      ],
+      "foreground": [
+        36,
+        33,
+        44
+      ],
+      "ratio": 1.1721148038539202,
+      "fontSize": "12px",
+      "height": 16
+    },
+    {
+      "footer": "update",
+      "theme": "light",
+      "width": 263,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        17,
+        24,
+        39
+      ],
+      "foreground": [
+        112.2,
+        116.4,
+        125.4
+      ],
+      "ratio": 3.8067735840272614,
+      "fontSize": "10px",
+      "height": 19
+    },
+    {
+      "footer": "update",
+      "theme": "light",
+      "width": 95.828125,
+      "tag": "SPAN",
+      "text": "Nova versão · 1.0.1",
+      "className": "truncate",
+      "cssColor": "rgb(36, 33, 44)",
+      "background": [
+        17,
+        24,
+        39
+      ],
+      "foreground": [
+        36,
+        33,
+        44
+      ],
+      "ratio": 1.1226081555916219,
+      "fontSize": "12px",
+      "height": 16
+    },
+    {
+      "footer": "update",
+      "theme": "dark",
+      "width": 215,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        9,
+        10,
+        15
+      ],
+      "foreground": [
+        107.4,
+        108,
+        111
+      ],
+      "ratio": 3.7711481961221813,
+      "fontSize": "10px",
+      "height": 19
+    },
+    {
+      "footer": "update",
+      "theme": "dark",
+      "width": 263,
+      "tag": "H2",
+      "text": "Crescimento",
+      "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+      "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+      "background": [
+        9,
+        13,
+        22
+      ],
+      "foreground": [
+        107.4,
+        109.8,
+        115.2
+      ],
+      "ratio": 3.7939261971092457,
+      "fontSize": "10px",
+      "height": 19
+    }
+  ]
+}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Texto da shell abaixo de 4.5:1
+
+12 !== 0
+
+    at file:///Users/juansanches/Documents/ChatGPT/CRM%20SAAS%20Deskcomm/.worktrees/contraste-shell/.superpowers/evidence/contraste-shell/medir-shell.mjs:74:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 12,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.23.2

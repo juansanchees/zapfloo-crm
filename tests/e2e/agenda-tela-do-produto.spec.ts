@@ -39,7 +39,12 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await page.goto("/app");
     // O item vive no grupo "Atendimento", junto do Inbox — decisão registrada
     // no `registry.ts`: a Agenda é onde o dia acontece, não onde se configura.
-    const item = page.getByRole("link", { name: "Agenda", exact: true }).first();
+    // No celular, a mesma porta fica na navegação recolhida. Abrir o menu
+    // mantém a prova pelo clique, sem substituir a jornada por um goto.
+    const mobile = (page.viewportSize()?.width ?? 1280) < 768;
+    if (mobile) await page.getByRole("button", { name: "Abrir navegação", exact: true }).click();
+    const navigation = mobile ? page.getByRole("dialog") : page;
+    const item = navigation.getByRole("link", { name: "Calendário", exact: true }).first();
     await expect(item).toBeVisible({ timeout: ESPERA });
     await item.click();
 

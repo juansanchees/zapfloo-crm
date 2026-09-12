@@ -215,6 +215,17 @@ beforeAll(() => {
               'auth-rls'
             );
         end if;
+
+        if not exists (select 1 from public.user_dashboard_preferences where organization_id = v_org) then
+          insert into public.user_dashboard_preferences
+            (organization_id, user_id, layout, schema_version)
+            values (
+              v_org,
+              case when v_org = '${ORG_A}'::uuid then '${USER_A}'::uuid else '${USER_B}'::uuid end,
+              '{"schema_version":1,"widgets":[]}'::jsonb,
+              1
+            );
+        end if;
       end loop;
     end
     $seed$;
@@ -253,6 +264,9 @@ export const TABLES = [
   // lia e escrevia. É o modo de falha que o aviso acima descreve, encontrado vivo.
   "org_guardrail_layers",
   "push_subscriptions",
+  // migration 0227 — preferência pessoal: além do tenant, a policy restringe
+  // a linha ao próprio auth.uid(); o controle positivo usa o dono semeado.
+  "user_dashboard_preferences",
   // migration 0204 — o catálogo de produtos da loja. A leitura é org-scoped sem
   // gate de papel (o `agent` semeado aqui precisa ler para atender), e a ESCRITA
   // exige `manager` — esse segundo eixo é medido em

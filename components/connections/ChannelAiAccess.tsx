@@ -14,10 +14,15 @@ import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
 import { aiAccessUpdateSchema, type AiAccessMode } from "@/lib/ai/elegibilidade/pre-go-live";
 
-interface Access { mode: AiAccessMode; test_phone_numbers: string[] }
+interface Access { mode: AiAccessMode; test_phone_numbers: string[]; access_revision?: string }
+interface AccessOptions {
+  restrictedOnly?: boolean;
+  requireAtLeastOne?: boolean;
+  onSaved?: (saved: { channelId: string; mode: AiAccessMode; count: number }) => void;
+}
 
 /** Mesma porta em todos os tipos de conexão; telefones acessíveis só a administradores. */
-export function ChannelAiAccess({ channelId }: { channelId: string }) {
+export function ChannelAiAccess({ channelId, ...options }: { channelId: string } & AccessOptions) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const query = useQuery({
@@ -60,7 +65,7 @@ export function ChannelAiAccess({ channelId }: { channelId: string }) {
               <Button variant="outline" onClick={() => void query.refetch()}>{t("Tentar novamente")}</Button>
             </div>
           ) : open && query.data ? (
-            <AccessForm channelId={channelId} initial={query.data.data} onClose={() => setOpen(false)} />
+            <AccessForm channelId={channelId} initial={query.data.data} onClose={() => setOpen(false)} {...options} />
           ) : null}
         </SheetContent>
       </Sheet>
@@ -68,7 +73,7 @@ export function ChannelAiAccess({ channelId }: { channelId: string }) {
   );
 }
 
-function AccessForm({ channelId, initial, onClose }: { channelId: string; initial: Access; onClose: () => void }) {
+function AccessForm({ channelId, initial, onClose, restrictedOnly, requireAtLeastOne, onSaved }: { channelId: string; initial: Access; onClose: () => void } & AccessOptions) {
   const t = useT();
   const id = useId();
   const qc = useQueryClient();
@@ -78,11 +83,21 @@ function AccessForm({ channelId, initial, onClose }: { channelId: string; initia
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function save(mode: "open" | "pre_go_live") {
+    if (restrictedOnly && mode !== "pre_go_live") return;
+    if (requireAtLeastOne && !numbers.trim()) {
+      setError(t("Autorize pelo menos um número para continuar."));
+      return;
+    }
     const parsed = aiAccessUpdateSchema.safeParse({
       mode, test_phone_numbers: numbers.split("\n").map(n => n.trim()).filter(Boolean),
+      ...(restrictedOnly ? { restricted_only: true, expected_access_revision: initial.access_revision } : {}),
     });
     if (!parsed.success) {
       setError(t("Use um telefone com DDI por linha, por exemplo +5511999998888."));
+      return;
+    }
+    if (requireAtLeastOne && parsed.data.test_phone_numbers.length === 0) {
+      setError(t("Autorize pelo menos um número para continuar."));
       return;
     }
     setBusy(true);
@@ -90,6 +105,7 @@ function AccessForm({ channelId, initial, onClose }: { channelId: string; initia
     try {
       const saved = await apiClient.patch<{ data: Access }>(`/api/v1/channel-sessions/${channelId}/ai-access`, parsed.data);
       qc.setQueryData(["channel-ai-access", channelId], saved);
+      onSaved?.({ channelId, mode: saved.data.mode, count: saved.data.test_phone_numbers.length });
       toast.success(t("Acesso da IA atualizado."));
       onClose();
     } catch {
@@ -99,6 +115,7 @@ function AccessForm({ channelId, initial, onClose }: { channelId: string; initia
 
   return (
     <div className="flex flex-col gap-5">
+      {restrictedOnly && initial.mode !== "pre_go_live" ? <p role="alert">{t("Este canal já tem outra política de atendimento. Escolha um canal em modo de teste; a configuração existente será preservada.")}</p> : <>
       <div className="flex flex-col gap-2">
         <Badge variant={initial.mode === "open" ? "neutral" : "warning"}>
           {initial.mode === "pre_go_live" ? t("IA em modo de teste") : initial.mode === "open" ? t("IA aberta ao público") : t("IA restrita por origem")}
@@ -132,12 +149,13 @@ function AccessForm({ channelId, initial, onClose }: { channelId: string; initia
         <Button disabled={busy} onClick={() => void save("pre_go_live")}>
           {busy ? t("Salvando…") : initial.mode === "pre_go_live" ? t("Salvar lista de teste") : t("Ativar modo de teste")}
         </Button>
-        {initial.mode !== "open" && <Button variant="outline" disabled={busy} onClick={() => setConfirmOpen(true)}>
+        {!restrictedOnly && initial.mode !== "open" && <Button variant="outline" disabled={busy} onClick={() => setConfirmOpen(true)}>
           {t("Liberar atendimento ao público")}
         </Button>}
         <Button variant="ghost" disabled={busy} onClick={onClose}>{t("Cancelar")}</Button>
       </div>
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      </>}
+      {!restrictedOnly && <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("Liberar a IA para o público?")}</AlertDialogTitle>
@@ -150,7 +168,7 @@ function AccessForm({ channelId, initial, onClose }: { channelId: string; initia
             <AlertDialogAction onClick={() => void save("open")}>{t("Confirmar liberação")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>}
     </div>
   );
 }

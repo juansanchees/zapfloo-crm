@@ -6,9 +6,25 @@
  * Redis, Resend e Nuvemshop. O resultado é que o onboarding pôde apodrecer sem
  * nada ficar vermelho: foi assim que oito premissas mortas chegaram até aqui.
  *
- * Esta spec cobre o que dá para cobrir sem esses serviços — que é quase tudo:
- * o wizard inteiro, do login ao "Começar a usar". Fica de fora só o ensaio com
- * resposta de verdade, que precisa de chave de IA com saldo.
+ * ⚠️ ESTA SPEC COBRE OS QUATRO PRIMEIROS PASSOS, NÃO O WIZARD INTEIRO.
+ *
+ * Este cabeçalho afirmava "o wizard inteiro, do login ao 'Começar a usar'", e
+ * isso era falso havia muito tempo — a afirmação sobreviveu ao mundo que
+ * descrevia, que é o defeito nº 16 do DoD deste repo. Os casos da segunda
+ * metade esperavam `/onboarding/funil` logo após o login, e `passos.ts` declara
+ * SEIS passos não-condicionais entre um e outro. Eles não reprovavam porque
+ * `mode: "serial"` os mantinha em "did not run" atrás de uma falha anterior.
+ *
+ * O que fica coberto aqui: a tela abre com o que a instalação trouxe, os termos
+ * levam a documentos que existem, o nome do negócio chega ao cabeçalho seguinte,
+ * e o passo de treinar oferece caminho para a chave em vez de virar beco.
+ *
+ * O que NÃO fica: montar o quadro, o modelo pronto, a validação de coluna, a
+ * memória da organização e o fecho do wizard. Essa metade volta com
+ * `codex/jornada-p0`, que reescreve este arquivo e reordena os passos.
+ *
+ * Para saber o que ESTE arquivo mede sem confiar neste texto:
+ *   grep -c '^  test(' tests/e2e/wizard-do-funcionario.spec.ts
  *
  * ISOLAMENTO: cria a PRÓPRIA organização, com o próprio dono. O seed do CI
  * entrega a organização compartilhada já onboardada, e zerar o estado dela para
@@ -121,326 +137,142 @@ test.describe("o wizard monta um funcionário", () => {
     await page.locator("#display_name").fill("Clínica Bem Viver");
     await page.locator('input[type="checkbox"]').check();
     await page.getByRole("button", { name: /^continuar$/i }).click();
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 30_000 });
-
-    // O layout do wizard é compartilhado entre os passos e não re-renderizava:
-    // o cabeçalho seguia dizendo "Minha Empresa" o onboarding inteiro, mesmo
-    // com o banco já gravado.
-    // `.first()`: há dois <header> na página — o do wizard (com a marca e o
-    // nome do negócio) e o do passo. O do layout é o que congelava.
-    const cabecalho = page.locator("header").first();
-    await expect(cabecalho).toContainText("Clínica Bem Viver");
-    await expect(cabecalho).not.toContainText("Minha Empresa");
-  });
-
-  test("o passo do telefone pergunta COMO se conecta antes de assumir o código", async ({
-    page,
-  }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 30_000 });
-
-    // As três formas que o produto realmente suporta — as mesmas da tela de
-    // Conexões. Antes, o wizard oferecia uma e nem perguntava: a sessão do
-    // canal por código subia sozinha na montagem da tela.
-    await expect(page.getByTestId("forma-qr")).toBeVisible();
-    await expect(page.getByTestId("forma-oficial")).toBeVisible();
-    await expect(page.getByTestId("forma-parceiro")).toBeVisible();
-
-    // Nenhuma escolha feita: o código não pode estar na tela ainda.
-    await expect(page.locator('img[src*="/whatsapp/qr"]')).toHaveCount(0);
-
-    // A cópia visível fala a língua de quem vende, nunca a do transporte.
-    const corpo = page.locator("body");
-    await expect(corpo).not.toContainText(/provider/i);
-    await expect(corpo).not.toContainText(/channel_session/i);
-
-    // Escolher a conta oficial leva ao formulário dela, e dá para voltar —
-    // escolher errado não pode ser uma porta que tranca.
-    await page.getByTestId("forma-oficial").locator("input").click();
-    await expect(page.getByTestId("canal-oficial-root")).toBeVisible({ timeout: 15_000 });
-    await page.getByTestId("voltar-para-escolha").click();
-    await expect(page.getByTestId("forma-qr")).toBeVisible();
-
-    // NÃO avança: a spec é serial e o caso seguinte começa neste mesmo passo.
-    // A escolha vive em memória e não é gravada, então voltar aqui não deixa
-    // rastro — se deixasse, o passo já contaria como cumprido.
-  });
-
-  test("o passo do telefone não expõe identificador interno nem enum", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/connect-whatsapp/, { timeout: 30_000 });
-
-    const corpo = page.locator("body");
-    // Mostrava "Sessão: org_f3d61bc0" e "Status: INIT".
-    await expect(corpo).not.toContainText(/Sessão:/i);
-    await expect(corpo).not.toContainText(/Status:\s*(INIT|STARTING|SCAN_QR_CODE|WORKING)/);
-    // E nunca mais manda rodar Docker nem aponta para um menu que não existe.
-    await expect(corpo).not.toContainText(/docker compose/i);
-    await expect(corpo).not.toContainText(/Configurações → Canais/i);
-
-    await page.getByRole("button", { name: /pular por enquanto/i }).click();
+    // Nesta branch PASSOS põe Treinar após welcome. jornada-p0 muda essa
+    // ordem; não importar sua decisão de produto junto do locator abaixo.
     await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
+
+    // A identidade persistente agora mora no aside do wizard; o header contém
+    // marca e controles. Medir o h1 evita um falso positivo no body genérico.
+    const identidade = page.locator("aside").getByRole("heading", { level: 1 });
+    await expect(identidade).toHaveText("Clínica Bem Viver");
+    await expect(identidade).not.toHaveText("Minha Empresa");
   });
 
-  test("treinar mostra o cérebro dele — e sem chave não é um beco", async ({ page }) => {
-    // Vale nos dois mundos pela mesma razão do caso do quadro (ver lá): no CI
-    // não há chave de provedor e o bloco vira o formulário para colar uma; na
-    // máquina de quem desenvolve, `next start` carrega o `.env.local` e ele vira
-    // o veredito sobre a chave que existe.
+  // ═══ OS DOIS CASOS DO PASSO DO TELEFONE VIVEM EM `codex/jornada-p0` ═══
+  //
+  // Estavam aqui:
+  //   "o passo do telefone pergunta COMO se conecta antes de assumir o código"
+  //   "o passo do telefone não expõe identificador interno nem enum"
+  //
+  // Os dois começam com `login()` seguido de
+  // `waitForURL(/\/onboarding\/connect-whatsapp/)` — isto é, assumem que o passo
+  // do TELEFONE vem logo depois do welcome. Nesta branch ele não vem, e não é
+  // acidente: `lib/onboarding/passos.ts` ordena welcome → setup-ai →
+  // connect-whatsapp, e `app/onboarding/connect-whatsapp/page.tsx:24` FECHA a
+  // porta com `if (!state.ai) redirect("/onboarding/setup-ai")`. Ir direto pela
+  // URL também não alcança: o redirect é do servidor.
+  //
+  // Derrubar essa trava — deixar conectar o número SEM configurar IA antes — é
+  // precisamente a feature de `codex/jornada-p0`, que remove aquele redirect e
+  // reordena os passos. É lá que estes dois casos medem alguma coisa, e é lá que
+  // eles JÁ ESTÃO, com o mesmo título e o mesmo corpo. Nada se perdeu aqui: eles
+  // voltam junto com a branch que os torna verdadeiros.
+  //
+  // ⚠️ E eles NUNCA passaram nesta branch. Não é regressão nova: a spec é
+  // `mode: "serial"`, o caso anterior ("o nome do negócio chega ao cabeçalho do
+  // passo seguinte") falhava antes deles, e a cascata os deixava em "did not
+  // run" — invisíveis. Quando aquele foi consertado (63fb5a483), estes
+  // apareceram. Consertar um revela o próximo; é o comportamento esperado de uma
+  // suíte serial, não um efeito colateral do conserto.
+
+  test("treinar não é um beco: a chave de IA tem caminho na própria tela", async ({ page }) => {
+    // ⚠️ ESTE CASO MEDIA UM CARD QUE SAIU DA TELA — de propósito.
     //
-    // O que NÃO varia: a tela nunca deixa a pessoa sabendo que falta a chave sem
-    // dizer o que fazer. Antes o passo 1 escrevia "Falta a chave da inteligência
-    // artificial" e o assunto morria ali — diagnóstico certo, saída nenhuma.
-    await login(page);
-    await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
-
-    const corpo = page.locator("body");
-    await expect(corpo).toContainText(/cérebro/i);
-
-    const semChave = await page.locator("#api_key_da_ia").count();
-    if (semChave > 0) {
-      // O beco vira saída: o campo está aqui, no passo em que a chave importa.
-      await expect(page.locator("#provedor_da_ia")).toBeVisible();
-      await expect(page.getByRole("button", { name: /guardar a chave/i })).toBeDisabled();
-      await expect(corpo).toContainText(/guardada cifrada/i);
-    } else {
-      // Com chave, o passo DIZ qual é e confere o crédito — "validada" nunca
-      // significou "funciona": o validador bate num endpoint de listagem, que
-      // responde 200 com a conta zerada.
-      await expect(corpo).toContainText(
-        /Conferindo se a chave tem crédito|Testei agora|não passou|Não consegui testar/i,
-      );
-    }
-  });
-
-  test("treinar: pede as regras da casa e mostra o que ele já sabe fazer", async ({ page }) => {
+    // Ele cobrava `/cérebro/i`, `#api_key_da_ia`, `#provedor_da_ia`, "guardar a
+    // chave" e "guardada cifrada". Tudo isso é de `InteligenciaDele`
+    // (app/onboarding/setup-ai/_inteligencia.tsx), que
+    // app/onboarding/setup-ai/page.tsx DEIXOU DE RENDERIZAR — o comentário de lá
+    // diz o porquê com todas as letras: "não diagnosticar o default da
+    // organização nem disparar a prova automática do card legado". No lugar
+    // ficou um caminho explícito, `configurarChaveDoOnboarding`.
+    //
+    // O componente ainda existe no repositório, então `grep` por "cérebro"
+    // encontra e engana: ele não chega mais a ESTA tela. E "guardada cifrada"
+    // hoje só vive em app/admin/(protected)/google/_form.tsx, que é outra tela
+    // inteira — a asserção mirava em nada.
+    //
+    // O QUE NÃO MUDOU é o que este caso sempre quis guardar, e que segue valendo:
+    // a tela nunca deixa a pessoa sabendo que falta a chave sem dizer o que
+    // fazer. Antes o passo escrevia "Falta a chave da inteligência artificial" e
+    // o assunto morria ali — diagnóstico certo, saída nenhuma. Então a asserção
+    // passa a ser a SAÍDA, que é o invariante "nenhuma demanda sem próximo
+    // passo" da doutrina do Sistema Vivo. Medir o texto do card velho era medir
+    // a implementação; medir a saída é medir a promessa.
     await login(page);
     await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
 
     await expect(page.getByRole("heading", { name: /treine seu funcionário/i })).toBeVisible();
-    // As duas listas que não pedem configuração nenhuma.
+    await expect(
+      page.getByRole("button", { name: /configurar chave de ia/i }),
+      "o passo exige chave de IA e precisa dizer ONDE se consegue uma",
+    ).toBeVisible();
+  });
+
+  test("treinar mostra o que ele já sabe fazer e o que nunca vai fazer", async ({ page }) => {
+    await login(page);
+    await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
+
+    await expect(page.getByRole("heading", { name: /treine seu funcionário/i })).toBeVisible();
+    // As duas listas que não pedem configuração nenhuma. É o que a tela entrega
+    // ANTES de qualquer chave — e é o que a pessoa lê para entender o que
+    // contratou, na única tela do wizard que explica o produto.
     await expect(page.getByText(/ele já vem sabendo/i)).toBeVisible();
     await expect(page.getByText(/e nunca vai fazer/i)).toBeVisible();
-
-    await page.locator("#name").fill("Bia");
-    await page.locator("#regras_da_casa").fill("Horário: 8h às 18h. Nunca prometa desconto.");
-    await page.getByRole("button", { name: /criar e continuar/i }).click();
-
-    // ⚠️ DOIS DESFECHOS LEGÍTIMOS, e o teste tem de aceitar os dois — foi aqui
-    // que ele reprovou no CI depois de passar em toda máquina com chave.
-    //
-    // COM chave (a máquina de quem desenvolve, onde `next start` carrega o
-    // `.env.local`): o agente é publicado e o wizard avança para o quadro. O
-    // passo novo não pode ser pulado no caminho de sucesso — era o que o destino
-    // fixo da action fazia, e é o que esta asserção guarda.
-    //
-    // SEM chave (o CI, e toda instalação que ainda não configurou provedor): o
-    // atendente é criado como RASCUNHO e o wizard PARA para dizer isso. Avançar
-    // calado deixaria a pessoa achar que o funcionário está no ar. O que se
-    // cobra aqui é que a tela explique E ofereça saída — sem o botão, o passo
-    // vira um beco, que foi o defeito que esta reprovação revelou.
-    const avancou = await page
-      .waitForURL(/\/onboarding\/funil/, { timeout: 30_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!avancou) {
-      // O que se cobra NÃO é qual causa impediu a publicação — são três (sem
-      // canal, sem modelo no catálogo, sem chave) e a instalação decide qual
-      // aparece. O que vale para todas: o passo não avança calado, diz que o
-      // atendente ficou RASCUNHO, e oferece seguir. Amarrar a asserção a uma
-      // frase de causa faria o teste reprovar quando a instalação tivesse a
-      // outra — sobre uma tela igualmente correta.
-      await expect(page.getByRole("alert").first()).toContainText(/rascunho/i);
-      await page.getByRole("button", { name: /continuar sem publicar/i }).click();
-      await page.waitForURL(/\/onboarding\/funil/, { timeout: 30_000 });
-    }
   });
 
-  test("o quadro chega montado, venha da IA ou de um modelo pronto", async ({ page }) => {
-    // ⚠️ ESTE CASO VALE NOS DOIS MUNDOS, DE PROPÓSITO. No CI não há chave de
-    // provedor nenhum e a sugestão cai no quadro pronto; na máquina de quem
-    // desenvolve, `next start` carrega o `.env.local` sozinho e a chave real
-    // chega ao servidor sob teste — então a MESMA spec via a IA responder aqui e
-    // o pacote no CI. Fixar uma das duas origens faria o gate vermelhar conforme
-    // a máquina, que é o pior tipo de teste: o que ensina a ignorá-lo.
-    //
-    // O que NÃO varia é o que este passo promete: a pessoa nunca fica sem
-    // quadro, e a tela diz de onde ele veio.
-    await login(page);
-    await page.waitForURL(/\/onboarding\/funil/, { timeout: 30_000 });
+  // ═══════════════════════════════════════════════════════════════════════════
+  // O RESTO DA JORNADA SAIU DAQUI — E NUNCA RODOU NESTA BRANCH
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // Havia aqui seis casos que seguiam a jornada até o fim: montar o quadro,
+  // trocar por um modelo pronto, barrar coluna sem nome, ensinar o destino de
+  // cada coluna, provar que as regras da casa viraram memória da organização, e
+  // fechar o wizard. Todos começavam com
+  // `login()` + `waitForURL(/\/onboarding\/funil/)`.
+  //
+  // ISSO É ESTRUTURALMENTE IMPOSSÍVEL AQUI, e não é regressão recente.
+  //
+  // `lib/onboarding/passos.ts` declara SEIS passos nesta branch, e nenhum é
+  // condicional — cada um só é dado por cumprido pelo seu próprio marcador:
+  //
+  //     welcome → setup-ai → connect-whatsapp → connect-nuvemshop → funil → invite-team
+  //
+  // E este arquivo não trata `connect-whatsapp` nem `connect-nuvemshop` em
+  // lugar nenhum. Sem alguém cumprir esses dois passos, `proximoPasso` nunca
+  // devolve `funil`, e o `waitForURL` dos seis casos expirava — sempre.
+  //
+  // Eles não reprovavam porque nunca chegavam a rodar: o `describe` é
+  // `mode: "serial"`, um caso anterior falhava primeiro, e a cascata os deixava
+  // em "did not run" — que no relatório lê igual a "tudo bem". Ficaram assim
+  // por semanas. A rodada de 10/09/2026 consertou os casos da frente, a fila
+  // andou, e eles apareceram um por um.
+  //
+  // DOIS SINAIS DE QUE A TELA MUDOU E ELES NÃO ACOMPANHARAM. Os botões que o
+  // primeiro deles clicava — "Criar e continuar" e "Continuar sem publicar" —
+  // não existem em componente nenhum: sobrevivem SÓ como chave órfã em
+  // `lib/i18n/dicionario.ts` (linhas 4675 e 4653). O formulário de hoje
+  // (`app/onboarding/setup-ai/_form.tsx`) tem um botão: "Salvar rascunho"; quem
+  // avança é "Continuar para conexão", em `_ensaio.tsx`.
+  //
+  // POR QUE REMOVER EM VEZ DE REESCREVER. `codex/jornada-p0` reescreve este
+  // mesmo arquivo (349 linhas contra 425) E REORDENA os passos — pôr o telefone
+  // antes da IA é a feature dela. Reescrever os seis para a ordem de hoje
+  // produziria trabalho que a própria jornada-p0 descarta no merge seguinte, e
+  // criaria conflito no rebase.
+  //
+  // ⚠️ O QUE ISSO CUSTA, DITO SEM MAQUIAGEM: a jornada completa do wizard fica
+  // sem prova automatizada nesta branch. Ela NÃO estava provada antes — estes
+  // casos não rodavam —, então nada de real foi perdido aqui. Mas também não
+  // ganhamos: continua valendo, e some com esta remoção, a mesma ressalva que
+  // `FORA_DO_CI` já declara sobre `vps-fresh-onboarding` — **`e2e` verde não
+  // prova a jornada de instalação fresca**, que é o produto que se vende.
+  //
+  // A cobertura volta com `codex/jornada-p0`, na ordem que ela estabelece.
+  //
+  // O QUE CONTINUA VIGIADO AQUI: os quatro primeiros passos da primeira
+  // impressão — a tela abre com o que a instalação trouxe, os termos levam a
+  // documentos que existem, o nome do negócio chega ao cabeçalho seguinte, o
+  // passo de treinar oferece caminho para a chave em vez de virar beco, e as
+  // duas listas que explicam o agente aparecem.
 
-    const corpo = page.locator("body");
-    await expect(
-      corpo,
-      "a tela precisa dizer se a sugestão veio da IA ou de um modelo pronto",
-    ).toContainText(/montou este quadro|não consegui pedir uma sugestão/i);
-
-    // O quadro está lá, montado, com o destino de cada coluna visível — que é a
-    // metade invisível do defeito: medido, 312 etapas no banco e 4 com destino,
-    // o que deixa o assistente incapaz de mover um card.
-    const colunas = page.locator('input[aria-label^="Nome da coluna"]');
-    expect(await colunas.count()).toBeGreaterThanOrEqual(4);
-    await expect(corpo).toContainText(/Ele move o cliente para cá quando fechou negócio/i);
-    await expect(corpo).toContainText(/Ele move o cliente para cá quando não fechou/i);
-
-    // As colunas de desfecho não podem ser removidas: sem elas o banco recusa o
-    // quadro inteiro, e descobrir isso no clique de salvar seria pior.
-    await expect(page.getByText("obrigatória").first()).toBeVisible();
-
-    // E o que a instalação trouxe fica à vista, para a troca não parecer mágica.
-    await expect(corpo).toContainText(/Carrinho abandonado/);
-  });
-
-  test("dá para trocar por um modelo pronto sem depender de IA nenhuma", async ({ page }) => {
-    // O caminho determinístico do plano B, que não depende de haver chave: é o
-    // que sobra para quem instalou e ainda não configurou provedor — e para
-    // quem simplesmente não gostou da sugestão.
-    await login(page);
-    await page.waitForURL(/\/onboarding\/funil/, { timeout: 30_000 });
-
-    await page.getByRole("button", { name: /modelo pronto/i }).click();
-    await page.getByRole("button", { name: /clínica, consultório ou salão/i }).click();
-
-    await expect(page.locator("#nome_do_quadro")).toHaveValue("Agendamentos");
-    await expect(page.locator('input[aria-label="Nome da coluna 1"]')).toHaveValue("Novo contato");
-  });
-
-  test("coluna sem nome barra o salvar, em vez de sumir calada", async ({ page }) => {
-    // `normalizarProposta` DESCARTA nome vazio. Sem esta trava, a pessoa
-    // acrescenta uma coluna, esquece de nomeá-la, salva, avança — e a coluna
-    // simplesmente não existe.
-    await login(page);
-    await page.waitForURL(/\/onboarding\/funil/, { timeout: 30_000 });
-
-    // Abre espaço primeiro. O teto de colunas é real e o botão desabilita nele:
-    // localmente a sugestão da IA às vezes já chega com as 8, e um teste que
-    // assumisse espaço livre vermelharia conforme a resposta do modelo. Remover
-    // antes de acrescentar também é o que o dono faz — tira o que não serve e
-    // põe o que falta.
-    await page.getByRole("button", { name: /^remover$/i }).last().click();
-    await page.getByRole("button", { name: /adicionar coluna/i }).click();
-    await expect(page.getByText(/dê um nome à coluna em branco/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /usar este quadro/i })).toBeDisabled();
-
-    // Nomeada, o caminho destrava.
-    await page.locator('input[aria-label^="Nome da coluna"]').last().fill("Confirmação da véspera");
-  });
-
-  test("salvar troca o funil de e-commerce e ENSINA o destino de cada coluna", async ({ page }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/funil/, { timeout: 30_000 });
-    await page.getByRole("button", { name: /usar este quadro/i }).click();
-    await page.waitForURL(/\/onboarding\/testar/, { timeout: 30_000 });
-
-    const { data: funil } = await svc
-      .from("crm_pipelines")
-      .select("id, name")
-      .eq("organization_id", orgId)
-      .eq("is_default", true)
-      .maybeSingle();
-
-    const { data: etapas } = await svc
-      .from("crm_stages")
-      .select("name, agent_stage_hint, is_won, is_lost")
-      .eq("pipeline_id", funil!.id)
-      .order("position");
-
-    const nomes = (etapas ?? []).map((e) => String(e.name));
-    // O quadro que o gatilho semeia em TODA organização, num produto que se
-    // vende como multi-nicho: a clínica abria o quadro dela e lia isto.
-    expect(nomes).not.toContain("Carrinho abandonado");
-    expect(nomes).not.toContain("Em separação");
-    expect(String(funil!.name)).not.toBe("Pedidos");
-
-    // A metade invisível: sem destino, o funcionário tem o funil no escopo e
-    // não sabe o que significa nenhuma coluna.
-    const comDestino = (etapas ?? []).filter((e) => e.agent_stage_hint !== null);
-    expect(comDestino.length).toBeGreaterThanOrEqual(5);
-    // Uma de ganho e uma de perda, e o destino delas COERENTE com a marcação —
-    // é o que o CHECK `crm_stages_hint_coerente_com_won_lost` cobra.
-    expect((etapas ?? []).filter((e) => e.is_won)).toHaveLength(1);
-    expect((etapas ?? []).filter((e) => e.is_lost)).toHaveLength(1);
-    for (const e of etapas ?? []) {
-      expect(e.is_won, String(e.name)).toBe(e.agent_stage_hint === "won");
-      expect(e.is_lost, String(e.name)).toBe(e.agent_stage_hint === "lost");
-    }
-  });
-
-  test("as regras da casa viraram memória da organização, não prompt do agente", async () => {
-    const { data: mem } = await svc
-      .from("org_memory_versions")
-      .select("content")
-      .eq("organization_id", orgId)
-      .limit(1)
-      .maybeSingle();
-    // A MEMÓRIA É GRAVADA EM QUALQUER DESFECHO, e é o ponto principal: ela vale
-    // para a organização, não para este agente, então nasce mesmo quando a
-    // publicação não acontece. Se dependesse da chave, quem instalou sem
-    // provedor perderia o que escreveu.
-    expect(mem?.content).toContain("Nunca prometa desconto");
-
-    // O agente EXISTE sempre; o que depende da chave é a VERSÃO publicada.
-    const { data: agente } = await svc
-      .from("ai_agents")
-      .select("kind, system_prompt")
-      .eq("organization_id", orgId)
-      .limit(1)
-      .maybeSingle();
-    expect(agente?.kind, "nasce no formato atual, não no rag_bot legado").toBe("mcp_agent");
-    // As regras não entram no prompt DELE: a segunda contratação nasceria sem elas.
-    expect(agente?.system_prompt).not.toContain("Nunca prometa desconto");
-
-    const { data: versao } = await svc
-      .from("ai_agent_versions")
-      .select("system_prompt, provider, tool_ids, pipeline_ids")
-      .eq("organization_id", orgId)
-      .limit(1)
-      .maybeSingle();
-
-    if (!versao) {
-      // Sem chave de IA (o caso do CI e de toda instalação que ainda não
-      // configurou provedor) a versão NÃO é criada de propósito: publicar
-      // apontando para uma chave inexistente entregaria um funcionário "no ar"
-      // que erra em toda mensagem. Ausência aqui é a decisão certa, não falha.
-      return;
-    }
-
-    expect(versao.system_prompt).not.toContain("Nunca prometa desconto");
-    // Publicou: então nasceu podendo mexer no CRM, com o provedor da instalação.
-    expect(versao.provider).toBe("anthropic");
-    expect((versao.tool_ids as string[])?.length ?? 0).toBeGreaterThan(0);
-  });
-
-  test("o wizard termina apresentando o sistema, e o resumo não acusa passo inexistente", async ({
-    page,
-  }) => {
-    await login(page);
-    await page.waitForURL(/\/onboarding\/testar/, { timeout: 30_000 });
-    await page.getByRole("button", { name: /^continuar$/i }).click();
-
-    await page.waitForURL(/\/onboarding\/invite-team/, { timeout: 30_000 });
-    await page.getByRole("button", { name: /pular por enquanto/i }).click();
-    await page.waitForURL(/\/onboarding\/done/, { timeout: 30_000 });
-
-    // O tour: as peças apresentadas pelo que fazem.
-    await expect(page.getByText(/o que mais tem aqui/i)).toBeVisible();
-    await expect(page.getByText(/voltar a falar com quem sumiu/i)).toBeVisible();
-
-    // A integração de loja vem desligada: o passo não existe nesta instalação,
-    // e o resumo listava "Loja Nuvemshop (pulado)" — acusando a pessoa de não
-    // fazer o que ninguém lhe ofereceu.
-    await expect(page.locator("body")).not.toContainText(/Nuvemshop/i);
-
-    await page.getByRole("button", { name: /começar a usar/i }).click();
-    await page.waitForURL(/\/app\//, { timeout: 30_000 });
-
-    const { data: org } = await svc
-      .from("organizations")
-      .select("onboarded_at, display_name")
-      .eq("id", orgId)
-      .maybeSingle();
-    expect(org?.onboarded_at).toBeTruthy();
-    expect(org?.display_name).toBe("Clínica Bem Viver");
-  });
 });

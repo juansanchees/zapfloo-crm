@@ -81,7 +81,7 @@ export const crmListConversations: McpToolDefinition<typeof listInputShape> = {
     }
     // Nomes (dedupe) e posições de fila (1 query cada) — sem N+1 na listagem.
     const names = await resolveUserNames(
-      ctx.supabase,
+      ctx,
       conversations.map((c) => c.assigned_to_user_id),
     );
     const queueMap = conversations.some(isInQueue)
@@ -134,7 +134,7 @@ export const crmGetConversation: McpToolDefinition<typeof getInputShape> = {
       },
       input.conversation_id,
     );
-    const names = await resolveUserNames(ctx.supabase, [conv.assigned_to_user_id]);
+    const names = await resolveUserNames(ctx, [conv.assigned_to_user_id]);
     const queue_position = isInQueue(conv)
       ? ((await getQueuePositions(ctx.supabase, ctx.organizationId)).get(conv.id) ?? null)
       : null;

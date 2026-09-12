@@ -1,0 +1,34 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "tela": {
+    "x": 264,
+    "y": 243,
+    "width": 992,
+    "height": 498,
+    "area": 494016
+  },
+  "grade": {
+    "x": 288,
+    "y": 909,
+    "width": 944,
+    "height": 2,
+    "area": 1888
+  },
+  "gradeBody": {
+    "x": 289,
+    "y": 910,
+    "width": 942,
+    "height": 0,
+    "area": 0
+  },
+  "historico": {
+    "x": 288,
+    "y": 533,
+    "width": 944,
+    "height": 0,
+    "area": 0
+  }
+}

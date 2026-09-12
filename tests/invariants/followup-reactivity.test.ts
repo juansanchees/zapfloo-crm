@@ -110,7 +110,7 @@ function reactivityDb(): ReactivityAdminClient {
         ...values,
       ]);
     },
-    // Migration 0143: quem acorda um enrollment grava o relógio do BANCO,
+    // Migration 0147: quem acorda um enrollment grava o relógio do BANCO,
     // porque o claim compara com now() e o processo fica à frente.
     async agoraNoBanco() {
       const { rows } = await pool.query<{ agora: string }>(`select public.fn_agora() as agora`);
@@ -407,36 +407,8 @@ describe("applyReactivityEvent — STOP/opt-out (message.received + is_blocked)"
     expect(afterDone.status).toBe("completed"); // terminal intocado pelo STOP
   });
 
-  /**
-   * O caso gêmeo de `paused_manual` (migration 0145). `LIVE_STATUSES` é escrita à
-   * mão, e estado novo não entra nela sozinho: dos SEIS consumidores que listam
-   * estados vivos, cinco acompanharam a 0145 e este — o único que fala em nome do
-   * opt-out do lead — não. O comentário do STOP promete "cancela TUDO que está
-   * vivo, sem exceção de política", e TUDO deixou de ser verdade quando o estado
-   * novo entrou: comentário que descreve alcance envelhece junto com a lista.
-   *
-   * O QUE CUSTA, medido em consequência e não em susto: a mensagem NÃO vaza —
-   * `stopGate` (before-send) relê `is_blocked` direto da fonte no turno e o sink
-   * veta em definitivo no 403. O que sobra é sujeira de estado: o enrollment não
-   * vira `opted_out` e OCUPA a vaga única do contato
-   * (`idx_followup_enrollments_one_live`), então um follow-up legítimo futuro
-   * morre com 23505 sem ninguém entender por quê — "esse contato nunca mais entra
-   * em follow-up e não sabemos a razão". Mais turnos enfileirados só para serem
-   * vetados, e a métrica de outcome sem contar este opt-out.
-   */
-  /**
-   * CONTROLE POSITIVO da catraca abaixo, e ele é um `it` NORMAL de propósito.
-   *
-   * `it.fails` é satisfeito por QUALQUER falha — typo, import quebrado, fixture
-   * impossível. Numa árvore sem a 0145 o CHECK de `followup_enrollments` recusa
-   * `paused_manual`, o seed estoura 23514, a catraca fica VERDE por não
-   * conseguir nem montar o cenário, e ninguém vira essa pedra nunca: catraca
-   * verde pelo motivo errado é pior que caso ausente, porque parece cobertura.
-   *
-   * Pôr a asserção DENTRO da catraca não resolveria — a falha dela também
-   * satisfaria o `.fails`. Separado e alto, este caso reprova de verdade e a
-   * mensagem aponta para migration ausente em vez de defeito de reactivity.
-   */
+
+
   it("controle positivo: a fixture consegue mesmo criar um enrollment paused_manual", async () => {
     const org = nextOrgId();
     await seedOrg(org);
@@ -456,16 +428,7 @@ describe("applyReactivityEvent — STOP/opt-out (message.received + is_blocked)"
     expect(row.status).toBe("paused_manual");
   });
 
-  /**
-   * SEGUNDO controle positivo, e fecha o resíduo que o @MaestroConexoes apontou:
-   * `it.fails` também é satisfeito por EXCEÇÃO. Se `applyReactivityEvent` passar
-   * a estourar por regressão alheia, a catraca abaixo fica verde satisfeita pelo
-   * throw — pelo motivo errado, de novo, um nível acima da fixture.
-   *
-   * Este caso é `it` normal: exercita o MESMO caminho e só exige que ele
-   * complete. Regressão que derrube `applyReactivityEvent` reprova ALTO aqui,
-   * com a mensagem apontando para a exceção, enquanto a catraca seguiria muda.
-   */
+
   it("controle positivo: aplicar o evento de STOP com enrollment pausado não estoura", async () => {
     const org = nextOrgId();
     await seedOrg(org);
@@ -483,28 +446,16 @@ describe("applyReactivityEvent — STOP/opt-out (message.received + is_blocked)"
 
     const row = eventRow({ organization_id: org, event_type: "message.received", payload: { contact_id: contactId } });
     const summary = await applyReactivityEvent(reactivityDb(), () => new Date(), row);
-    expect(summary.matched).toBe(true); // completou; o QUANTO é a catraca abaixo
+    expect(summary.matched).toBe(true); // completou sem exceção
   });
 
-  // ACOPLADO À MIGRATION 0145: o `seedEnrollment` abaixo grava
-  // `status: "paused_manual"`, e na `main` o CHECK de `followup_enrollments`
-  // ainda RECUSA esse valor (0054: active, waiting_reply, paused_handoff,
-  // completed, cancelled, dead). Este caso só roda em árvore que carrega a 0145 —
-  // medido: 1 arquivo de migration 0145 e 7 ocorrências no baseline desta base.
-  // Cherry-pick isolado para uma árvore sem ela vira 23514 no seed, e o vermelho
-  // vai parecer defeito de reactivity em vez de migration ausente.
-  //
-  // `it.fails` = CATRACA, não teste desligado. Ele EXECUTA e exige que o defeito
-  // ainda esteja lá; no dia em que `LIVE_STATUSES` ganhar `paused_manual` este
-  // caso REPROVA por ter passado, e quem consertar é obrigado a vir tirar o
-  // `.fails`. O conserto é acrescentar o estado à lista em
-  // `lib/followup/reactivity.ts` — decisão de comportamento, do dono do arquivo.
-  it.fails("STOP alcança também o enrollment PAUSADO MANUALMENTE — opt-out não abre exceção de estado", async () => {
+  // Regressão da migration 0145: STOP inclui pausas manuais e registra o opt-out uma vez.
+  it("STOP alcança também o enrollment PAUSADO MANUALMENTE — opt-out não abre exceção de estado", async () => {
     const org = nextOrgId();
     await seedOrg(org);
     const contactId = await seedContact(org, { isBlocked: true });
     const flow = await seedFlow(org, SIMPLE_GRAPH);
-    await seedEnrollment({
+    const enrollmentId = await seedEnrollment({
       org,
       pointerId: flow.pointerId,
       versionId: flow.versionId,
@@ -517,22 +468,25 @@ describe("applyReactivityEvent — STOP/opt-out (message.received + is_blocked)"
     const row = eventRow({ organization_id: org, event_type: "message.received", payload: { contact_id: contactId } });
     const summary = await applyReactivityEvent(reactivityDb(), () => new Date(), row);
 
-    // UMA asserção só, e é deliberado — `it.fails` é satisfeito pela PRIMEIRA
-    // que falha, então toda asserção extra aqui seria letra morta enquanto o
-    // defeito existir, e estrearia junto no dia do conserto. Se uma delas
-    // quebrasse por outro motivo, o caso seguiria falhando, o `.fails` seguiria
-    // satisfeito, e a catraca não reprovaria: sobreviveria ao próprio conserto.
-    //
-    // O estado final do enrollment cancelado é congelado pelo caso irmão
-    // "cancela o enrollment VIVO do contato (outcome='opted_out') e ignora os já
-    // terminais" — citado pelo TÍTULO, e não por "logo acima", porque a garantia
-    // desta catraca depende dele e um `git grep` precisa achá-lo se ele se mudar.
-    // Os dois passam pelo mesmo `cancelAll`, que não tem ramo por status.
-    //
-    // DÍVIDA DECLARADA: se aquele caso for removido, movido ou pulado, as três
-    // propriedades ficam órfãs e ESTA catraca continua com cara de saudável.
-    // Prosa não reprova — quem mexer no irmão está mexendo em dois lugares.
     expect(summary.reacted).toBe(1);
+    expect(await getEnrollment(enrollmentId)).toMatchObject({ status: "cancelled", outcome: "opted_out", next_eval_at: null });
+    expect((await applyReactivityEvent(reactivityDb(), () => new Date(), row)).reacted).toBe(0);
+    expect((await getEvents(enrollmentId)).filter((e) => e.event_type === "reactivity_opted_out")).toHaveLength(1);
+  });
+
+  it.each(["pause", "cancel", "allow"] as const)("inbound e handoff %s preservam a pausa manual sem STOP", async (handoffPolicy) => {
+    const org = nextOrgId();
+    await seedOrg(org);
+    const contactId = await seedContact(org);
+    const conversationId = await seedConversation(org, contactId);
+    const flow = await seedFlow(org, SIMPLE_GRAPH, { handoffPolicy });
+    const enrollmentId = await seedEnrollment({ org, pointerId: flow.pointerId, versionId: flow.versionId, contactId, currentNodeId: "w1", status: "paused_manual", nextEvalAt: null });
+    for (const eventType of ["message.received", "ai.handoff_triggered", "ai.handoff_resolved"]) {
+      const row = eventRow({ organization_id: org, event_type: eventType, payload: { contact_id: contactId, conversation_id: conversationId } });
+      expect(await applyReactivityEvent(reactivityDb(), () => new Date(), row)).toEqual({ matched: true, reacted: 0 });
+      expect(await getEnrollment(enrollmentId)).toMatchObject({ status: "paused_manual", next_eval_at: null });
+    }
+    expect(await getEvents(enrollmentId)).toHaveLength(0);
   });
 
   it("re-drenar o MESMO event_log row é idempotente — sem efeito duplicado", async () => {
@@ -590,25 +544,18 @@ describe("applyReactivityEvent — inbound wake (waiting_reply, sem cancel_on_re
     ]);
 
     const row = eventRow({ organization_id: org, event_type: "message.received", payload: { contact_id: contactId } });
+    // A reatividade grava fn_agora() desde a migration 0147. O contrato é
+    // "agora no banco", não "perto do relógio do Mac": a VM pode ter skew.
+    const antesDoWake = await reactivityDb().agoraNoBanco();
     const summary = await applyReactivityEvent(reactivityDb(), () => new Date(), row);
     expect(summary).toEqual({ matched: true, reacted: 1 });
 
     const afterWake = await getEnrollment(enrollmentId);
-    expect(new Date(afterWake.next_eval_at as string).getTime()).toBeLessThanOrEqual(Date.now() + 2_000);
+    const depoisDoWake = await reactivityDb().agoraNoBanco();
+    const acordadoEm = new Date(afterWake.next_eval_at as string).getTime();
+    expect(acordadoEm).toBeGreaterThanOrEqual(new Date(antesDoWake).getTime());
+    expect(acordadoEm).toBeLessThanOrEqual(new Date(depoisDoWake).getTime());
     expect(afterWake.status).toBe("waiting_reply"); // reactivity não muda status, só acorda
-
-    // A asserção acima já provou o que a reactivity faz: trouxe o next_eval_at de
-    // +10min para "agora". O empurrão abaixo existe por causa de DOIS RELÓGIOS:
-    // a reactivity grava o instante com o relógio do PROCESSO (clock injetado) e
-    // o claim pergunta `next_eval_at <= now()`, o do POSTGRES. Medido nesta
-    // configuração: o `now()` do banco fica 17 a 34ms ATRÁS do processo — então
-    // "agora" gravado aqui ainda é futuro para o claim, e o tick logo em seguida
-    // não reclama nada. Em produção o efeito não existe (o tick seguinte vem um
-    // minuto depois); neste teste os dois passos são consecutivos, e era a última
-    // fonte de vermelho intermitente do arquivo.
-    await pool.query(`update followup_enrollments set next_eval_at = now() - interval '1 second' where id = $1`, [
-      enrollmentId,
-    ]);
 
     // 2º tick: reclama por causa do next_eval_at movido. SEM o wake marker,
     // waitElapsed=true cairia em 'no_reply' (fix da Task 5.1) — descartando a

@@ -62,3 +62,27 @@ export function useCreateFollowupFlow() {
     },
   });
 }
+
+export function useGenerateFollowupFlow() {
+  const t = useT();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: ["followup", "flows", "generate"],
+    mutationFn: async (input: { name: string; description: string }) => {
+      // O modelo pode levar 35s e a rota até 45s. O timeout padrão de 10s
+      // abandonava a resposta e repetia a geração, potencialmente cobrando de novo.
+      const res = await apiClient.post<SingleResponse>("/api/v1/ai/followup-flows/generate", input, {
+        timeoutMs: 50_000,
+        retry: false,
+      });
+      return res.data;
+    },
+    onSuccess: (created) => {
+      qc.setQueryData<FollowupFlowPointerRow[]>(followupFlowsListQueryKey, (prev) =>
+        prev ? [created, ...prev] : [created],
+      );
+      toast.success(t("Rascunho criado com IA. Revise antes de publicar."));
+    },
+    onError: (err) => showApiError(err),
+  });
+}

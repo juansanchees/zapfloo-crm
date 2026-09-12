@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api/client";
 
 export interface ChannelSession {
   id: string;
+  provider?: "waha" | "meta_cloud" | "zernio";
   /**
    * Nome da sessão no transporte. NULL no canal oficial, que não tem sessão a
    * iniciar, deslogar ou apagar — é o que distingue, na tela, quem depende do

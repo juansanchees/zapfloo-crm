@@ -17,6 +17,7 @@ import {
   FlowArrow,
   Funnel,
   Gauge,
+  Gear,
   Inbox,
   Kanban,
   Key,
@@ -85,6 +86,36 @@ export interface NavDestination {
   healthDot?: boolean;
 }
 
+export type CompactAreaId =
+  | "home"
+  | "conversas"
+  | "funis"
+  | "contatos"
+  | "ia"
+  | "automacoes"
+  | "relatorios"
+  | "agenda"
+  | "configuracoes";
+
+export type CompactAreaSection = "operacao" | "crescimento";
+
+export interface CompactAreaTab {
+  href: string;
+  label: string;
+}
+
+export interface CompactArea {
+  id: CompactAreaId;
+  label: string;
+  href: string;
+  icon: PhosphorIcon;
+  position: "main" | "footer";
+  section: CompactAreaSection;
+  tabs: CompactAreaTab[];
+  /** Propaga a saúde de um destino secundário crítico para a porta compacta. */
+  healthDot?: boolean;
+}
+
 /**
  * Grupos por OBJETIVO, na ordem de uso: o que se abre toda hora primeiro, o que
  * se ajusta uma vez por mês por último.
@@ -129,6 +160,135 @@ export const NAV_GROUPS: NavGroup[] = [
  */
 export const GRUPO_NO_RODAPE: NavGroupId = "organizacao";
 
+interface CompactAreaSpec extends Omit<CompactArea, "tabs"> {
+  minRole?: Role;
+  tabs: Array<{ href: string; label?: string }>;
+}
+
+/**
+ * Oito portas para o produto inteiro — contrato aprovado pelo proprietário.
+ *
+ * Isto NÃO é outro registro de telas: todo `href` abaixo resolve para um
+ * `NAV_DESTINATIONS` ou para um hub já declarado em `NAV_GROUPS`. É só a
+ * projeção da frequência de uso. O inventário completo continua nos hubs e no
+ * ⌘K; por isso reduzir o sidebar não torna rota órfã.
+ */
+const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
+  {
+    id: "home",
+    label: "Painel de controle",
+    href: "/app",
+    icon: Gauge,
+    position: "main",
+    section: "operacao",
+    tabs: [],
+  },
+  {
+    id: "conversas",
+    label: "Conversas",
+    href: "/app/inbox",
+    icon: Inbox,
+    position: "main",
+    section: "operacao",
+    tabs: [
+      { href: "/app/inbox", label: "Conversas" },
+      { href: "/app/radar", label: "Precisam de atenção" },
+      { href: "/app/templates" },
+    ],
+  },
+  {
+    id: "agenda",
+    label: "Calendário",
+    href: "/app/agenda",
+    icon: CalendarBlank,
+    position: "main",
+    section: "operacao",
+    tabs: [{ href: "/app/agenda", label: "Compromissos" }, { href: "/app/tasks" }],
+  },
+  {
+    id: "contatos",
+    label: "Contatos",
+    href: "/app/contacts",
+    icon: Users,
+    position: "main",
+    section: "operacao",
+    tabs: [],
+  },
+  {
+    id: "funis",
+    label: "Leads",
+    href: "/app/leads",
+    icon: Kanban,
+    position: "main",
+    section: "operacao",
+    tabs: [
+      { href: "/app/leads", label: "Leads" },
+      { href: "/app/kanban", label: "Funis" },
+      { href: "/app/products" },
+      { href: "/app/settings/tenant/pipelines" },
+    ],
+  },
+  {
+    id: "ia",
+    label: "Agentes de IA",
+    href: "/app/ai",
+    icon: Robot,
+    position: "main",
+    section: "operacao",
+    minRole: "manager",
+    tabs: [
+      { href: "/app/ai", label: "Visão geral" },
+      { href: "/app/ai/agents" },
+      { href: "/app/ai/knowledge/sources" },
+      { href: "/app/ai/routers", label: "Distribuição" },
+      { href: "/app/ai/providers", label: "Avançado" },
+    ],
+  },
+  {
+    id: "automacoes",
+    label: "Automações",
+    href: "/app/ai/followups",
+    icon: FlowArrow,
+    position: "main",
+    section: "crescimento",
+    minRole: "manager",
+    tabs: [
+      { href: "/app/ai/followups", label: "Fluxos e follow-ups" },
+      { href: "/app/webhooks", label: "Entradas e webhooks" },
+    ],
+  },
+  {
+    id: "relatorios",
+    label: "Relatórios",
+    href: "/app/analise",
+    icon: ChartBar,
+    position: "main",
+    section: "crescimento",
+    tabs: [
+      { href: "/app/analise", label: "Visão geral" },
+      { href: "/app/metrics" },
+      { href: "/app/activities" },
+      { href: "/app/ads/meta" },
+      { href: "/app/ai/evolution" },
+    ],
+  },
+  {
+    id: "configuracoes",
+    label: "Configurações",
+    href: "/app/settings",
+    icon: Gear,
+    position: "footer",
+    section: "operacao",
+    tabs: [
+      { href: "/app/settings", label: "Visão geral" },
+      { href: "/app/team", label: "Empresa e equipe" },
+      { href: "/app/connections" },
+      { href: "/app/webhooks", label: "Integrações" },
+      { href: "/app/settings/profile", label: "Conta e segurança" },
+    ],
+  },
+];
+
 /**
  * Como `minRole` foi escolhido — medido tela a tela, não estimado:
  *
@@ -143,6 +303,14 @@ export const GRUPO_NO_RODAPE: NavGroupId = "organizacao";
  * fechada e por isso não vira `minRole`.
  */
 export const NAV_DESTINATIONS: NavDestination[] = [
+  {
+    href: "/app",
+    label: "Visão geral",
+    description: "Conversas, tarefas e oportunidades: o próximo passo do seu negócio.",
+    icon: Gauge,
+    group: "atendimento",
+    // Entrada transversal, desenhada antes dos grupos pelo Sidebar.
+  },
   // ---- Atendimento — onde o operador passa o dia ----
   {
     href: "/app/inbox",
@@ -194,6 +362,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
 
   // ---- CRM — o funil ----
   {
+    href: "/app/leads",
+    label: "Leads",
+    description: "Acompanhe oportunidades e organize cada etapa da venda.",
+    icon: Kanban,
+    group: "crm",
+    section: "O dia a dia da venda",
+    sidebar: true,
+  },
+  {
     // ⚠️ ERA "Kanban", e a URL continua sendo. O nome saiu da interface porque o
     // produto tinha CINCO vocabulários para a mesma coisa — "Kanban" no menu,
     // "Pipelines" no título desta tela, "Funis" no menu ao lado, "funil" em todo
@@ -210,7 +387,6 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: Kanban,
     group: "crm",
     section: "O dia a dia da venda",
-    sidebar: true,
   },
   {
     href: "/app/contacts",
@@ -315,6 +491,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   },
 
   // ---- Agente de IA — montar, ensinar, acompanhar ----
+  {
+    href: "/app/ai/ask",
+    label: "Pergunte à IA",
+    description: "Analise conversas, oportunidades e próximos passos com fontes do seu CRM.",
+    icon: Brain,
+    group: "ia",
+    section: "Trabalhar com a IA",
+    minRole: "agent",
+  },
   {
     href: "/app/ai/agents",
     label: "Agentes",
@@ -738,6 +923,113 @@ export function sidebarGroups(
       (d) => d.group === group.id && d.sidebar && canSee(d, isPlatformAdmin, role),
     ),
   })).filter((g) => g.items.length > 0);
+}
+
+function podeVerPapel(minRole: Role | undefined, isPlatformAdmin: boolean, role: Role | null) {
+  if (isPlatformAdmin) return true;
+  if (!role) return false;
+  return ROLE_RANK[role] >= ROLE_RANK[minRole ?? "viewer"];
+}
+
+function rotuloDoHref(href: string): string | undefined {
+  return (
+    NAV_DESTINATIONS.find((destination) => destination.href === href)?.label ??
+    NAV_GROUPS.find((group) => group.hub?.href === href)?.hub?.label
+  );
+}
+
+/**
+ * Projeção compacta do sidebar e de suas abas contextuais.
+ *
+ * O filtro acontece por aba, e não apenas por área: um viewer continua vendo
+ * Configurações, mas não recebe o atalho de Conexões (admin) nem Webhooks
+ * (manager). O destino segue alcançável para quem tem papel suficiente.
+ */
+export function compactAreas(isPlatformAdmin: boolean, role: Role | null): CompactArea[] {
+  return COMPACT_AREA_SPECS.filter((area) => podeVerPapel(area.minRole, isPlatformAdmin, role)).map(
+    (area) => {
+      const tabs = area.tabs.flatMap((tab) => {
+        const destination = NAV_DESTINATIONS.find((item) => item.href === tab.href);
+        if (destination && !canSee(destination, isPlatformAdmin, role)) return [];
+
+        // Hubs não são destinos duplicados: a permissão deles é a da própria
+        // área, já filtrada acima. Todo outro href precisa existir no registro.
+        const isHub = NAV_GROUPS.some((group) => group.hub?.href === tab.href);
+        if (!destination && !isHub) return [];
+
+        return [{ href: tab.href, label: tab.label ?? rotuloDoHref(tab.href) ?? area.label }];
+      });
+
+      return {
+        id: area.id,
+        label: area.label,
+        href: area.href,
+        icon: area.icon,
+        position: area.position,
+        section: area.section,
+        healthDot: tabs.some(
+          (tab) => NAV_DESTINATIONS.find((item) => item.href === tab.href)?.healthDot,
+        ),
+        tabs,
+      };
+    },
+  );
+}
+
+const AREA_PADRAO_POR_GRUPO: Record<NavGroupId, CompactAreaId> = {
+  atendimento: "conversas",
+  crm: "funis",
+  ia: "ia",
+  canais: "automacoes",
+  analise: "relatorios",
+  organizacao: "configuracoes",
+};
+
+function pathPertence(pathname: string, href: string): boolean {
+  // O quadro tem ID no caminho, mas pertence à entrada operacional de Leads.
+  if (href === "/app/leads" && pathname.startsWith("/app/pipelines/")) return true;
+  if (href === "/app") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Mesma resolução de rota usada pelo sidebar e pelas abas contextuais. */
+export function compactTabForPath(pathname: string, tabs: CompactAreaTab[]): CompactAreaTab | undefined {
+  return [...tabs]
+    .filter((tab) => tab.label === "Visão geral"
+      ? pathname === tab.href
+      : pathPertence(pathname, tab.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+}
+
+/** Área pai da rota atual. Abas explícitas vencem o grupo canônico. */
+export function compactAreaForPath(
+  pathname: string,
+  areas: CompactArea[],
+): CompactArea | undefined {
+  if (pathname === "/app") return areas.find((area) => area.id === "home");
+
+  const abas = areas
+    .flatMap((area) => area.tabs.map((tab) => ({ area, href: tab.href })))
+    .filter(({ href }) => pathPertence(pathname, href))
+    .sort((a, b) => b.href.length - a.href.length);
+  if (abas[0]) return abas[0].area;
+
+  const portaDireta = [...areas]
+    .filter((area) => pathPertence(pathname, area.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  if (portaDireta) return portaDireta;
+
+  const destination = [...NAV_DESTINATIONS]
+    .filter((item) => pathPertence(pathname, item.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  if (destination) {
+    const areaId = AREA_PADRAO_POR_GRUPO[destination.group];
+    return areas.find((area) => area.id === areaId);
+  }
+
+  const hub = NAV_GROUPS.find((group) => group.hub && pathPertence(pathname, group.hub.href));
+  if (!hub) return undefined;
+  return areas.find((area) => area.id === AREA_PADRAO_POR_GRUPO[hub.id]);
 }
 
 /**

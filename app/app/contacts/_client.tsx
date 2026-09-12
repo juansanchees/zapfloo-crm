@@ -5,6 +5,7 @@ import { Plus, MagnifyingGlass, UploadSimple, UsersThree } from "@/lib/ui/icons"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { OperationalPage } from "@/components/ui/operational-page";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -80,14 +81,13 @@ export function ContactsListClient() {
   );
 
   return (
-    <div className="space-y-4 p-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{t("Contatos")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("Customer 360 — busque, filtre e gerencie contatos.")}
-          </p>
-        </div>
+    <OperationalPage
+      className="p-6"
+      eyebrow={t("RELACIONAMENTO")}
+      title={t("Contatos")}
+      description={t("Customer 360 — busque, filtre e gerencie contatos.")}
+      actions={
+        <>
         {/*
           A estrutura é a da main (o "Importar CSV" do PR #313); o `shrink-0`
           vem do PR #267, e vale para os DOIS botões agora: numa tela de 390px
@@ -113,9 +113,10 @@ export function ContactsListClient() {
             <span>{t("Novo contato")}</span>
           </Button>
         </div>
-      </header>
-
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2">
+        </>
+      }
+      toolbar={
+        <>
         <div className="relative w-full sm:w-72">
           <MagnifyingGlass
             size={16}
@@ -195,7 +196,9 @@ export function ContactsListClient() {
             {t("Limpar filtros")}
           </Button>
         )}
-      </div>
+        </>
+      }
+    >
 
       {q.isLoading ? (
         <div className="space-y-2">
@@ -251,6 +254,6 @@ export function ContactsListClient() {
       <NewContactDialog open={createOpen} onOpenChange={setCreateOpen} />
       <ImportContactsDialog open={importOpen} onOpenChange={setImportOpen} />
       <MergeDialog open={duplicadosOpen} onOpenChange={setDuplicadosOpen} />
-    </div>
+    </OperationalPage>
   );
 }

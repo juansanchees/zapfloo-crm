@@ -16,6 +16,7 @@ import {
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import styles from "./FlowCanvas.module.css";
 
 import {
   toReactFlow,
@@ -45,6 +46,7 @@ import { NodeConfigPanel } from "./NodeConfigPanel";
 import { EdgeConfigPanel } from "./EdgeConfigPanel";
 import { NodePalette } from "./NodePalette";
 import { PublishBar } from "./PublishBar";
+import { TriggerConfigControl, type TriggerFormState } from "./TriggerConfigControl";
 import { NODE_VISUALS } from "./nodes/nodeVisuals";
 import { TriggerNode } from "./nodes/TriggerNode";
 import { WaitNode } from "./nodes/WaitNode";
@@ -95,6 +97,9 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // O gatilho pertence ao fluxo, não à seleção de um nó. Trocar/fechar o
+  // painel não descarta a edição que ainda aguarda "Salvar gatilho".
+  const triggerDraft = useState<TriggerFormState | null>(null);
 
   const liveGraph = useMemo(() => fromReactFlow(nodes, edges), [nodes, edges]);
   const dirty = useMemo(() => !graphsEqual(liveGraph, savedGraph), [liveGraph, savedGraph]);
@@ -253,6 +258,7 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
           onSaved={setSavedGraph}
           onPublishErrors={markNodeErrors}
           onPublishSuccess={clearNodeErrors}
+          triggerDraftState={triggerDraft}
         />
       )}
       <div className="flex flex-1 overflow-hidden">
@@ -272,7 +278,9 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
           </SheetContent>
         </Sheet>
 
-        <div className="relative h-full flex-1" data-testid="flow-canvas" onDragOver={onDragOver} onDrop={onDrop}>
+        {/* Stretch usa a altura útil da linha, depois da barra de publicação.
+            Não encadear aqui outro h-full dependente da altura dos wrappers. */}
+        <div className={`${styles.canvas} relative min-w-0 flex-1`} data-testid="flow-canvas" onDragOver={onDragOver} onDrop={onDrop}>
           <ReactFlow
             nodes={nodes}
             edges={edgesForRender}
@@ -284,9 +292,16 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
             onEdgeClick={onEdgeClick}
             onPaneClick={onPaneClick}
             fitView
+            ariaLabelConfig={{
+              "controls.ariaLabel": t("Controles do fluxo"),
+              "controls.zoomIn.ariaLabel": t("Aumentar zoom"),
+              "controls.zoomOut.ariaLabel": t("Diminuir zoom"),
+              "controls.fitView.ariaLabel": t("Enquadrar fluxo"),
+              "controls.interactive.ariaLabel": t("Alternar bloqueio do fluxo"),
+            }}
           >
             <Background />
-            <Controls />
+            <Controls position="bottom-right" />
           </ReactFlow>
           <Button
             type="button"
@@ -333,6 +348,7 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
                 node={selectedNode}
                 onChange={(patch) => updateNodeData(selectedNode.id, patch)}
                 ramosLigados={ramosLigadosDoSelecionado}
+                triggerSettings={flow ? <TriggerConfigControl flowId={flowId} triggerConfig={flow.trigger_config} variant="inline" draftState={triggerDraft} /> : null}
               />
             </div>
           </aside>

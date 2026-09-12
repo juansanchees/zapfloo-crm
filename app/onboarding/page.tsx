@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
+import { lerJornada } from "@/lib/onboarding/jornada";
 import { proximoPasso } from "@/lib/onboarding/passos";
 import { env } from "@/lib/env";
 
@@ -20,7 +20,7 @@ export default async function OnboardingIndex() {
   // é a tela que CRIA a organização que falta.
   if (!activeOrg) redirect("/get-started");
 
-  const { state, onboardedAt } = await loadOnboardingState(activeOrg.orgId);
+  const { state, onboardedAt } = await lerJornada(user.id, activeOrg.orgId);
   if (onboardedAt) redirect("/app/inbox");
 
   const passo = proximoPasso(state, { lojaLigada: env.NUVEMSHOP_ENABLED });

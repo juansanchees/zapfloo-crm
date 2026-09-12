@@ -2,6 +2,7 @@
 
 import { useT } from "@/hooks/i18n/useT";
 import { useState } from "react";
+import { ApiError } from "@/lib/api/types";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreateFollowupFlow } from "@/hooks/followup/useFollowupFlows";
+import { Textarea } from "@/components/ui/textarea";
+import { useCreateFollowupFlow, useGenerateFollowupFlow } from "@/hooks/followup/useFollowupFlows";
 
 interface Props {
   open: boolean;
@@ -24,16 +26,22 @@ interface Props {
 export function NewFlowDialog({ open, onOpenChange }: Props) {
   const t = useT();
   const [name, setName] = useState("");
+  const [mode, setMode] = useState<"ai" | "manual">("ai");
+  const [description, setDescription] = useState("");
   const create = useCreateFollowupFlow();
+  const generate = useGenerateFollowupFlow();
 
   const [erro, setErro] = useState<string | null>(null);
+  const [erroDeConfiguracao, setErroDeConfiguracao] = useState(false);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
-    create.mutate(name.trim(), {
+    setErroDeConfiguracao(false);
+    const callbacks = {
       onSuccess: () => {
         setName("");
+        setDescription("");
         setErro(null);
         onOpenChange(false);
       },
@@ -42,13 +50,25 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
       // erro fica DENTRO do diálogo (não num toast que some) porque é ali que
       // ele está olhando, e o diálogo NÃO fecha — fechar apagaria o nome digitado.
       onError: (err: unknown) => {
+        setErroDeConfiguracao(err instanceof ApiError &&
+          ["ai_credential_error", "ai_not_configured"].includes(err.code));
         setErro(
           err instanceof Error && err.message
             ? t(err.message)
             : t("Não consegui criar o fluxo. Tente de novo."),
         );
       },
-    });
+    };
+
+    if (mode === "ai") {
+      generate.mutate(
+        { name: name.trim(), description: description.trim() },
+        callbacks,
+      );
+      return;
+    }
+
+    create.mutate(name.trim(), callbacks);
   };
 
   return (
@@ -57,6 +77,7 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
       onOpenChange={(next) => {
         if (!next) {
           setName("");
+          setDescription("");
           setErro(null);
         }
         onOpenChange(next);
@@ -66,10 +87,29 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>{t("Novo fluxo de follow-up")}</DialogTitle>
           <DialogDescription>
-            {t("Nasce como rascunho. Você monta as etapas no editor visual em seguida.")}
+            {t("Crie manualmente ou descreva o que precisa. A IA monta um rascunho para você revisar antes de publicar.")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>{t("Como deseja começar?")}</Label>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("Modo de criação")}>
+              <Button
+                type="button"
+                variant={mode === "ai" ? "default" : "outline"}
+                onClick={() => setMode("ai")}
+              >
+                {t("Criar com IA")}
+              </Button>
+              <Button
+                type="button"
+                variant={mode === "manual" ? "default" : "outline"}
+                onClick={() => setMode("manual")}
+              >
+                {t("Criar manualmente")}
+              </Button>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="flow-name">Nome</Label>
             <Input
@@ -82,22 +122,56 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
               autoFocus
             />
           </div>
+          {mode === "ai" && (
+            <div className="space-y-2">
+              <Label htmlFor="flow-description">{t("Descreva o fluxo")}</Label>
+              <Textarea
+                id="flow-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("Ex: depois de 30 minutos, envie uma mensagem. Se o cliente responder que tem interesse, marque como convertido; se não responder em 24 horas, encerre.")}
+                maxLength={2000}
+                rows={5}
+                required
+              />
+              <p className="text-xs text-text-muted">
+                {t("A plataforma usa apenas blocos e operadores compatíveis. Nada entra no ar sem sua revisão.")}
+              </p>
+            </div>
+          )}
           {erro && (
-            <p role="alert" data-testid="new-flow-error" className="text-sm text-error-fg">
-              {erro}
-            </p>
+            <div role="alert" data-testid="new-flow-error" className="space-y-2 text-sm">
+              <p className="text-error-fg">{erro}</p>
+              {erroDeConfiguracao && <>
+                <p className="text-text-muted">{t("Revise a chave e o modelo em outra aba. Seu texto continua aqui para tentar novamente.")}</p>
+                <div className="flex flex-wrap gap-4">
+                  <a href="/app/ai/credentials" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("Revisar chaves de IA")}</a>
+                  <a href="/app/ai/providers" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("Revisar modelo de IA")}</a>
+                </div>
+              </>}
+            </div>
           )}
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={create.isPending}
+              disabled={create.isPending || generate.isPending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={create.isPending || name.trim().length === 0}>
-              {create.isPending ? "Criando…" : "Criar fluxo"}
+            <Button
+              type="submit"
+              disabled={
+                create.isPending || generate.isPending || name.trim().length === 0 ||
+                (mode === "ai" && description.trim().length < 20)
+              }
+            >
+              {create.isPending || generate.isPending
+                ? t("Criando…")
+                : mode === "ai"
+                  ? t("Gerar rascunho")
+                  : t("Criar fluxo")}
             </Button>
           </DialogFooter>
         </form>

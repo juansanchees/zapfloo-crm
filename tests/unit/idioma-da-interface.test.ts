@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
  */
 import { traduzir } from "@/lib/i18n/dicionario";
 import { IDIOMAS, IDIOMA_PADRAO, normalizarIdioma } from "@/lib/i18n/idiomas";
-import { NAV_DESTINATIONS, NAV_GROUPS } from "@/lib/navigation/registry";
+import { compactAreas, NAV_DESTINATIONS, NAV_GROUPS } from "@/lib/navigation/registry";
 import { DICIONARIO } from "@/lib/i18n/dicionario";
 
 describe("traduzir", () => {
@@ -127,7 +127,7 @@ describe("os elos que somem sem barulho", () => {
     // o operador concluiria que a opção segue sendo decorativa.
     const fonte = readFileSync("components/shell/Sidebar.tsx", "utf8");
     expect(fonte).toMatch(/const t = useT\(\);/);
-    expect(fonte).toMatch(/\{t\(item\.label\)\}/);
+    expect(fonte).toMatch(/\{t\(area\.label\)\}/);
   });
 
   it("o inbox traduz o que se usa o dia inteiro", () => {
@@ -165,5 +165,18 @@ describe("o dicionário acompanha o registro de navegação", () => {
   it("todo grupo da barra lateral tem tradução", () => {
     const semTraducao = NAV_GROUPS.filter((g) => !(g.label in DICIONARIO));
     expect(semTraducao.map((g) => g.label)).toEqual([]);
+  });
+
+  it("toda área e aba do menu compacto tem tradução", () => {
+    const rotulos = compactAreas(true, null).flatMap((area) => [
+      area.label,
+      ...area.tabs.map((tab) => tab.label),
+    ]);
+    const semTraducao = [...new Set(rotulos)].filter((rotulo) => !(rotulo in DICIONARIO));
+
+    expect(
+      semTraducao,
+      "área ou aba compacta sem tradução — o espanhol dela cai para o português",
+    ).toEqual([]);
   });
 });

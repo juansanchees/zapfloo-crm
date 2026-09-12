@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": { "title": "Ensaio de texto do onboarding", "subtitle": "Preparar, ensaiar e revisar sem ferramentas ou canal", "output": "onboarding-ensaio.html", "quality_profile": "standard" },
+  "lanes": [{ "id": "ui", "label": "Interface" }, { "id": "server", "label": "Servidor" }, { "id": "db", "label": "Banco" }],
+  "mainPath": ["panel", "actions", "start", "model", "finish", "review"],
+  "nodes": [
+    { "id": "panel", "lane": "ui", "col": 1, "type": "service", "label": "setup-ai / seleção explícita, mensagem, resposta e revisão" },
+    { "id": "actions", "lane": "server", "col": 2, "type": "service", "label": "ensaio.ts / admin + MFA + contexto + Zod" },
+    { "id": "start", "lane": "db", "col": 3, "type": "database", "label": "fn_iniciar_ensaio_onboarding / snapshot e lease" },
+    { "id": "model", "lane": "server", "col": 4, "type": "service", "label": "runModelCall / modelo explícito, orçamento, sem tools" },
+    { "id": "finish", "lane": "db", "col": 5, "type": "database", "label": "fn_finalizar_ensaio_onboarding / CAS pós-rede + llm_calls" },
+    { "id": "review", "lane": "db", "col": 6, "type": "database", "label": "fn_revisar_ensaio_onboarding / confirmação idempotente" },
+    { "id": "draft", "lane": "db", "col": 2, "type": "database", "label": "onboarding_drafts / última execução, trigger invalida edição" },
+    { "id": "audit", "lane": "db", "col": 4, "type": "database", "label": "llm_calls e api_audit_log / métricas e eventos sem conteúdo" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "panel", "to": "actions", "label": "IDs/revisão e mensagem sintética; sem prompt no browser" },
+    { "id": "e2", "from": "actions", "to": "start", "label": "identidade confiável, contador compartilhado 6/min" },
+    { "id": "e3", "from": "start", "to": "model", "label": "snapshot capturado e congelado; transação já terminou" },
+    { "id": "e4", "from": "model", "to": "finish", "label": "texto completo e call_id; truncamento/vazio falham" },
+    { "id": "e5", "from": "finish", "to": "panel", "label": "resposta ou erro honesto, nenhuma ativação" },
+    { "id": "e6", "from": "panel", "to": "review", "label": "ação humana separada com run_id" },
+    { "id": "e7", "from": "review", "to": "draft", "label": "somente prova concluída do snapshot atual" },
+    { "id": "e8", "from": "draft", "to": "panel", "label": "retoma seleção/prova válida; edição exige novo teste" },
+    { "id": "e9", "from": "model", "to": "audit", "label": "consumo/custo pela camada canônica" },
+    { "id": "e10", "from": "review", "to": "audit", "label": "um audit por revisão; nenhum texto/segredo" },
+    { "id": "e11", "from": "audit", "to": "panel", "label": "call_id sustenta a prova persistida; falha mantém próximo passo" }
+  ],
+  "non_connections": ["Não invoca runAgent legado, RAG, ferramentas, contatos, WAHA, publicação ou ativação.", "Ensaio prova texto da configuração capturada; não prova capacidades ou instalação completa."]
+}

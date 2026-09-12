@@ -4,6 +4,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TestarClient } from "./_client";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { lerJornada } from "@/lib/onboarding/jornada";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,10 @@ export default async function TestarPage() {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/login");
+  const { state } = await lerJornada(user.id, activeOrg.orgId);
+  // Bookmarks antigos continuam úteis para agentes legados, não introduzem
+  // um segundo ensaio/publicação na jornada de draft revisado.
+  if (!state.ai || state.ai.flow === "reviewed_draft_v2") redirect("/onboarding");
   const idioma = user.idioma;
 
   const admin = createAdminClient();

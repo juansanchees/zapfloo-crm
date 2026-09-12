@@ -34,7 +34,11 @@ set -a
 set +a
 
 echo "==> Buildando contra ${NEXT_PUBLIC_SUPABASE_URL}"
-pnpm exec next build
+# O projeto fixa pnpm 9.15.9 no packageManager. Chamar o binário global aqui
+# permitia que pnpm 11 ignorasse `package.json#pnpm.overrides`, tentasse purgar
+# node_modules e recusasse o lockfile antes do build. Corepack aplica a versão
+# declarada pelo próprio repositório, igual aos gates locais e do CI.
+corepack pnpm exec next build
 
 # A PROVA, e não a suposição: se a URL de produção sobreviveu em qualquer
 # artefato do bundle, o `.env.local` venceu e o teste falaria com a nuvem pela

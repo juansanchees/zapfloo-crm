@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useT } from "@/hooks/i18n/useT";
+import type { OnboardingState } from "@/lib/schemas/onboarding";
+import { PACOTES } from "@/lib/onboarding/pacotes-de-funil";
 
 import { acceptWelcome } from "@/app/actions/onboarding/acceptWelcome";
 import { Button } from "@/components/ui/button";
@@ -36,16 +38,18 @@ const FUSOS: { id: string; cidade: string }[] = [
   { id: "UTC", cidade: "Outro (horário universal)" },
 ];
 
-export function WelcomeForm({ defaultOrgName }: { defaultOrgName: string }) {
+export function WelcomeForm({ defaultOrgName, initial, context }: { defaultOrgName: string; initial?: OnboardingState["welcome"]; context?: string }) {
   const t = useT();
-  const [displayName, setDisplayName] = useState(defaultOrgName);
-  const [oQueFaz, setOQueFaz] = useState("");
-  const [timezone, setTimezone] = useState("America/Sao_Paulo");
-  const [accepted, setAccepted] = useState(false);
+  const [displayName, setDisplayName] = useState(initial?.display_name ?? defaultOrgName);
+  const [oQueFaz, setOQueFaz] = useState(initial?.o_que_faz ?? "");
+  const [segmento, setSegmento] = useState(initial?.segmento ?? "");
+  const [timezone, setTimezone] = useState(initial?.timezone ?? "America/Sao_Paulo");
+  const [accepted, setAccepted] = useState(Boolean(initial?.accepted_at));
   const [pending, startTransition] = useTransition();
 
   return (
     <form
+      id="seu-negocio"
       className="space-y-5 rounded-lg border bg-background p-6"
       action={(formData) => {
         if (!accepted) {
@@ -60,6 +64,7 @@ export function WelcomeForm({ defaultOrgName }: { defaultOrgName: string }) {
         });
       }}
     >
+      <input type="hidden" name="expected_context" value={context ?? ""} />
       <div className="space-y-2">
         <Label htmlFor="display_name">{t("Como se chama o seu negócio?")}</Label>
         <Input
@@ -76,6 +81,13 @@ export function WelcomeForm({ defaultOrgName }: { defaultOrgName: string }) {
         </p>
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="segmento">{t("Segmento do negócio")}</Label>
+        <select id="segmento" name="segmento" value={segmento} onChange={e => setSegmento(e.target.value)} className="h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary">
+          <option value="">{t("Selecione seu segmento")}</option>
+          {PACOTES.map(p => <option key={p.id} value={p.id}>{t(p.comoSeApresenta)}</option>)}
+        </select>
+      </div>
       {/*
         A pergunta que faltava no produto inteiro. Sem ela, o funcionário nasce
         se apresentando como atendente de uma "loja online" — era o que os três

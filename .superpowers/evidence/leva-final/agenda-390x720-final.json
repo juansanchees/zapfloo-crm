@@ -1,0 +1,37 @@
+{
+  "source": ".superpowers/leva-final/final/editor-e-agenda-altura-390-ee79a--e-a-Agenda-conserva-altura-chromium/agenda-390x720.json",
+  "measurement": {
+    "viewport": {
+      "width": 390,
+      "height": 720
+    },
+    "tela": {
+      "x": 16,
+      "y": 307,
+      "width": 358,
+      "height": 1888,
+      "area": 675904
+    },
+    "grade": {
+      "x": 40,
+      "y": 1417,
+      "width": 310,
+      "height": 754,
+      "area": 233740
+    },
+    "gradeBody": {
+      "x": 41,
+      "y": 1418,
+      "width": 308,
+      "height": 752,
+      "area": 231616
+    },
+    "historico": {
+      "x": 40,
+      "y": 839,
+      "width": 310,
+      "height": 154,
+      "area": 47740
+    }
+  }
+}

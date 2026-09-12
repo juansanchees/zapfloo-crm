@@ -19,7 +19,7 @@
  *                 Exigir o meu formato reprovaria uma tela que avisa de outro
  *                 jeito, que é o falso vermelho que me pegou sete vezes na wave 6.
  *
- * ─── O DETECTOR QUE FALTA JÁ ESTÁ CALCULADO (achado de 2026-08-25) ──────────
+ * ─── DETECTOR E AVISO SÃO CONTRATOS DIFERENTES ──────────────────────────
  *
  * Quem pegar esta lacuna não precisa inventar detecção — ela existe e só não
  * virou aviso. `hooks/realtime/useRefetchDeSeguranca.ts:116` calcula:
@@ -31,38 +31,18 @@
  * parágrafo acima diz não existir. Um contador que só incrementa nesse estado
  * É o detector.
  *
- * Ele já é publicado no DOM como `data-refetch-divergencias` em dois lugares
+ * Ele já é publicado no DOM como `data-refetch-divergencias`, inclusive em
  * (`app/app/pipelines/[id]/_client.tsx` e `components/kanban/LeadDossier.tsx`).
  * Sem número de linha de propósito: achar por
  * `grep -rn data-refetch-divergencias` responde certo em qualquer branch, e um
  * número envelhece no primeiro commit que mexer no arquivo — inclusive neste.
  *
- * ⚠️ E NÃO no Inbox — que é onde o operador vive e onde a intermitência mais
- * dói. (Ressalva de régua: o PR #327 acrescenta a publicação em
- * `components/inbox/InboxLayout.tsx`; enquanto ele não entrar, na `main` são
- * dois pontos, não três. Confira com `grep -rn data-refetch-divergencias` em
- * vez de confiar neste comentário.)
- *
- * Então o que falta aqui são duas coisas, e nenhuma é a difícil: transformar o
- * número em AVISO visível ao operador, e publicá-lo também no Inbox. No dia em
- * que isso existir, o `test.fail()` abaixo vira verde e esta cerca cumpre o que
- * prometeu.
- *
- * Achado numa revisão cruzada entre MaestroConexoes e Assistente e Testes, e
- * escrito aqui em vez de numa issue porque quem chega neste arquivo é quem vai
- * pagar a dívida — e ia redescobrir o cálculo do zero.
- *
- * POR QUE `test.fail()` E NÃO UM VERMELHO DE VERDADE: hoje o sinal que a tela
- * precisaria mostrar NÃO EXISTE. O único estado publicado é o da ASSINATURA
- * (`data-realtime-status`), e ele diz `subscribed` com a entrega morta — medido.
- * Uma cerca permanentemente vermelha treina o time a ignorar vermelho, que é o
- * mesmo mecanismo pelo qual a intermitência do inbox é pior que a falha
- * determinística. Com `test.fail()` ela não polui a suíte, documenta a lacuna
- * com precisão, e VIRA CATRACA: no dia em que a tela passar a avisar, este teste
- * fica vermelho por PASSAR, e obriga alguém a virar a chave conscientemente.
- *
- * A peça que falta é do produto, não do teste: um REFETCH DE SEGURANÇA. Ele é ao
- * mesmo tempo a base da tela, a cura da perda e o detector da falha.
+ * A régua acompanha o ciclo real de 45s: entrega positiva, entrega suprimida,
+ * assinatura ainda viva, divergência detectada, dado recuperado e aviso humano.
+ * Recuperar o dado não substitui o aviso. Esperar 12s e exigir dado ausente
+ * testava outra janela e não alcançava este detector. Sem `test.fail`: qualquer
+ * falha de pré-condição, recuperação ou aviso agora é um vermelho real.
+ * Escopo desta prova: quadro do funil; não afirma cobertura do Inbox/dossiê.
  */
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -114,23 +94,10 @@ function ehEntrega(bruto: string): boolean {
 }
 
 test.describe("degradação silenciosa do tempo real", () => {
-  test("com a entrega morta, a tela avisa que pode estar desatualizada", async ({ page }) => {
-    // O padrão de 30s da suíte não cabe: só a janela de observação depois da
-    // mudança são 12s, e observar por menos tempo transformaria "a tela não
-    // avisa" em "eu não esperei o aviso".
-    test.setTimeout(150_000);
-    // CERCA_CRUA=1 desliga a catraca e deixa o vermelho aparecer com a razão. Sem
-    // isso, "falhou como esperado" esconde QUAL asserção falhou — e uma cerca que
-    // falha na PRÉ-CONDIÇÃO (nada foi engolido) parece idêntica a uma que falha
-    // no ponto certo, documentando uma lacuna que ela nunca exercitou.
-    test.fail(
-      process.env.CERCA_CRUA !== "1",
-      "LACUNA CONHECIDA, não regressão: nenhuma superfície avisa quando a entrega " +
-        "de postgres_changes morre. O único estado publicado descreve a ASSINATURA " +
-        "e diz 'subscribed' com a entrega morta. Falta um refetch de segurança que " +
-        "sirva de detector. Quando existir, este teste passa e vira vermelho aqui — " +
-        "é a catraca: alguém tem de remover este test.fail conscientemente.",
-    );
+  test("com a entrega morta, a tela avisa que pode estar desatualizada", async ({ page }, testInfo) => {
+    // Duas verificações reais de 45s, login e rede. As esperas terminam pelo
+    // estado observado; não mudamos a cadência do produto para acelerar a prova.
+    test.setTimeout(180_000);
 
     const creds = loadCreds();
     const env = envLocal();
@@ -140,6 +107,7 @@ test.describe("degradação silenciosa do tempo real", () => {
 
     let engolidos = 0;
     let quadrosTotais = 0;
+    let bloquear = false;
     // O PROXY MATA A ENTREGA SEM DERRUBAR O CANAL: engole só os quadros de dados
     // e deixa passar join, phx_reply e heartbeat. Fechar o socket seria outro
     // defeito — visível — e mediria uma tela que não é a que interessa.
@@ -148,7 +116,7 @@ test.describe("degradação silenciosa do tempo real", () => {
       route.onMessage((m) => servidor.send(m));
       servidor.onMessage((m) => {
         quadrosTotais++;
-        if (ehEntrega(String(m))) {
+        if (bloquear && ehEntrega(String(m))) {
           engolidos++;
           return;
         }
@@ -162,44 +130,83 @@ test.describe("degradação silenciosa do tempo real", () => {
     await page.getByRole("button", { name: /entrar|acessar/i }).click();
     await page.waitForURL(/\/app\//, { timeout: 30_000 });
 
-    const { data: pipes } = await admin
+    const { data: pipes, error: erroPipes } = await admin
       .from("crm_pipelines")
       .select("id")
       .eq("organization_id", creds.org_id)
       .order("created_at")
       .limit(1);
+    expect(erroPipes).toBeNull();
+    expect(pipes?.length).toBe(1);
     const pipelineId = ((pipes ?? [])[0] as { id: string }).id;
     await page.goto(`/app/pipelines/${pipelineId}`);
-    await page.waitForTimeout(4000);
+    const quadro = page.locator("[data-refetch-divergencias]").first();
+    await expect(quadro).toHaveAttribute("data-realtime-status", "subscribed");
 
-    const { data: leads } = await admin
+    const { data: leads, error: erroLeads } = await admin
       .from("crm_leads")
       .select("id,title")
       .eq("pipeline_id", pipelineId)
+      .eq("organization_id", creds.org_id)
       .order("id")
       .limit(1);
+    expect(erroLeads).toBeNull();
+    expect(leads?.length).toBe(1);
     const lead = (leads ?? [])[0] as { id: string; title: string };
 
-    const marca = `CERCA${Date.now() % 100000}`;
-    await admin.from("crm_leads").update({ title: `${lead.title} ${marca}` }).eq("id", lead.id);
-    await page.waitForTimeout(12_000);
-    const texto = ((await page.locator("body").innerText()) ?? "").replace(/\s+/g, " ");
-    await admin.from("crm_leads").update({ title: lead.title }).eq("id", lead.id);
-
-    // PRÉ-CONDIÇÃO ANTES DA ASSERÇÃO: se nenhum quadro de dados foi engolido, a
-    // entrega não foi morta e o teste não mediu degradação nenhuma. Sem esta
-    // checagem, "a tela não avisou" seria verdade também num ambiente saudável —
-    // e a cerca passaria a documentar uma lacuna que não foi exercida.
-    expect(
-      engolidos,
-      `nenhum quadro de dados foi engolido (${quadrosTotais} quadros no total): a entrega ` +
-        `não chegou a ser morta, então esta execução não exercita a degradação`,
-    ).toBeGreaterThan(0);
-
-    // E a mudança NÃO pode ter aparecido: se apareceu, existe outro caminho vivo
-    // (refetch, polling) e a premissa da cerca mudou — o que também é notícia.
-    expect(texto, "a mudança apareceu mesmo com a entrega morta — há outro caminho vivo").not.toContain(marca);
-
-    expect(texto, "a tela não diz nada sobre estar possivelmente desatualizada").toMatch(AVISO);
+    const marca = `CERCA${Date.now()}`;
+    let corpoFalhou = false;
+    const alterar = (title: string) => admin.from("crm_leads").update({ title })
+      .eq("id", lead.id).eq("organization_id", creds.org_id);
+    try {
+      // Controle positivo: uma entrega viva atualiza a tela sem acusar falha.
+      expect((await alterar(`${lead.title} VIVO${marca}`)).error).toBeNull();
+      await expect(quadro.getByText(`${lead.title} VIVO${marca}`, { exact: true })).toBeVisible();
+      expect(await quadro.innerText()).not.toMatch(AVISO);
+      // A primeira verificação separa a entrega positiva da perda seguinte.
+      // O produto usa 45s; 12s não exercitavam o detector. Esperamos seu estado,
+      // não um sleep nem uma nova cadência criada apenas para o teste.
+      await expect(quadro).toHaveAttribute("data-refetch-em", /\d+/, { timeout: 60_000 });
+      const verificacaoAntes = await quadro.getAttribute("data-refetch-em");
+      const divergenciasAntes = Number(await quadro.getAttribute("data-refetch-divergencias"));
+      expect(divergenciasAntes, "entrega saudável não deve acusar perda").toBe(0);
+      expect(await quadro.innerText()).not.toMatch(AVISO);
+      const engolidosAntes = engolidos;
+      bloquear = true;
+      expect((await alterar(`${lead.title} PERDIDO${marca}`)).error).toBeNull();
+      await expect.poll(() => engolidos, { message: `entrega não suprimida (${quadrosTotais} quadros)` }).toBeGreaterThan(engolidosAntes);
+      await expect(quadro).toHaveAttribute("data-realtime-status", "subscribed");
+      await expect(quadro.getByText(`${lead.title} PERDIDO${marca}`, { exact: true })).toHaveCount(0);
+      await expect.poll(async () => ({
+        novaVerificacao: await quadro.getAttribute("data-refetch-em") !== verificacaoAntes,
+        detectou: Number(await quadro.getAttribute("data-refetch-divergencias")) > divergenciasAntes,
+        recuperou: await quadro.getByText(`${lead.title} PERDIDO${marca}`, { exact: true }).isVisible(),
+      }), { timeout: 60_000 }).toEqual({ novaVerificacao: true, detectou: true, recuperou: true });
+      await expect(quadro).toHaveAttribute("data-realtime-status", "subscribed");
+      const texto = await quadro.innerText();
+      const evidencia = testInfo.outputPath("degradacao-medida.json");
+      fs.writeFileSync(evidencia, JSON.stringify({
+        assinatura: await quadro.getAttribute("data-realtime-status"),
+        entregasSuprimidas: engolidos - engolidosAntes,
+        divergenciasAntes,
+        divergenciasDepois: Number(await quadro.getAttribute("data-refetch-divergencias")),
+        marcaRecuperada: true,
+        avisoVisivel: AVISO.test(texto),
+      }, null, 2));
+      await testInfo.attach("degradacao-medida", { contentType: "application/json", path: evidencia });
+      await page.screenshot({ path: testInfo.outputPath("degradacao-aviso.png") });
+      expect(texto, "o detector recuperou o dado perdido, mas não avisou o operador").toMatch(AVISO);
+    } catch (error) {
+      corpoFalhou = true;
+      throw error;
+    } finally {
+      bloquear = false;
+      const { error } = await alterar(lead.title);
+      if (error) {
+        testInfo.annotations.push({ type: "limpeza", description: "Não foi possível restaurar o título sintético do lead." });
+        // Não substituir a causa do corpo por outra exceção no finally.
+        if (!corpoFalhou) throw new Error("Não foi possível restaurar o título sintético do lead.");
+      }
+    }
   });
 });

@@ -67,6 +67,10 @@ export interface Message {
   media_mime: string | null;
   media_size_bytes: number | null;
   media_storage_path: string | null;
+  /** Texto derivado para leitura da IA (ex.: transcrição do áudio). */
+  media_derived_text?: string | null;
+  /** null/pending/ready/failed; opcional para respostas antigas ainda em cache. */
+  media_derived_status?: string | null;
   sent_via: "user" | "ai" | "system";
   sent_by_user_id: string | null;
   sent_at: string;

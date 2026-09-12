@@ -273,6 +273,11 @@ jobs:
     # e devolvem ~9 min de relógio a cada uma.
     env:
       SPECS_PARTE_1: >-
+        periodo-de-testes.spec.ts
+        fluxo-controles-contraste.spec.ts
+        editor-e-agenda-altura.spec.ts
+        fluxo-gatilho-no-editor.spec.ts
+        leads-navegacao.spec.ts
         pre-go-live-whatsapp.spec.ts
         auth.spec.ts error-pages.spec.ts
         password-recovery.spec.ts
@@ -388,6 +393,7 @@ jobs:
         agenda-ver-na-agenda.spec.ts
         agenda-escopo-da-organizacao.spec.ts
         troca-de-organizacao-tem-volta.spec.ts
+        onboarding-ativacao-restrita.spec.ts
         agenda-caminho-ate-os-horarios.spec.ts
         agenda-google-volta-do-consentimento.spec.ts
         agenda-google-volta-nao-desloga.spec.ts
@@ -403,7 +409,7 @@ jobs:
       SPECS_PARTE_3: >-
         agente-novo-e-uso.spec.ts capacidades-do-agente.spec.ts
         followup-builder.spec.ts i18n-espanhol-na-tela.spec.ts
-        marca-logo.spec.ts navegacao.spec.ts prova-painel-provedores.spec.ts
+        marca-logo.spec.ts navegacao.spec.ts prova-painel-provedores.spec.ts redesign-operacional.spec.ts
         icone-da-marca.spec.ts reset-password-mfa.spec.ts signup-journey.spec.ts
         smoke.spec.ts
       # `moeda-da-organizacao` entrou na PARTE_2 em 2026-09-04, ao lado de
@@ -830,6 +836,17 @@ jobs:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
           # ver o comentário do passo de build: vazio NÃO desliga.
           SENTRY_DSN: "off"
+
+      # A rodada normal mantém o seam desligado. Este passo inicia OUTRO Next
+      # com preload + chave fictícia; a spec fornece seu receiver HTTP local.
+      - name: Onboarding — ativação restrita com provedor HTTP sintético
+        if: matrix.parte == 2
+        env:
+          E2E_ONBOARDING_SYNTHETIC_PROVIDER: "1"
+          OPENAI_API_KEY: "onboarding-local-provider-only"
+          AUTH_RATE_LIMIT_LOGIN_IP: "1000"
+          SENTRY_DSN: "off"
+        run: pnpm exec playwright test tests/e2e/onboarding-ativacao-restrita.spec.ts --workers=1 --reporter=list
 
       - uses: actions/upload-artifact@v7
         if: failure()

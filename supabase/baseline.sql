@@ -9789,6 +9789,7 @@ comment on column public.automation_rules.last_change_actor_kind is
 
 notify pgrst, 'reload schema';
 
+
 -- ---- uso das capacidades do agente (migration 0103) ----
 -- Toda chamada de tool do agente já era auditada em api_audit_log
 -- (action='mcp.tool_called') e NENHUMA tela lia — log invisível é log morto
@@ -18232,79 +18233,986 @@ revoke execute on function public.fn_seed_org_llm_defaults() from public, anon, 
 grant execute on function public.fn_seed_org_llm_defaults() to service_role;
 
 
--- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
---
--- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES
--- dele — quem o empurrar para o meio desarma a cura para tudo que vier depois.
--- Vigiado por `tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts`.
---
--- A 0108 revogou anon numa LISTA de 8 funções, medida num banco instalado do
--- ZERO. Quem ATUALIZA tem outro estado: o `ALTER DEFAULT PRIVILEGES ... GRANT
--- ALL ON FUNCTIONS TO anon` do corpo deste arquivo grava uma entrada em
--- `pg_default_acl` que fica no catálogo PARA SEMPRE, e a partir daí toda função
--- criada em `public` nasce com EXECUTE para anon — inclusive as deste apêndice.
---
--- Medido numa VPS real (2026-08-07), comparando com o que um install fresco
--- produz: 6 definer expostas a anon e 5 a authenticated, entre elas
--- `fn_decrypt_oauth` — alcançável pela anon key, que vai para o browser.
---
--- Lista conserta o estoque e reabre no próximo `create function`. Esta varredura
--- é auto-curativa e roda DEPOIS de tudo que cria função, então cura no mesmo run
--- em que o defeito nasceria. Desfazer o ALTER DEFAULT PRIVILEGES não serve: ele
--- vem do `pg_dump` do Supabase e é reescrito a cada re-aplicação.
---
--- As duas origens de EXECUTE (a mesma lição da 0108): grant DIRETO a anon, que
--- `revoke from public` não remove; e grant a PUBLIC, do qual anon HERDA, que
--- `revoke from anon` não remove. O privilégio EFETIVO de authenticated e
--- service_role é medido ANTES e devolvido depois — tira anon sem tirar leitura.
+-- ---- Rascunho preparatório do onboarding (migration 0221) ----
+-- Intenção editável, não versão executável: salvar nunca chama IA ou publica agente.
+create table if not exists public.onboarding_drafts (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  revision integer not null check (revision > 0),
+  configuration jsonb not null check (jsonb_typeof(configuration) = 'object'),
+  updated_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+alter table public.onboarding_drafts enable row level security;
+revoke all on public.onboarding_drafts from public, anon, authenticated;
+grant select on public.onboarding_drafts to authenticated;
+grant select, insert, update, delete on public.onboarding_drafts to service_role;
 do $$
-declare
-  f record;
-  tinha_auth boolean;
-  tinha_service boolean;
 begin
-  if to_regrole('anon') is null then
-    return;
+  if not exists (select 1 from pg_policies where schemaname='public'
+    and tablename='onboarding_drafts' and policyname='onboarding_drafts_admin_read') then
+    create policy onboarding_drafts_admin_read on public.onboarding_drafts
+      for select to authenticated using (
+        exists (select 1 from public.user_organizations u
+          where u.organization_id = onboarding_drafts.organization_id
+            and u.user_id = (select auth.uid()) and u.role='admin'
+            and u.accepted_at is not null and u.revoked_at is null)
+      );
+  end if;
+end;
+$$;
+
+create or replace function public.fn_save_onboarding_draft(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_configuration jsonb
+) returns jsonb
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  next_revision integer;
+begin
+  if p_expected_revision is null or p_expected_revision < 0
+    or p_configuration is null or jsonb_typeof(p_configuration) <> 'object' then
+    raise exception 'draft_invalid_input';
+  end if;
+  if not (p_configuration ?& array['name','prompt_template','regras_da_casa'])
+    or (p_configuration - array['name','prompt_template','regras_da_casa']) <> '{}'::jsonb
+    or jsonb_typeof(p_configuration->'name') <> 'string'
+    or jsonb_typeof(p_configuration->'prompt_template') <> 'string'
+    or jsonb_typeof(p_configuration->'regras_da_casa') <> 'string'
+    or length(btrim(p_configuration->>'name')) not between 2 and 80
+    or length(p_configuration->>'regras_da_casa') > 20000
+    or p_configuration->>'prompt_template' not in
+      ('ecommerce_friendly','ecommerce_professional','support_minimal') then
+    raise exception 'draft_invalid_input';
+  end if;
+  -- Lock curto e por organização: nenhuma chamada de rede dentro da transação.
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations
+    where organization_id=p_org_id and user_id=p_actor_id and role='admin'
+      and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active'
+    or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id;
+  -- Reenvio inofensivo: mesmo conteúdo já confirmado, nunca uma revisão futura.
+  if found and p_expected_revision <= draft.revision
+    and draft.configuration = p_configuration then
+    return jsonb_build_object('revision',draft.revision,'configuration',draft.configuration);
+  end if;
+  if p_expected_revision <> coalesce(draft.revision,0) then
+    raise exception 'draft_conflict';
+  end if;
+  next_revision := coalesce(draft.revision,0) + 1;
+  insert into public.onboarding_drafts(organization_id,revision,configuration,updated_by)
+    values(p_org_id,next_revision,p_configuration,p_actor_id)
+    on conflict (organization_id) do update
+      set revision=excluded.revision,configuration=excluded.configuration,
+        updated_by=excluded.updated_by,updated_at=now();
+  insert into public.api_audit_log
+    (organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.draft_saved','organization',p_org_id,
+      jsonb_build_object('revision',next_revision));
+  return jsonb_build_object('revision',next_revision,'configuration',p_configuration);
+end;
+$$;
+revoke execute on function public.fn_save_onboarding_draft(uuid,uuid,integer,jsonb) from public, anon, authenticated;
+grant execute on function public.fn_save_onboarding_draft(uuid,uuid,integer,jsonb) to service_role;
+notify pgrst, 'reload schema';
+
+-- ---- Preparação executável inativa do onboarding (migration 0222) ----
+-- Preparar não testa, publica, ativa, vincula canal ou publica memória da org.
+alter table public.onboarding_drafts
+  add column if not exists prepared_agent_id uuid references public.ai_agents(id) on delete set null,
+  add column if not exists prepared_version_id uuid references public.ai_agent_versions(id) on delete set null,
+  add column if not exists prepared_revision integer,
+  add column if not exists prepared_request jsonb,
+  add column if not exists prepared_snapshot jsonb;
+
+create or replace function public.fn_prepare_onboarding_draft(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer,
+  p_expected_version_id uuid, p_expected_business jsonb, p_version jsonb
+) returns jsonb
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  agent public.ai_agents%rowtype;
+  version public.ai_agent_versions%rowtype;
+  business jsonb;
+  request jsonb;
+  credential uuid;
+  tools text[];
+  pipeline uuid;
+  next_number integer;
+begin
+  if p_expected_revision is null or p_expected_revision < 1
+    or p_expected_business is null or jsonb_typeof(p_expected_business) <> 'object'
+    or p_version is null or jsonb_typeof(p_version) <> 'object' then
+    raise exception 'draft_invalid_input';
+  end if;
+  if not (p_version ?& array['system_prompt','provider','model','credential_id','tool_ids'])
+    or (p_version - array['system_prompt','provider','model','credential_id','tool_ids']) <> '{}'::jsonb
+    or jsonb_typeof(p_version->'system_prompt') <> 'string'
+    or length(btrim(p_version->>'system_prompt')) not between 10 and 20000
+    or jsonb_typeof(p_version->'provider') <> 'string'
+    or jsonb_typeof(p_version->'model') <> 'string'
+    or length(btrim(p_version->>'model')) not between 1 and 120
+    or jsonb_typeof(p_version->'tool_ids') <> 'array'
+    or jsonb_typeof(p_version->'credential_id') not in ('null','string') then
+    raise exception 'draft_invalid_input';
+  end if;
+  if jsonb_array_length(p_version->'tool_ids') > 25
+    or exists(select 1 from jsonb_array_elements(p_version->'tool_ids') t where jsonb_typeof(t) <> 'string') then
+    raise exception 'draft_invalid_input';
+  end if;
+  begin
+    credential := (p_version->>'credential_id')::uuid;
+  exception when invalid_text_representation then raise exception 'draft_invalid_input';
+  end;
+  select coalesce(array_agg(t), '{}'::text[]) into tools from jsonb_array_elements_text(p_version->'tool_ids') t;
+
+  -- Ordem compatível com salvar: organização → vínculo → rascunho → agente → versão.
+  -- Não há rede/IA dentro da transação.
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations where organization_id=p_org_id
+    and user_id=p_actor_id and role='admin' and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active'
+    or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  business := jsonb_build_object('display_name',coalesce(org.display_name,org.legal_name),
+    'o_que_faz',case when jsonb_typeof(org.onboarding_state #> '{welcome,o_que_faz}')='string'
+      then org.onboarding_state #> '{welcome,o_que_faz}' else 'null'::jsonb end);
+  if business is distinct from p_expected_business then raise exception 'draft_context_changed'; end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id for update;
+  if not found or draft.revision <> p_expected_revision then raise exception 'draft_conflict'; end if;
+
+  -- Par explícito e disponível; nenhuma escolha de modelo/chave por fallback.
+  perform 1 from public.ai_models where provider=p_version->>'provider' and model_id=p_version->>'model'
+    and deprecated_at is null and (cardinality(tools)=0 or supports_tools) for share;
+  if not found then raise exception 'draft_model_unavailable'; end if;
+  if credential is not null then
+    perform 1 from public.ai_provider_credentials where id=credential and organization_id=p_org_id
+      and provider=p_version->>'provider' and is_active and validated_at is not null for share;
+    if not found then raise exception 'draft_credential_unavailable'; end if;
   end if;
 
-  for f in
-    select p.oid, p.oid::regprocedure as assinatura
-      from pg_proc p
-      join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public'
-       and p.prosecdef
-  loop
-    tinha_auth := to_regrole('authenticated') is not null
-                  and has_function_privilege('authenticated', f.oid, 'EXECUTE');
-    tinha_service := to_regrole('service_role') is not null
-                     and has_function_privilege('service_role', f.oid, 'EXECUTE');
-
-    execute format('revoke execute on function %s from public, anon', f.assinatura);
-
-    if tinha_auth then
-      execute format('grant execute on function %s to authenticated', f.assinatura);
+  request := jsonb_build_object('business',business,'version',p_version,'name',draft.configuration->>'name');
+  if draft.prepared_agent_id is not null then
+    select * into agent from public.ai_agents where id=draft.prepared_agent_id and organization_id=p_org_id for update;
+    if not found or agent.is_active or agent.is_default or agent.published_version_id is not null
+      or agent.archived_at is not null then raise exception 'draft_unavailable'; end if;
+    select * into version from public.ai_agent_versions where id=draft.prepared_version_id
+      and organization_id=p_org_id and agent_id=agent.id for update;
+    -- O editor permite editar drafts. ID/revisão sozinhos não provam conteúdo.
+    if not found or version.status <> 'draft' or to_jsonb(version) is distinct from draft.prepared_snapshot
+      or agent.name is distinct from draft.prepared_request->>'name'
+      or agent.system_prompt is distinct from draft.prepared_request #>> '{version,system_prompt}'
+      or agent.model is distinct from draft.prepared_request #>> '{version,model}' then
+      raise exception 'draft_conflict';
     end if;
-    if tinha_service then
-      execute format('grant execute on function %s to service_role', f.assinatura);
+    if draft.prepared_revision=p_expected_revision and draft.prepared_request=request then
+      return jsonb_build_object('revision',draft.revision,'agent_id',agent.id,'version_id',version.id);
     end if;
-  end loop;
-end $$;
+  elsif draft.prepared_version_id is not null or draft.prepared_revision is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  if p_expected_version_id is distinct from draft.prepared_version_id then raise exception 'draft_conflict'; end if;
+  if exists(select 1 from public.ai_agents where organization_id=p_org_id
+    and name=draft.configuration->>'name' and id is distinct from draft.prepared_agent_id) then
+    raise exception 'draft_name_conflict';
+  end if;
+  if agent.id is null then
+    insert into public.ai_agents(organization_id,name,system_prompt,model,kind,is_active,is_default,created_by)
+      values(p_org_id,draft.configuration->>'name',p_version->>'system_prompt',p_version->>'model','mcp_agent',false,false,p_actor_id)
+      returning * into agent;
+  else
+    update public.ai_agents set name=draft.configuration->>'name',system_prompt=p_version->>'system_prompt',model=p_version->>'model'
+      where id=agent.id and organization_id=p_org_id;
+  end if;
+  select id into pipeline from public.crm_pipelines where organization_id=p_org_id and is_default and not is_archived;
+  select coalesce(max(version_number),0)+1 into next_number from public.ai_agent_versions where agent_id=agent.id and organization_id=p_org_id;
+  insert into public.ai_agent_versions(organization_id,agent_id,version_number,system_prompt,provider,model,
+    credential_id,tool_ids,pipeline_ids,channel_session_id,status,created_by)
+    values(p_org_id,agent.id,next_number,p_version->>'system_prompt',p_version->>'provider',p_version->>'model',
+      credential,tools,case when pipeline is null then '{}'::uuid[] else array[pipeline] end,null,'draft',p_actor_id)
+    returning * into version;
+  update public.onboarding_drafts set prepared_agent_id=agent.id,prepared_version_id=version.id,
+    prepared_revision=draft.revision,prepared_request=request,prepared_snapshot=to_jsonb(version)
+    where organization_id=p_org_id;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.draft_prepared','ai_agent',agent.id,
+      jsonb_build_object('revision',draft.revision,'version_id',version.id));
+  return jsonb_build_object('revision',draft.revision,'agent_id',agent.id,'version_id',version.id);
+end;
+$$;
+revoke execute on function public.fn_prepare_onboarding_draft(uuid,uuid,integer,uuid,jsonb,jsonb) from public, anon, authenticated;
+grant execute on function public.fn_prepare_onboarding_draft(uuid,uuid,integer,uuid,jsonb,jsonb) to service_role;
+notify pgrst, 'reload schema';
 
--- regra 2 (authenticated): as 5 que o update abriu e o install não abre. Aqui não
--- cabe varredura — `authenticated` PRECISA de EXECUTE nos helpers de RLS e em
--- `retrieve_top_k_chunks` (num install fresco ele tem). É julgamento por função,
--- e o alvo de cada linha é o valor que um install fresco produz, medido.
-revoke execute on function public.fn_audit_log_row() from authenticated;
-revoke execute on function public.fn_decrypt_oauth(bytea) from authenticated;
-revoke execute on function public.fn_encrypt_oauth(text) from authenticated;
-revoke execute on function public.fn_lgpd_cascade_redact_contact(uuid, uuid, uuid) from authenticated;
-revoke execute on function public.fn_update_budget_consumption() from authenticated;
+-- ---- Ensaio de texto e revisão do onboarding (migration 0223) ----
+-- Última execução apenas; conteúdo sintético, sem contatos, canais ou ferramentas.
+alter table public.onboarding_drafts add column if not exists rehearsal jsonb;
 
-grant execute on function public.fn_audit_log_row() to service_role;
-grant execute on function public.fn_decrypt_oauth(bytea) to service_role;
-grant execute on function public.fn_encrypt_oauth(text) to service_role;
-grant execute on function public.fn_lgpd_cascade_redact_contact(uuid, uuid, uuid) to service_role;
-grant execute on function public.fn_update_budget_consumption() to service_role;
+-- Validação compartilhada. Locks curtos na ordem da 0222; nunca inclui rede.
+create or replace function public.fn_validar_ensaio_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_expected_version_id uuid
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  agent public.ai_agents%rowtype;
+  version public.ai_agent_versions%rowtype;
+  business jsonb;
+begin
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations where organization_id=p_org_id and user_id=p_actor_id
+    and role='admin' and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active' or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id for update;
+  if not found or p_expected_revision is null or p_expected_version_id is null
+    or draft.revision is distinct from p_expected_revision or draft.prepared_revision is distinct from draft.revision
+    or draft.prepared_version_id is distinct from p_expected_version_id then raise exception 'draft_conflict'; end if;
+  select * into agent from public.ai_agents where organization_id=p_org_id and id=draft.prepared_agent_id for update;
+  if not found or agent.is_active or agent.is_default or agent.published_version_id is not null or agent.archived_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into version from public.ai_agent_versions where organization_id=p_org_id and id=draft.prepared_version_id and agent_id=agent.id for update;
+  if not found or version.status <> 'draft' or version.channel_session_id is not null
+    or to_jsonb(version) is distinct from draft.prepared_snapshot
+    or agent.name is distinct from draft.configuration->>'name'
+    or agent.name is distinct from draft.prepared_request->>'name'
+    or agent.system_prompt is distinct from version.system_prompt or agent.model is distinct from version.model then
+    raise exception 'draft_conflict';
+  end if;
+  business := jsonb_build_object('display_name',coalesce(org.display_name,org.legal_name),
+    'o_que_faz',case when jsonb_typeof(org.onboarding_state #> '{welcome,o_que_faz}')='string'
+      then org.onboarding_state #> '{welcome,o_que_faz}' else 'null'::jsonb end);
+  if business is distinct from draft.prepared_request->'business' then raise exception 'draft_context_changed'; end if;
+  perform 1 from public.ai_models where provider=version.provider and model_id=version.model and deprecated_at is null for share;
+  if not found then raise exception 'draft_model_unavailable'; end if;
+  if version.credential_id is not null then
+    perform 1 from public.ai_provider_credentials where id=version.credential_id and organization_id=p_org_id
+      and provider=version.provider and is_active and validated_at is not null for share;
+    if not found then raise exception 'draft_credential_unavailable'; end if;
+  end if;
+  return draft.prepared_snapshot;
+end;
+$$;
+revoke execute on function public.fn_validar_ensaio_onboarding(uuid,uuid,integer,uuid) from public, anon, authenticated;
+grant execute on function public.fn_validar_ensaio_onboarding(uuid,uuid,integer,uuid) to service_role;
+
+-- Toda alteração de configuração/preparação retira a prova, inclusive antes de nova preparação.
+create or replace function public.fn_invalidar_ensaio_onboarding()
+returns trigger language plpgsql security invoker set search_path = '' as $$
+begin
+  if new.configuration is distinct from old.configuration or new.revision is distinct from old.revision
+    or new.prepared_snapshot is distinct from old.prepared_snapshot then new.rehearsal := null; end if;
+  return new;
+end;
+$$;
+revoke execute on function public.fn_invalidar_ensaio_onboarding() from public, anon, authenticated;
+grant execute on function public.fn_invalidar_ensaio_onboarding() to service_role;
+drop trigger if exists onboarding_rehearsal_invalidated on public.onboarding_drafts;
+create trigger onboarding_rehearsal_invalidated before update on public.onboarding_drafts
+  for each row execute function public.fn_invalidar_ensaio_onboarding();
+
+create or replace function public.fn_iniciar_ensaio_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_expected_version_id uuid, p_sample_message text
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare snapshot jsonb; run jsonb;
+begin
+  -- Limite técnico de payload da prévia, não regra do atendimento.
+  if p_sample_message is null or length(btrim(p_sample_message)) not between 1 and 4000 then raise exception 'draft_invalid_input'; end if;
+  snapshot := public.fn_validar_ensaio_onboarding(p_org_id,p_actor_id,p_expected_revision,p_expected_version_id);
+  select rehearsal into run from public.onboarding_drafts where organization_id=p_org_id;
+  -- Lease técnico de 60s: maior que o timeout de rede de 30s; retry recupera processo interrompido.
+  if run->>'status'='running' and (run->>'started_at')::timestamptz > now()-interval '60 seconds' then
+    raise exception 'rehearsal_busy';
+  end if;
+  run := jsonb_build_object('run_id',gen_random_uuid(),'revision',p_expected_revision,'version_id',p_expected_version_id,
+    'snapshot',snapshot,'sample_message',btrim(p_sample_message),'status','running','response',null,'call_id',null,
+    'error',null,'reviewed',false,'started_at',now());
+  update public.onboarding_drafts set rehearsal=run where organization_id=p_org_id;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.rehearsal_started','ai_agent',(snapshot->>'agent_id')::uuid,
+      jsonb_build_object('run_id',run->'run_id','version_id',p_expected_version_id));
+  return jsonb_build_object('run_id',run->'run_id','snapshot',snapshot);
+end;
+$$;
+revoke execute on function public.fn_iniciar_ensaio_onboarding(uuid,uuid,integer,uuid,text) from public, anon, authenticated;
+grant execute on function public.fn_iniciar_ensaio_onboarding(uuid,uuid,integer,uuid,text) to service_role;
+
+create or replace function public.fn_finalizar_ensaio_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_expected_version_id uuid,
+  p_run_id uuid, p_response text, p_call_id uuid, p_error text
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare snapshot jsonb; run jsonb;
+begin
+  snapshot := public.fn_validar_ensaio_onboarding(p_org_id,p_actor_id,p_expected_revision,p_expected_version_id);
+  select rehearsal into run from public.onboarding_drafts where organization_id=p_org_id;
+  if run is null or p_run_id is null or run->>'run_id' is distinct from p_run_id::text
+    or run->>'status' <> 'running' or run->'snapshot' is distinct from snapshot then raise exception 'rehearsal_conflict'; end if;
+  if p_error is null then
+    if p_response is null or length(btrim(p_response)) not between 1 and 12000 or p_call_id is null then raise exception 'rehearsal_invalid_result'; end if;
+    perform 1 from public.llm_calls where id=p_call_id and organization_id=p_org_id
+      and agent_id=(snapshot->>'agent_id')::uuid and purpose='onboarding_rehearsal' and status='ok'
+      and model=snapshot->>'model' and provider=snapshot->>'provider'
+      and created_at >= (run->>'started_at')::timestamptz;
+    if not found then raise exception 'rehearsal_invalid_result'; end if;
+  elsif p_error not in ('not_configured','budget_exceeded','provider_error','empty_response','incomplete_response') then
+    raise exception 'rehearsal_invalid_result';
+  end if;
+  run := run || jsonb_build_object('status',case when p_error is null then 'completed' else 'failed' end,
+    'response',case when p_error is null then btrim(p_response) else null end,'call_id',p_call_id,'error',p_error,'reviewed',false);
+  update public.onboarding_drafts set rehearsal=run where organization_id=p_org_id;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.rehearsal_finished','ai_agent',(snapshot->>'agent_id')::uuid,
+      jsonb_build_object('run_id',p_run_id,'status',run->'status','call_id',p_call_id,'error',p_error));
+  return run - 'snapshot' - 'started_at';
+end;
+$$;
+revoke execute on function public.fn_finalizar_ensaio_onboarding(uuid,uuid,integer,uuid,uuid,text,uuid,text) from public, anon, authenticated;
+grant execute on function public.fn_finalizar_ensaio_onboarding(uuid,uuid,integer,uuid,uuid,text,uuid,text) to service_role;
+
+create or replace function public.fn_revisar_ensaio_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_expected_version_id uuid, p_run_id uuid
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare snapshot jsonb; run jsonb;
+begin
+  snapshot := public.fn_validar_ensaio_onboarding(p_org_id,p_actor_id,p_expected_revision,p_expected_version_id);
+  select rehearsal into run from public.onboarding_drafts where organization_id=p_org_id;
+  if run is null or p_run_id is null or run->>'run_id' is distinct from p_run_id::text
+    or run->'snapshot' is distinct from snapshot then raise exception 'rehearsal_conflict'; end if;
+  if run->>'status' <> 'completed' or coalesce(length(btrim(run->>'response')),0)=0 or run->>'call_id' is null then
+    raise exception 'rehearsal_not_completed';
+  end if;
+  if not (run->>'reviewed')::boolean then
+    run := run || jsonb_build_object('reviewed',true);
+    update public.onboarding_drafts set rehearsal=run where organization_id=p_org_id;
+    insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+      values(p_org_id,p_actor_id,'onboarding.rehearsal_reviewed','ai_agent',(snapshot->>'agent_id')::uuid,
+        jsonb_build_object('run_id',p_run_id,'version_id',p_expected_version_id));
+  end if;
+  return run - 'snapshot' - 'started_at';
+end;
+$$;
+revoke execute on function public.fn_revisar_ensaio_onboarding(uuid,uuid,integer,uuid,uuid) from public, anon, authenticated;
+grant execute on function public.fn_revisar_ensaio_onboarding(uuid,uuid,integer,uuid,uuid) to service_role;
+notify pgrst, 'reload schema';
+
+-- ---- Revisão confirmada e ativação restrita do onboarding (migration 0224) ----
+-- Confirmar consome a revisão corrente sem publicar. Ativar revalida tudo e
+-- publica, vincula e ativa o MESMO agente preparado numa única transação.
+-- Nenhuma função executa IA, ferramenta, mensagem, HTTP ou evento proativo.
+
+create or replace function public.fn_confirmar_agente_revisado_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer,
+  p_expected_version_id uuid, p_run_id uuid
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  v_org public.organizations%rowtype;
+  v_draft public.onboarding_drafts%rowtype;
+  v_snapshot jsonb;
+  v_run jsonb;
+  v_ai jsonb;
+  v_marker jsonb;
+begin
+  if p_org_id is null or p_actor_id is null or p_expected_revision is null
+    or p_expected_revision < 1 or p_expected_version_id is null or p_run_id is null then
+    raise exception 'draft_invalid_input';
+  end if;
+  v_snapshot := public.fn_validar_ensaio_onboarding(
+    p_org_id, p_actor_id, p_expected_revision, p_expected_version_id
+  );
+  select * into v_org from public.organizations where id = p_org_id for update;
+  select * into v_draft from public.onboarding_drafts where organization_id = p_org_id for update;
+  v_run := v_draft.rehearsal;
+  if v_run is null or v_run->>'run_id' is distinct from p_run_id::text
+    or v_run->>'revision' is distinct from p_expected_revision::text
+    or v_run->>'version_id' is distinct from p_expected_version_id::text
+    or v_run->'snapshot' is distinct from v_snapshot then raise exception 'rehearsal_conflict'; end if;
+  if v_run->>'status' <> 'completed' or coalesce(length(btrim(v_run->>'response')), 0) = 0
+    or v_run->>'call_id' is null or coalesce((v_run->>'reviewed')::boolean, false) is not true then
+    raise exception 'rehearsal_not_completed';
+  end if;
+  perform 1 from public.llm_calls llm
+   where llm.id = (v_run->>'call_id')::uuid and llm.organization_id = p_org_id
+     and llm.agent_id = (v_snapshot->>'agent_id')::uuid and llm.purpose = 'onboarding_rehearsal'
+     and llm.status = 'ok' and llm.provider = v_snapshot->>'provider' and llm.model = v_snapshot->>'model'
+     and llm.created_at >= (v_run->>'started_at')::timestamptz;
+  if not found then raise exception 'rehearsal_invalid_result'; end if;
+  v_ai := case when jsonb_typeof(v_org.onboarding_state->'ai') = 'object'
+    then v_org.onboarding_state->'ai' else '{}'::jsonb end;
+  v_marker := jsonb_build_object('flow','reviewed_draft_v2','revision',p_expected_revision,
+    'agent_id',v_snapshot->>'agent_id','version_id',p_expected_version_id,'run_id',p_run_id,
+    'review_confirmed_at',now());
+  if v_ai->>'flow' = 'reviewed_draft_v2' and v_ai->>'revision' = p_expected_revision::text
+    and v_ai->>'agent_id' = v_snapshot->>'agent_id' and v_ai->>'version_id' = p_expected_version_id::text
+    and v_ai->>'run_id' = p_run_id::text then
+    return jsonb_build_object('agent_id',v_snapshot->>'agent_id','version_id',p_expected_version_id);
+  end if;
+  update public.organizations set onboarding_state = coalesce(onboarding_state,'{}'::jsonb)
+    || jsonb_build_object('ai',v_ai || v_marker) where id = p_org_id;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.review_confirmed','ai_agent',(v_snapshot->>'agent_id')::uuid,
+      jsonb_build_object('revision',p_expected_revision,'version_id',p_expected_version_id,'run_id',p_run_id));
+  return jsonb_build_object('agent_id',v_snapshot->>'agent_id','version_id',p_expected_version_id);
+end;
+$$;
+revoke execute on function public.fn_confirmar_agente_revisado_onboarding(uuid,uuid,integer,uuid,uuid)
+  from public, anon, authenticated;
+grant execute on function public.fn_confirmar_agente_revisado_onboarding(uuid,uuid,integer,uuid,uuid) to service_role;
+
+create or replace function public.fn_ativar_agente_teste_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_expected_version_id uuid,
+  p_run_id uuid, p_channel_session_id uuid, p_installation_key_available boolean
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  v_org public.organizations%rowtype;
+  v_draft public.onboarding_drafts%rowtype;
+  v_agent public.ai_agents%rowtype;
+  v_version public.ai_agent_versions%rowtype;
+  v_channel public.channel_sessions%rowtype;
+  v_snapshot jsonb;
+  v_run jsonb;
+  v_ai jsonb;
+  v_whatsapp jsonb;
+  v_confirmation jsonb;
+  v_receipt jsonb;
+  v_numbers jsonb;
+  v_snapshot_sha256 text;
+  v_activated_at timestamptz := now();
+begin
+  if p_org_id is null or p_actor_id is null or p_expected_revision is null
+    or p_expected_revision < 1 or p_expected_version_id is null or p_run_id is null
+    or p_channel_session_id is null or p_installation_key_available is null then raise exception 'draft_invalid_input'; end if;
+  select * into v_org from public.organizations where id = p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations membership where membership.organization_id = p_org_id
+    and membership.user_id = p_actor_id and membership.role = 'admin' and membership.accepted_at is not null
+    and membership.revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if v_org.onboarded_at is not null or v_org.status <> 'active' or v_org.suspended_at is not null
+    or v_org.redacted_at is not null then raise exception 'draft_unavailable'; end if;
+  select * into v_draft from public.onboarding_drafts where organization_id = p_org_id for update;
+  if not found then raise exception 'draft_conflict'; end if;
+  v_ai := case when jsonb_typeof(v_org.onboarding_state->'ai') = 'object'
+    then v_org.onboarding_state->'ai' else '{}'::jsonb end;
+  v_receipt := v_ai->'restricted_activation';
+  if jsonb_typeof(v_receipt) = 'object' then
+    if v_receipt->>'draft_revision' is distinct from p_expected_revision::text
+      or v_receipt->>'run_id' is distinct from p_run_id::text
+      or v_receipt->>'version_id' is distinct from p_expected_version_id::text
+      or v_receipt->>'channel_session_id' is distinct from p_channel_session_id::text
+      or v_receipt->>'agent_id' is null then raise exception 'activation_conflict'; end if;
+    begin
+      select * into v_agent from public.ai_agents where id=(v_receipt->>'agent_id')::uuid
+        and organization_id=p_org_id for update;
+      select * into v_version from public.ai_agent_versions where id=p_expected_version_id
+        and organization_id=p_org_id and agent_id=(v_receipt->>'agent_id')::uuid for update;
+    exception when invalid_text_representation then raise exception 'activation_conflict'; end;
+    select * into v_channel from public.channel_sessions where id=p_channel_session_id
+      and organization_id=p_org_id for update;
+    v_numbers := v_channel.metadata->'ai_test_phone_numbers';
+    if v_agent.id is null or v_agent.archived_at is not null or not v_agent.is_active
+      or v_agent.published_version_id is distinct from p_expected_version_id
+      or v_version.id is null or v_version.status <> 'published'
+      or v_version.channel_session_id is distinct from p_channel_session_id
+      or v_channel.id is null or v_channel.archived_at is not null or v_channel.status <> 'WORKING'
+      or v_channel.metadata->>'ai_gate' <> 'allowlist' or v_channel.metadata->>'ai_gate_mode' <> 'pre_go_live'
+      or jsonb_typeof(v_numbers) <> 'array' then raise exception 'activation_conflict'; end if;
+    if jsonb_array_length(v_numbers) < 1 or exists (select 1 from jsonb_array_elements(v_numbers) item
+      where jsonb_typeof(item) <> 'string' or (item #>> '{}') !~ '^\+[1-9][0-9]{7,14}$') then raise exception 'activation_conflict'; end if;
+    perform 1 from public.api_audit_log audit where audit.organization_id=p_org_id
+      and audit.action='onboarding.restricted_activation' and audit.resource_id=(v_receipt->>'agent_id')::uuid
+      and audit.metadata->>'version_id'=p_expected_version_id::text and audit.metadata->>'run_id'=p_run_id::text
+      and audit.metadata->>'channel_session_id'=p_channel_session_id::text;
+    if not found then raise exception 'activation_conflict'; end if;
+    return jsonb_build_object('agent_id',v_receipt->>'agent_id','version_id',p_expected_version_id,
+      'channel_session_id',p_channel_session_id,'activated_at',v_receipt->>'activated_at');
+  elsif v_receipt is not null then raise exception 'activation_conflict'; end if;
+  v_snapshot := public.fn_validar_ensaio_onboarding(p_org_id,p_actor_id,p_expected_revision,p_expected_version_id);
+  select * into v_draft from public.onboarding_drafts where organization_id=p_org_id for update;
+  v_run := v_draft.rehearsal;
+  v_confirmation := v_ai;
+  if v_confirmation->>'flow' <> 'reviewed_draft_v2'
+    or v_confirmation->>'revision' is distinct from p_expected_revision::text
+    or v_confirmation->>'agent_id' is distinct from v_snapshot->>'agent_id'
+    or v_confirmation->>'version_id' is distinct from p_expected_version_id::text
+    or v_confirmation->>'run_id' is distinct from p_run_id::text then raise exception 'activation_conflict'; end if;
+  if v_run is null or v_run->>'run_id' is distinct from p_run_id::text
+    or v_run->>'revision' is distinct from p_expected_revision::text
+    or v_run->>'version_id' is distinct from p_expected_version_id::text
+    or v_run->'snapshot' is distinct from v_snapshot then raise exception 'rehearsal_conflict'; end if;
+  if v_run->>'status' <> 'completed' or coalesce(length(btrim(v_run->>'response')),0)=0
+    or v_run->>'call_id' is null or coalesce((v_run->>'reviewed')::boolean,false) is not true then
+    raise exception 'rehearsal_not_completed'; end if;
+  perform 1 from public.llm_calls llm where llm.id=(v_run->>'call_id')::uuid
+    and llm.organization_id=p_org_id and llm.agent_id=(v_snapshot->>'agent_id')::uuid
+    and llm.purpose='onboarding_rehearsal' and llm.status='ok'
+    and llm.provider=v_snapshot->>'provider' and llm.model=v_snapshot->>'model'
+    and llm.created_at >= (v_run->>'started_at')::timestamptz;
+  if not found then raise exception 'rehearsal_invalid_result'; end if;
+  select * into v_agent from public.ai_agents where id=(v_snapshot->>'agent_id')::uuid
+    and organization_id=p_org_id for update;
+  select * into v_version from public.ai_agent_versions where id=p_expected_version_id
+    and organization_id=p_org_id and agent_id=(v_snapshot->>'agent_id')::uuid for update;
+  if v_agent.id is null or v_agent.is_active or v_agent.is_default or v_agent.published_version_id is not null
+    or v_agent.archived_at is not null or v_version.id is null or v_version.status <> 'draft'
+    or v_version.channel_session_id is not null or to_jsonb(v_version) is distinct from v_snapshot then
+    raise exception 'draft_conflict'; end if;
+  select * into v_channel from public.channel_sessions where id=p_channel_session_id
+    and organization_id=p_org_id for update;
+  if not found or v_channel.archived_at is not null or v_channel.status <> 'WORKING' then
+    raise exception 'activation_channel_unavailable'; end if;
+  if v_channel.metadata->>'ai_gate' <> 'allowlist' or v_channel.metadata->>'ai_gate_mode' <> 'pre_go_live' then
+    raise exception 'activation_channel_not_restricted'; end if;
+  v_numbers := v_channel.metadata->'ai_test_phone_numbers';
+  if jsonb_typeof(v_numbers) <> 'array' then raise exception 'activation_channel_not_restricted'; end if;
+  if exists(select 1 from jsonb_array_elements(v_numbers) item where jsonb_typeof(item)<>'string'
+    or (item #>> '{}') !~ '^\+[1-9][0-9]{7,14}$') or jsonb_array_length(v_numbers) = 0 then
+    raise exception 'activation_channel_not_restricted'; end if;
+  perform 1 from public.ai_models model where model.provider=v_version.provider
+    and model.model_id=v_version.model and model.deprecated_at is null
+    and (cardinality(v_version.tool_ids)=0 or model.supports_tools) for share;
+  if not found or length(btrim(v_version.system_prompt)) not between 10 and 20000
+    or length(btrim(v_version.provider))=0 or length(btrim(v_version.model)) not between 1 and 120 then
+    raise exception 'activation_model_unavailable'; end if;
+  if v_version.credential_id is null then
+    if not p_installation_key_available then raise exception 'activation_credential_unavailable'; end if;
+  else
+    perform 1 from public.ai_provider_credentials credential where credential.id=v_version.credential_id
+      and credential.organization_id=p_org_id and credential.provider=v_version.provider
+      and credential.is_active and credential.validated_at is not null for share;
+    if not found then raise exception 'activation_credential_unavailable'; end if;
+  end if;
+  perform 1 from public.ai_agents other_agent join public.ai_agent_versions published
+    on published.id=other_agent.published_version_id and published.organization_id=p_org_id
+    where other_agent.organization_id=p_org_id and other_agent.id<>v_agent.id and other_agent.is_active
+      and other_agent.archived_at is null and published.status='published'
+      and published.channel_session_id=p_channel_session_id for update of other_agent,published;
+  if found then raise exception 'activation_agent_conflict'; end if;
+  v_snapshot_sha256 := encode(extensions.digest(convert_to(v_snapshot::text,'UTF8'),'sha256'),'hex');
+  update public.ai_agent_versions set channel_session_id=p_channel_session_id,status='published',
+    published_at=v_activated_at,superseded_at=null where id=p_expected_version_id and organization_id=p_org_id;
+  update public.ai_agents set is_active=true,published_version_id=p_expected_version_id,updated_at=v_activated_at
+    where id=v_agent.id and organization_id=p_org_id;
+  v_receipt := jsonb_build_object('draft_revision',p_expected_revision,'run_id',p_run_id,
+    'call_id',v_run->>'call_id','agent_id',v_agent.id,'version_id',p_expected_version_id,
+    'channel_session_id',p_channel_session_id,'snapshot_sha256',v_snapshot_sha256,
+    'access_mode','pre_go_live','test_phone_count',jsonb_array_length(v_numbers),
+    'activated_at',v_activated_at,'actor_id',p_actor_id);
+  v_whatsapp := case when jsonb_typeof(v_org.onboarding_state->'whatsapp')='object'
+    then v_org.onboarding_state->'whatsapp' else '{}'::jsonb end;
+  update public.organizations set onboarding_state=coalesce(onboarding_state,'{}'::jsonb)
+    || jsonb_build_object('ai',v_ai || jsonb_build_object('restricted_activation',v_receipt),
+      'whatsapp',v_whatsapp || jsonb_build_object('channel_session_id',p_channel_session_id,
+        'status','restricted_active','activated_at',v_activated_at)) where id=p_org_id;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.restricted_activation','ai_agent',v_agent.id,
+      jsonb_build_object('draft_revision',p_expected_revision,'run_id',p_run_id,
+        'call_id',v_run->>'call_id','agent_id',v_agent.id,'version_id',p_expected_version_id,
+        'channel_session_id',p_channel_session_id,'snapshot_sha256',v_snapshot_sha256,
+        'access_mode','pre_go_live','test_phone_count',jsonb_array_length(v_numbers),
+        'activated_at',v_activated_at,'actor_id',p_actor_id));
+  return jsonb_build_object('agent_id',v_agent.id,'version_id',p_expected_version_id,
+    'channel_session_id',p_channel_session_id,'activated_at',v_activated_at);
+end;
+$$;
+revoke execute on function public.fn_ativar_agente_teste_onboarding(uuid,uuid,integer,uuid,uuid,uuid,boolean)
+  from public, anon, authenticated;
+grant execute on function public.fn_ativar_agente_teste_onboarding(uuid,uuid,integer,uuid,uuid,uuid,boolean) to service_role;
+comment on function public.fn_ativar_agente_teste_onboarding(uuid,uuid,integer,uuid,uuid,uuid,boolean) is
+  'Publica somente o draft de onboarding revisado, num canal WORKING fechado em pre_go_live com allowlist não vazia. Não executa IA, ferramentas, mensagens, HTTP ou eventos.';
+notify pgrst, 'reload schema';
+
+-- ---- Forward-fix fail-closed da conclusão do onboarding (migration 0225) ----
+-- Forward-fix da 0224: metadata ausente deve falhar fechada, o resolvedor de
+-- credenciais preserva a precedência BYOK da organização → chave da instalação,
+-- e o retry prova que versão, recibo e audit continuam íntegros.
+
+create or replace function public.fn_ativar_agente_teste_onboarding(
+  p_org_id uuid,
+  p_actor_id uuid,
+  p_expected_revision integer,
+  p_expected_version_id uuid,
+  p_run_id uuid,
+  p_channel_session_id uuid,
+  p_installation_key_available boolean
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_org public.organizations%rowtype;
+  v_draft public.onboarding_drafts%rowtype;
+  v_agent public.ai_agents%rowtype;
+  v_version public.ai_agent_versions%rowtype;
+  v_channel public.channel_sessions%rowtype;
+  v_snapshot jsonb;
+  v_current_snapshot jsonb;
+  v_run jsonb;
+  v_ai jsonb;
+  v_whatsapp jsonb;
+  v_confirmation jsonb;
+  v_receipt jsonb;
+  v_numbers jsonb;
+  v_snapshot_sha256 text;
+  v_current_snapshot_sha256 text;
+  v_resolved_credential_id uuid;
+  v_receipt_agent_id uuid;
+  v_receipt_call_id uuid;
+  v_receipt_actor_id uuid;
+  v_receipt_activated_at timestamptz;
+  v_activated_at timestamptz := now();
+begin
+  if p_org_id is null or p_actor_id is null or p_expected_revision is null
+    or p_expected_revision < 1 or p_expected_version_id is null or p_run_id is null
+    or p_channel_session_id is null or p_installation_key_available is null then
+    raise exception 'draft_invalid_input';
+  end if;
+
+  select * into v_org from public.organizations where id = p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1
+    from public.user_organizations membership
+   where membership.organization_id = p_org_id
+     and membership.user_id = p_actor_id
+     and membership.role = 'admin'
+     and membership.accepted_at is not null
+     and membership.revoked_at is null
+   for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if v_org.onboarded_at is not null or v_org.status <> 'active'
+    or v_org.suspended_at is not null or v_org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into v_draft
+    from public.onboarding_drafts
+   where organization_id = p_org_id
+   for update;
+  if not found then raise exception 'draft_conflict'; end if;
+
+  v_ai := case when jsonb_typeof(v_org.onboarding_state->'ai') = 'object'
+    then v_org.onboarding_state->'ai' else '{}'::jsonb end;
+  v_receipt := v_ai->'restricted_activation';
+
+  -- Retry idempotente só é aceito quando o recibo histórico, a versão publicada,
+  -- o canal ainda restrito e o audit original formam a mesma prova imutável.
+  if jsonb_typeof(v_receipt) = 'object' then
+    if v_receipt->>'draft_revision' is distinct from p_expected_revision::text
+      or v_receipt->>'run_id' is distinct from p_run_id::text
+      or v_receipt->>'version_id' is distinct from p_expected_version_id::text
+      or v_receipt->>'channel_session_id' is distinct from p_channel_session_id::text
+      or v_receipt->>'access_mode' is distinct from 'pre_go_live'
+      or coalesce(v_receipt->>'snapshot_sha256', '') !~ '^[a-f0-9]{64}$'
+      or coalesce(v_receipt->>'test_phone_count', '') !~ '^[1-9][0-9]*$'
+      or v_receipt->>'agent_id' is null
+      or v_receipt->>'call_id' is null
+      or v_receipt->>'actor_id' is null
+      or v_receipt->>'activated_at' is null then
+      raise exception 'activation_conflict';
+    end if;
+    begin
+      v_receipt_agent_id := (v_receipt->>'agent_id')::uuid;
+      v_receipt_call_id := (v_receipt->>'call_id')::uuid;
+      v_receipt_actor_id := (v_receipt->>'actor_id')::uuid;
+      v_receipt_activated_at := (v_receipt->>'activated_at')::timestamptz;
+      select * into v_agent
+        from public.ai_agents
+       where id = v_receipt_agent_id and organization_id = p_org_id
+       for update;
+      select * into v_version
+        from public.ai_agent_versions
+       where id = p_expected_version_id and organization_id = p_org_id
+         and agent_id = v_receipt_agent_id
+       for update;
+    exception when invalid_text_representation or invalid_datetime_format or datetime_field_overflow then
+      raise exception 'activation_conflict';
+    end;
+    select * into v_channel
+      from public.channel_sessions
+     where id = p_channel_session_id and organization_id = p_org_id
+     for update;
+    v_numbers := v_channel.metadata->'ai_test_phone_numbers';
+    if v_agent.id is null or v_agent.archived_at is not null or not v_agent.is_active
+      or v_agent.published_version_id is distinct from p_expected_version_id
+      or v_version.id is null or v_version.status is distinct from 'published'
+      or v_version.channel_session_id is distinct from p_channel_session_id
+      or v_channel.id is null or v_channel.archived_at is not null
+      or v_channel.status is distinct from 'WORKING'
+      or v_channel.metadata->>'ai_gate' is distinct from 'allowlist'
+      or v_channel.metadata->>'ai_gate_mode' is distinct from 'pre_go_live'
+      or jsonb_typeof(v_numbers) is distinct from 'array' then
+      raise exception 'activation_conflict';
+    end if;
+    if jsonb_array_length(v_numbers) < 1 or exists (
+      select 1
+        from jsonb_array_elements(v_numbers) item
+       where jsonb_typeof(item) is distinct from 'string'
+          or (item #>> '{}') !~ '^\+[1-9][0-9]{7,14}$'
+    ) then
+      raise exception 'activation_conflict';
+    end if;
+
+    v_current_snapshot := to_jsonb(v_version) || jsonb_build_object(
+      'channel_session_id', null,
+      'status', 'draft',
+      'published_at', null,
+      'superseded_at', null
+    );
+    v_current_snapshot_sha256 := encode(
+      extensions.digest(convert_to(v_current_snapshot::text, 'UTF8'), 'sha256'),
+      'hex'
+    );
+    if v_receipt->>'snapshot_sha256' is distinct from v_current_snapshot_sha256 then
+      raise exception 'activation_conflict';
+    end if;
+
+    perform 1
+      from public.api_audit_log audit
+     where audit.organization_id = p_org_id
+       and audit.action = 'onboarding.restricted_activation'
+       and audit.resource_type = 'ai_agent'
+       and audit.resource_id = v_receipt_agent_id
+       and audit.actor_user_id = v_receipt_actor_id
+       and audit.metadata->>'draft_revision' is not distinct from v_receipt->>'draft_revision'
+       and audit.metadata->>'run_id' is not distinct from v_receipt->>'run_id'
+       and audit.metadata->>'call_id' is not distinct from v_receipt_call_id::text
+       and audit.metadata->>'agent_id' is not distinct from v_receipt_agent_id::text
+       and audit.metadata->>'version_id' is not distinct from v_receipt->>'version_id'
+       and audit.metadata->>'channel_session_id' is not distinct from v_receipt->>'channel_session_id'
+       and audit.metadata->>'snapshot_sha256' is not distinct from v_receipt->>'snapshot_sha256'
+       and audit.metadata->>'access_mode' is not distinct from v_receipt->>'access_mode'
+       and audit.metadata->>'test_phone_count' is not distinct from v_receipt->>'test_phone_count'
+       and audit.metadata->>'activated_at' is not distinct from v_receipt->>'activated_at'
+       and audit.metadata->>'actor_id' is not distinct from v_receipt_actor_id::text;
+    if not found then raise exception 'activation_conflict'; end if;
+    return jsonb_build_object(
+      'agent_id', v_receipt_agent_id,
+      'version_id', p_expected_version_id,
+      'channel_session_id', p_channel_session_id,
+      'activated_at', v_receipt_activated_at
+    );
+  elsif v_receipt is not null then
+    raise exception 'activation_conflict';
+  end if;
+
+  v_snapshot := public.fn_validar_ensaio_onboarding(
+    p_org_id, p_actor_id, p_expected_revision, p_expected_version_id
+  );
+  select * into v_draft from public.onboarding_drafts where organization_id = p_org_id for update;
+  v_run := v_draft.rehearsal;
+  v_confirmation := v_ai;
+
+  if v_confirmation->>'flow' is distinct from 'reviewed_draft_v2'
+    or v_confirmation->>'revision' is distinct from p_expected_revision::text
+    or v_confirmation->>'agent_id' is distinct from v_snapshot->>'agent_id'
+    or v_confirmation->>'version_id' is distinct from p_expected_version_id::text
+    or v_confirmation->>'run_id' is distinct from p_run_id::text then
+    raise exception 'activation_conflict';
+  end if;
+  if v_run is null or v_run->>'run_id' is distinct from p_run_id::text
+    or v_run->>'revision' is distinct from p_expected_revision::text
+    or v_run->>'version_id' is distinct from p_expected_version_id::text
+    or v_run->'snapshot' is distinct from v_snapshot then
+    raise exception 'rehearsal_conflict';
+  end if;
+  if v_run->>'status' is distinct from 'completed'
+    or coalesce(length(btrim(v_run->>'response')), 0) = 0
+    or v_run->>'call_id' is null
+    or coalesce((v_run->>'reviewed')::boolean, false) is not true then
+    raise exception 'rehearsal_not_completed';
+  end if;
+  perform 1
+    from public.llm_calls llm
+   where llm.id = (v_run->>'call_id')::uuid
+     and llm.organization_id = p_org_id
+     and llm.agent_id = (v_snapshot->>'agent_id')::uuid
+     and llm.purpose = 'onboarding_rehearsal'
+     and llm.status = 'ok'
+     and llm.provider = v_snapshot->>'provider'
+     and llm.model = v_snapshot->>'model'
+     and llm.created_at >= (v_run->>'started_at')::timestamptz;
+  if not found then raise exception 'rehearsal_invalid_result'; end if;
+
+  select * into v_agent
+    from public.ai_agents
+   where id = (v_snapshot->>'agent_id')::uuid and organization_id = p_org_id
+   for update;
+  select * into v_version
+    from public.ai_agent_versions
+   where id = p_expected_version_id and organization_id = p_org_id
+     and agent_id = (v_snapshot->>'agent_id')::uuid
+   for update;
+  if v_agent.id is null or v_agent.is_active or v_agent.is_default
+    or v_agent.published_version_id is not null or v_agent.archived_at is not null
+    or v_version.id is null or v_version.status is distinct from 'draft'
+    or v_version.channel_session_id is not null
+    or to_jsonb(v_version) is distinct from v_snapshot then
+    raise exception 'draft_conflict';
+  end if;
+
+  select * into v_channel
+    from public.channel_sessions
+   where id = p_channel_session_id and organization_id = p_org_id
+   for update;
+  if not found or v_channel.archived_at is not null
+    or v_channel.status is distinct from 'WORKING' then
+    raise exception 'activation_channel_unavailable';
+  end if;
+  if v_channel.metadata->>'ai_gate' is distinct from 'allowlist'
+    or v_channel.metadata->>'ai_gate_mode' is distinct from 'pre_go_live' then
+    raise exception 'activation_channel_not_restricted';
+  end if;
+  v_numbers := v_channel.metadata->'ai_test_phone_numbers';
+  if jsonb_typeof(v_numbers) is distinct from 'array' then
+    raise exception 'activation_channel_not_restricted';
+  end if;
+  if exists (
+    select 1
+      from jsonb_array_elements(v_numbers) item
+     where jsonb_typeof(item) is distinct from 'string'
+        or (item #>> '{}') !~ '^\+[1-9][0-9]{7,14}$'
+  ) or jsonb_array_length(v_numbers) = 0 then
+    raise exception 'activation_channel_not_restricted';
+  end if;
+
+  perform 1
+    from public.ai_models model
+   where model.provider = v_version.provider
+     and model.model_id = v_version.model
+     and model.deprecated_at is null
+     and (cardinality(v_version.tool_ids) = 0 or model.supports_tools)
+   for share;
+  if not found or length(btrim(v_version.system_prompt)) not between 10 and 20000
+    or length(btrim(v_version.provider)) = 0
+    or length(btrim(v_version.model)) not between 1 and 120 then
+    raise exception 'activation_model_unavailable';
+  end if;
+
+  if v_version.credential_id is null then
+    select credential.id into v_resolved_credential_id
+      from public.ai_provider_credentials credential
+     where credential.organization_id = p_org_id
+       and credential.provider = v_version.provider
+       and credential.is_active
+       and credential.validated_at is not null
+     order by credential.created_at desc
+     limit 1
+     for share;
+    if v_resolved_credential_id is null and not p_installation_key_available then
+      raise exception 'activation_credential_unavailable';
+    end if;
+  else
+    perform 1
+      from public.ai_provider_credentials credential
+     where credential.id = v_version.credential_id
+       and credential.organization_id = p_org_id
+       and credential.provider = v_version.provider
+       and credential.is_active
+       and credential.validated_at is not null
+     for share;
+    if not found then raise exception 'activation_credential_unavailable'; end if;
+  end if;
+
+  perform 1
+    from public.ai_agents other_agent
+    join public.ai_agent_versions published
+      on published.id = other_agent.published_version_id
+     and published.organization_id = p_org_id
+   where other_agent.organization_id = p_org_id
+     and other_agent.id <> v_agent.id
+     and other_agent.is_active
+     and other_agent.archived_at is null
+     and published.status = 'published'
+     and published.channel_session_id = p_channel_session_id
+   for update of other_agent, published;
+  if found then raise exception 'activation_agent_conflict'; end if;
+
+  v_snapshot_sha256 := encode(
+    extensions.digest(convert_to(v_snapshot::text, 'UTF8'), 'sha256'),
+    'hex'
+  );
+  update public.ai_agent_versions
+     set channel_session_id = p_channel_session_id,
+         status = 'published',
+         published_at = v_activated_at,
+         superseded_at = null
+   where id = p_expected_version_id and organization_id = p_org_id;
+  update public.ai_agents
+     set is_active = true,
+         published_version_id = p_expected_version_id,
+         updated_at = v_activated_at
+   where id = v_agent.id and organization_id = p_org_id;
+
+  v_receipt := jsonb_build_object(
+    'draft_revision', p_expected_revision,
+    'run_id', p_run_id,
+    'call_id', v_run->>'call_id',
+    'agent_id', v_agent.id,
+    'version_id', p_expected_version_id,
+    'channel_session_id', p_channel_session_id,
+    'snapshot_sha256', v_snapshot_sha256,
+    'access_mode', 'pre_go_live',
+    'test_phone_count', jsonb_array_length(v_numbers),
+    'activated_at', v_activated_at,
+    'actor_id', p_actor_id
+  );
+  v_whatsapp := case when jsonb_typeof(v_org.onboarding_state->'whatsapp') = 'object'
+    then v_org.onboarding_state->'whatsapp' else '{}'::jsonb end;
+
+  update public.organizations
+     set onboarding_state = coalesce(onboarding_state, '{}'::jsonb)
+       || jsonb_build_object(
+         'ai', v_ai || jsonb_build_object('restricted_activation', v_receipt),
+         'whatsapp', v_whatsapp || jsonb_build_object(
+           'channel_session_id', p_channel_session_id,
+           'status', 'restricted_active',
+           'activated_at', v_activated_at
+         )
+       )
+   where id = p_org_id;
+
+  insert into public.api_audit_log(
+    organization_id, actor_user_id, action, resource_type, resource_id, metadata
+  ) values (
+    p_org_id, p_actor_id, 'onboarding.restricted_activation', 'ai_agent', v_agent.id,
+    v_receipt
+  );
+
+  return jsonb_build_object(
+    'agent_id', v_agent.id,
+    'version_id', p_expected_version_id,
+    'channel_session_id', p_channel_session_id,
+    'activated_at', v_activated_at
+  );
+end;
+$$;
+
+revoke execute on function public.fn_ativar_agente_teste_onboarding(uuid,uuid,integer,uuid,uuid,uuid,boolean)
+  from public, anon, authenticated;
+grant execute on function public.fn_ativar_agente_teste_onboarding(uuid,uuid,integer,uuid,uuid,uuid,boolean)
+  to service_role;
+
+comment on function public.fn_ativar_agente_teste_onboarding(uuid,uuid,integer,uuid,uuid,uuid,boolean) is
+  'Publica somente o draft de onboarding revisado, num canal WORKING fechado em pre_go_live com allowlist não vazia. Retry exige integridade de versão, recibo e audit. Não executa IA, ferramentas, mensagens, HTTP ou eventos.';
+
+notify pgrst, 'reload schema';
+
 -- ---- conversões de anúncio: conexão + livro-razão (migration 0213) ----
 -- Idempotente e auto-curativo, como o kit exige: `update.sh` re-aplica este
 -- arquivo inteiro num banco existente e sem `ON_ERROR_STOP`.
@@ -18465,3 +19373,765 @@ notify pgrst, 'reload schema';
 -- em produção (engolido, fire-and-forget), e o aviso ficava aberto pra sempre.
 alter table public.agent_inbox_items
   add column if not exists resolved_at timestamptz;
+
+-- 0220 — rascunho pode existir antes da conexão; publicação continua exigindo canal.
+-- Nenhuma versão, credencial ou autorização existente é reescrita.
+alter table public.ai_agent_versions
+  alter column channel_session_id drop not null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.ai_agent_versions'::regclass
+      and conname = 'ai_agent_versions_canal_ao_publicar'
+  ) then
+    alter table public.ai_agent_versions
+      add constraint ai_agent_versions_canal_ao_publicar
+      check (channel_session_id is not null or status in ('draft', 'archived'));
+  end if;
+end;
+$$;
+
+notify pgrst, 'reload schema';
+
+-- ---- Segmento e objetivo no ensaio (migration 0226) ----
+-- Campos opcionais para leitura de dados antigos, sem backfill ou nova taxonomia.
+-- A revisão já invalida por configuração/revisão; negócio inclui segmento somente quando presente.
+create or replace function public.fn_save_onboarding_draft(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_configuration jsonb
+) returns jsonb
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  next_revision integer;
+begin
+  if p_expected_revision is null or p_expected_revision < 0
+    or p_configuration is null or jsonb_typeof(p_configuration) <> 'object' then
+    raise exception 'draft_invalid_input';
+  end if;
+  if not (p_configuration ?& array['name','prompt_template','regras_da_casa'])
+    or (p_configuration - array['name','prompt_template','regras_da_casa','objetivo']) <> '{}'::jsonb
+    or (p_configuration ? 'objetivo' and jsonb_typeof(p_configuration->'objetivo') <> 'string')
+    or jsonb_typeof(p_configuration->'name') <> 'string'
+    or jsonb_typeof(p_configuration->'prompt_template') <> 'string'
+    or jsonb_typeof(p_configuration->'regras_da_casa') <> 'string'
+    or length(btrim(p_configuration->>'name')) not between 2 and 80
+    or length(p_configuration->>'regras_da_casa') > 20000
+    or p_configuration->>'prompt_template' not in
+      ('ecommerce_friendly','ecommerce_professional','support_minimal') then
+    raise exception 'draft_invalid_input';
+  end if;
+  -- Lock curto e por organização: nenhuma chamada de rede dentro da transação.
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations
+    where organization_id=p_org_id and user_id=p_actor_id and role='admin'
+      and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active'
+    or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id;
+  -- Reenvio inofensivo: mesmo conteúdo já confirmado, nunca uma revisão futura.
+  if found and p_expected_revision <= draft.revision
+    and draft.configuration = p_configuration then
+    return jsonb_build_object('revision',draft.revision,'configuration',draft.configuration);
+  end if;
+  if p_expected_revision <> coalesce(draft.revision,0) then
+    raise exception 'draft_conflict';
+  end if;
+  next_revision := coalesce(draft.revision,0) + 1;
+  insert into public.onboarding_drafts(organization_id,revision,configuration,updated_by)
+    values(p_org_id,next_revision,p_configuration,p_actor_id)
+    on conflict (organization_id) do update
+      set revision=excluded.revision,configuration=excluded.configuration,
+        updated_by=excluded.updated_by,updated_at=now();
+  insert into public.api_audit_log
+    (organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.draft_saved','organization',p_org_id,
+      jsonb_build_object('revision',next_revision));
+  return jsonb_build_object('revision',next_revision,'configuration',p_configuration);
+end;
+$$;
+revoke execute on function public.fn_save_onboarding_draft(uuid,uuid,integer,jsonb) from public, anon, authenticated;
+grant execute on function public.fn_save_onboarding_draft(uuid,uuid,integer,jsonb) to service_role;
+notify pgrst, 'reload schema';
+
+create or replace function public.fn_prepare_onboarding_draft(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer,
+  p_expected_version_id uuid, p_expected_business jsonb, p_version jsonb
+) returns jsonb
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  agent public.ai_agents%rowtype;
+  version public.ai_agent_versions%rowtype;
+  business jsonb;
+  request jsonb;
+  credential uuid;
+  tools text[];
+  pipeline uuid;
+  next_number integer;
+begin
+  if p_expected_revision is null or p_expected_revision < 1
+    or p_expected_business is null or jsonb_typeof(p_expected_business) <> 'object'
+    or p_version is null or jsonb_typeof(p_version) <> 'object' then
+    raise exception 'draft_invalid_input';
+  end if;
+  if not (p_version ?& array['system_prompt','provider','model','credential_id','tool_ids'])
+    or (p_version - array['system_prompt','provider','model','credential_id','tool_ids']) <> '{}'::jsonb
+    or jsonb_typeof(p_version->'system_prompt') <> 'string'
+    or length(btrim(p_version->>'system_prompt')) not between 10 and 20000
+    or jsonb_typeof(p_version->'provider') <> 'string'
+    or jsonb_typeof(p_version->'model') <> 'string'
+    or length(btrim(p_version->>'model')) not between 1 and 120
+    or jsonb_typeof(p_version->'tool_ids') <> 'array'
+    or jsonb_typeof(p_version->'credential_id') not in ('null','string') then
+    raise exception 'draft_invalid_input';
+  end if;
+  if jsonb_array_length(p_version->'tool_ids') > 25
+    or exists(select 1 from jsonb_array_elements(p_version->'tool_ids') t where jsonb_typeof(t) <> 'string') then
+    raise exception 'draft_invalid_input';
+  end if;
+  begin
+    credential := (p_version->>'credential_id')::uuid;
+  exception when invalid_text_representation then raise exception 'draft_invalid_input';
+  end;
+  select coalesce(array_agg(t), '{}'::text[]) into tools from jsonb_array_elements_text(p_version->'tool_ids') t;
+
+  -- Ordem compatível com salvar: organização → vínculo → rascunho → agente → versão.
+  -- Não há rede/IA dentro da transação.
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations where organization_id=p_org_id
+    and user_id=p_actor_id and role='admin' and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active'
+    or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  business := jsonb_build_object('display_name',coalesce(org.display_name,org.legal_name),
+    'o_que_faz',case when jsonb_typeof(org.onboarding_state #> '{welcome,o_que_faz}')='string'
+      then org.onboarding_state #> '{welcome,o_que_faz}' else 'null'::jsonb end);
+  if jsonb_typeof(org.onboarding_state #> '{welcome,segmento}')='string' then
+    business := business || jsonb_build_object('segmento',org.onboarding_state #>> '{welcome,segmento}');
+  end if;
+  if business is distinct from p_expected_business then raise exception 'draft_context_changed'; end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id for update;
+  if not found or draft.revision <> p_expected_revision then raise exception 'draft_conflict'; end if;
+
+  -- Par explícito e disponível; nenhuma escolha de modelo/chave por fallback.
+  perform 1 from public.ai_models where provider=p_version->>'provider' and model_id=p_version->>'model'
+    and deprecated_at is null and (cardinality(tools)=0 or supports_tools) for share;
+  if not found then raise exception 'draft_model_unavailable'; end if;
+  if credential is not null then
+    perform 1 from public.ai_provider_credentials where id=credential and organization_id=p_org_id
+      and provider=p_version->>'provider' and is_active and validated_at is not null for share;
+    if not found then raise exception 'draft_credential_unavailable'; end if;
+  end if;
+
+  request := jsonb_build_object('business',business,'version',p_version,'name',draft.configuration->>'name');
+  if draft.prepared_agent_id is not null then
+    select * into agent from public.ai_agents where id=draft.prepared_agent_id and organization_id=p_org_id for update;
+    if not found or agent.is_active or agent.is_default or agent.published_version_id is not null
+      or agent.archived_at is not null then raise exception 'draft_unavailable'; end if;
+    select * into version from public.ai_agent_versions where id=draft.prepared_version_id
+      and organization_id=p_org_id and agent_id=agent.id for update;
+    -- O editor permite editar drafts. ID/revisão sozinhos não provam conteúdo.
+    if not found or version.status <> 'draft' or to_jsonb(version) is distinct from draft.prepared_snapshot
+      or agent.name is distinct from draft.prepared_request->>'name'
+      or agent.system_prompt is distinct from draft.prepared_request #>> '{version,system_prompt}'
+      or agent.model is distinct from draft.prepared_request #>> '{version,model}' then
+      raise exception 'draft_conflict';
+    end if;
+    if draft.prepared_revision=p_expected_revision and draft.prepared_request=request then
+      return jsonb_build_object('revision',draft.revision,'agent_id',agent.id,'version_id',version.id);
+    end if;
+  elsif draft.prepared_version_id is not null or draft.prepared_revision is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  if p_expected_version_id is distinct from draft.prepared_version_id then raise exception 'draft_conflict'; end if;
+  if exists(select 1 from public.ai_agents where organization_id=p_org_id
+    and name=draft.configuration->>'name' and id is distinct from draft.prepared_agent_id) then
+    raise exception 'draft_name_conflict';
+  end if;
+  if agent.id is null then
+    insert into public.ai_agents(organization_id,name,system_prompt,model,kind,is_active,is_default,created_by)
+      values(p_org_id,draft.configuration->>'name',p_version->>'system_prompt',p_version->>'model','mcp_agent',false,false,p_actor_id)
+      returning * into agent;
+  else
+    update public.ai_agents set name=draft.configuration->>'name',system_prompt=p_version->>'system_prompt',model=p_version->>'model'
+      where id=agent.id and organization_id=p_org_id;
+  end if;
+  select id into pipeline from public.crm_pipelines where organization_id=p_org_id and is_default and not is_archived;
+  select coalesce(max(version_number),0)+1 into next_number from public.ai_agent_versions where agent_id=agent.id and organization_id=p_org_id;
+  insert into public.ai_agent_versions(organization_id,agent_id,version_number,system_prompt,provider,model,
+    credential_id,tool_ids,pipeline_ids,channel_session_id,status,created_by)
+    values(p_org_id,agent.id,next_number,p_version->>'system_prompt',p_version->>'provider',p_version->>'model',
+      credential,tools,case when pipeline is null then '{}'::uuid[] else array[pipeline] end,null,'draft',p_actor_id)
+    returning * into version;
+  update public.onboarding_drafts set prepared_agent_id=agent.id,prepared_version_id=version.id,
+    prepared_revision=draft.revision,prepared_request=request,prepared_snapshot=to_jsonb(version)
+    where organization_id=p_org_id;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.draft_prepared','ai_agent',agent.id,
+      jsonb_build_object('revision',draft.revision,'version_id',version.id));
+  return jsonb_build_object('revision',draft.revision,'agent_id',agent.id,'version_id',version.id);
+end;
+$$;
+revoke execute on function public.fn_prepare_onboarding_draft(uuid,uuid,integer,uuid,jsonb,jsonb) from public, anon, authenticated;
+grant execute on function public.fn_prepare_onboarding_draft(uuid,uuid,integer,uuid,jsonb,jsonb) to service_role;
+notify pgrst, 'reload schema';
+
+create or replace function public.fn_validar_ensaio_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_expected_version_id uuid
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  agent public.ai_agents%rowtype;
+  version public.ai_agent_versions%rowtype;
+  business jsonb;
+begin
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations where organization_id=p_org_id and user_id=p_actor_id
+    and role='admin' and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active' or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id for update;
+  if not found or p_expected_revision is null or p_expected_version_id is null
+    or draft.revision is distinct from p_expected_revision or draft.prepared_revision is distinct from draft.revision
+    or draft.prepared_version_id is distinct from p_expected_version_id then raise exception 'draft_conflict'; end if;
+  select * into agent from public.ai_agents where organization_id=p_org_id and id=draft.prepared_agent_id for update;
+  if not found or agent.is_active or agent.is_default or agent.published_version_id is not null or agent.archived_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into version from public.ai_agent_versions where organization_id=p_org_id and id=draft.prepared_version_id and agent_id=agent.id for update;
+  if not found or version.status <> 'draft' or version.channel_session_id is not null
+    or to_jsonb(version) is distinct from draft.prepared_snapshot
+    or agent.name is distinct from draft.configuration->>'name'
+    or agent.name is distinct from draft.prepared_request->>'name'
+    or agent.system_prompt is distinct from version.system_prompt or agent.model is distinct from version.model then
+    raise exception 'draft_conflict';
+  end if;
+  business := jsonb_build_object('display_name',coalesce(org.display_name,org.legal_name),
+    'o_que_faz',case when jsonb_typeof(org.onboarding_state #> '{welcome,o_que_faz}')='string'
+      then org.onboarding_state #> '{welcome,o_que_faz}' else 'null'::jsonb end);
+  if jsonb_typeof(org.onboarding_state #> '{welcome,segmento}')='string' then
+    business := business || jsonb_build_object('segmento',org.onboarding_state #>> '{welcome,segmento}');
+  end if;
+  if business is distinct from draft.prepared_request->'business' then raise exception 'draft_context_changed'; end if;
+  perform 1 from public.ai_models where provider=version.provider and model_id=version.model and deprecated_at is null for share;
+  if not found then raise exception 'draft_model_unavailable'; end if;
+  if version.credential_id is not null then
+    perform 1 from public.ai_provider_credentials where id=version.credential_id and organization_id=p_org_id
+      and provider=version.provider and is_active and validated_at is not null for share;
+    if not found then raise exception 'draft_credential_unavailable'; end if;
+  end if;
+  return draft.prepared_snapshot;
+end;
+$$;
+revoke execute on function public.fn_validar_ensaio_onboarding(uuid,uuid,integer,uuid) from public, anon, authenticated;
+grant execute on function public.fn_validar_ensaio_onboarding(uuid,uuid,integer,uuid) to service_role;
+
+notify pgrst, 'reload schema';
+
+-- 0227 — preferência pessoal e tenant-aware do dashboard.
+create table if not exists public.user_dashboard_preferences (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  layout jsonb not null,
+  schema_version smallint not null default 1,
+  updated_at timestamptz not null default now(),
+  primary key (organization_id, user_id)
+);
+
+alter table public.user_dashboard_preferences
+  drop constraint if exists user_dashboard_preferences_layout_object;
+alter table public.user_dashboard_preferences
+  add constraint user_dashboard_preferences_layout_object
+    check (jsonb_typeof(layout) = 'object');
+alter table public.user_dashboard_preferences
+  drop constraint if exists user_dashboard_preferences_schema_version_positive;
+alter table public.user_dashboard_preferences
+  add constraint user_dashboard_preferences_schema_version_positive
+    check (schema_version > 0);
+
+create index if not exists user_dashboard_preferences_user_idx
+  on public.user_dashboard_preferences (user_id);
+
+drop trigger if exists trg_user_dashboard_preferences_updated_at
+  on public.user_dashboard_preferences;
+create trigger trg_user_dashboard_preferences_updated_at
+  before update on public.user_dashboard_preferences
+  for each row execute function public.fn_set_updated_at();
+
+alter table public.user_dashboard_preferences enable row level security;
+
+drop policy if exists user_dashboard_preferences_own on public.user_dashboard_preferences;
+drop policy if exists user_dashboard_preferences_select_own on public.user_dashboard_preferences;
+drop policy if exists user_dashboard_preferences_insert_own on public.user_dashboard_preferences;
+drop policy if exists user_dashboard_preferences_update_own on public.user_dashboard_preferences;
+drop policy if exists user_dashboard_preferences_delete_own on public.user_dashboard_preferences;
+
+create policy user_dashboard_preferences_select_own
+  on public.user_dashboard_preferences
+  for select
+  to authenticated
+  using (
+    user_id = (select auth.uid())
+    and organization_id in (select public.fn_user_org_ids())
+  );
+create policy user_dashboard_preferences_insert_own
+  on public.user_dashboard_preferences
+  for insert
+  to authenticated
+  with check (
+    user_id = (select auth.uid())
+    and organization_id in (select public.fn_user_org_ids())
+  );
+create policy user_dashboard_preferences_update_own
+  on public.user_dashboard_preferences
+  for update
+  to authenticated
+  using (
+    user_id = (select auth.uid())
+    and organization_id in (select public.fn_user_org_ids())
+  )
+  with check (
+    user_id = (select auth.uid())
+    and organization_id in (select public.fn_user_org_ids())
+  );
+create policy user_dashboard_preferences_delete_own
+  on public.user_dashboard_preferences
+  for delete
+  to authenticated
+  using (
+    user_id = (select auth.uid())
+    and organization_id in (select public.fn_user_org_ids())
+  );
+
+revoke all on public.user_dashboard_preferences from anon, public;
+grant select, insert, update, delete on public.user_dashboard_preferences to authenticated;
+
+comment on table public.user_dashboard_preferences is
+  'Layout pessoal e versionado do dashboard; RLS limita à própria pessoa dentro de organização ativa.';
+
+notify pgrst, 'reload schema';
+
+-- ---- Recuperação explícita da preparação indisponível (migration 0228) ----
+-- Preserva o agente arquivado e o texto salvo. Não publica, não reativa e não chama IA.
+create or replace function public.fn_recuperar_preparacao_onboarding(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_expected_version_id uuid
+) returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  agent public.ai_agents%rowtype;
+begin
+  if p_expected_revision is null or p_expected_revision < 1 then raise exception 'draft_invalid_input'; end if;
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations where organization_id=p_org_id and user_id=p_actor_id
+    and role='admin' and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active' or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id for update;
+  if not found or draft.revision <> p_expected_revision
+    or draft.prepared_version_id is distinct from p_expected_version_id then raise exception 'draft_conflict'; end if;
+  if draft.prepared_revision is null then raise exception 'draft_unavailable'; end if;
+  if draft.prepared_agent_id is not null then
+    select * into agent from public.ai_agents where id=draft.prepared_agent_id and organization_id=p_org_id for update;
+    -- Ponteiro externo, agente publicado/padrão/ativo e preparação íntegra não são recuperáveis.
+    if not found or agent.is_active or agent.is_default or agent.published_version_id is not null then
+      raise exception 'draft_unavailable';
+    end if;
+    if agent.archived_at is null and draft.prepared_version_id is not null then raise exception 'draft_unavailable'; end if;
+    if draft.prepared_version_id is not null then
+      perform 1 from public.ai_agent_versions where id=draft.prepared_version_id
+        and organization_id=p_org_id and agent_id=agent.id and status='draft' for update;
+      if not found then raise exception 'draft_unavailable'; end if;
+    end if;
+  elsif draft.prepared_version_id is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  update public.onboarding_drafts set prepared_agent_id=null,prepared_version_id=null,
+    prepared_revision=null,prepared_request=null,prepared_snapshot=null,rehearsal=null
+    where organization_id=p_org_id;
+  -- Retira somente o recibo obsoleto desta preparação, nunca outros passos do onboarding.
+  if org.onboarding_state #>> '{ai,flow}' = 'reviewed_draft_v2'
+    and org.onboarding_state #>> '{ai,version_id}' = draft.prepared_snapshot->>'id' then
+    update public.organizations set onboarding_state=onboarding_state-'ai' where id=p_org_id;
+  end if;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.preparation_recovered','organization',p_org_id,
+      jsonb_build_object('revision',draft.revision,'previous_agent_id',draft.prepared_agent_id,'previous_version_id',draft.prepared_version_id));
+  return jsonb_build_object('revision',draft.revision);
+end;
+$$;
+revoke execute on function public.fn_recuperar_preparacao_onboarding(uuid,uuid,integer,uuid) from public, anon, authenticated;
+grant execute on function public.fn_recuperar_preparacao_onboarding(uuid,uuid,integer,uuid) to service_role;
+notify pgrst, 'reload schema';
+
+-- ---- Teto único do prompt preparatório (migration 0229) ----
+-- JavaScript mede strings em unidades UTF-16; char_length(text) mede code points.
+-- Este helper mantém SAVE e PREPARE na mesma régua inclusive para caracteres astral.
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+grant usage on schema private to service_role;
+
+create or replace function private.fn_utf16_length(p_value text)
+returns integer
+language sql immutable strict parallel safe
+set search_path = ''
+as $$
+  select coalesce(sum(case when pg_catalog.ascii(character) > 65535 then 2 else 1 end), 0)::integer
+  from pg_catalog.string_to_table(p_value, null) as units(character);
+$$;
+revoke execute on function private.fn_utf16_length(text) from public, anon, authenticated;
+grant execute on function private.fn_utf16_length(text) to service_role;
+
+-- Espelha lib/onboarding/prompt.ts. O teste de paridade percorre todas as
+-- templates, negócio, segmento e Unicode para impedir deriva silenciosa.
+create or replace function private.fn_onboarding_draft_prompt(
+  p_configuration jsonb, p_business jsonb
+) returns text
+language plpgsql immutable strict
+set search_path = ''
+as $$
+declare
+  business_name text := p_business->>'display_name';
+  business_kind text := p_business->>'o_que_faz';
+  business_context text;
+  base_prompt text;
+  segment_label text;
+  objective text := p_configuration->>'objetivo';
+  house_rules text := p_configuration->>'regras_da_casa';
+  -- WhiteSpace + LineTerminator do String.prototype.trim() do ECMAScript.
+  js_whitespace constant text := E' \t\n\013\f\r' || U&'\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF';
+begin
+  business_context := case when business_kind is not null and business_kind <> ''
+    then business_name || ', que é: ' || business_kind else business_name end;
+
+  base_prompt := case p_configuration->>'prompt_template'
+    when 'ecommerce_friendly' then
+      'Você atende os clientes de ' || business_context || '. Fale de forma calorosa e próxima, como alguém que gosta de ajudar. Cumprimente, entenda o que a pessoa precisa e ofereça opções claras. Confirme os detalhes antes de agir.'
+    when 'ecommerce_professional' then
+      'Você atende os clientes de ' || business_context || '. Fale de forma objetiva, cordial e profissional. Vá direto ao ponto, sem parecer frio, e sempre termine indicando o próximo passo.'
+    when 'support_minimal' then
+      'Você atende os clientes de ' || business_context || '. Responda em frases curtas, peça apenas o que for necessário e chame uma pessoa do time assim que a dúvida sair do seu alcance.'
+    else null
+  end;
+  if base_prompt is null then raise exception 'draft_invalid_input'; end if;
+
+  segment_label := case p_business->>'segmento'
+    when 'clinica' then 'Clínica, consultório ou salão'
+    when 'imobiliaria' then 'Imobiliária ou corretor'
+    when 'servicos' then 'Serviços, agência ou obra'
+    when 'curso' then 'Curso, mentoria ou infoproduto'
+    when 'loja' then 'Loja — online ou de rua'
+    when 'generico' then 'Outro tipo de negócio'
+    else null
+  end;
+
+  return pg_catalog.concat_ws(E'\n\n',
+    base_prompt,
+    case when segment_label is not null then 'Segmento do negócio: ' || segment_label end,
+    case when objective is not null and pg_catalog.btrim(objective, js_whitespace) <> ''
+      then 'Objetivo do agente:' || E'\n' || objective end,
+    case when pg_catalog.btrim(house_rules, js_whitespace) <> ''
+      then 'Regras deste rascunho:' || E'\n' || house_rules end
+  );
+end;
+$$;
+revoke execute on function private.fn_onboarding_draft_prompt(jsonb,jsonb) from public, anon, authenticated;
+grant execute on function private.fn_onboarding_draft_prompt(jsonb,jsonb) to service_role;
+
+create or replace function public.fn_save_onboarding_draft(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer, p_configuration jsonb
+) returns jsonb
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  business jsonb;
+  assembled_prompt text;
+  next_revision integer;
+begin
+  if p_expected_revision is null or p_expected_revision < 0
+    or p_configuration is null or jsonb_typeof(p_configuration) <> 'object' then
+    raise exception 'draft_invalid_input';
+  end if;
+  if not (p_configuration ?& array['name','prompt_template','regras_da_casa'])
+    or (p_configuration - array['name','prompt_template','regras_da_casa','objetivo']) <> '{}'::jsonb
+    or (p_configuration ? 'objetivo' and jsonb_typeof(p_configuration->'objetivo') <> 'string')
+    or jsonb_typeof(p_configuration->'name') <> 'string'
+    or jsonb_typeof(p_configuration->'prompt_template') <> 'string'
+    or jsonb_typeof(p_configuration->'regras_da_casa') <> 'string'
+    or length(btrim(p_configuration->>'name')) not between 2 and 80
+    or private.fn_utf16_length(p_configuration->>'regras_da_casa') > 20000
+    or p_configuration->>'prompt_template' not in
+      ('ecommerce_friendly','ecommerce_professional','support_minimal') then
+    raise exception 'draft_invalid_input';
+  end if;
+
+  -- A composição usa somente o negócio lido sob o lock confiável da organização.
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations
+    where organization_id=p_org_id and user_id=p_actor_id and role='admin'
+      and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active'
+    or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+
+  business := jsonb_build_object('display_name',coalesce(org.display_name,org.legal_name),
+    'o_que_faz',case when jsonb_typeof(org.onboarding_state #> '{welcome,o_que_faz}')='string'
+      then org.onboarding_state #> '{welcome,o_que_faz}' else 'null'::jsonb end);
+  if jsonb_typeof(org.onboarding_state #> '{welcome,segmento}')='string' then
+    business := business || jsonb_build_object('segmento',org.onboarding_state #>> '{welcome,segmento}');
+  end if;
+  assembled_prompt := private.fn_onboarding_draft_prompt(p_configuration, business);
+  if private.fn_utf16_length(assembled_prompt) > 20000 then
+    raise exception 'draft_prompt_too_long';
+  end if;
+
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id;
+  if found and p_expected_revision <= draft.revision
+    and draft.configuration = p_configuration then
+    return jsonb_build_object('revision',draft.revision,'configuration',draft.configuration);
+  end if;
+  if p_expected_revision <> coalesce(draft.revision,0) then
+    raise exception 'draft_conflict';
+  end if;
+  next_revision := coalesce(draft.revision,0) + 1;
+  insert into public.onboarding_drafts(organization_id,revision,configuration,updated_by)
+    values(p_org_id,next_revision,p_configuration,p_actor_id)
+    on conflict (organization_id) do update
+      set revision=excluded.revision,configuration=excluded.configuration,
+        updated_by=excluded.updated_by,updated_at=now();
+  insert into public.api_audit_log
+    (organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.draft_saved','organization',p_org_id,
+      jsonb_build_object('revision',next_revision));
+  return jsonb_build_object('revision',next_revision,'configuration',p_configuration);
+end;
+$$;
+revoke execute on function public.fn_save_onboarding_draft(uuid,uuid,integer,jsonb) from public, anon, authenticated;
+grant execute on function public.fn_save_onboarding_draft(uuid,uuid,integer,jsonb) to service_role;
+
+create or replace function public.fn_prepare_onboarding_draft(
+  p_org_id uuid, p_actor_id uuid, p_expected_revision integer,
+  p_expected_version_id uuid, p_expected_business jsonb, p_version jsonb
+) returns jsonb
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  org public.organizations%rowtype;
+  draft public.onboarding_drafts%rowtype;
+  agent public.ai_agents%rowtype;
+  version public.ai_agent_versions%rowtype;
+  business jsonb;
+  request jsonb;
+  credential uuid;
+  tools text[];
+  pipeline uuid;
+  next_number integer;
+begin
+  if p_expected_revision is null or p_expected_revision < 1
+    or p_expected_business is null or jsonb_typeof(p_expected_business) <> 'object'
+    or p_version is null or jsonb_typeof(p_version) <> 'object' then
+    raise exception 'draft_invalid_input';
+  end if;
+  if not (p_version ?& array['system_prompt','provider','model','credential_id','tool_ids'])
+    or (p_version - array['system_prompt','provider','model','credential_id','tool_ids']) <> '{}'::jsonb
+    or jsonb_typeof(p_version->'system_prompt') <> 'string'
+    or length(btrim(p_version->>'system_prompt')) < 10
+    or jsonb_typeof(p_version->'provider') <> 'string'
+    or jsonb_typeof(p_version->'model') <> 'string'
+    or length(btrim(p_version->>'model')) not between 1 and 120
+    or jsonb_typeof(p_version->'tool_ids') <> 'array'
+    or jsonb_typeof(p_version->'credential_id') not in ('null','string') then
+    raise exception 'draft_invalid_input';
+  end if;
+  if private.fn_utf16_length(p_version->>'system_prompt') > 20000 then
+    raise exception 'draft_prompt_too_long';
+  end if;
+  if jsonb_array_length(p_version->'tool_ids') > 25
+    or exists(select 1 from jsonb_array_elements(p_version->'tool_ids') t where jsonb_typeof(t) <> 'string') then
+    raise exception 'draft_invalid_input';
+  end if;
+  begin
+    credential := (p_version->>'credential_id')::uuid;
+  exception when invalid_text_representation then raise exception 'draft_invalid_input';
+  end;
+  select coalesce(array_agg(t), '{}'::text[]) into tools from jsonb_array_elements_text(p_version->'tool_ids') t;
+
+  select * into org from public.organizations where id=p_org_id for update;
+  if not found then raise exception 'draft_forbidden'; end if;
+  perform 1 from public.user_organizations where organization_id=p_org_id
+    and user_id=p_actor_id and role='admin' and accepted_at is not null and revoked_at is null for share;
+  if not found then raise exception 'draft_forbidden'; end if;
+  if org.onboarded_at is not null or org.status <> 'active'
+    or org.suspended_at is not null or org.redacted_at is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  business := jsonb_build_object('display_name',coalesce(org.display_name,org.legal_name),
+    'o_que_faz',case when jsonb_typeof(org.onboarding_state #> '{welcome,o_que_faz}')='string'
+      then org.onboarding_state #> '{welcome,o_que_faz}' else 'null'::jsonb end);
+  if jsonb_typeof(org.onboarding_state #> '{welcome,segmento}')='string' then
+    business := business || jsonb_build_object('segmento',org.onboarding_state #>> '{welcome,segmento}');
+  end if;
+  if business is distinct from p_expected_business then raise exception 'draft_context_changed'; end if;
+  select * into draft from public.onboarding_drafts where organization_id=p_org_id for update;
+  if not found or draft.revision <> p_expected_revision then raise exception 'draft_conflict'; end if;
+
+  perform 1 from public.ai_models where provider=p_version->>'provider' and model_id=p_version->>'model'
+    and deprecated_at is null and (cardinality(tools)=0 or supports_tools) for share;
+  if not found then raise exception 'draft_model_unavailable'; end if;
+  if credential is not null then
+    perform 1 from public.ai_provider_credentials where id=credential and organization_id=p_org_id
+      and provider=p_version->>'provider' and is_active and validated_at is not null for share;
+    if not found then raise exception 'draft_credential_unavailable'; end if;
+  end if;
+
+  request := jsonb_build_object('business',business,'version',p_version,'name',draft.configuration->>'name');
+  if draft.prepared_agent_id is not null then
+    select * into agent from public.ai_agents where id=draft.prepared_agent_id and organization_id=p_org_id for update;
+    if not found or agent.is_active or agent.is_default or agent.published_version_id is not null
+      or agent.archived_at is not null then raise exception 'draft_unavailable'; end if;
+    select * into version from public.ai_agent_versions where id=draft.prepared_version_id
+      and organization_id=p_org_id and agent_id=agent.id for update;
+    if not found or version.status <> 'draft' or to_jsonb(version) is distinct from draft.prepared_snapshot
+      or agent.name is distinct from draft.prepared_request->>'name'
+      or agent.system_prompt is distinct from draft.prepared_request #>> '{version,system_prompt}'
+      or agent.model is distinct from draft.prepared_request #>> '{version,model}' then
+      raise exception 'draft_conflict';
+    end if;
+    if draft.prepared_revision=p_expected_revision and draft.prepared_request=request then
+      return jsonb_build_object('revision',draft.revision,'agent_id',agent.id,'version_id',version.id);
+    end if;
+  elsif draft.prepared_version_id is not null or draft.prepared_revision is not null then
+    raise exception 'draft_unavailable';
+  end if;
+  if p_expected_version_id is distinct from draft.prepared_version_id then raise exception 'draft_conflict'; end if;
+  if exists(select 1 from public.ai_agents where organization_id=p_org_id
+    and name=draft.configuration->>'name' and id is distinct from draft.prepared_agent_id) then
+    raise exception 'draft_name_conflict';
+  end if;
+  if agent.id is null then
+    insert into public.ai_agents(organization_id,name,system_prompt,model,kind,is_active,is_default,created_by)
+      values(p_org_id,draft.configuration->>'name',p_version->>'system_prompt',p_version->>'model','mcp_agent',false,false,p_actor_id)
+      returning * into agent;
+  else
+    update public.ai_agents set name=draft.configuration->>'name',system_prompt=p_version->>'system_prompt',model=p_version->>'model'
+      where id=agent.id and organization_id=p_org_id;
+  end if;
+  select id into pipeline from public.crm_pipelines where organization_id=p_org_id and is_default and not is_archived;
+  select coalesce(max(version_number),0)+1 into next_number from public.ai_agent_versions where agent_id=agent.id and organization_id=p_org_id;
+  insert into public.ai_agent_versions(organization_id,agent_id,version_number,system_prompt,provider,model,
+    credential_id,tool_ids,pipeline_ids,channel_session_id,status,created_by)
+    values(p_org_id,agent.id,next_number,p_version->>'system_prompt',p_version->>'provider',p_version->>'model',
+      credential,tools,case when pipeline is null then '{}'::uuid[] else array[pipeline] end,null,'draft',p_actor_id)
+    returning * into version;
+  update public.onboarding_drafts set prepared_agent_id=agent.id,prepared_version_id=version.id,
+    prepared_revision=draft.revision,prepared_request=request,prepared_snapshot=to_jsonb(version)
+    where organization_id=p_org_id;
+  insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+    values(p_org_id,p_actor_id,'onboarding.draft_prepared','ai_agent',agent.id,
+      jsonb_build_object('revision',draft.revision,'version_id',version.id));
+  return jsonb_build_object('revision',draft.revision,'agent_id',agent.id,'version_id',version.id);
+end;
+$$;
+revoke execute on function public.fn_prepare_onboarding_draft(uuid,uuid,integer,uuid,jsonb,jsonb) from public, anon, authenticated;
+grant execute on function public.fn_prepare_onboarding_draft(uuid,uuid,integer,uuid,jsonb,jsonb) to service_role;
+
+notify pgrst, 'reload schema';
+
+-- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
+--
+-- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES
+-- dele — quem o empurrar para o meio desarma a cura para tudo que vier depois.
+-- Vigiado por `tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts`.
+--
+-- A 0108 revogou anon numa LISTA de 8 funções, medida num banco instalado do
+-- ZERO. Quem ATUALIZA tem outro estado: o `ALTER DEFAULT PRIVILEGES ... GRANT
+-- ALL ON FUNCTIONS TO anon` do corpo deste arquivo grava uma entrada em
+-- `pg_default_acl` que fica no catálogo PARA SEMPRE, e a partir daí toda função
+-- criada em `public` nasce com EXECUTE para anon — inclusive as deste apêndice.
+--
+-- Medido numa VPS real (2026-08-07), comparando com o que um install fresco
+-- produz: 6 definer expostas a anon e 5 a authenticated, entre elas
+-- `fn_decrypt_oauth` — alcançável pela anon key, que vai para o browser.
+--
+-- Lista conserta o estoque e reabre no próximo `create function`. Esta varredura
+-- é auto-curativa e roda DEPOIS de tudo que cria função, então cura no mesmo run
+-- em que o defeito nasceria. Desfazer o ALTER DEFAULT PRIVILEGES não serve: ele
+-- vem do `pg_dump` do Supabase e é reescrito a cada re-aplicação.
+--
+-- As duas origens de EXECUTE (a mesma lição da 0108): grant DIRETO a anon, que
+-- `revoke from public` não remove; e grant a PUBLIC, do qual anon HERDA, que
+-- `revoke from anon` não remove. O privilégio EFETIVO de authenticated e
+-- service_role é medido ANTES e devolvido depois — tira anon sem tirar leitura.
+do $$
+declare
+  f record;
+  tinha_auth boolean;
+  tinha_service boolean;
+begin
+  if to_regrole('anon') is null then
+    return;
+  end if;
+
+  for f in
+    select p.oid, p.oid::regprocedure as assinatura
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.prosecdef
+  loop
+    tinha_auth := to_regrole('authenticated') is not null
+                  and has_function_privilege('authenticated', f.oid, 'EXECUTE');
+    tinha_service := to_regrole('service_role') is not null
+                     and has_function_privilege('service_role', f.oid, 'EXECUTE');
+
+    execute format('revoke execute on function %s from public, anon', f.assinatura);
+
+    if tinha_auth then
+      execute format('grant execute on function %s to authenticated', f.assinatura);
+    end if;
+    if tinha_service then
+      execute format('grant execute on function %s to service_role', f.assinatura);
+    end if;
+  end loop;
+end $$;
+
+-- regra 2 (authenticated): as 5 que o update abriu e o install não abre. Aqui não
+-- cabe varredura — `authenticated` PRECISA de EXECUTE nos helpers de RLS e em
+-- `retrieve_top_k_chunks` (num install fresco ele tem). É julgamento por função,
+-- e o alvo de cada linha é o valor que um install fresco produz, medido.
+revoke execute on function public.fn_audit_log_row() from authenticated;
+revoke execute on function public.fn_decrypt_oauth(bytea) from authenticated;
+revoke execute on function public.fn_encrypt_oauth(text) from authenticated;
+revoke execute on function public.fn_lgpd_cascade_redact_contact(uuid, uuid, uuid) from authenticated;
+revoke execute on function public.fn_update_budget_consumption() from authenticated;
+
+grant execute on function public.fn_audit_log_row() to service_role;
+grant execute on function public.fn_decrypt_oauth(bytea) to service_role;
+grant execute on function public.fn_encrypt_oauth(text) to service_role;
+grant execute on function public.fn_lgpd_cascade_redact_contact(uuid, uuid, uuid) to service_role;
+grant execute on function public.fn_update_budget_consumption() to service_role;

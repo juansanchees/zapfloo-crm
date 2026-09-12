@@ -1,3 +1,7 @@
+// @vitest-environment node
+// API de servidor: use o parser multipart e os construtores nativos juntos.
+// No Node 24, misturá-los com os globais do jsdom faz req.formData() lançar
+// antes de alcançar a importação (11 casos viravam 422). Não é teste de DOM.
 /**
  * A IMPORTAÇÃO DE LEADS NÃO ACEITA NADA NO ESCURO.
  *
@@ -210,7 +214,7 @@ describe("POST /api/v1/leads/import", () => {
 
     const res = await POST(pedido("nome,valor\nAna,100\nBruno,200"));
 
-    expect(res.status).toBe(200);
+    expect(res.status, await res.clone().text()).toBe(200);
     expect(vi.mocked(createLeadHandler)).toHaveBeenCalledTimes(2);
     for (const [, ctx] of vi.mocked(createLeadHandler).mock.calls) {
       expect((ctx as { organization_id: string }).organization_id).toBe(ORG);

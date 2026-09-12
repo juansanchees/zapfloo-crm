@@ -33,7 +33,7 @@ export function VersionFooter({
   if (!alerta) {
     return (
       <p
-        className={cn("px-3 py-1 text-[11px] text-muted-foreground", collapsed && "px-0 text-center")}
+        className={cn("px-3 py-1 text-[11px] text-white/60", collapsed && "px-0 text-center")}
         title={`${t("Versão")} ${label}`}
       >
         {collapsed ? label.split(".").slice(0, 2).join(".") : `${t("versão")} ${label}`}
@@ -48,7 +48,7 @@ export function VersionFooter({
       onClick={onNavigate}
       title={`${t("Nova versão")} ${novo} ${t("disponível")}`}
       className={cn(
-        "flex items-center gap-2 rounded-md px-3 py-2 text-xs text-foreground hover:bg-accent/50",
+        "flex items-center gap-2 rounded-md px-3 py-2 text-xs text-white hover:bg-accent/50",
         collapsed && "justify-center px-2",
       )}
     >

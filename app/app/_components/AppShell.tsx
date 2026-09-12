@@ -1,7 +1,9 @@
 "use client";
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
+import { AreaNavigation } from "@/components/shell/AreaNavigation";
 import { useInboundMessageAlerts } from "@/hooks/notifications/useInboundMessageAlerts";
 import { useCrmAlerts } from "@/hooks/notifications/useCrmAlerts";
 import { useNotifyOpenFromServiceWorker } from "@/lib/notifications/notify_open";
@@ -9,15 +11,19 @@ import { useNotifyOpenFromServiceWorker } from "@/lib/notifications/notify_open"
 interface AppShellProps {
   sidebarCollapsed: boolean;
   children: ReactNode;
+  notice?: ReactNode;
+  onboardingNotice?: ReactNode;
 }
 
-export function AppShell({ sidebarCollapsed, children }: AppShellProps) {
+export function AppShell({ sidebarCollapsed, children, notice, onboardingNotice }: AppShellProps) {
+  const pathname = usePathname();
+  const isInbox = pathname === "/app/inbox" || pathname.startsWith("/app/inbox/");
   useInboundMessageAlerts();
   useCrmAlerts();
   useNotifyOpenFromServiceWorker();
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <div className="hidden md:block">
+    <div className="flex h-screen h-dvh w-full overflow-hidden bg-workspace">
+      <div className="hidden h-full md:block">
         <Sidebar collapsed={sidebarCollapsed} />
       </div>
       {/*
@@ -39,9 +45,18 @@ export function AppShell({ sidebarCollapsed, children }: AppShellProps) {
         SEGUNDA medida da mesma coisa — a que discordava e deixava a barra por
         cima da lista.
       */}
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        {notice}
         <TopBar />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <AreaNavigation />
+        <main className={isInbox
+          ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-workspace p-2 md:p-4"
+          : "min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6"}>
+          {onboardingNotice}
+          {/* Altura automática para as raízes h-full não comprimirem seus filhos.
+              O piso preenche telas curtas; a rolagem continua pertencendo ao main. */}
+          {isInbox ? children : <div className="flex min-h-full flex-col">{children}</div>}
+        </main>
       </div>
     </div>
   );

@@ -38,7 +38,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 p-0 sm:max-w-xs"
+        className="flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 border-white/10 bg-[#111827] p-0 text-white sm:max-w-xs dark:bg-[#090d16]"
       >
         <SheetTitle className="sr-only">{t("Navegação principal")}</SheetTitle>
         <SidebarContent

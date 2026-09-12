@@ -300,19 +300,7 @@ describe("histórico da agenda — a repartição nas quatro abas", () => {
     expect(contador("proximos"), "e ela não pode ficar contada nos dois lados").toBe(0);
   });
 
-  /**
-   * CONTROLE POSITIVO da catraca abaixo, e é um `it` NORMAL de propósito.
-   *
-   * `it.fails` é satisfeito por QUALQUER falha — import quebrado, testid
-   * renomeado, render que estoura. Se a montagem parar de funcionar, a catraca
-   * fica verde por não conseguir nem desenhar o cenário, e ninguém vira essa
-   * pedra nunca: catraca verde pelo motivo errado é pior que caso ausente,
-   * porque parece cobertura.
-   *
-   * Este caso exercita o MESMO cenário e só exige que ele apareça em ALGUMA
-   * aba. Regressão de montagem reprova ALTO aqui, apontando para a montagem,
-   * enquanto a catraca seguiria muda.
-   */
+  // Garante que a renderização não perde o atendimento em curso.
   it("controle positivo: o compromisso EM ANDAMENTO é desenhado em alguma aba", () => {
     montar([ag("em-andamento", -5, { duracao: 30 })]);
 
@@ -320,33 +308,8 @@ describe("histórico da agenda — a repartição nas quatro abas", () => {
     expect(soma, "se ele não está em aba nenhuma, a catraca abaixo é ruído").toBe(1);
   });
 
-  /**
-   * CATRACA — defeito medido, não teste desligado.
-   *
-   * `separar()` decide "passado" por `isBefore(comeca, agora)`, e só olha o
-   * COMEÇO. Uma consulta que começou às 14h32, dura 30 minutos e está
-   * ACONTECENDO às 14h37 é classificada como passada. Consequências, as duas
-   * na mesma linha:
-   *
-   *   1. ela some de "Próximos" no minuto em que começa — quem abre a tela
-   *      durante o atendimento não vê o que está em curso;
-   *   2. ela aparece em "Passados" oferecendo "Realizado" e "Faltou" (decisão
-   *      17) enquanto a pessoa ainda está na sala: o produto pergunta se
-   *      aconteceu antes de ter acontecido, e "Faltou" clicado ali é falta
-   *      registrada em cima de quem compareceu.
-   *
-   * O resto da casa já trata o compromisso como ocupado até `termina` — a
-   * consulta de sobreposição de `lib/agenda/consulta.ts` filtra por
-   * `starts_at < ate AND ends_at > de`. Aqui `termina` não é lido.
-   *
-   * UMA asserção só, e é deliberado: `it.fails` é satisfeito pela PRIMEIRA que
-   * falha, então asserção extra seria letra morta enquanto o defeito existir, e
-   * estrearia sem cobertura no dia do conserto.
-   *
-   * No dia em que a fronteira passar a olhar `termina`, este caso REPROVA por
-   * ter passado, e quem consertar é obrigado a vir tirar o `.fails`.
-   */
-  it.fails("o compromisso EM ANDAMENTO ainda é Próximos — começou, mas não terminou", () => {
+  // Regressão: olhar somente o começo mandava atendimentos em curso para Passados.
+  it("o compromisso EM ANDAMENTO ainda é Próximos — começou, mas não terminou", () => {
     montar([ag("em-andamento", -5, { duracao: 30 })]);
 
     expect(
@@ -354,5 +317,11 @@ describe("histórico da agenda — a repartição nas quatro abas", () => {
       "o que está acontecendo agora sai da tela de quem atende e reaparece em Passados " +
         "oferecendo 'Faltou' para quem está na sala",
     ).toEqual(["em-andamento"]);
+  });
+
+  it("a fronteira usa o fim: ainda em curso antes dele e passado no instante exato", () => {
+    montar([ag("terminou-agora", -30), ag("ainda-em-curso", -29)]);
+    expect(idsNaAba("passados")).toEqual(["terminou-agora"]);
+    expect(idsNaAba("proximos")).toEqual(["ainda-em-curso"]);
   });
 });

@@ -1,0 +1,104 @@
+{
+  "source": ".superpowers/leva-final/final/editor-e-agenda-altura-390-ee79a--e-a-Agenda-conserva-altura-chromium/editor-390x720.json",
+  "measurement": {
+    "before": {
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "horizontalOverflow": 0,
+      "main": {
+        "tag": "main",
+        "testid": null,
+        "classes": "min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6",
+        "x": 0,
+        "y": 194,
+        "width": 390,
+        "height": 526,
+        "area": 205140,
+        "visibleArea": 205140,
+        "cssHeight": "526px",
+        "minHeight": "0px",
+        "overflowY": "auto",
+        "flexShrink": "1",
+        "clientHeight": 526,
+        "scrollHeight": 713,
+        "scrollTop": 0
+      },
+      "canvas": {
+        "tag": "div",
+        "testid": "flow-canvas",
+        "classes": "FlowCanvas-module__Yt3enW__canvas relative min-w-0 flex-1",
+        "x": 16,
+        "y": 518,
+        "width": 358,
+        "height": 389,
+        "area": 139262,
+        "visibleArea": 72316,
+        "cssHeight": "389px",
+        "minHeight": "auto",
+        "overflowY": "visible",
+        "flexShrink": "1",
+        "clientHeight": 389,
+        "scrollHeight": 389,
+        "scrollTop": 0
+      },
+      "nodeInsideCanvas": true
+    },
+    "afterZoom": {
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "horizontalOverflow": 0,
+      "main": {
+        "tag": "main",
+        "testid": null,
+        "classes": "min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6",
+        "x": 0,
+        "y": 194,
+        "width": 390,
+        "height": 526,
+        "area": 205140,
+        "visibleArea": 205140,
+        "cssHeight": "526px",
+        "minHeight": "0px",
+        "overflowY": "auto",
+        "flexShrink": "1",
+        "clientHeight": 526,
+        "scrollHeight": 713,
+        "scrollTop": 187
+      },
+      "canvas": {
+        "tag": "div",
+        "testid": "flow-canvas",
+        "classes": "FlowCanvas-module__Yt3enW__canvas relative min-w-0 flex-1",
+        "x": 16,
+        "y": 331,
+        "width": 358,
+        "height": 389,
+        "area": 139262,
+        "visibleArea": 139262,
+        "cssHeight": "389px",
+        "minHeight": "auto",
+        "overflowY": "visible",
+        "flexShrink": "1",
+        "clientHeight": 389,
+        "scrollHeight": 389,
+        "scrollTop": 0
+      },
+      "nodeInsideCanvas": true
+    },
+    "zoom": {
+      "hit": true,
+      "changed": true,
+      "scaleBefore": 1.45536,
+      "scaleAfter": 1.2128
+    },
+    "trigger": {
+      "clicked": true,
+      "opened": true,
+      "closed": true
+    }
+  }
+}

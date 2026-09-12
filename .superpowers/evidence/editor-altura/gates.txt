@@ -1,0 +1,28 @@
+Checkout: .worktrees/altura-shell, branch codex/altura-shell.
+NÃO é medição do checkout principal.
+Runtime: Node 22.23.2, pnpm 9.15.9, NODE_OPTIONS=--max-old-space-size=4096.
+
+corepack pnpm gov:verify — exit 0
+typecheck: tsc --noEmit -p tsconfig.typecheck.json
+lint: 310 problems (0 errors, 310 warnings)
+lint-channels: ok (62 arquivos de dívida conhecida, nenhum novo)
+lint-role-rank: ok (nenhum ROLE_RANK[ fora de lib/auth/ em app/api)
+test:unit: vitest run, sem restringir a tests/unit/
+Test Files 749 passed (749)
+Tests 7874 passed (7874)
+Duration 282.25s
+
+corepack pnpm release:conferir — exit 0
+Modo de conferência: nenhum arquivo escrito, nenhuma release cortada.
+
+corepack pnpm test:db — exit 0
+Postgres efêmero local pgvector/pgvector:pg15, banco novo por arquivo.
+baseline INSTALL: ok, ON_ERROR_STOP=1
+baseline UPDATE: ok, ON_ERROR_STOP=1 (zero erro na reaplicação)
+Test Files 167 passed (167)
+Tests 1374 passed | 1 skipped (1375)
+Duration 383.40s
+Skip explícito preexistente: tests/invariants/webhooks-inbound.test.ts:539,
+rate limit 429 coberto por unitário do fallback in-memory.
+Nenhuma mudança em schema ou tests/invariants nesta tarefa.
+Container temporário deskcomm-test-db-13646 removido pelo teardown do gate.

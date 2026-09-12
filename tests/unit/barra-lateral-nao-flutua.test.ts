@@ -66,4 +66,13 @@ describe("a barra ocupa lugar, em vez de flutuar", () => {
     const margens = [...CASCA.matchAll(/\bml-(?:16|60)\b/g)].map((m) => m[0]);
     expect(margens, "voltou a segunda medida da mesma coisa").toEqual([]);
   });
+
+  it("a casca limita a rolagem ao conteúdo e mantém a barra no viewport", () => {
+    // `sticky` não prende se o documento inteiro continuar sendo o scroller.
+    // A casca ocupa exatamente a viewport; só o `main` rola. Assim a barra
+    // permanece visível sem voltar ao par frágil `fixed` + margem compensatória.
+    expect(CASCA).toMatch(/\bh-screen\b/);
+    expect(CASCA).toMatch(/\boverflow-hidden\b/);
+    expect(CASCA).toMatch(/<main[^>]*\boverflow-auto\b/);
+  });
 });

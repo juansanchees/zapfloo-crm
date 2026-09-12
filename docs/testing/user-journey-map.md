@@ -16,9 +16,113 @@
 - Resultado: `PASS` / `FAIL(bug#)` / `WARN` (funciona mas UX ruim).
 - Evidência: screenshot/trace em `.superpowers/evidence/vps-qa/`.
 
+### Leva final: gatilhos, agente e perda de atualizações `[P0/P1]` — 10/set/2026
+
+Em `codex/altura-shell`, os sete casos nomeados pelo dono passaram junto
+com as provas de alcance do popover e altura do editor/Agenda: **21 passed**,
+zero skips, exit 0. Popover medido em 1280×720 e 390×720; Salvar recebe clique
+antes/depois da rolagem e persiste o gatilho após reload. Caso e etapa geram
+enrollment pelo evento e dreno existentes; resolver o caso cancela. A causa
+reproduzida era alcance do botão, não `!dirty` nem falha do motor.
+
+Agente novo oferece os dois próximos passos no próprio formulário. A régua
+de espanhol exclui apenas a inicial decorativa derivada da empresa, e preserva
+rótulos reais; PT retorna byte a byte na mesma tela. Nome do negócio usa o
+destino `setup-ai` desta branch e identidade no aside; isso não valida toda J1.
+A execução adicional do wizard inteiro terminou com 3 passes, 1 falha no
+próximo caso (espera telefone, recebe IA) e 9 não executados pela sequência
+serial. A jornada completa segue pendente; não se importou a ordem da P0.
+
+No quadro, a chave estável deixa o detector de 45s trabalhar entre renders.
+Browser provou entrega saudável, assinatura `subscribed`, duas entregas
+suprimidas, divergência 0→1, dado recuperado e aviso visível. Removeu-se
+`test.fail`: falha de pré-condição agora reprova. A predição histórica de JR
+abaixo não deve ser tomada como estado atual desta spec; esta rodada mediu-a.
+Não é prova de degradação do Inbox/dossiê.
+
+Sabotagem em produto reprovou os sete casos e as duas geometrias; sabotagens
+unitárias guardam também a cadência e a régua. Harness preserva a asserção
+original quando a limpeza falha. Evidências, limites, gates e pendências:
+[`leva-final-e2e.md`](leva-final-e2e.md) e
+`.superpowers/evidence/leva-final/`. Sem schema, deploy ou medição de produção.
+
+### Altura da shell e Agenda `[P0]` — 10/set/2026
+
+`codex/altura-shell`: contêiner não-Inbox com altura automática e piso
+`min-h-full`, sem mudar a implementação da Agenda. Os quatro casos pedidos
+(clique, dois arrastes e histórico) passaram no recorte de 10 testes em
+1280×720 e 390×720; a preparação mobile abre o menu recolhido por clique.
+Sonda em 12 rotas × 2 larguras: grade da Agenda 0 → 752px, rolador principal
+preservado. A retirada isolada do mínimo NÃO reproduziu as quatro falhas;
+reprovou o piso de Plano. Sem o contêiner, três casos reprovaram na repetição
+(quatro na rodada original), com grade novamente em 0px nas duas larguras.
+Limites, comandos e evidências: [altura-shell.md](altura-shell.md) e
+`.superpowers/evidence/altura-shell/`. Não equivale a QA completo das 12 telas.
+
+### Editor de follow-up ocupa o espaço útil `[P0]` — 10/set/2026 — UI validada
+
+O canvas zerado foi reproduzido em 1280×720 e 390×720 sem derrubar a Agenda.
+Remover seu `h-full` recuperou o paint; arrastes além dos 539px restantes ainda
+acionavam auto-pan e tiravam nós anteriores da área clicável. FIX3 (`h-dvh`)
+foi rejeitado com 2 falhas/22 passes. FIX4, medindo a altura útil do `main`,
+passou o recorte de 24 casos, mas a regressão sintética 180→240px provou que um
+irmão interno podia deixar a medida obsoleta sem resize do `main`: 1 falha/1
+passe, deltas 180/240px. FIX5 observa `main`, irmãos anteriores e mudanças de
+`childList`; build e geometria passaram (2/2 em 41,0s), inclusive com delta
+inferior 0px nos estímulos e em 767↔768. O alcance comprovado é a estrutura DOM
+atual; a rodada final combinada é registrada abaixo.
+
+A prova usa wheel real, hit-test e escala `DOMMatrix`; 390px continua sendo
+Chromium desktop estreito, não toque. As specs antigas mantêm seus próprios
+viewports. O bloco sintético é somente estímulo geométrico, não aviso/evento de
+negócio. Ao remover o FIX5, falharam os 12 casos antigos do editor e as 2 sondas,
+enquanto os 10 casos da Agenda passaram. Ao remover o wrapper do AppShell com
+FIX5 retido, as 2 sondas e 3/4 casos antigos alvo reprovaram; o quarto passou e
+quatro casos seguintes não rodaram pela cascata serial existente. Portanto, a
+prova exata 4/4 não foi atingida. Após restaurar ambas as sabotagens, build limpo
+e os 24 casos combinados passaram sem skips. Canvas mediu 539/389px, a grade
+752/752px, o histórico 128/154px e o overflow horizontal 0px; zoom e gatilho
+foram acionados de verdade. `gov:verify` e `test:db` também passaram localmente.
+CI, P0 completa, VPS, WhatsApp e toque em aparelho não foram provados. Detalhes:
+[`editor-altura.md`](editor-altura.md).
+
+### Contraste da navegação autenticada `[P0]` — 10/set/2026
+
+`rbac-roles.spec.ts` intacta, executada nos temas claro/escuro: 8/8 passaram.
+Medição adicional da shell em 1440px e 390px, versão instalada e aviso de nova
+versão: menor contraste dos textos corrigidos 6,99:1. Sabotagem `/60` → `/40`
+reprovou os dois casos de acessibilidade RBAC nos dois temas (4/4), sem alterar
+as specs. Detalhes, limites e reprodução em `docs/testing/contraste-shell.md`;
+evidências em `.superpowers/evidence/contraste-shell/`.
+
+### Prazo de teste e espaço do atendimento `[P0]`
+
+`tests/e2e/periodo-de-testes.spec.ts`: login de empresa com cadastro conhecido →
+onboarding com vencimento em cadastro + 168 horas → recarga sem renovar o prazo →
+explorar CRM → abrir conversa em 1440×900, 768×1024 e 390×844. O aviso mantém a
+mesma data, o composer cabe na tela e não há overflow horizontal do documento.
+Cadastro vencido da fixture mostra o término sem bloquear atendimento. Prova
+local contra Supabase e build de produção; não equivale à validação na VPS.
+Evidência: `.superpowers/evidence/periodo-de-testes/`.
+
+### Editor de fluxos: contraste e recuperação de erro `[P1]`
+
+`tests/e2e/fluxo-controles-contraste.spec.ts`: cores dos controles com contraste
+>=4,5:1 nos dois temas, botões clicáveis, enquadramento e ausência de sobreposição
+com “Adicionar nó” em 390px. Recusa controlada da credencial apresenta links de
+revisão sem apagar o texto nem repetir o POST. Este último teste valida a UX de
+falha, não a geração por um provedor real. Capturas em
+`.superpowers/evidence/fluxo-controles/`.
+
 ---
 
 ## J1 — Onboarding do primeiro usuário `[P0]`
+
+### Adendo medido — auditoria anexos 3–6, 10/set/2026
+
+`codex/correcoes-anexos`: banco fresco local via `baseline.sql` + bootstrap-owner, sem Resend. O caso novo em `onboarding-ativacao-restrita.spec.ts` provou arquivar → recuperar → preparar novamente pela tela sem chave de IA, preservando rascunho e agente anterior inativo. DOM validado em 1440, 768 e 390 px (sem overflow horizontal, botão >44px, fonte ≥12px). A spec completa passou seus três cenários; as jornadas PT-BR/ES usam HTTP de IA sintético local, não fornecedor/WhatsApp real. Detalhes e limitações: [anexos-3-6.md](anexos-3-6.md).
+
+A spec completa `redesign-operacional.spec.ts` passou quatro cenários, incluindo resposta controlada do Copiloto após 12 segundos com um único POST. Isto não mede cobrança real. O primeiro teste de recuperação precisou corrigir o seletor do próprio harness (`Email`), não a tela.
 
 Contexto do código: primeiro usuário nasce do `scripts/bootstrap-owner.ts`
 (install.sh); quem é convidado e ainda não tem conta entra por `/signup?invite=`.
@@ -54,6 +158,7 @@ fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Ga
 | J1.23 | Convite expirado ou emitido para outro e-mail, no signup | falha FECHADA: não provisiona organização nenhuma e explica no login. Cair no provisionamento aqui devolveria o defeito de J1.22 para quem demorasse entre criar a conta e confirmar o e-mail · **PASS** (`lib/auth/convite-no-signup.test.ts`) |
 
 | J1.24 | Ver o funcionário atender antes de terminar | passo novo entre treinar e chamar o time: ensaio com o runtime real (`is_dry_run`), nada enviado pelo WhatsApp. Trata os três estados — sem agente, agente em rascunho, e o caso normal — e o erro aparece aqui, não com o primeiro cliente de verdade · **PASS** (`tests/e2e/vps-fresh-onboarding.spec.ts`, `lib/onboarding/passos.test.ts`) |
+| J1.24a | Entender o limite do teste legado | Todas as ferramentas retornam recusa antes dos handlers; eventos operacionais suprimidos, registro técnico mantido. `runtime-dry-run-isolado.test.ts` e `test-panel-isolamento.test.tsx`; prova HTTP sintética no caso de ensaio de `troca-de-organizacao-tem-volta.spec.ts` (opt-in local). Não comprova ferramentas nem transporte reais. |
 | J1.25 | O passo 1 mostra o que a instalação já trouxe | provedor contratado, WhatsApp pronto, funil criado — cada linha MEDIDA. E o campo de nome vem vazio quando a organização ainda está com o "Minha Empresa" do instalador, em vez de obrigar a pessoa a apagá-lo · **PASS** (`lib/instalacao/ambiente.test.ts`) |
 | J1.26 | O quadro de clientes deixa de nascer de e-commerce | passo novo entre treinar e ver ele atender. `trg_seed_default_pipeline_for_org` semeia "Carrinho abandonado / Em separação / Enviado" em TODA organização, e a clínica abria o quadro dela e lia isso. A sugestão sai do MESMO modelo que vai atender — se ela falha, o dono descobre agora e não com o primeiro cliente · **PASS** (`tests/e2e/wizard-do-funcionario.spec.ts`, `lib/onboarding/proposta-de-funil.test.ts`) |
 | J1.27 | O quadro **ensina o funcionário a percorrê-lo** | MEDIDO em 2026-08-13: **312 etapas em 43 funis, 4 com `agent_stage_hint`** — e as 4 de organizações de teste. Toda instalação real nascia com `coberturaDoFunil()` devolvendo `mudo: true`: o assistente tinha o funil no escopo (J1.20) e não sabia o que significava nenhuma coluna. Aqui uma coluna é NOME + DESTINO indissociáveis · **PASS** (`tests/invariants/quadro-do-onboarding.test.ts`, 7 casos contra o Postgres do baseline) |
@@ -77,6 +182,34 @@ fonte só (`lib/onboarding/passos.ts`) — eram três listas que discordavam. Ga
 > O que travava a virada era o editor novo exigir `credential_id`, enquanto instalação pelo kit funciona com a chave de plataforma do `.env` e não tem nenhuma linha em `ai_provider_credentials` — o dono cairia numa tela onde não consegue salvar nada. Resolvido nas duas pontas: `versionShapeSchema` aceita `credential_id: null` (= a chave da instalação), o seletor oferece essa opção, e a rota de versões **recusa** o nulo quando o ambiente não tem chave daquele provedor (falha fechada — senão publicaria um agente que morre em toda mensagem).
 >
 > MEDIDO na tela, num tenant fresco: o funcionário criado no wizard abre no editor atual, com "Chave de acesso: A chave desta instalação (anthropic)", o pacote "Vender e mover o funil" ativo, e a contagem de capacidades que ele traz. (O número saiu daqui: já dizia 12 quando eram 16, e o teto foi de 20 para 25. Para o valor de hoje: `pnpm exec tsx -e 'import("@/lib/ai/agents/capacidades-padrao").then(m => console.log(m.capacidadesPadraoDoOnboarding().length))'`.)
+
+### J1.36 — Guardar a configuração antes de criar o agente
+
+Recorte local de 2026-09-08: etapa Treinar → **Salvar rascunho** → recarregar e retomar nome, jeito e regras. Sem chave de IA, criação de agente, versão, canal ou mudança de `onboarding_state`. Não equivale a ensaio nem revisão para publicação.
+
+- `tests/invariants/onboarding-draft-save.test.ts`: CAS concorrente, idempotência, RLS admin/tenant, grants e audit sem conteúdo.
+- `tests/unit/onboarding-rascunho-action.test.ts` e `onboarding-rascunho-form.test.tsx`: contexto confiável, formulário antigo após troca de org/usuário, erro sem perda de campos e falha de leitura explícita.
+- `tests/e2e/troca-de-organizacao-tem-volta.spec.ts`: percurso visível, recarga, duas abas e duas organizações com revisão igual, nenhuma ativação; desktop/celular.
+- Resultado da execução e limites: `docs/superpowers/reports/2026-09-08-salvar-rascunho-onboarding.md`.
+
+### J1.37 — Preparar uma versão inativa (contrato backend)
+
+Recorte local de 2026-09-08. `prepararRascunho` materializa configuração salva como agente inativo/não padrão e versão draft sem canal. Escolha explícita de provedor/modelo/credencial, sem chamada de IA. O painel `setup-ai/_ensaio.tsx` agora consome esse contrato. Preparação isolada continua sem equivaler a revisão ou ativação.
+
+### J1 — Ensaio de texto sem canal `[P0]`
+
+- Porta: `setup-ai` → salvar rascunho → escolher modelo → preparar → testar mensagem → revisar resposta. Teclado/Enter não submete o criador legado; revisão é uma ação separada.
+- Banco: `tests/invariants/onboarding-ensaio.test.ts` cobre snapshot antes/depois da rede, mudança de negócio/configuração/versão, revogação e organização concluída, CAS de execução, lease recuperável, prova real via `llm_calls`, revisão idempotente e controle de mutação SQL.
+- UI: caso `ensaio explícito retoma seleção...` em `troca-de-organizacao-tem-volta.spec.ts`; erro sem chave na execução padrão e integração SDK→HTTP sintético local→SQL→UI na execução opt-in `E2E_ONBOARDING_SYNTHETIC_PROVIDER=1`. A segunda não é chamada a um provedor real.
+- Limite da prova: texto apenas. Não usa RAG, ferramentas, contatos/canais, envio ou publicação. Não substitui QA de WAHA e instalação completa.
+- Limites técnicos: mensagem 4.000 caracteres, saída 1.200 tokens/12.000 caracteres, rede 30s via abort do SDK, lease 60s, seis tentativas/min por organização via contador compartilhado (fallback por processo). Não são plano comercial nem alteração do orçamento canônico.
+- Retorno e anti-morte: falha guarda mensagem/configuração para retry; lease vencida pode ser refeita; erro não gera revisão. Edição invalida prova, refresh retoma somente resultado válido e “Continuar depois” usa exploração existente.
+- Evidências e resultados desta rodada: `.superpowers/sdd/2026-09-08-ensaio-interface/task-1-report.md` e `.superpowers/evidence/ensaio/`. Não declarar wizard completo validado por este ensaio.
+
+- `tests/invariants/onboarding-draft-prepare.test.ts`: atomicidade, ausência de publicação, idempotência concorrente, snapshots, credenciais, RLS/grants e execução real sob service_role.
+- `tests/unit/onboarding-preparar-action.test.ts`: identidade confiável, contexto/revisão, seleção obrigatória, prompt somente do servidor e erros sem segredo.
+- `tests/unit/onboarding-prompt.test.ts`: texto legado preservado, regras isoladas e limite sem truncamento.
+- Mapa: `docs/architecture/onboarding-preparacao.architecture.json`. Relatório: `docs/superpowers/reports/2026-09-08-preparar-versao-inativa.md`.
 
 ## J2 — Conectar WhatsApp e Central de Conexões `[P0]`
 
@@ -1337,6 +1470,10 @@ helper numa spec nova: `test.describe.configure({ timeout: 120_000 })`.
 
 ## O menu inteiro cabe na dobra de um notebook? (2026-09-04)
 
+> **Histórico substituído em 2026-09-09:** os grupos expansíveis abaixo eram a
+> etapa anterior. A navegação atual usa oito portas e uma barra contextual;
+> a prova vigente está na seção seguinte.
+
 Origem: PR #546 pôs a tela de **Tarefas** no grupo CRM e o menu passou a rolar.
 Medido pela tela, 1280×900, logado como admin: `nav.scrollHeight` **776** contra
 **763** de altura útil — **13px** de excesso, 19 links, 5 grupos. Nenhum título
@@ -1360,6 +1497,23 @@ grupo IA já usava.
 grampeado no `clientHeight`, então "excesso 0" e "sobra 200px" dão o MESMO número.
 Quem quiser saber quanta folga restou tem de medir o `bottom` do último filho
 contra a caixa de conteúdo da `<nav>` — foi assim que os 19px saíram.
+
+## O menu compacto preserva todas as portas? (2026-09-09)
+
+Origem: aprovação visual do proprietário para reduzir a barra lateral a Início,
+Conversas, Funis, Contatos, Agentes de IA, Relatórios, Agenda e Configurações.
+As telas secundárias continuam no registro canônico e aparecem na barra da área,
+nos hubs completos ou no ⌘K.
+
+| caso | prioridade | estado |
+|---|---|---|
+| Admin vê exatamente seis portas principais e duas no rodapé | `[P1]` | **COBERTO em unitário** por `tests/unit/sidebar-grupos.test.tsx`; prova visual E2E pendente nesta execução |
+| Radar e Respostas rápidas ficam dentro de Conversas | `[P1]` | **COBERTO em unitário** por `tests/unit/area-navigation.test.tsx`; jornada visual em `tests/e2e/navegacao.spec.ts` |
+| Produtos e Etapas do funil continuam alcançáveis por Funis | `[P1]` | **COBERTO em unitário e E2E**; as rotas e permissões não mudam |
+| Conexões e Integrações ficam dentro de Configurações e respeitam o papel | `[P1]` | **COBERTO em unitário e E2E**; viewer não recebe os atalhos de admin/manager |
+| A área pai continua destacada numa rota secundária | `[P1]` | **COBERTO em unitário** para Radar e Tarefas |
+| Desktop e mobile não alargam a página | `[P1]` | **JORNADA ATUALIZADA**, medição pela interface pendente nesta execução |
+
 
 ## O inbox em tempo real — o defeito que veio de fora (2026-08-24)
 
@@ -1798,3 +1952,31 @@ COLUMN`, `UPDATE`, `ALTER COLUMN`, um bloco `DO` com `pg_constraint`), e
 `scripts/test-db.sh` já sobe `pgvector/pgvector:pg15` — os `pnpm test:db`
 anteriores desta sessão já corriam contra o piso certo, mesmo antes deste
 achado.
+## Fluxos e Leads — correções de 2026-09-09
+
+- `tests/e2e/fluxo-gatilho-no-editor.spec.ts`: abrir nó inicial → escolher gatilho → salvar → conferir banco → recarregar; seletor e gravação acessíveis em 1440/768/390 px.
+- `tests/e2e/leads-navegacao.spec.ts`: Leads → quadro padrão da organização → Funis → troca; fallback sem padrão/sem ativo e papel viewer.
+- `tests/invariants/followup-canal-origem.test.ts`: duas conversas em canais distintos → worker preserva origem; recusa vínculo incompatível, outra organização e canal desconectado.
+
+Relatório e limites: `docs/superpowers/reports/2026-09-09-fluxos-leads-canais.md`.
+Fixtures locais, sem mensagens externas nem publicação de fluxo de cliente.
+
+# Visão geral — redesign de 2026-09-09
+
+Prova local: `tests/e2e/navegacao.spec.ts`, caso “visão geral usa dados locais reais e preserva navegação no desktop e celular”. Entrar → Visão geral → conferir contagem contra API autenticada → abrir fila → voltar → abrir tarefas em celular. Menu em 1280×900 e gaveta em 390 px também aprovados. Evidências e limites em `docs/testing/dashboard-redesign.md`. Nenhum envio WhatsApp ou publicação.
+
+## Dashboard personalizável e copiloto — lote operacional de 2026-09-09
+
+| Caso | Expectativa | Prova |
+|---|---|---|
+| Personalizar o dashboard | ocultar, reordenar e redimensionar; salvar; recarregar e manter | `tests/e2e/redesign-operacional.spec.ts` |
+| Restaurar o padrão | remove somente a preferência da pessoa e volta ao catálogo canônico | `tests/e2e/redesign-operacional.spec.ts` + invariante de banco |
+| Falha ao carregar preferência | dashboard continua com default e oferece nova tentativa | `tests/unit/dashboard.test.tsx` |
+| Perguntar ao copiloto | página alcançável, resposta e fontes consultadas visíveis | `tests/e2e/redesign-operacional.spec.ts` |
+| Copiloto somente leitura | nenhuma ação de escrita aparece; allowlist recusa ferramentas fora do contrato | `tests/unit/copilot-page.test.tsx` + `lib/ai/copilot/tools.test.ts` |
+| Isolamento | usuário e organização não leem nem alteram layout alheio | `tests/invariants/user-dashboard-preferences.test.ts` |
+
+O Playwright intercepta apenas a chamada do modelo para produzir uma resposta
+determinística, sem consumir crédito nem expor dado real; autenticação, rota,
+navegação, persistência do dashboard e renderização continuam reais. A suíte não
+prova qualidade semântica de um provedor externo nem autoriza ações de escrita.

@@ -103,7 +103,7 @@ interface VersionRow {
   model: string;
   credential_id: string | null;
   tool_ids: string[];
-  channel_session_id: string;
+  channel_session_id: string | null;
   max_steps: number;
   token_budget: number;
   cost_budget_cents: number;
@@ -247,7 +247,8 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     resourceId: run.id,
     metadata: { agent_id: run.agent_id, agent_version_id: run.agent_version_id, is_dry_run: run.is_dry_run },
   });
-  await admin.rpc("emit_event" as never, {
+  // Teste tem run/auditoria próprios; não alimenta consumidores de operação.
+  if (!run.is_dry_run) await admin.rpc("emit_event" as never, {
     p_event_type: "ai_agent.run_started",
     p_entity_kind: "ai_agent_run",
     p_entity_id: run.id,
@@ -483,6 +484,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
       auth,
       toolIds: version.tool_ids ?? [],
       handoffToolEnabled: version.handoff_tool_enabled,
+      isDryRun: run.is_dry_run,
       // `?? []` — o clone sem a coluna 0125 nasce FECHADO.
       pipelineIds: (version as { pipeline_ids?: string[] }).pipeline_ids ?? [],
       handoffSignal,

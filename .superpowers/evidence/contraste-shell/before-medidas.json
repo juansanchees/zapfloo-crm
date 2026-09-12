@@ -1,0 +1,2378 @@
+[
+  {
+    "footer": "installed",
+    "theme": "light",
+    "width": 1440,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 18.522032655015135,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          34.72941176470589,
+          35.65882352941176,
+          42.16470588235294
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 15.527589011679241,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          34.72941176470589,
+          35.65882352941176,
+          42.16470588235294
+        ],
+        "foreground": [
+          145.2966089965398,
+          145.75949250288352,
+          148.9996770472895
+        ],
+        "ratio": 4.983666053309287,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          34.72941176470589,
+          35.65882352941176,
+          42.16470588235294
+        ],
+        "foreground": [
+          188.48692041522492,
+          188.7675663206459,
+          190.73208765859286
+        ],
+        "ratio": 8.251565977910278,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          112.8,
+          113.4,
+          117.6
+        ],
+        "ratio": 3.8271250648296116,
+        "fontSize": "10px",
+        "width": 215,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "P",
+        "text": "versão 1.0.0",
+        "className": "px-3 py-1 text-[11px] text-muted-foreground",
+        "cssColor": "rgb(87, 81, 97)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          87,
+          81,
+          97
+        ],
+        "ratio": 2.4297667083337493,
+        "fontSize": "11px",
+        "width": 215,
+        "height": 24.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Recolher",
+        "className": "",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.55)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          148.11764705882354,
+          148.5686274509804,
+          151.72549019607843
+        ],
+        "ratio": 6.160521702155251,
+        "fontSize": "12px",
+        "width": 46.359375,
+        "height": 16
+      }
+    ]
+  },
+  {
+    "footer": "installed",
+    "theme": "light",
+    "width": 390,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 17.73971700407407,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          33.8,
+          40.305882352941175,
+          54.247058823529414
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 14.69837169543144,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          33.8,
+          40.305882352941175,
+          54.247058823529414
+        ],
+        "foreground": [
+          144.8337254901961,
+          148.07391003460208,
+          155.0171626297578
+        ],
+        "ratio": 4.839933862233878,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          33.8,
+          40.305882352941175,
+          54.247058823529414
+        ],
+        "foreground": [
+          188.20627450980393,
+          190.17079584775087,
+          194.38048442906575
+        ],
+        "ratio": 7.913419937328685,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          112.2,
+          116.4,
+          125.4
+        ],
+        "ratio": 3.8067735840272614,
+        "fontSize": "10px",
+        "width": 263,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "P",
+        "text": "versão 1.0.0",
+        "className": "px-3 py-1 text-[11px] text-muted-foreground",
+        "cssColor": "rgb(87, 81, 97)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          87,
+          81,
+          97
+        ],
+        "ratio": 2.3271405787145274,
+        "fontSize": "11px",
+        "width": 263,
+        "height": 24.5
+      }
+    ]
+  },
+  {
+    "footer": "installed",
+    "theme": "dark",
+    "width": 1440,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 19.775318646134416,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          26.364705882352943,
+          27.294117647058826,
+          31.941176470588236
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 17.14053084635835,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          26.364705882352943,
+          27.294117647058826,
+          31.941176470588236
+        ],
+        "foreground": [
+          141.13065743944637,
+          141.5935409457901,
+          143.90795847750866
+        ],
+        "ratio": 5.209129971712367,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          26.364705882352943,
+          27.294117647058826,
+          31.941176470588236
+        ],
+        "foreground": [
+          185.961107266436,
+          186.24175317185697,
+          187.64498269896194
+        ],
+        "ratio": 8.8591309039617,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          107.4,
+          108,
+          111
+        ],
+        "ratio": 3.7711481961221813,
+        "fontSize": "10px",
+        "width": 215,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "P",
+        "text": "versão 1.0.0",
+        "className": "px-3 py-1 text-[11px] text-muted-foreground",
+        "cssColor": "rgb(170, 168, 184)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          170,
+          168,
+          184
+        ],
+        "ratio": 8.477397150848818,
+        "fontSize": "11px",
+        "width": 215,
+        "height": 24.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Recolher",
+        "className": "",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.55)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          144.05882352941177,
+          144.50980392156862,
+          146.76470588235293
+        ],
+        "ratio": 6.240544330922872,
+        "fontSize": "12px",
+        "width": 46.359375,
+        "height": 16
+      }
+    ]
+  },
+  {
+    "footer": "installed",
+    "theme": "dark",
+    "width": 390,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 19.430583718331373,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          26.364705882352943,
+          30.08235294117647,
+          38.44705882352942
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 16.666640181628054,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          26.364705882352943,
+          30.08235294117647,
+          38.44705882352942
+        ],
+        "foreground": [
+          141.13065743944637,
+          142.98219146482123,
+          147.14814302191465
+        ],
+        "ratio": 5.146816312947316,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          26.364705882352943,
+          30.08235294117647,
+          38.44705882352942
+        ],
+        "foreground": [
+          185.961107266436,
+          187.08369088811995,
+          189.60950403690887
+        ],
+        "ratio": 8.684280309176325,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          107.4,
+          109.8,
+          115.2
+        ],
+        "ratio": 3.7939261971092457,
+        "fontSize": "10px",
+        "width": 263,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "P",
+        "text": "versão 1.0.0",
+        "className": "px-3 py-1 text-[11px] text-muted-foreground",
+        "cssColor": "rgb(170, 168, 184)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          170,
+          168,
+          184
+        ],
+        "ratio": 8.329614202464983,
+        "fontSize": "11px",
+        "width": 263,
+        "height": 24.5
+      }
+    ]
+  },
+  {
+    "footer": "update",
+    "theme": "light",
+    "width": 1440,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 18.522032655015135,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          34.72941176470589,
+          35.65882352941176,
+          42.16470588235294
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 15.527589011679241,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          34.72941176470589,
+          35.65882352941176,
+          42.16470588235294
+        ],
+        "foreground": [
+          145.2966089965398,
+          145.75949250288352,
+          148.9996770472895
+        ],
+        "ratio": 4.983666053309287,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          34.72941176470589,
+          35.65882352941176,
+          42.16470588235294
+        ],
+        "foreground": [
+          188.48692041522492,
+          188.7675663206459,
+          190.73208765859286
+        ],
+        "ratio": 8.251565977910278,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          112.8,
+          113.4,
+          117.6
+        ],
+        "ratio": 3.8271250648296116,
+        "fontSize": "10px",
+        "width": 215,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          183.43529411764706,
+          183.7372549019608,
+          185.85098039215686
+        ],
+        "ratio": 9.31949214039769,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Nova versão · 1.0.1",
+        "className": "truncate",
+        "cssColor": "rgb(36, 33, 44)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          36,
+          33,
+          44
+        ],
+        "ratio": 1.1721148038539202,
+        "fontSize": "12px",
+        "width": 95.828125,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Recolher",
+        "className": "",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.55)",
+        "background": [
+          18,
+          19,
+          26
+        ],
+        "foreground": [
+          148.11764705882354,
+          148.5686274509804,
+          151.72549019607843
+        ],
+        "ratio": 6.160521702155251,
+        "fontSize": "12px",
+        "width": 46.359375,
+        "height": 16
+      }
+    ]
+  },
+  {
+    "footer": "update",
+    "theme": "light",
+    "width": 390,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 17.73971700407407,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          33.8,
+          40.305882352941175,
+          54.247058823529414
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 14.69837169543144,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          33.8,
+          40.305882352941175,
+          54.247058823529414
+        ],
+        "foreground": [
+          144.8337254901961,
+          148.07391003460208,
+          155.0171626297578
+        ],
+        "ratio": 4.839933862233878,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          33.8,
+          40.305882352941175,
+          54.247058823529414
+        ],
+        "foreground": [
+          188.20627450980393,
+          190.17079584775087,
+          194.38048442906575
+        ],
+        "ratio": 7.913419937328685,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          80,
+          109,
+          72
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 5.797699590644619,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          112.2,
+          116.4,
+          125.4
+        ],
+        "ratio": 3.8067735840272614,
+        "fontSize": "10px",
+        "width": 263,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          183.13333333333333,
+          185.24705882352941,
+          189.7764705882353
+        ],
+        "ratio": 9.054514160943578,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Nova versão · 1.0.1",
+        "className": "truncate",
+        "cssColor": "rgb(36, 33, 44)",
+        "background": [
+          17,
+          24,
+          39
+        ],
+        "foreground": [
+          36,
+          33,
+          44
+        ],
+        "ratio": 1.1226081555916219,
+        "fontSize": "12px",
+        "width": 95.828125,
+        "height": 16
+      }
+    ]
+  },
+  {
+    "footer": "update",
+    "theme": "dark",
+    "width": 1440,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 19.775318646134416,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          26.364705882352943,
+          27.294117647058826,
+          31.941176470588236
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 17.14053084635835,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          26.364705882352943,
+          27.294117647058826,
+          31.941176470588236
+        ],
+        "foreground": [
+          141.13065743944637,
+          141.5935409457901,
+          143.90795847750866
+        ],
+        "ratio": 5.209129971712367,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          26.364705882352943,
+          27.294117647058826,
+          31.941176470588236
+        ],
+        "foreground": [
+          185.961107266436,
+          186.24175317185697,
+          187.64498269896194
+        ],
+        "ratio": 8.8591309039617,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          107.4,
+          108,
+          111
+        ],
+        "ratio": 3.7711481961221813,
+        "fontSize": "10px",
+        "width": 215,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.01960784313727,
+          182.52941176470588
+        ],
+        "ratio": 9.651242771958106,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Nova versão · 1.0.1",
+        "className": "truncate",
+        "cssColor": "rgb(244, 242, 250)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          244,
+          242,
+          250
+        ],
+        "ratio": 17.82405698697055,
+        "fontSize": "12px",
+        "width": 95.828125,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Recolher",
+        "className": "",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.55)",
+        "background": [
+          9,
+          10,
+          15
+        ],
+        "foreground": [
+          144.05882352941177,
+          144.50980392156862,
+          146.76470588235293
+        ],
+        "ratio": 6.240544330922872,
+        "fontSize": "12px",
+        "width": 46.359375,
+        "height": 16
+      }
+    ]
+  },
+  {
+    "footer": "update",
+    "theme": "dark",
+    "width": 390,
+    "measured": [
+      {
+        "tag": "SPAN",
+        "text": "DeskcommCRM",
+        "className": "font-semibold tracking-tight",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 19.430583718331373,
+        "fontSize": "16px",
+        "width": 113.328125,
+        "height": 24
+      },
+      {
+        "tag": "SPAN",
+        "text": "E2E Test Org",
+        "className": "block truncate text-sm font-semibold text-white",
+        "cssColor": "rgb(255, 255, 255)",
+        "background": [
+          26.364705882352943,
+          30.08235294117647,
+          38.44705882352942
+        ],
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "ratio": 16.666640181628054,
+        "fontSize": "14px",
+        "width": 85.8125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Sua empresa",
+        "className": "block text-[11px] text-white/50",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+        "background": [
+          26.364705882352943,
+          30.08235294117647,
+          38.44705882352942
+        ],
+        "foreground": [
+          141.13065743944637,
+          142.98219146482123,
+          147.14814302191465
+        ],
+        "ratio": 5.146816312947316,
+        "fontSize": "11px",
+        "width": 85.8125,
+        "height": 16.5
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pesquisar",
+        "className": "inline",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          26.364705882352943,
+          30.08235294117647,
+          38.44705882352942
+        ],
+        "foreground": [
+          185.961107266436,
+          187.08369088811995,
+          189.60950403690887
+        ],
+        "ratio": 8.684280309176325,
+        "fontSize": "12px",
+        "width": 52.0625,
+        "height": 16
+      },
+      {
+        "tag": "SPAN",
+        "text": "Pergunte à IA",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 92.25,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Painel de controle",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 111.0625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Conversas",
+        "className": "truncate",
+        "cssColor": "rgb(17, 17, 20)",
+        "background": [
+          130,
+          160,
+          119
+        ],
+        "foreground": [
+          17,
+          17,
+          20
+        ],
+        "ratio": 6.501904511121379,
+        "fontSize": "14px",
+        "width": 63.59375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Calendário",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 66.578125,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Contatos",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 55.140625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Leads",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 36.953125,
+        "height": 20
+      },
+      {
+        "tag": "H2",
+        "text": "Crescimento",
+        "className": "px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40",
+        "cssColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.4)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          107.4,
+          109.8,
+          115.2
+        ],
+        "ratio": 3.7939261971092457,
+        "fontSize": "10px",
+        "width": 263,
+        "height": 19
+      },
+      {
+        "tag": "SPAN",
+        "text": "Relatórios",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 62.15625,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Configurações",
+        "className": "truncate",
+        "cssColor": "oklab(0.999994 0.0000455677 0.0000200868 / 0.7)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          180.71764705882353,
+          181.92549019607844,
+          184.64313725490197
+        ],
+        "ratio": 9.567761965421534,
+        "fontSize": "14px",
+        "width": 88.9375,
+        "height": 20
+      },
+      {
+        "tag": "SPAN",
+        "text": "Nova versão · 1.0.1",
+        "className": "truncate",
+        "cssColor": "rgb(244, 242, 250)",
+        "background": [
+          9,
+          13,
+          22
+        ],
+        "foreground": [
+          244,
+          242,
+          250
+        ],
+        "ratio": 17.51333759435223,
+        "fontSize": "12px",
+        "width": 95.828125,
+        "height": 16
+      }
+    ]
+  }
+]

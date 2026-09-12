@@ -1,0 +1,31 @@
+.canvas {
+  --xy-controls-button-background-color: var(--color-surface);
+  --xy-controls-button-background-color-hover: var(--color-surface-elevated);
+  --xy-controls-button-color: var(--color-text);
+  --xy-controls-button-color-hover: var(--color-text);
+  --xy-controls-button-border-color: var(--color-border-strong);
+}
+
+.canvas :global(.react-flow__controls) {
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.canvas :global(.react-flow__controls-button) {
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+}
+
+.canvas :global(.react-flow__controls-button:focus-visible) {
+  outline: 2px solid var(--color-text);
+  outline-offset: -4px;
+}
+
+@media (max-width: 767px) {
+  .canvas :global(.react-flow__controls-button) {
+    width: 44px;
+    height: 44px;
+  }
+}

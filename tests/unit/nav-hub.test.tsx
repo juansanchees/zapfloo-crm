@@ -13,10 +13,15 @@ import { NavHub } from "@/components/shell/NavHub";
 afterEach(cleanup);
 
 describe("NavHub", () => {
-  it("apresenta a IA nas três etapas da jornada, na ordem", () => {
+  it("apresenta a consulta e as três etapas da jornada, na ordem", () => {
     render(<NavHub group="ia" isPlatformAdmin role={null} title="Agente de IA" subtitle="" />);
     const secoes = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent?.trim());
-    expect(secoes).toEqual(["Montar o agente", "Ensinar o agente", "Acompanhar o agente"]);
+    expect(secoes).toEqual([
+      "Trabalhar com a IA",
+      "Montar o agente",
+      "Ensinar o agente",
+      "Acompanhar o agente",
+    ]);
   });
 
   it("desenterra Conhecimento, que só existia atrás das abas", () => {

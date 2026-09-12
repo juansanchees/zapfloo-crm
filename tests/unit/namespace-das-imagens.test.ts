@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
@@ -278,7 +279,7 @@ describe("catraca: ninguém mais repete o namespace", () => {
    * (ADR, CHANGELOG, runbooks) e não monta string em runtime. A catraca vale
    * para o que executa.
    */
-  function reincidentes(): string[] {
+  function reincidentes(raiz = RAIZ): string[] {
     const excluiDir = [
       ".git",
       "node_modules",
@@ -290,10 +291,11 @@ describe("catraca: ninguém mais repete o namespace", () => {
       ".superpowers",
       // Prova visual (PNG, trace) e worktrees aninhados — 42 MB e 4,8 s de
       // varredura entre os dois, medido. Nenhum dos dois monta referência de
-      // imagem: `evidence/` é artefato de QA e `.claude/worktrees/` são OUTRAS
+      // imagem: `evidence/` é artefato de QA e os diretórios de checkout são OUTRAS
       // árvores do repo, com o gate delas próprio.
       "evidence",
       ".claude",
+      ".worktrees",
     ].map((d) => `--exclude-dir=${d}`);
     // `.bak`/`.orig`/`.rej`/`~` são sobra de editor e de `sed -i.bak`. Sem isto,
     // uma sabotagem local deixa o gate vermelho pelo motivo errado.
@@ -304,7 +306,7 @@ describe("catraca: ninguém mais repete o namespace", () => {
       saida = execFileSync(
         "grep",
         ["-rlF", NAMESPACE_DESTE_REPO, ".", ...excluiDir, ...excluiArq],
-        { cwd: RAIZ, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
+        { cwd: raiz, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
       );
     } catch (e) {
       // grep sai 1 quando não casa nada — que aqui é o resultado bom. Qualquer
@@ -347,5 +349,17 @@ describe("catraca: ninguém mais repete o namespace", () => {
         "TS: leia-o como este arquivo faz) — senão a âncora deixa de ser única e um " +
         "namespace errado fica verde em todo lugar.",
     ).toEqual([]);
+  });
+
+  it("ignora checkout alheio sem deixar de detectar arquivo novo no próprio repo", () => {
+    const raiz = fs.mkdtempSync(path.join(tmpdir(), "gate-namespace-"));
+    try {
+      fs.mkdirSync(path.join(raiz, ".worktrees/outro"), { recursive: true });
+      fs.writeFileSync(path.join(raiz, ".worktrees/outro/imagem.ts"), NAMESPACE_DESTE_REPO);
+      fs.writeFileSync(path.join(raiz, "novo.ts"), NAMESPACE_DESTE_REPO);
+      expect(reincidentes(raiz)).toEqual(["novo.ts"]);
+    } finally {
+      fs.rmSync(raiz, { recursive: true, force: true });
+    }
   });
 });

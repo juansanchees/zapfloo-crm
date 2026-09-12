@@ -1,0 +1,2082 @@
+[
+  {
+    "file": "app/actions/auth/recoverOrganization.ts",
+    "value": "#465"
+  },
+  {
+    "file": "app/actions/settings/apagarDadosOperacionaisDaOrganizacao.ts",
+    "value": "#556"
+  },
+  {
+    "file": "app/actions/settings/updateAdInsightsConnection.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/actions/settings/updateAdPlatformConnection.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/actions/settings/updateAdPlatformConnection.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/actions/settings/updateBranding.ts",
+    "value": "#FFF"
+  },
+  {
+    "file": "app/actions/settings/updateBranding.ts",
+    "value": "#FFFFFF"
+  },
+  {
+    "file": "app/actions/settings/updateBranding.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/actions/settings/updateGoogleOAuth.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/actions/settings/updateMarcaDaOrganizacao.ts",
+    "value": "#FFF"
+  },
+  {
+    "file": "app/actions/settings/updateMarcaDaOrganizacao.ts",
+    "value": "#FFFFFF"
+  },
+  {
+    "file": "app/actions/settings/updateMarcaDaOrganizacao.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/actions/settings/updateTenant.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/admin/(protected)/marca/_form.tsx",
+    "value": "#808080"
+  },
+  {
+    "file": "app/admin/(protected)/marca/_form.tsx",
+    "value": "#f5c518"
+  },
+  {
+    "file": "app/admin/(protected)/marca/_form.tsx",
+    "value": "#418"
+  },
+  {
+    "file": "app/admin/(protected)/marca/_form.tsx",
+    "value": "#7a5cd6"
+  },
+  {
+    "file": "app/admin/(protected)/marca/_form.tsx",
+    "value": "#7a5cd6"
+  },
+  {
+    "file": "app/api/v1/ai/agents/[id]/route.ts",
+    "value": "#456"
+  },
+  {
+    "file": "app/api/v1/contacts/import/route.ts",
+    "value": "#483"
+  },
+  {
+    "file": "app/api/v1/conversations/_handler.ts",
+    "value": "#341"
+  },
+  {
+    "file": "app/api/v1/conversations/route.ts",
+    "value": "#199"
+  },
+  {
+    "file": "app/api/v1/cron/agenda-google-sync/route.ts",
+    "value": "#518"
+  },
+  {
+    "file": "app/api/v1/cron/agenda-google-sync/route.ts",
+    "value": "#474"
+  },
+  {
+    "file": "app/api/v1/cron/agenda-google-sync/route.ts",
+    "value": "#518"
+  },
+  {
+    "file": "app/api/v1/cron/data-retention/route.ts",
+    "value": "#261"
+  },
+  {
+    "file": "app/api/v1/cron/data-retention/route.ts",
+    "value": "#260"
+  },
+  {
+    "file": "app/api/v1/cron/recover-stuck-messages/route.ts",
+    "value": "#129"
+  },
+  {
+    "file": "app/api/v1/health/route.test.ts",
+    "value": "#465"
+  },
+  {
+    "file": "app/api/v1/leads/import/route.ts",
+    "value": "#418"
+  },
+  {
+    "file": "app/api/v1/leads/import/route.ts",
+    "value": "#597"
+  },
+  {
+    "file": "app/api/v1/leads/import/route.ts",
+    "value": "#600"
+  },
+  {
+    "file": "app/api/v1/leads/import/route.ts",
+    "value": "#597"
+  },
+  {
+    "file": "app/api/v1/leads/import/route.ts",
+    "value": "#600"
+  },
+  {
+    "file": "app/api/v1/leads/import/route.ts",
+    "value": "#597"
+  },
+  {
+    "file": "app/api/v1/leads/import/route.ts",
+    "value": "#600"
+  },
+  {
+    "file": "app/api/v1/lgpd/anonymize/route.ts",
+    "value": "#310"
+  },
+  {
+    "file": "app/api/v1/lgpd/anonymize/route.ts",
+    "value": "#310"
+  },
+  {
+    "file": "app/api/v1/marca/logo/route.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/api/v1/marca/logo/route.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/api/v1/messages/_handler.ts",
+    "value": "#108"
+  },
+  {
+    "file": "app/api/v1/messages/_handler.ts",
+    "value": "#129"
+  },
+  {
+    "file": "app/api/v1/products/import/route.ts",
+    "value": "#483"
+  },
+  {
+    "file": "app/api/v1/settings/routing/route.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/api/v1/settings/routing/route.ts",
+    "value": "#144"
+  },
+  {
+    "file": "app/api/v1/tasks/[id]/route.ts",
+    "value": "#418"
+  },
+  {
+    "file": "app/api/v1/tasks/route.ts",
+    "value": "#418"
+  },
+  {
+    "file": "app/api/v1/webhooks/in/[token]/route.ts",
+    "value": "#326"
+  },
+  {
+    "file": "app/api/v1/webhooks/meta/[token]/route.ts",
+    "value": "#236"
+  },
+  {
+    "file": "app/app/agenda/_client.tsx",
+    "value": "#474"
+  },
+  {
+    "file": "app/app/agenda/_client.tsx",
+    "value": "#474"
+  },
+  {
+    "file": "app/app/ai/agents/[id]/_actions.ts",
+    "value": "#463"
+  },
+  {
+    "file": "app/app/ai/agents/[id]/_actions.ts",
+    "value": "#502"
+  },
+  {
+    "file": "app/app/ai/agents/[id]/_components/AgentForm.tsx",
+    "value": "#463"
+  },
+  {
+    "file": "app/app/ai/agents/[id]/_components/ToolPicker.tsx",
+    "value": "#162"
+  },
+  {
+    "file": "app/app/ai/agents/[id]/_components/ToolPicker.tsx",
+    "value": "#162"
+  },
+  {
+    "file": "app/app/ai/agents/[id]/page.tsx",
+    "value": "#456"
+  },
+  {
+    "file": "app/app/ai/agents/_components/AgentCard.tsx",
+    "value": "#267"
+  },
+  {
+    "file": "app/app/analise/page.tsx",
+    "value": "#583"
+  },
+  {
+    "file": "app/app/contacts/_client.tsx",
+    "value": "#313"
+  },
+  {
+    "file": "app/app/contacts/_client.tsx",
+    "value": "#267"
+  },
+  {
+    "file": "app/app/crm/page.tsx",
+    "value": "#546"
+  },
+  {
+    "file": "app/app/kanban/_components/ImportarLeads.tsx",
+    "value": "#418"
+  },
+  {
+    "file": "app/app/settings/atendimento/_form.tsx",
+    "value": "#144"
+  },
+  {
+    "file": "app/app/settings/atendimento/page.tsx",
+    "value": "#144"
+  },
+  {
+    "file": "app/app/settings/conversoes/page.tsx",
+    "value": "#144"
+  },
+  {
+    "file": "app/app/settings/marca/_form.tsx",
+    "value": "#808080"
+  },
+  {
+    "file": "app/app/settings/marca/_form.tsx",
+    "value": "#7a5cd6"
+  },
+  {
+    "file": "app/app/settings/marca/_form.tsx",
+    "value": "#7a5cd6"
+  },
+  {
+    "file": "app/app/tasks/page.tsx",
+    "value": "#418"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3f6f1"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e4ebe0"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c8d6c1"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a4ba9a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#82a077"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#67885d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#506d48"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#41573b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#374731"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2f3c2b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#171f15"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#faf9f6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3f1ec"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e7e3da"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#d2cdbf"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a9a395"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7d786c"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5d594f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#46433b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2e2c26"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1c1a16"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#0e0d0a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f5f4ef"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e6e4dc"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#bbb8ac"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#8e8b7f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#605e54"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#444239"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#33312a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#272620"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1d1c17"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#161510"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#0c0b08"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5a8a5f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#b07a2b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a94a3c"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4a7a93"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#82a077"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#d09455"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c87263"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7da9bf"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#faf9f6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f5f3ee"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1c1a16"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5d594f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e7e3da"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#161510"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1d1c17"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#272620"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f5f4ef"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#8e8b7f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#33312a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#fbf3ef"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f4e0d3"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e7bda5"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#d79376"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c47353"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#b05a3d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#934531"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#76382a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5e2f25"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4d2820"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#28130f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#fbf8f4"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3eee5"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e6dccb"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#cebfa6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a5957c"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7a6c57"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5b5043"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#453d33"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2d2823"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1c1814"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#0e0c0a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f6f1ea"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e6dccb"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#b8aa94"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#8a7e6b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5d5447"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#403930"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#302b25"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#24211c"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1b1815"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#13110f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#0a0908"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5e8b62"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#9c6321"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a94431"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#506e8a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#85a98a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#cf8d4a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c8765d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7e9fbb"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#fbf8f4"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f5f0e6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1c1814"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5b5043"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e6dccb"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#13110f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1b1815"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#24211c"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f6f1ea"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#8a7e6b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#302b25"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f1f4f7"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#dde5ec"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#b8c8d6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#8da7bd"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#6789a3"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4f6f88"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3f586d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#344758"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2a3a48"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#22303b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#11181d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f8f8f6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#eeede9"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#dddbd3"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#bcb9ad"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#8d8a7e"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#65635a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4b4943"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#37362f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#26251f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181712"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#0c0b08"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f1f1ee"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#d9d8d2"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a9a8a0"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7d7c75"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#56554f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3a3935"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2c2b27"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#21201d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181712"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#11100d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#080807"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#54845d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a47428"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a14739"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3f5f7a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7ea286"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#cd954b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c47866"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7099b6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f8f8f6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f1f1ed"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181712"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4b4943"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#dddbd3"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#11100d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181712"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#21201d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f1f1ee"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7d7c75"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2c2b27"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f6f1f4"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#ebdce5"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#d4b2c4"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#b885a0"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#9e637f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#854b66"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#6c3d54"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#583244"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#462937"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3a232e"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#1d1118"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#faf8f8"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f1eeee"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e2dddd"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c2b9b9"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#928787"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#695f5f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4f4747"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3a3434"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#272222"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181414"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#0c0a0a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3f0f0"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#dcd6d6"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#aea5a5"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#827a7a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5a5454"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3e3939"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2e2a2a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#221f1f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#191616"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#111010"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#080707"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#598661"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a47128"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a4453a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4d6986"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#83a589"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#cf914c"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c77565"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7c9eba"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#faf8f8"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3eeee"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181414"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4f4747"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e2dddd"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#111010"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#191616"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#221f1f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3f0f0"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#827a7a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2e2a2a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f6f5ec"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e9e6cf"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#d2cc9f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#b1a96b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#928a4a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#776f3a"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5e572f"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4a4527"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3b3722"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#302d1d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#18170e"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#faf9f4"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f1efe4"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e3dfcc"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c5beA1"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#988f70"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#6e6750"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#534e3e"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3d392d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#29261e"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#191712"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#0c0b08"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3f1ea"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#dcd8c8"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#aea795"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#807a68"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#585345"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#3c3830"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2c2a24"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#21201b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181713"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#11100d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#080807"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#5d8a5b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#a87326"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#9f4636"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#4d7088"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#8aac82"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#d29449"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#c47762"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#7ba2bb"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#faf9f4"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3f0e3"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#191712"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#534e3e"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#e3dfcc"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#11100d"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#181713"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#21201b"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#f3f1ea"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#807a68"
+  },
+  {
+    "file": "app/design/lib/tokens.ts",
+    "value": "#2c2a24"
+  },
+  {
+    "file": "app/design/lib/variant-context.tsx",
+    "value": "#0c0b08"
+  },
+  {
+    "file": "app/design/lib/variant-context.tsx",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/design/sections/SectionPalettes.tsx",
+    "value": "#fff"
+  },
+  {
+    "file": "app/design/sections/SectionPalettes.tsx",
+    "value": "#0a0908"
+  },
+  {
+    "file": "app/design/sections/SectionPalettes.tsx",
+    "value": "#fff"
+  },
+  {
+    "file": "app/design/sections/SectionPalettes.tsx",
+    "value": "#0a0908"
+  },
+  {
+    "file": "app/design/sections/SectionTypography.tsx",
+    "value": "#482"
+  },
+  {
+    "file": "app/design/showcase.css",
+    "value": "#fff"
+  },
+  {
+    "file": "app/design/showcase.css",
+    "value": "#000"
+  },
+  {
+    "file": "app/design/showcase.css",
+    "value": "#fff"
+  },
+  {
+    "file": "app/design/showcase.css",
+    "value": "#faf9f6"
+  },
+  {
+    "file": "app/design/showcase.css",
+    "value": "#1c1a16"
+  },
+  {
+    "file": "app/design/showcase.css",
+    "value": "#161510"
+  },
+  {
+    "file": "app/design/showcase.css",
+    "value": "#f5f4ef"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#fafaf9"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#1c1917"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#e7e5e4"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#57534e"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#f5f5f4"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#d6d3d1"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#1c1917"
+  },
+  {
+    "file": "app/global-error.tsx",
+    "value": "#1c1917"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#faf9fc"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f3f1f7"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#12131a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f5f7fb"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f0f2f7"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#24212c"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#575161"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#6b6477"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e4e0eb"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#cec8d8"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f3f6f1"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e4ebe0"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#c8d6c1"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#a4ba9a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#82a077"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#67885d"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#506d48"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#41573b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#374731"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#2f3c2b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#171f15"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#faf9fc"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f3f1f7"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e4e0eb"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#cec8d8"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#a49dae"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#6b6477"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#575161"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#46404f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#302a39"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#24212c"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#111014"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#5a8a5f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#41673f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#b07a2b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#875a1a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#a94a3c"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#8a3a2e"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#4a7a93"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#355d72"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ac4d40"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#bd7c20"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#7e6f01"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#11a19b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#0b7a9a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#608bda"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#7b5bad"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#cc77b1"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#faf9fc"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f3f1f7"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#12131a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f5f7fb"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f0f2f7"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#24212c"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#575161"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#6b6477"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e4e0eb"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#cec8d8"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#faf9fc"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f3f1f7"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e4e0eb"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#cec8d8"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#a49dae"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#6b6477"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#575161"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#46404f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#302a39"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#24212c"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#111014"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#5a8a5f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#41673f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#b07a2b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#875a1a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#a94a3c"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#8a3a2e"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#4a7a93"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#355d72"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ac4d40"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#bd7c20"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#7e6f01"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#11a19b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#0b7a9a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#608bda"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#7b5bad"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#cc77b1"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#111114"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#19191e"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#24242b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#090a0f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#111114"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#19191e"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#24242b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f4f2fa"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#aaa8b8"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#9b97aa"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#303037"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#45424f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f3f6f1"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e4ebe0"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#c8d6c1"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#a4ba9a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#82a077"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#67885d"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#506d48"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#41573b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#374731"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#2f3c2b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#171f15"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#111114"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f4f2fa"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e8e4f0"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#c2bccd"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#aaa8b8"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#9b97aa"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#45424f"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#303037"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#24242b"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#19191e"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#111114"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#0b0b0e"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#82a077"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#a4ba9a"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#d09455"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e0ad77"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#c87263"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#d99182"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#7da9bf"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#9bbfd2"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#111114"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#f89080"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ca8931"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#d1bf55"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#0cafa8"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#4ccffb"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#6c97e7"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#be9ef6"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#cc77b1"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#ffffff"
+  },
+  {
+    "file": "app/globals.css",
+    "value": "#e4ebe0"
+  },
+  {
+    "file": "app/layout.tsx",
+    "value": "#418"
+  },
+  {
+    "file": "app/onboarding/_components/OnboardingFrame.module.css",
+    "value": "#453257"
+  },
+  {
+    "file": "app/onboarding/_components/OnboardingFrame.module.css",
+    "value": "#f5f2fb"
+  },
+  {
+    "file": "app/onboarding/_components/OnboardingFrame.module.css",
+    "value": "#8250f238"
+  },
+  {
+    "file": "app/onboarding/_components/OnboardingFrame.module.css",
+    "value": "#f58a4620"
+  },
+  {
+    "file": "app/onboarding/_components/OnboardingFrame.module.css",
+    "value": "#19171f"
+  },
+  {
+    "file": "app/onboarding/_components/OnboardingFrame.module.css",
+    "value": "#c5b4e6"
+  },
+  {
+    "file": "app/onboarding/_components/OnboardingFrame.module.css",
+    "value": "#c9c2d3"
+  },
+  {
+    "file": "components/admin/dashboard/KPICards.tsx",
+    "value": "#118"
+  },
+  {
+    "file": "components/agenda/PainelDeMarcacao.tsx",
+    "value": "#382"
+  },
+  {
+    "file": "components/branding/CampoDeLogo.tsx",
+    "value": "#ffffff"
+  },
+  {
+    "file": "components/kanban/BulkActionBar.tsx",
+    "value": "#418"
+  },
+  {
+    "file": "components/shell/MobileSidebar.tsx",
+    "value": "#111827"
+  },
+  {
+    "file": "components/shell/MobileSidebar.tsx",
+    "value": "#090d16"
+  }
+]

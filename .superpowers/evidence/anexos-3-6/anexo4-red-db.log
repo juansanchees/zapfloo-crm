@@ -1,0 +1,149 @@
+
+> deskcomm-crm@0.1.0 test:db /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> bash scripts/test-db.sh tests/invariants/onboarding-recuperar-preparacao.test.ts
+
+==> subindo pgvector/pgvector:pg15 como deskcomm-test-db-35661 (worktree /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos, branch codex/correcoes-anexos)
+    ✓ publicado em 127.0.0.1:32805
+==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)
+==> conferindo que o banco efêmero é o do PRODUTO (antes do baseline)
+    ✓ definer nova nasce com grant direto a anon (armadilha do produto reproduzida)
+==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1
+ set_config 
+------------
+ 
+(1 row)
+
+psql:<stdin>:5007: WARNING:  wal_level is insufficient to publish logical changes
+HINT:  Set wal_level to "logical" before creating subscriptions.
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ install ok
+==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)
+ set_config 
+------------
+ 
+(1 row)
+
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ update ok (zero erro na re-aplicação)
+==> banco `postgres` a partir do molde (o setupFile o recria a cada arquivo)
+==> invariantes: vitest (tests/invariants) — banco novo por ARQUIVO, ordem sorteada
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.db.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+      Running tests with seed "1789049538043"
+
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts (6 tests | 6 failed) 401ms
+     × arquivar → recuperar → salvar outro nome → preparar permite continuar sem reativar o arquivado 100ms
+     × exclusão do agente limpa a preparação órfã e permite preparar de novo 68ms
+     × exclusão somente da versão também tem recuperação 97ms
+     × preparação íntegra ou agente ativo não é abandonado pelo mecanismo de recuperação 41ms
+     × ator externo, revogado, revisão antiga e ponteiro externo falham fechado 62ms
+     × RPC não é pública e service_role recupera com autorização explícita 33ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > arquivar → recuperar → salvar outro nome → preparar permite continuar sem reativar o arquivado
+error: function fn_recuperar_preparacao_onboarding(unknown, unknown, unknown, unknown) does not exist
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.0/node_modules/pg-pool/index.js:45:11
+ ❯ recover tests/invariants/onboarding-recuperar-preparacao.test.ts:25:11
+     23| }
+     24| async function recover(f: { org: string; user: string }, previous: str…
+     25|   return (await db.query("select fn_recuperar_preparacao_onboarding($1…
+       |           ^
+     26| }
+     27| describe("recuperação explícita do agente preparado", () => {
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:31:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > exclusão do agente limpa a preparação órfã e permite preparar de novo
+error: function fn_recuperar_preparacao_onboarding(unknown, unknown, unknown, unknown) does not exist
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.0/node_modules/pg-pool/index.js:45:11
+ ❯ recover tests/invariants/onboarding-recuperar-preparacao.test.ts:25:11
+     23| }
+     24| async function recover(f: { org: string; user: string }, previous: str…
+     25|   return (await db.query("select fn_recuperar_preparacao_onboarding($1…
+       |           ^
+     26| }
+     27| describe("recuperação explícita do agente preparado", () => {
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:44:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > exclusão somente da versão também tem recuperação
+error: function fn_recuperar_preparacao_onboarding(unknown, unknown, unknown, unknown) does not exist
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.0/node_modules/pg-pool/index.js:45:11
+ ❯ recover tests/invariants/onboarding-recuperar-preparacao.test.ts:25:11
+     23| }
+     24| async function recover(f: { org: string; user: string }, previous: str…
+     25|   return (await db.query("select fn_recuperar_preparacao_onboarding($1…
+       |           ^
+     26| }
+     27| describe("recuperação explícita do agente preparado", () => {
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:50:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > preparação íntegra ou agente ativo não é abandonado pelo mecanismo de recuperação
+AssertionError: expected [Function] to throw error including 'draft_unavailable' but got 'function fn_recuperar_preparacao_onbo…'
+
+Expected: "draft_unavailable"
+Received: "function fn_recuperar_preparacao_onboarding(unknown, unknown, unknown, unknown) does not exist"
+
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:56:43
+     54|   it("preparação íntegra ou agente ativo não é abandonado pelo mecanis…
+     55|     const f = await fixture();
+     56|     await expect(recover(f, f.version_id)).rejects.toThrow("draft_unav…
+       |                                           ^
+     57|     await db.query("update ai_agents set is_active=true,archived_at=no…
+     58|     await expect(recover(f, f.version_id)).rejects.toThrow("draft_unav…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > ator externo, revogado, revisão antiga e ponteiro externo falham fechado
+AssertionError: expected [Function] to throw error including 'draft_forbidden' but got 'function fn_recuperar_preparacao_onbo…'
+
+Expected: "draft_forbidden"
+Received: "function fn_recuperar_preparacao_onboarding(unknown, unknown, unknown, unknown) does not exist"
+
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:63:64
+     61|     const a = await fixture(); const b = await fixture();
+     62|     await db.query("update ai_agents set archived_at=now() where id=$1…
+     63|     await expect(recover({ ...a, user: b.user }, a.version_id)).reject…
+       |                                                                ^
+     64|     await expect(recover(a, a.version_id, 2)).rejects.toThrow("draft_c…
+     65|     await expect(recover(a, b.version_id)).rejects.toThrow("draft_conf…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/invariants/onboarding-recuperar-preparacao.test.ts > recuperação explícita do agente preparado > RPC não é pública e service_role recupera com autorização explícita
+error: function "public.fn_recuperar_preparacao_onboarding(uuid,uuid,integer,uuid)" does not exist
+ ❯ node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.0/node_modules/pg-pool/index.js:45:11
+ ❯ tests/invariants/onboarding-recuperar-preparacao.test.ts:74:15
+     72|     const f = await fixture();
+     73|     for (const role of ["anon", "authenticated"]) {
+     74|       expect((await db.query("select has_function_privilege($1,'public…
+       |               ^
+     75|     }
+     76|     await db.query("update ai_agents set archived_at=now() where id=$1…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  11:12:18
+   Duration  1.62s (transform 73ms, setup 934ms, import 116ms, tests 401ms, environment 0ms)
+
+==> teardown: removendo container deskcomm-test-db-35661
+ ELIFECYCLE  Command failed with exit code 1.

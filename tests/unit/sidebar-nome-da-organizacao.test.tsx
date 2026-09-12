@@ -81,6 +81,14 @@ vi.mock("@/hooks/auth/AuthProvider", () => ({
 }));
 
 describe("o nome da marca na barra lateral", () => {
+  it("mostra a empresa ativa em um cartão separado da marca da instalação", () => {
+    contexto = { user: usuario, activeOrg: org };
+    renderSidebar({ collapsed: false });
+
+    expect(screen.getByText("Loja da Ana")).toBeVisible();
+    expect(screen.getByText("Sua empresa")).toBeVisible();
+  });
+
   it("sem marca da organização, mostra o nome da instalação", () => {
     // Não-regressão: a organização que nunca abriu a tela de marca precisa ver
     // exatamente o que via antes. É também a guarda de vacuidade do caso
@@ -93,7 +101,7 @@ describe("o nome da marca na barra lateral", () => {
   it("com marca da organização, o nome dela SUBSTITUI o da instalação", () => {
     contexto = { user: usuario, activeOrg: { ...org, marca: { nome: "Loja da Ana" } } };
     renderSidebar({ collapsed: false });
-    expect(screen.getByText("Loja da Ana")).toBeTruthy();
+    expect(screen.getAllByText("Loja da Ana")).toHaveLength(2);
     // A ausência importa tanto quanto a presença: uma barra que mostrasse os
     // dois nomes passaria na asserção de cima e estaria errada.
     expect(screen.queryByText("Sistema do Revendedor")).toBeNull();

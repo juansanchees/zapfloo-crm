@@ -9,6 +9,7 @@ import { ConnectionsClient } from "./ConnectionsClient";
 import { TemplatesClient } from "./TemplatesClient";
 import { TemplatesParceiroClient } from "./TemplatesParceiroClient";
 import { useT } from "@/hooks/i18n/useT";
+import { ChannelChoiceGuide } from "./ChannelChoiceGuide";
 
 /**
  * Conexões — TODOS os canais em um lugar só.
@@ -53,6 +54,7 @@ export function ConexoesShell({ wahaConfigured }: { wahaConfigured: boolean }) {
 
   return (
     <Tabs value={aba} onValueChange={(v) => irPara(v, sub)} className="flex flex-col gap-4">
+      <ChannelChoiceGuide />
       <TabsList>
         {/* Rótulos pelo que o usuário RECONHECE, não pelo nome técnico do motor por
             trás: ele sabe se leu um QR ou se tem conta na Meta; a sigla do provedor
@@ -64,7 +66,7 @@ export function ConexoesShell({ wahaConfigured }: { wahaConfigured: boolean }) {
             a frase custou menos que abrir exceção no gate, e o gate continua
             estrito: o dia em que alguém escrever o nome do provider aqui DE VERDADE,
             ele reprova igual. */}
-        <TabsTrigger value="numeros">{t("Números por QR")}</TabsTrigger>
+        <TabsTrigger value="numeros">{t("Canais conectados")}</TabsTrigger>
         <TabsTrigger value="oficial">{t("API Oficial (Meta)")}</TabsTrigger>
         {/* "Provedor parceiro" e não a marca: o rótulo da marca vem do servidor
             (`lib/channels/connect`), porque a tela não pode nomear provider — e

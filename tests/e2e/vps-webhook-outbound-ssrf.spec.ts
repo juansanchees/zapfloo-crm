@@ -103,7 +103,21 @@ test.describe("J6.8 — anti-SSRF do outbound call_webhook (real, ponta a ponta)
     try {
       // --- fonte inbound (para gerar o lead que dispara a regra) ---
       await login(page, creds.users.manager!.email);
-      await page.getByRole("link", { name: "Webhooks" }).click();
+      // "Webhooks" saiu da nav principal no redesenho: `/app/webhooks` virou a
+      // aba "Entradas e webhooks" da área Automações
+      // (`lib/navigation/registry.ts`, área `automacoes`). Este caso morria no
+      // clique do link que não existe mais — e ele é o ÚNICO teste ponta a ponta
+      // do guard anti-SSRF do outbound, então navegar pela tela (e não por
+      // `goto`) é o que prova que a porta existe para quem opera.
+      await page
+        .getByRole("navigation", { name: "Navegação principal" })
+        .getByRole("link", { name: "Automações", exact: true })
+        .click();
+      await page.waitForURL(/\/app\/ai\/followups/);
+      await page
+        .getByRole("navigation", { name: /Opções da área/ })
+        .getByRole("link", { name: "Entradas e webhooks" })
+        .click();
       await page.waitForURL(/\/app\/webhooks/);
       await page.getByRole("button", { name: /Nova fonte|Criar primeira fonte/ }).click();
       await page.locator("#src-name").fill(SOURCE_NAME);

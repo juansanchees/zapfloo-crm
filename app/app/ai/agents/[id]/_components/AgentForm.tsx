@@ -740,6 +740,12 @@ export function AgentForm(props: Props) {
               id="credential_id"
               instalacaoTemChave={(props.provedoresDaInstalacao ?? []).includes(form.provider)}
             />
+            {!readOnly && <Link
+              href="/app/ai/credentials"
+              className="inline-flex text-xs font-medium text-foreground underline underline-offset-2"
+            >
+              {t("Cadastrar credencial de IA")}
+            </Link>}
             {validation.credential_id ? (
               <p className="text-xs text-destructive">{validation.credential_id}</p>
             ) : null}
@@ -804,6 +810,12 @@ export function AgentForm(props: Props) {
               {validation.channel_session_id ? (
                 <p className="text-xs text-destructive">{validation.channel_session_id}</p>
               ) : null}
+              {!readOnly && <Link
+                href="/app/connections"
+                className="inline-flex text-xs font-medium text-foreground underline underline-offset-2"
+              >
+                {t("Conectar número de WhatsApp")}
+              </Link>}
             </div>
           </Card>
 

@@ -20,10 +20,12 @@ function fmt(seconds: number): string {
 interface Props {
   messageId: string;
   isOutbound: boolean;
+  derivedText?: string | null;
+  derivedStatus?: string | null;
 }
 
 /** Player de voz estilo WhatsApp: play/pause, progresso seekável, tempo, 1x/1.5x/2x. */
-export function AudioPlayer({ messageId, isOutbound }: Props) {
+export function AudioPlayer({ messageId, isOutbound, derivedText, derivedStatus }: Props) {
   const t = useT();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -82,7 +84,8 @@ export function AudioPlayer({ messageId, isOutbound }: Props) {
   };
 
   return (
-    <div className="flex w-60 items-center gap-2 py-1">
+    <div className="w-60 py-1">
+      <div className="flex items-center gap-2">
       <audio ref={audioRef} src={mediaSrc(messageId)} preload="metadata" />
       <button
         type="button"
@@ -130,6 +133,21 @@ export function AudioPlayer({ messageId, isOutbound }: Props) {
       >
         {RATES[rateIdx]}x
       </button>
+      </div>
+      {derivedStatus === "ready" && derivedText?.trim() ? (
+        <details className="mt-2 rounded-md border border-current/15 px-2 py-1 text-xs">
+          <summary className="cursor-pointer font-medium">{t("Ver transcrição")}</summary>
+          <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed opacity-80">
+            {derivedText}
+          </p>
+        </details>
+      ) : derivedStatus === "failed" ? (
+        <p className="mt-1 text-[11px] opacity-70">
+          {t("Não foi possível transcrever este áudio. Ele continua disponível para ouvir.")}
+        </p>
+      ) : derivedStatus && derivedStatus !== "ready" ? (
+        <p className="mt-1 text-[11px] opacity-70">{t("Transcrevendo áudio para a IA…")}</p>
+      ) : null}
     </div>
   );
 }

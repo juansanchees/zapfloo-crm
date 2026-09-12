@@ -1,0 +1,11 @@
+{
+  "source": ".superpowers/leva-final/final/degradacao-silenciosa-degr-bafa3-ue-pode-estar-desatualizada-chromium/degradacao-medida.json",
+  "measurement": {
+    "assinatura": "subscribed",
+    "entregasSuprimidas": 2,
+    "divergenciasAntes": 0,
+    "divergenciasDepois": 1,
+    "marcaRecuperada": true,
+    "avisoVisivel": true
+  }
+}

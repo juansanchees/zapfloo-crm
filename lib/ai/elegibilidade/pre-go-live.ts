@@ -37,7 +37,10 @@ export const aiAccessUpdateSchema = z
   .object({
     mode: z.enum(["open", "pre_go_live"]),
     test_phone_numbers: z.array(numeroDeTesteSchema),
+    restricted_only: z.literal(true).optional(),
+    expected_access_revision: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   })
+  .refine(value => !value.restricted_only || (value.mode === "pre_go_live" && value.test_phone_numbers.length > 0 && Boolean(value.expected_access_revision)))
   .transform((valor) => ({
     ...valor,
     test_phone_numbers: [...new Set(valor.test_phone_numbers)],

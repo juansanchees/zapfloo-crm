@@ -60,6 +60,9 @@ vi.mock("@/lib/auth/server", () => ({
   resolveActiveOrg: vi.fn(async () => ({ orgId: ORG, name: "QA", role: "admin" })),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => clienteFalso() }));
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(async () => ({ rpc: vi.fn(async () => ({ data: "admin", error: null })) })),
+}));
 
 import { createDefaultAgent, type CreateAgentResult } from "@/app/actions/onboarding/createDefaultAgent";
 
@@ -272,7 +275,8 @@ function montarBanco(mundo: Mundo = {}): Estado {
         return { data: { id: linha.id }, error: null };
       }
       const achada = estado.versoes.find(
-        (v) => v.agent_id === c.filtros.agent_id && v.version_number === c.filtros.version_number,
+        (v) => v.agent_id === c.filtros.agent_id && v.version_number === c.filtros.version_number
+          && (c.filtros.status === undefined || v.status === c.filtros.status),
       );
       return { data: achada ? { id: achada.id } : null, error: null };
     }
@@ -442,7 +446,7 @@ describe("onboarding: publicação impossível não pode terminar em silêncio",
   it("versão já gravada por uma passagem anterior: repontar, não bater em duplicate key", async () => {
     const estado = montarBanco({
       agentes: [{ id: "agente-1", organization_id: ORG, is_default: true, published_version_id: null }],
-      versoes: [{ id: "versao-1", agent_id: "agente-1", version_number: 1 }],
+      versoes: [{ id: "versao-1", agent_id: "agente-1", version_number: 1, status: "published", channel_session_id: "canal-1" }],
     });
 
     const res = await clicar();
@@ -450,6 +454,23 @@ describe("onboarding: publicação impossível não pode terminar em silêncio",
     expect(res).toBe("redirecionou");
     expect(estado.versoes).toHaveLength(1);
     expect(estado.agentes[0]?.published_version_id).toBe("versao-1");
+  });
+
+  it.each(["draft", "archived", "superseded"])("colisão com versão %s não a transforma em publicação", async (status) => {
+    const estado = montarBanco({
+      agentes: [{ id: "agente-1", organization_id: ORG, is_default: true, published_version_id: null }],
+      versoes: [{ id: "versao-1", agent_id: "agente-1", version_number: 1, status,
+        channel_session_id: status === "superseded" ? "canal-1" : null }],
+    });
+
+    const res = await clicar() as CreateAgentResult;
+
+    expect(res).toMatchObject({ ok: true, publish_error: expect.any(String) });
+    expect(redirects).toEqual([]);
+    expect(estado.agentes[0]?.published_version_id).toBeNull();
+    expect(estado.versoes).toHaveLength(1);
+    expect(estado.versoes[0]?.status).toBe(status);
+    expect(estado.eventos[0]?.payload).toMatchObject({ published: false });
   });
 
   it("falha ao gravar a versão também chega à tela (era um return mudo)", async () => {

@@ -1,0 +1,319 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+
+stderr | tests/unit/onboarding-recuperar-ui.test.tsx
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+ ❯ tests/unit/onboarding-recuperar-ui.test.tsx (1 test | 1 failed) 179ms
+     × recupera e volta a permitir preparar sem reutilizar versão obsoleta 178ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/onboarding-recuperar-ui.test.tsx > saída visível para preparação arquivada > recupera e volta a permitir preparar sem reutilizar versão obsoleta
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Recuperar preparação"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "Ensaio de conversa, sem envio":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"ensaio-title"[39m
+    [33mclass[39m=[32m"min-w-0 space-y-4 rounded-xl border border-primary/30 bg-background p-4 sm:p-6"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Ensaio de conversa, sem envio":
+  [36m<h3[39m
+    [33mclass[39m=[32m"text-lg font-semibold"[39m
+    [33mid[39m=[32m"ensaio-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+    [33mid[39m=[32m"ensaio-credential-help"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-xs text-muted-foreground"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"mb-2 text-sm"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "Modelo do ensaio":
+  [36m<select[39m
+    [33mclass[39m=[32m"h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"[39m
+    [33mid[39m=[32m"ensaio-model"[39m
+  [36m/>[39m
+
+  Name "Credencial do ensaio":
+  [36m<select[39m
+    [33maria-describedby[39m=[32m"ensaio-credential-help"[39m
+    [33mclass[39m=[32m"h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"[39m
+    [33mid[39m=[32m"ensaio-credential"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "Escolha um modelo de IA":
+  [36m<option[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  Name "QA (openai)":
+  [36m<option[39m
+    [33mvalue[39m=[32m"openai/qa"[39m
+  [36m/>[39m
+
+  Name "Credencial disponível":
+  [36m<option[39m
+    [33mvalue[39m=[32m""[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Preparar ensaio":
+  [36m<button[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-4 text-sm lg:h-9"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Testar mensagem":
+  [36m<button[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs h-11 px-4 text-sm lg:h-9"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Revisar resposta":
+  [36m<button[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-4 text-sm lg:h-9"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Continuar para conexão":
+  [36m<button[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs h-11 px-4 text-sm lg:h-9"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Explorar o CRM":
+  [36m<button[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-3 text-xs lg:h-8"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "Mensagem de exemplo":
+  [36m<textarea[39m
+    [33mclass[39m=[32m"flex min-h-[80px] w-full rounded-sm border border-border bg-bg px-4 py-3 text-sm leading-relaxed text-text placeholder:text-text-muted transition-[border-color,box-shadow] duration-fast ease-out hover:border-border-strong focus-visible:outline-hidden focus-visible:border-accent-500 focus-visible:ring-2 focus-visible:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-error aria-[invalid=true]:focus-visible:ring-error-bg"[39m
+    [33mid[39m=[32m"ensaio-message"[39m
+    [33mmaxlength[39m=[32m"4000"[39m
+    [33mrows[39m=[32m"3"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"ensaio-title"[39m
+      [33mclass[39m=[32m"min-w-0 space-y-4 rounded-xl border border-primary/30 bg-background p-4 sm:p-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"space-y-2"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mclass[39m=[32m"text-lg font-semibold"[39m
+          [33mid[39m=[32m"ensaio-title"[39m
+        [36m>[39m
+          [0mEnsaio de conversa, sem envio[0m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+        [36m>[39m
+          [0mPrévia de texto apenas: não consulta memória ou ferramentas, não envia mensagens e não testa o WhatsApp.[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm"[39m
+        [36m>[39m
+          [0mO teste chama a IA escolhida e pode consumir créditos de API. Preparar e revisar não chamam a IA.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"grid min-w-0 gap-4 sm:grid-cols-2"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"min-w-0 space-y-2"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mclass[39m=[32m"inline-block text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"[39m
+            [33mfor[39m=[32m"ensaio-model"[39m
+          [36m>[39m
+            [0mModelo do ensaio[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33mclass[39m=[32m"h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"[39m
+            [33mid[39m=[32m"ensaio-model"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0mEscolha um modelo de IA[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"openai/qa"[39m
+            [36m>[39m
+              [0mQA[0m
+              [0m ([0m
+              [0mopenai[0m
+              [0m)[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"min-w-0 space-y-2"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mclass[39m=[32m"inline-block text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"[39m
+            [33mfor[39m=[32m"ensaio-credential"[39m
+          [36m>[39m
+            [0mCredencial do ensaio[0m
+          [36m</label>[39m
+          [36m<select[39m
+            [33maria-describedby[39m=[32m"ensaio-credential-help"[39m
+            [33mclass[39m=[32m"h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"[39m
+            [33mid[39m=[32m"ensaio-credential"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0mCredencial disponível[0m
+            [36m</option>[39m
+          [36m</select>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+            [33mid[39m=[32m"ensaio-credential-help"[39m
+          [36m>[39m
+            [0mCredencial disponível deste provedor (organização/instalação)[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-4 text-sm lg:h-9"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mPreparar ensaio[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"space-y-2"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mclass[39m=[32m"inline-block text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"[39m
+          [33mfor[39m=[32m"ensaio-message"[39m
+        [36m>[39m
+          [0mMensagem de exemplo[0m
+        [36m</label>[39m
+        [36m<textarea[39m
+          [33mclass[39m=[32m"flex min-h-[80px] w-full rounded-sm border border-border bg-bg px-4 py-3 text-sm leading-relaxed text-text placeholder:text-text-muted transition-[border-color,box-shadow] duration-fast ease-out hover:border-border-strong focus-visible:outline-hidden focus-visible:border-accent-500 focus-visible:ring-2 focus-visible:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-error aria-[invalid=true]:focus-visible:ring-error-bg"[39m
+          [33mid[39m=[32m"ensaio-message"[39m
+          [33mmaxlength[39m=[32m"4000"[39m
+          [33mrows[39m=[32m"3"[39m
+        [36m/>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-xs text-muted-foreground"[39m
+        [36m>[39m
+          [0mUse dados fictícios. Não inclua senhas nem dados reais de clientes.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs h-11 px-4 text-sm lg:h-9"[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mTestar mensagem[0m
+      [36m</button>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-4 text-sm lg:h-9"[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mRevisar resposta[0m
+      [36m</button>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs h-11 px-4 text-sm lg:h-9"[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0mContinuar para conexão[0m
+      [36m</button>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"border-t pt-4"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"mb-2 text-sm"[39m
+        [36m>[39m
+          [0mContinuar depois[0m
+        [36m</p>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-1"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-3 text-xs lg:h-8"[39m
+          [36m>[39m
+            [0mExplorar o CRM[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/unit/onboarding-recuperar-ui.test.tsx:20:28
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  11:11:25
+   Duration  2.43s (transform 521ms, setup 250ms, import 830ms, tests 179ms, environment 731ms)
+

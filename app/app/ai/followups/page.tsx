@@ -8,6 +8,8 @@ import type { FollowupFlowPointerRow } from "@/hooks/followup/useFollowupFlows";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FlowsList } from "./_components/FlowsList";
 import { QueueTab } from "./_components/QueueTab";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,11 @@ export default async function FollowupFlowsPage() {
             {t("Fluxos automáticos de reengajamento — silêncio, etapa, webhook ou resposta do contato, sem intervenção em cada mensagem.")}
           </p>
         </div>
+        {canWrite && (
+          <Button asChild variant="outline">
+            <Link href="/app/webhooks">{t("Ver entradas e webhooks")}</Link>
+          </Button>
+        )}
       </header>
       <Tabs defaultValue="fluxos" className="flex flex-1 flex-col">
         <TabsList>

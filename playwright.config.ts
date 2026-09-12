@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { defineConfig } from "@playwright/test";
 
@@ -132,7 +134,10 @@ export default defineConfig({
   webServer: {
     // Produção (`next build` antes!): dev-server compila por rota (40-80s) e
     // Turbopack dev quebra cookies() fora do request scope — inviável p/ e2e.
-    command: `pnpm exec next start --port ${PORT}`,
+    // Opt-in do harness: preload só neste Next isolado, nunca no runner/workers ou na produção.
+    command: process.env.E2E_ONBOARDING_SYNTHETIC_PROVIDER === "1"
+      ? `node --import "${pathToFileURL(resolve("tests/e2e/helpers/onboarding-provider-preload.mjs")).href}" node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port ${PORT}`
+      : `corepack pnpm exec next start --port ${PORT}`,
     // O ambiente do servidor sob teste vem do `.env.e2e`, INJETADO aqui — e não
     // do `.env.local`, que num checkout de trabalho aponta para PRODUÇÃO.
     // Variável de ambiente real tem precedência sobre os arquivos `.env*` que o

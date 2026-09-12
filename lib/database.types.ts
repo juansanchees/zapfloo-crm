@@ -100,6 +100,47 @@ export type Database = {
           },
         ]
       }
+      ad_insights_connections: {
+        Row: {
+          access_token_encrypted: string
+          created_at: string
+          default_account_id: string | null
+          id: string
+          organization_id: string
+          platform: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          access_token_encrypted: string
+          created_at?: string
+          default_account_id?: string | null
+          id?: string
+          organization_id: string
+          platform: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          access_token_encrypted?: string
+          created_at?: string
+          default_account_id?: string | null
+          id?: string
+          organization_id?: string
+          platform?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_insights_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_platform_connections: {
         Row: {
           access_token_encrypted: string | null
@@ -476,7 +517,7 @@ export type Database = {
         Row: {
           agent_id: string
           cases_enabled: boolean
-          channel_session_id: string
+          channel_session_id: string | null
           cost_budget_cents: number
           created_at: string
           created_by: string | null
@@ -512,7 +553,7 @@ export type Database = {
         Insert: {
           agent_id: string
           cases_enabled?: boolean
-          channel_session_id: string
+          channel_session_id?: string | null
           cost_budget_cents?: number
           created_at?: string
           created_by?: string | null
@@ -548,7 +589,7 @@ export type Database = {
         Update: {
           agent_id?: string
           cases_enabled?: boolean
-          channel_session_id?: string
+          channel_session_id?: string | null
           cost_budget_cents?: number
           created_at?: string
           created_by?: string | null
@@ -2392,6 +2433,74 @@ export type Database = {
           },
         ]
       }
+      catalog_products: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          codigo: string
+          controla_estoque: boolean
+          created_at: string
+          custo_cents: number | null
+          descricao: string | null
+          id: string
+          imagem_url: string | null
+          marca: string | null
+          moeda: string
+          nome: string
+          organization_id: string
+          origem: string
+          preco_cents: number
+          quantidade: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo: string
+          controla_estoque?: boolean
+          created_at?: string
+          custo_cents?: number | null
+          descricao?: string | null
+          id?: string
+          imagem_url?: string | null
+          marca?: string | null
+          moeda?: string
+          nome: string
+          organization_id: string
+          origem?: string
+          preco_cents: number
+          quantidade?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo?: string
+          controla_estoque?: boolean
+          created_at?: string
+          custo_cents?: number | null
+          descricao?: string | null
+          id?: string
+          imagem_url?: string | null
+          marca?: string | null
+          moeda?: string
+          nome?: string
+          organization_id?: string
+          origem?: string
+          preco_cents?: number
+          quantidade?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       channel_knobs: {
         Row: {
           allow_sunday: boolean | null
@@ -2769,10 +2878,10 @@ export type Database = {
           blocked_reason: string | null
           consent: Json
           cpf_encrypted: string | null
-          custom_fields: Json
           cpf_hash: string | null
           created_at: string
           created_by_user_id: string | null
+          custom_fields: Json
           display_name: string | null
           email: string | null
           email_normalized: string | null
@@ -2806,10 +2915,10 @@ export type Database = {
           blocked_reason?: string | null
           consent?: Json
           cpf_encrypted?: string | null
-          custom_fields?: Json
           cpf_hash?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          custom_fields?: Json
           display_name?: string | null
           email?: string | null
           email_normalized?: string | null
@@ -2843,10 +2952,10 @@ export type Database = {
           blocked_reason?: string | null
           consent?: Json
           cpf_encrypted?: string | null
-          custom_fields?: Json
           cpf_hash?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          custom_fields?: Json
           display_name?: string | null
           email?: string | null
           email_normalized?: string | null
@@ -3668,6 +3777,76 @@ export type Database = {
             columns: ["pipeline_id"]
             isOneToOne: false
             referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_tasks: {
+        Row: {
+          assigned_to: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          lead_id?: string | null
+          organization_id: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          lead_id?: string | null
+          organization_id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -5453,6 +5632,70 @@ export type Database = {
           },
         ]
       }
+      onboarding_drafts: {
+        Row: {
+          configuration: Json
+          organization_id: string
+          prepared_agent_id: string | null
+          prepared_request: Json | null
+          prepared_revision: number | null
+          prepared_snapshot: Json | null
+          prepared_version_id: string | null
+          rehearsal: Json | null
+          revision: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          configuration: Json
+          organization_id: string
+          prepared_agent_id?: string | null
+          prepared_request?: Json | null
+          prepared_revision?: number | null
+          prepared_snapshot?: Json | null
+          prepared_version_id?: string | null
+          rehearsal?: Json | null
+          revision: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          configuration?: Json
+          organization_id?: string
+          prepared_agent_id?: string | null
+          prepared_request?: Json | null
+          prepared_revision?: number | null
+          prepared_snapshot?: Json | null
+          prepared_version_id?: string | null
+          rehearsal?: Json | null
+          revision?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_drafts_prepared_agent_id_fkey"
+            columns: ["prepared_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_drafts_prepared_version_id_fkey"
+            columns: ["prepared_version_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agent_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           contact_id: string | null
@@ -6637,6 +6880,38 @@ export type Database = {
           },
         ]
       }
+      user_dashboard_preferences: {
+        Row: {
+          layout: Json
+          organization_id: string
+          schema_version: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          layout: Json
+          organization_id: string
+          schema_version?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          layout?: Json
+          organization_id?: string
+          schema_version?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_dashboard_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_organizations: {
         Row: {
           accepted_at: string | null
@@ -7044,6 +7319,10 @@ export type Database = {
         Args: { p_agent_id: string; p_version_id: string }
         Returns: undefined
       }
+      comando_da_conversa: {
+        Args: { c: Database["public"]["Tables"]["conversations"]["Row"] }
+        Returns: string
+      }
       emit_event: {
         Args: {
           p_entity_id: string
@@ -7054,6 +7333,16 @@ export type Database = {
           p_payload?: Json
         }
         Returns: string
+      }
+      fn_activity_report: {
+        Args: {
+          p_from: string
+          p_limit?: number
+          p_org: string
+          p_to: string
+          p_tz?: string
+        }
+        Returns: Json
       }
       fn_agent_tool_usage: {
         Args: { p_agent_id: string; p_organization_id: string; p_since: string }
@@ -7073,6 +7362,18 @@ export type Database = {
           p_organization_id: string
           p_pipeline_id: string
           p_slug: string
+        }
+        Returns: Json
+      }
+      fn_ativar_agente_teste_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_channel_session_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_installation_key_available: boolean
+          p_org_id: string
+          p_run_id: string
         }
         Returns: Json
       }
@@ -7150,6 +7451,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      fn_comando_da_conversa: {
+        Args: {
+          p_agora: string
+          p_assigned_to_user_id: string
+          p_bot_silenced_until: string
+          p_force_human: boolean
+          p_is_blocked: boolean
+          p_status: string
+        }
+        Returns: string
+      }
       fn_configurar_pre_go_live_canal: {
         Args: {
           p_canal: string
@@ -7158,6 +7470,16 @@ export type Database = {
           p_org: string
         }
         Returns: number
+      }
+      fn_confirmar_agente_revisado_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+          p_run_id: string
+        }
+        Returns: Json
       }
       fn_conversation_assign: {
         Args: {
@@ -7239,7 +7561,30 @@ export type Database = {
         Args: { p_dias: number; p_lote?: number }
         Returns: number
       }
+      fn_finalizar_ensaio_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_call_id: string
+          p_error: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+          p_response: string
+          p_run_id: string
+        }
+        Returns: Json
+      }
       fn_gasto_de_ia_do_mes: { Args: { p_org: string }; Returns: number }
+      fn_iniciar_ensaio_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+          p_sample_message: string
+        }
+        Returns: Json
+      }
       fn_is_platform_admin: { Args: never; Returns: boolean }
       fn_lgpd_cascade_redact_contact: {
         Args: {
@@ -7279,7 +7624,11 @@ export type Database = {
         Returns: Json
       }
       fn_mover_leads_em_lote: {
-        Args: { p_lead_ids: string[]; p_organization_id: string; p_stage_id: string }
+        Args: {
+          p_lead_ids: string[]
+          p_organization_id: string
+          p_stage_id: string
+        }
         Returns: {
           from_stage_id: string
           lead_id: string
@@ -7289,6 +7638,17 @@ export type Database = {
       fn_podar_fila_de_jobs: {
         Args: { p_limite?: number; p_retencao_dias?: number }
         Returns: number
+      }
+      fn_prepare_onboarding_draft: {
+        Args: {
+          p_actor_id: string
+          p_expected_business: Json
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+          p_version: Json
+        }
+        Returns: Json
       }
       fn_publish_ai_agent_version: {
         Args: { p_agent_id: string; p_org_id: string; p_version_id: string }
@@ -7308,9 +7668,37 @@ export type Database = {
         }
         Returns: string
       }
+      fn_recuperar_preparacao_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
+      fn_revisar_ensaio_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+          p_run_id: string
+        }
+        Returns: Json
+      }
       fn_role_at_least: {
         Args: { p_min: string; p_org: string }
         Returns: boolean
+      }
+      fn_save_onboarding_draft: {
+        Args: {
+          p_actor_id: string
+          p_configuration: Json
+          p_expected_revision: number
+          p_org_id: string
+        }
+        Returns: Json
       }
       fn_semear_tipos_de_agendamento: {
         Args: { p_organization_id: string }
@@ -7334,6 +7722,15 @@ export type Database = {
       fn_user_org_ids: { Args: never; Returns: string[] }
       fn_user_role_in: { Args: { p_org: string }; Returns: number }
       fn_user_role_in_org: { Args: { p_org: string }; Returns: string }
+      fn_validar_ensaio_onboarding: {
+        Args: {
+          p_actor_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
       midpoint: { Args: { p_next: number; p_prev: number }; Returns: number }
       retrieve_top_k_chunks: {
         Args: {
@@ -7376,7 +7773,6 @@ export type Database = {
           public: boolean | null
           type: Database["storage"]["Enums"]["buckettype"]
           updated_at: string | null
-          versioning_status: string
         }
         Insert: {
           allowed_mime_types?: string[] | null
@@ -7390,7 +7786,6 @@ export type Database = {
           public?: boolean | null
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string | null
-          versioning_status?: string
         }
         Update: {
           allowed_mime_types?: string[] | null
@@ -7404,7 +7799,6 @@ export type Database = {
           public?: boolean | null
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string | null
-          versioning_status?: string
         }
         Relationships: []
       }
@@ -7459,6 +7853,101 @@ export type Database = {
         }
         Relationships: []
       }
+      iceberg_namespaces: {
+        Row: {
+          bucket_name: string
+          catalog_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_name: string
+          catalog_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_name?: string
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_namespaces_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iceberg_tables: {
+        Row: {
+          bucket_name: string
+          catalog_id: string
+          created_at: string
+          id: string
+          location: string
+          name: string
+          namespace_id: string
+          remote_table_id: string | null
+          shard_id: string | null
+          shard_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          bucket_name: string
+          catalog_id: string
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          namespace_id: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bucket_name?: string
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          namespace_id?: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_tables_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iceberg_tables_namespace_id_fkey"
+            columns: ["namespace_id"]
+            isOneToOne: false
+            referencedRelation: "iceberg_namespaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       migrations: {
         Row: {
           executed_at: string | null
@@ -7482,12 +7971,9 @@ export type Database = {
       }
       objects: {
         Row: {
-          archived_at: string | null
           bucket_id: string | null
           created_at: string | null
           id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
           last_accessed_at: string | null
           metadata: Json | null
           name: string | null
@@ -7499,12 +7985,9 @@ export type Database = {
           version: string | null
         }
         Insert: {
-          archived_at?: string | null
           bucket_id?: string | null
           created_at?: string | null
           id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
           last_accessed_at?: string | null
           metadata?: Json | null
           name?: string | null
@@ -7516,12 +7999,9 @@ export type Database = {
           version?: string | null
         }
         Update: {
-          archived_at?: string | null
           bucket_id?: string | null
           created_at?: string | null
           id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
           last_accessed_at?: string | null
           metadata?: Json | null
           name?: string | null
@@ -7549,7 +8029,6 @@ export type Database = {
           id: string
           in_progress_size: number
           key: string
-          metadata: Json | null
           owner_id: string | null
           upload_signature: string
           user_metadata: Json | null
@@ -7561,7 +8040,6 @@ export type Database = {
           id: string
           in_progress_size?: number
           key: string
-          metadata?: Json | null
           owner_id?: string | null
           upload_signature: string
           user_metadata?: Json | null
@@ -7573,7 +8051,6 @@ export type Database = {
           id?: string
           in_progress_size?: number
           key?: string
-          metadata?: Json | null
           owner_id?: string | null
           upload_signature?: string
           user_metadata?: Json | null
@@ -7692,14 +8169,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      allow_any_operation: {
-        Args: { expected_operations: string[] }
-        Returns: boolean
-      }
-      allow_only_operation: {
-        Args: { expected_operation: string }
-        Returns: boolean
-      }
       can_insert_object: {
         Args: { bucketid: string; metadata: Json; name: string; owner: string }
         Returns: undefined
@@ -7833,12 +8302,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7862,11 +8331,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7887,11 +8356,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7912,11 +8381,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7929,11 +8398,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

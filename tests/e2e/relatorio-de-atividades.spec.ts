@@ -282,25 +282,33 @@ test.describe("Relatório de atividades — o período, pela tela", () => {
 
     await login(page, creds.users.manager!.email, creds.password);
 
+    // A porta é de DUAS camadas desde o redesenho: a barra lateral desenha oito
+    // ÁREAS, e as telas irmãs viraram abas da área (`lib/navigation/registry.ts`).
+    // "Atividades" é aba de `Relatórios` (`/app/analise`), não link da nav
+    // principal — antes esta linha procurava o link solto e não achava.
     const sidebar = page.getByRole("navigation", { name: "Navegação principal" });
-    const item = sidebar.getByRole("link", { name: "Atividades", exact: true });
-    await expect(item, "tela sem porta é tela que só existe para quem digita a URL").toBeVisible({
+    const porta = sidebar.getByRole("link", { name: "Relatórios", exact: true });
+    await expect(porta, "tela sem porta é tela que só existe para quem digita a URL").toBeVisible({
       timeout: 30_000,
     });
-    expect(await item.getAttribute("href")).toBe("/app/activities");
+    expect(await porta.getAttribute("href")).toBe("/app/analise");
+
+    await porta.click();
+    await page.waitForURL(/\/app\/analise/, { timeout: 30_000 });
 
     // O grupo importa: "Atividades" é irmã de Desempenho e Audit Log, não de
     // Inbox. Ir parar no grupo errado é a diferença entre achar e caçar.
-    const grupo = await item.evaluate((a) => {
-      let el: Element | null = a;
-      while (el && el.previousElementSibling === null) el = el.parentElement;
-      // sobe até achar o cabeçalho de grupo mais próximo acima
-      const titulos = [...document.querySelectorAll('nav[aria-label="Navegação principal"] h2')];
-      const y = a.getBoundingClientRect().top;
-      const acima = titulos.filter((h) => h.getBoundingClientRect().top < y);
-      return (acima[acima.length - 1]?.textContent ?? "").trim();
-    });
-    expect(grupo, "Atividades pertence ao grupo Análise").toMatch(/an[áa]lise/i);
+    //
+    // A prova deixou de ser GEOMÉTRICA de propósito. A sonda antiga procurava o
+    // `h2` mais próximo acima do link dentro da nav principal; o sidebar novo
+    // tem um único `h2` — "Crescimento" (`components/shell/Sidebar.tsx:157`) —,
+    // então ela nunca mais poderia devolver "Análise", e mediria pixel em vez de
+    // pertencimento. A pergunta original é respondida melhor pela estrutura: a
+    // aba VIVE na barra contextual da área Relatórios, ao lado das irmãs.
+    const abasDaArea = page.getByRole("navigation", { name: /Opções da área/ });
+    const item = abasDaArea.getByRole("link", { name: "Atividades", exact: true });
+    await expect(item, "Atividades pertence à área Relatórios").toBeVisible({ timeout: 30_000 });
+    expect(await item.getAttribute("href")).toBe("/app/activities");
 
     await item.click();
     await page.waitForURL(/\/app\/activities/, { timeout: 30_000 });
@@ -435,11 +443,19 @@ test.describe("Relatório de atividades — o período, pela tela", () => {
     // rota é `viewer` de propósito: um piso mais alto esconderia da pessoa as
     // atividades dela mesma.
     const sidebar = page.getByRole("navigation", { name: "Navegação principal" });
-    await expect(sidebar.getByRole("link", { name: "Atividades", exact: true })).toBeVisible({
+    await expect(sidebar.getByRole("link", { name: "Relatórios", exact: true })).toBeVisible({
       timeout: 30_000,
     });
 
     await page.goto("/app/activities");
+    // A porta fina, na segunda camada: dentro da área Relatórios a aba
+    // "Atividades" também aparece para quem só lê. Sem esta asserção o caso
+    // provaria apenas que a URL digitada abre — que é o oposto do que ele mede.
+    await expect(
+      page
+        .getByRole("navigation", { name: /Opções da área/ })
+        .getByRole("link", { name: "Atividades", exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Atividades", level: 1 })).toBeVisible({
       timeout: 30_000,
     });

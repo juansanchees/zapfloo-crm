@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Dashboard personalizável por usuário",
+    "subtitle": "Layout validado, isolado por tenant e degradável para o padrão",
+    "output": "dashboard-personalizavel.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "ui", "label": "Interface" },
+    { "id": "api", "label": "API" },
+    { "id": "db", "label": "Banco" }
+  ],
+  "mainPath": ["dashboard", "preferences_api", "sanitizer", "preferences_db", "dashboard"],
+  "nodes": [
+    { "id": "dashboard", "lane": "ui", "col": 1, "type": "service", "label": "Dashboard / editor de layout / fallback canônico" },
+    { "id": "preferences_api", "lane": "api", "col": 2, "type": "api", "label": "GET PUT DELETE /api/v1/dashboard/preferences / requireRole(viewer)" },
+    { "id": "sanitizer", "lane": "api", "col": 3, "type": "service", "label": "Catálogo e schema Zod / ids, ordem, tamanho e papel permitidos" },
+    { "id": "preferences_db", "lane": "db", "col": 4, "type": "database", "label": "user_dashboard_preferences / organization_id + user_id / RLS" },
+    { "id": "audit", "lane": "api", "col": 4, "type": "service", "label": "Audit de atualização e restauração sem gravar o layout completo" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "dashboard", "to": "preferences_api", "label": "carrega, salva ou restaura" },
+    { "id": "e2", "from": "preferences_api", "to": "sanitizer", "label": "valida e remove o que o papel não permite" },
+    { "id": "e3", "from": "sanitizer", "to": "preferences_db", "label": "persiste somente layout completo sanitizado" },
+    { "id": "e4", "from": "preferences_db", "to": "dashboard", "label": "preferência própria ou default" },
+    { "id": "e5", "from": "preferences_api", "to": "audit", "label": "metadados da mutação" }
+  ],
+  "non_connections": [
+    "O editor não aceita SQL, fórmulas, endpoints ou componentes arbitrários.",
+    "Uma pessoa não lê nem altera preferências de outro usuário ou tenant.",
+    "Falha da preferência não bloqueia os dados do dashboard."
+  ]
+}

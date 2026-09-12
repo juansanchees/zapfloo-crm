@@ -47,7 +47,13 @@ async function login(page: Page, email: string): Promise<void> {
 }
 
 async function gotoRadar(page: Page): Promise<void> {
-  await page.getByRole("link", { name: "Radar" }).click();
+  // A barra lateral deixou de desenhar um link "Radar". Ela tem OITO portas, e
+  // as telas irmãs foram para a barra contextual da área: o Radar é a aba
+  // "Precisam de atenção" da área Conversas (`lib/navigation/registry.ts`, área
+  // `conversas`, aba `/app/radar`). O login cai em `/app/inbox`
+  // (`app/actions/auth/verifyMfa.ts:44`), então essa barra já está na tela.
+  const abasDaArea = page.getByRole("navigation", { name: /Opções da área/ });
+  await abasDaArea.getByRole("link", { name: "Precisam de atenção" }).click();
   await page.waitForURL(/\/app\/radar/);
   await expect(page.getByRole("heading", { name: "Radar de risco" })).toBeVisible();
 }

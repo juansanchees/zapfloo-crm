@@ -254,6 +254,23 @@ Migrations were applied directly via the Supabase MCP `apply_migration` tool dur
 
 To re-apply on a fresh Supabase project, replay the migrations in version order via `supabase db push` (Supabase CLI) or via the MCP.
 
+## Apêndice de primeiro acesso
+
+| Versão | Nome | Mudança |
+| --- | --- | --- |
+| `20260908171945` | `0220_rascunho_sem_canal` | Versão draft/archived pode existir sem canal; CHECK mantém canal obrigatório em published/superseded. Sem backfill, mudança de RLS ou autorização de atendimento. Apêndice idempotente no baseline. |
+| `20260908175114` | `0221_onboarding_draft_save` | Rascunho preparatório por organização com revisão, RLS admin e RPC atômica exclusiva do servidor. Não cria agentes nem altera canais/modelos. |
+| `20260908183448` | `0222_onboarding_draft_prepare` | Preparação transacional de versão draft sem canal e agente inativo/não padrão; seleção explícita, CAS e snapshot contra edição externa. Somente local neste lote. |
+
+| `20260908191151` | `0223_onboarding_rehearsal` | Último ensaio de texto e revisão persistidos, CAS de snapshot antes/depois da rede, RPCs exclusivas do servidor e invalidação na edição. Sem ativação/canal/ferramentas. |
+| `20260908213253` | `0224_onboarding_concluir_restrito` | Confirma a revisão sem ativar e, em ação explícita separada, publica exatamente a versão ensaiada somente em canal WORKING com allowlist pré-go-live não vazia. Retry histórico idempotente, RPCs exclusivas de service role e nenhum envio/evento proativo. |
+| `20260908222232` | `0225_onboarding_concluir_fail_closed` | Forward-fix da conclusão restrita: chaves JSON ausentes falham fechadas; credencial válida mais recente da organização precede a chave da instalação sem alterar a versão selecionada; retry mantém campos canônicos e hash verificados entre recibo e audit. Mesma RPC service-only, sem ampliar ativação ou publicar para canal aberto. |
+| `20260908224839` | `0226_onboarding_business_goal` | Objetivo opcional no rascunho e segmento no snapshot de negócio; mudanças exigem novo ensaio. Sem backfill, preservando configuração antiga e assinaturas service-only. |
+| `20260909130000` | `0227_user_dashboard_preferences` | Layout pessoal versionado do dashboard, com ordem, visibilidade e tamanho; RLS limita cada linha ao próprio usuário dentro de organização ativa. |
+| `20260910141154` | `0228_onboarding_recover_preparation` | Recuperação explícita e auditada da preparação arquivada/removida: limpa vínculos e prova obsoletos sem reativar agente, com admin/tenant e CAS. |
+
+| `20260910141734` | `0229_limite_exato_prompt_onboarding` | Alinha salvar e preparar ao teto total de 20.000 unidades UTF-16 sem truncar rascunhos antigos. |
+
 ## Tables created (33 total, all RLS enabled)
 
 - **Platform**: organizations, user_organizations, platform_admins, api_tokens, api_audit_log, user_recovery_codes, idempotency_keys

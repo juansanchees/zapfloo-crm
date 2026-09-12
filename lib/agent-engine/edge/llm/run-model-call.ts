@@ -126,6 +126,11 @@ export interface RunModelCallInput {
    * agente), nunca constante.
    */
   maxSteps?: number;
+  /** Prévia explícita: binding não substitui modelo/provider/credencial capturados. */
+  selectionMode?: 'explicit';
+  /** Limites técnicos opcionais. Defaults dos consumidores existentes preservados. */
+  timeoutMs?: number;
+  maxOutputTokens?: number;
   /**
    * Override de provider/credencial vindo da versão PUBLICADA do agente (Fase
    * 2B) — resolvido no seam, nunca no call site. Sem ele, config da org.
@@ -313,13 +318,21 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
 
   // A config da org é lida ANTES da decisão porque o resolvedor precisa dela
   // como último degrau da precedência (o padrão, quando ninguém mais opinou).
-  const padrao = await resolveOrgLlmConfig(db, cfg, input.tenantId, input.llmOverride);
+  if (input.selectionMode === 'explicit' && (!input.model || !input.llmOverride?.provider)) {
+    throw new Error('seleção explícita exige provider e modelo');
+  }
+  const padrao = await resolveOrgLlmConfig(db, cfg, input.tenantId,
+    input.selectionMode === 'explicit' ? { ...input.llmOverride, strictCredential: true } : input.llmOverride);
 
   // O painel de provedores entra AQUI, e é o que faz `purpose` deixar de ser
   // só um rótulo de custo e virar decisão. Sem binding configurado, `decisao`
   // reproduz exatamente o comportamento anterior — a origem volta como
   // 'variavel_de_ambiente' ou 'padrao_da_organizacao'.
-  const decisao = await decidirParaOSeam(db, {
+  const decisao = input.selectionMode === 'explicit' ? {
+    provider: input.llmOverride!.provider!, modelId: input.model!,
+    credentialId: input.llmOverride!.credentialId ?? null, baseUrl: null,
+    origem: 'herdado_de_quem_chamou' as const, avisos: [] as string[],
+  } : await decidirParaOSeam(db, {
     organizationId: input.tenantId,
     purpose,
     modeloDoCallSite: input.model,
@@ -427,7 +440,9 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
       temperature,
       topP,
       topK,
-      maxOutputTokens,
+      maxOutputTokens: input.maxOutputTokens === undefined ? maxOutputTokens
+        : Math.min(input.maxOutputTokens, maxOutputTokens ?? input.maxOutputTokens),
+      ...(input.timeoutMs === undefined ? {} : { abortSignal: AbortSignal.timeout(input.timeoutMs) }),
     });
   } catch (err) {
     // ─── A LINHA QUE FALTAVA ────────────────────────────────────────────────

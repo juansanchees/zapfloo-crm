@@ -1,0 +1,38 @@
+{
+  "source": ".superpowers/leva-final/sabotagem/followup-builder-followup--f34cf-ormulário-longo-em-1280×720-chromium/gatilho-alcance.json",
+  "measurement": {
+    "before": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "panel": {
+        "x": 68,
+        "y": 286,
+        "width": 320,
+        "height": 504,
+        "top": 286,
+        "right": 388,
+        "bottom": 790,
+        "left": 68
+      },
+      "button": {
+        "x": 85,
+        "y": 805,
+        "width": 286,
+        "height": 32,
+        "top": 805,
+        "right": 371,
+        "bottom": 837,
+        "left": 85
+      },
+      "disabled": false,
+      "clientHeight": 502,
+      "scrollHeight": 566,
+      "scrollTop": 0,
+      "overflowY": "auto",
+      "availableHeight": "434px",
+      "hit": false
+    }
+  }
+}

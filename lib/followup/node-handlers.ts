@@ -13,6 +13,7 @@ export type EnrollmentStatus =
   | "active"
   | "waiting_reply"
   | "paused_handoff"
+  | "paused_manual"
   | "completed"
   | "cancelled"
   | "dead";

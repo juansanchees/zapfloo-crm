@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": { "title": "Teste legado isolado", "subtitle": "Recusa de ferramentas antes dos handlers", "output": "teste-legado-isolado.html", "quality_profile": "standard" },
+  "lanes": [{ "id": "ui", "label": "Interface" }, { "id": "server", "label": "Servidor" }, { "id": "db", "label": "Registro técnico" }],
+  "mainPath": ["panel", "route", "runtime", "bridge", "trace"],
+  "nodes": [
+    { "id": "panel", "lane": "ui", "col": 1, "type": "service", "label": "TestPanel / aviso de limites e resultado" },
+    { "id": "route", "lane": "server", "col": 2, "type": "service", "label": "versions/:vid/test / admin, organização, run dry-run" },
+    { "id": "runtime", "lane": "server", "col": 3, "type": "service", "label": "runAgent / flag persistida, modelo e orçamento" },
+    { "id": "bridge", "lane": "server", "col": 4, "type": "service", "label": "wrapMcpTool / dry_run_tool_blocked antes do handler" },
+    { "id": "trace", "lane": "db", "col": 5, "type": "database", "label": "ai_agent_runs + audit / recusa, custo e status" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "panel", "to": "route", "label": "mensagem de exemplo, não publicação" },
+    { "id": "e2", "from": "route", "to": "runtime", "label": "run_id de organização autenticada" },
+    { "id": "e3", "from": "runtime", "to": "bridge", "label": "isDryRun da linha, não dos argumentos do modelo" },
+    { "id": "e4", "from": "bridge", "to": "runtime", "label": "executed: false para toda ferramenta montada" },
+    { "id": "e5", "from": "runtime", "to": "trace", "label": "serializeSteps + finalizeRun, sem eventos operacionais" },
+    { "id": "e6", "from": "trace", "to": "panel", "label": "RunTrace mostra recusa e texto; não comprova operações" }
+  ],
+  "non_connections": ["Em dry-run nenhum handler MCP, handoff real ou envio final é executado.", "Sem flag, execução normal preservada. Registro técnico e consumo de modelo continuam.", "O novo ensaio de onboarding não utiliza este runtime."]
+}

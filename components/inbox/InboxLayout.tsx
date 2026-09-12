@@ -285,27 +285,9 @@ export function InboxLayout({ initialSelectedId = null }: InboxLayoutProps = {})
       ? t("Contato anonimizado — não é possível enviar mensagens.")
       : null;
 
-  // Altura da grade: a conta desconta TUDO que fica acima e abaixo dela.
-  //   3.5rem            TopBar (`h-14`, em components/shell/TopBar.tsx)
-  //   2 * --space-6     padding do <main> do AppShell (`p-6`, em cima e embaixo)
-  //
-  // Com `100vh-3.5rem` o padding ficava de fora e a grade media 48px a MAIS que a
-  // tela. Quem pagava a diferença era o composer, que fica no rodapé: nascia
-  // parcialmente abaixo da borda, atrapalhando justo na hora de escrever.
-  //
-  // As duas parcelas NÃO estão na mesma unidade, e por isso o padding entra pelo
-  // token e não como `3rem`: o `@theme inline` de `app/globals.css` remapeia a
-  // escala de spacing para `var(--space-N)` — `--space-6` é `24px` LITERAL —, mas
-  // não remapeia o `14`, que o Tailwind 4 calcula pelo multiplicador `--spacing`
-  // e segue sendo `3.5rem` de verdade. (Até o Tailwind 4 quem remapeava era o
-  // `tailwind.config.ts`; o arquivo não existe mais, o efeito é o mesmo.)
-  // Escrever a soma como
-  // `6.5rem` só acerta enquanto a raiz for 16px; com acessibilidade de fonte maior
-  // ou menor o composer sai da tela de novo. Pelo token, a conta se auto-corrige
-  // se a escala de espaçamento mudar.
-  //
-  // `dvh` em vez de `vh` porque no celular a `vh` ignora a barra do navegador — o
-  // mesmo corte, só que pior e mudando conforme se rola a página.
+  // AppShell distribui a altura restante após cabeçalho, abas e avisos.
+  // Um cálculo fixo em dvh ignorava banners e cortava o composer. A grade
+  // agora encolhe com o espaço disponível; cada coluna mantém sua rolagem.
 
   // TRÊS COLUNAS QUE CABEM — medido, não estimado.
   //
@@ -328,7 +310,7 @@ export function InboxLayout({ initialSelectedId = null }: InboxLayoutProps = {})
   return (
     <OpenConversationProvider conversationId={selectedId}>
     <div
-      className="grid h-[calc(100dvh-3.5rem-2*var(--space-6))] w-full grid-cols-1 md:grid-cols-[300px_1fr] xl:grid-cols-[272px_1fr_296px] 2xl:grid-cols-[300px_1fr_320px]"
+      className="grid min-h-0 w-full flex-1 grid-cols-1 overflow-hidden md:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[272px_minmax(0,1fr)_296px] 2xl:grid-cols-[300px_minmax(0,1fr)_320px]"
       /*
        * O ESTADO DO TEMPO REAL, LEGÍVEL DE FORA — mesmo par que o dossiê do lead
        * já publica (`LeadDossier`), e pela mesma razão: quando a entrega morre,

@@ -94,9 +94,14 @@ function job(payload: Record<string, unknown>): JobRow {
   } as JobRow;
 }
 
-/** Pool mínimo: resolve a conversa e devolve a escolha da organização. */
+/** Pool mínimo: inscrição sem conversa pinada, destino e escolha da organização. */
 function fakePool(camadaDaOrg: boolean) {
   const query = vi.fn(async (sql: string): Promise<{ rows: Array<Record<string, unknown>> }> => {
+    if (/from followup_enrollments/.test(sql)) {
+      // Captação sem vínculo prévio: o worker valida a inscrição antes de
+      // usar o destino já disponível, sem mudar a regra da camada semântica.
+      return { rows: [{ conversation_id: null }] };
+    }
     if (/from org_guardrail_layers/.test(sql)) {
       return { rows: [{ layer: "promessa_semantica", enabled: camadaDaOrg }] };
     }

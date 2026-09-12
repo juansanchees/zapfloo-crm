@@ -308,8 +308,10 @@ test.describe("gatilho de caso aberto", () => {
       await expect(linhaCancelada.getByText("Cancelado", { exact: true })).toBeVisible({ timeout: ESPERA });
       await page.screenshot({ path: path.join(ARTIFACTS_DIR, "caso-04-cancelado-apos-resolver.png"), fullPage: true });
     } finally {
-      if (flowId) await page.request.post(`/api/v1/ai/followup-flows/${flowId}/disable`, { data: {} });
-      if (agentId) await page.request.delete(`/api/v1/ai/agents/${agentId}`);
+      // Uma exceção no finally substituiria a falha original. Só a limpeza é
+      // best-effort; as asserções e requisições do corpo continuam reprovando.
+      if (flowId) await page.request.post(`/api/v1/ai/followup-flows/${flowId}/disable`, { data: {} }).catch(() => undefined);
+      if (agentId) await page.request.delete(`/api/v1/ai/agents/${agentId}`).catch(() => undefined);
     }
   });
 });

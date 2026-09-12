@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": { "title": "Rascunho preparatório do onboarding", "subtitle": "CONFIRMADO: persistência sem criar ou ativar atendimento", "output": "onboarding-rascunho.html", "quality_profile": "standard" },
+  "lanes": [
+    { "id": "ui", "label": "Tela" },
+    { "id": "server", "label": "Servidor" },
+    { "id": "db", "label": "Banco" }
+  ],
+  "mainPath": ["form", "action", "rpc", "draft", "read", "form"],
+  "nodes": [
+    { "id": "form", "lane": "ui", "col": 1, "type": "frontend", "label": "SetupAiForm / Salvar rascunho" },
+    { "id": "action", "lane": "server", "col": 2, "type": "service", "label": "salvarRascunho / admin + MFA / Zod" },
+    { "id": "rpc", "lane": "db", "col": 3, "type": "database", "label": "fn_save_onboarding_draft / lock + revisão + prompt montado até 20.000 UTF-16" },
+    { "id": "draft", "lane": "db", "col": 4, "type": "database", "label": "onboarding_drafts / nome, jeito, regras" },
+    { "id": "read", "lane": "server", "col": 5, "type": "service", "label": "lerRascunho / admin + MFA / filtro organization_id" },
+    { "id": "audit", "lane": "db", "col": 4, "type": "database", "label": "api_audit_log / onboarding.draft_saved / somente revisão" },
+    { "id": "audit_ui", "lane": "ui", "col": 5, "type": "frontend", "label": "Auditoria / consulta existente" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "form", "to": "action", "label": "configuração, revisão e fingerprint do contexto inicial; não é credencial" },
+    { "id": "e2", "from": "action", "to": "rpc", "label": "org/ator confiáveis; valida admin e org ativa não concluída" },
+    { "id": "e3", "from": "rpc", "to": "draft", "label": "gravação atômica; repetição idempotente" },
+    { "id": "e4", "from": "draft", "to": "read", "label": "conteúdo salvo ou ausência explícita" },
+    { "id": "e5", "from": "read", "to": "form", "label": "retoma; falha de leitura bloqueia gravação" },
+    { "id": "e6", "from": "rpc", "to": "action", "label": "conflito não sobrescreve outra aba" },
+    { "id": "e7", "from": "action", "to": "form", "label": "sucesso sem ativação; limite orienta reduzir texto; erro preserva campos" },
+    { "id": "e8", "from": "rpc", "to": "audit", "label": "audit na mesma transação, sem conteúdo" },
+    { "id": "e9", "from": "audit", "to": "audit_ui", "label": "leitura administrativa existente" }
+  ],
+  "non_connections": [
+    "Salvar não cria ai_agents ou ai_agent_versions, não altera memória, canais, modelo, chave ou onboarding_state.",
+    "Configuração preparatória não é versão executável. Ensaio, revisão vinculada ao conteúdo e autorização de atendimento continuam fora deste recorte."
+  ]
+}

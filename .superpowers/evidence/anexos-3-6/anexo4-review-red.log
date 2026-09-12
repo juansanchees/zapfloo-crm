@@ -1,0 +1,257 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+
+stderr | tests/unit/onboarding-recuperar-leitura.test.ts
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+ ❯ tests/unit/onboarding-recuperar-leitura.test.ts (4 tests | 1 failed) 31ms
+     × editar o rascunho antes de arquivar não esconde a recuperação 19ms
+stderr | tests/unit/onboarding-recuperar-ui.test.tsx
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+ ❯ tests/unit/onboarding-recuperar-ui.test.tsx (2 tests | 1 failed) 1327ms
+     × agente apagado com a tela aberta atualiza o CAS antes de recuperar 1252ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/onboarding-recuperar-leitura.test.ts > leitura expõe recuperação sem inventar prova de ensaio > editar o rascunho antes de arquivar não esconde a recuperação
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/unit/onboarding-recuperar-leitura.test.ts:27:58
+     25|     f.rpc.mockResolvedValue({ data: null, error: { message: "draft_con…
+     26|     const result = await lerEnsaio({ expected_context: context });
+     27|     expect(result.ok && result.panel.recovery_available).toBe(true);
+       |                                                          ^
+     28|     expect(result.ok && result.panel.proof).toBeNull();
+     29|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/unit/onboarding-recuperar-ui.test.tsx > saída visível para preparação arquivada > agente apagado com a tela aberta atualiza o CAS antes de recuperar
+AssertionError: expected last "vi.fn()" call to have been called with [ ObjectContaining{…} ]
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"ensaio-title"[39m
+        [33mclass[39m=[32m"min-w-0 space-y-4 rounded-xl border border-primary/30 bg-background p-4 sm:p-6"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-2"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"text-lg font-semibold"[39m
+            [33mid[39m=[32m"ensaio-title"[39m
+          [36m>[39m
+            [0mEnsaio de conversa, sem envio[0m
+          [36m</h3>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+          [36m>[39m
+            [0mPrévia de texto apenas: não consulta memória ou ferramentas, não envia mensagens e não testa o WhatsApp.[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm"[39m
+          [36m>[39m
+            [0mO teste chama a IA escolhida e pode consumir créditos de API. Preparar e revisar não chamam a IA.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"grid min-w-0 gap-4 sm:grid-cols-2"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0 space-y-2"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"inline-block text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"[39m
+              [33mfor[39m=[32m"ensaio-model"[39m
+            [36m>[39m
+              [0mModelo do ensaio[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33mclass[39m=[32m"h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"[39m
+              [33mid[39m=[32m"ensaio-model"[39m
+            [36m>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m""[39m
+              [36m>[39m
+                [0mEscolha um modelo de IA[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"openai/qa"[39m
+              [36m>[39m
+                [0mQA[0m
+                [0m ([0m
+                [0mopenai[0m
+                [0m)[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"min-w-0 space-y-2"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"inline-block text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"[39m
+              [33mfor[39m=[32m"ensaio-credential"[39m
+            [36m>[39m
+              [0mCredencial do ensaio[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33maria-describedby[39m=[32m"ensaio-credential-help"[39m
+              [33mclass[39m=[32m"h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"[39m
+              [33mid[39m=[32m"ensaio-credential"[39m
+            [36m>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m""[39m
+              [36m>[39m
+                [0mCredencial disponível[0m
+              [36m</option>[39m
+            [36m</select>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+              [33mid[39m=[32m"ensaio-credential-help"[39m
+            [36m>[39m
+              [0mCredencial disponível deste provedor (organização/instalação)[0m
+            [36m</p>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-2 rounded-lg border p-3"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0mA preparação anterior está indisponível. Se o agente foi arquivado ou removido, recupere a preparação; seu rascunho será preservado.[0m
+          [36m</p>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-4 text-sm lg:h-9"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mRecuperar preparação[0m
+          [36m</button>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-xs text-muted-foreground"[39m
+          [36m>[39m
+            [0mSe o nome já estiver em uso, escolha outro nome e salve o rascunho antes de preparar novamente.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-4 text-sm lg:h-9"[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mPreparar ensaio[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"space-y-2"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mclass[39m=[32m"inline-block text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"[39m
+            [33mfor[39m=[32m"ensaio-message"[39m
+          [36m>[39m
+            [0mMensagem de exemplo[0m
+          [36m</label>[39m
+          [36m<textarea[39m
+            [33mclass[39m=[32m"flex min-h-[80px] w-full rounded-sm border border-border bg-bg px-4 py-3 text-sm leading-relaxed text-text placeholder:text-text-muted transition-[border-color,box-shadow] duration-fast ease-out hover:border-border-strong focus-visible:outline-hidden focus-visible:border-accent-500 focus-visible:ring-2 focus-visible:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-error aria-[invalid=true]:focus-visible:ring-error-bg"[39m
+            [33mid[39m=[32m"ensaio-message"[39m
+            [33mmaxlength[39m=[32m"4000"[39m
+            [33mrows[39m=[32m"3"[39m
+          [36m/>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-xs text-muted-foreground"[39m
+          [36m>[39m
+            [0mUse dados fictícios. Não inclua senhas nem dados reais de clientes.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs h-11 px-4 text-sm lg:h-9"[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mTestar mensagem[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-4 text-sm lg:h-9"[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mRevisar resposta[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs h-11 px-4 text-sm lg:h-9"[39m
+          [33mdisabled[39m=[32m""[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mContinuar para conexão[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"border-t pt-4"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"mb-2 text-sm"[39m
+          [36m>[39m
+            [0mContinuar depois[0m
+          [36m</p>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"space-y-1"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px bg-transparent text-text border border-border hover:border-accent hover:text-accent h-11 px-3 text-xs lg:h-8"[39m
+            [36m>[39m
+              [0mExplorar o CRM[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+  [
+    {
+-     "expected_version_id": null,
++     "expected_context": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
++     "expected_revision": 1,
++     "expected_version_id": "11111111-1111-4111-8111-111111111111",
+    },
+  ]
+
+ ❯ tests/unit/onboarding-recuperar-ui.test.tsx:22:43
+     20|     fireEvent.click(screen.getByRole("button", { name: "Preparar ensai…
+     21|     fireEvent.click(await screen.findByRole("button", { name: "Recuper…
+     22|     await waitFor(() => expect(f.recover).toHaveBeenLastCalledWith(exp…
+       |                                           ^
+     23|   });
+     24|   it("recupera e volta a permitir preparar sem reutilizar versão obsol…
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 4 passed (6)
+   Start at  11:26:39
+   Duration  3.72s (transform 719ms, setup 605ms, import 1.25s, tests 1.36s, environment 2.53s)
+

@@ -1,0 +1,64 @@
+[WebServer] (node:6469) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:6471) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+[WebServer] Invalid Sentry Dsn: off
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+Running 8 tests using 1 worker
+
+(node:6505) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:31:35.308Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '165415727'
+[WebServer] }
+  ✓  1 [chromium-light] › tests/e2e/rbac-roles.spec.ts:104:7 › rbac role matrix (spec 13 §4) › agent é bloqueado em api-tokens e billing (403) (10.5s)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:31:45.259Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+  ✓  2 [chromium-light] › tests/e2e/rbac-roles.spec.ts:118:7 › rbac role matrix (spec 13 §4) › admin acessa api-tokens e billing (login com MFA TOTP) (4.9s)
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:31:50.187Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+  ✓  3 [chromium-light] › tests/e2e/rbac-roles.spec.ts:131:7 › rbac role matrix (spec 13 §4) › agent vê inbox e kanban (3.4s)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:31:53.554Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+  ✓  4 [chromium-light] › tests/e2e/rbac-roles.spec.ts:147:7 › rbac role matrix (spec 13 §4) › viewer não consegue enviar mensagem (403 no POST /api/v1/messages) (1.7s)
+(node:6642) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:31:56.409Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '165415727'
+[WebServer] }
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '165415727'
+[WebServer] }
+  ✓  5 [chromium-dark] › tests/e2e/rbac-roles.spec.ts:104:7 › rbac role matrix (spec 13 §4) › agent é bloqueado em api-tokens e billing (403) (4.6s)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:32:00.974Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+  ✓  6 [chromium-dark] › tests/e2e/rbac-roles.spec.ts:118:7 › rbac role matrix (spec 13 §4) › admin acessa api-tokens e billing (login com MFA TOTP) (6.2s)
+[WebServer] Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:32:07.170Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+  ✓  7 [chromium-dark] › tests/e2e/rbac-roles.spec.ts:131:7 › rbac role matrix (spec 13 §4) › agent vê inbox e kanban (5.6s)
+[WebServer] {"level":"warn","msg":"[ai-dispatcher.rate-limit] redis incr failed; falling back to in-memory","ts":"2026-09-10T15:32:12.766Z","error":"fetch failed","bucket":"auth:login:ip:eff8e7ca506627fe15dda5e0e512fcaa"}
+  ✓  8 [chromium-dark] › tests/e2e/rbac-roles.spec.ts:147:7 › rbac role matrix (spec 13 §4) › viewer não consegue enviar mensagem (403 no POST /api/v1/messages) (4.2s)
+
+  8 passed (51.7s)

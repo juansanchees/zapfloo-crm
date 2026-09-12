@@ -3,7 +3,7 @@
  *
  * ## Por que este arquivo existe
  *
- * O DeskcommCRM chama modelo de linguagem em 23 lugares. Até aqui, QUAL modelo
+ * O produto chama modelo de linguagem em vários lugares. Até aqui, QUAL modelo
  * cada um usava estava espalhado por três pilhas que não se falavam
  * (`runModelCall` com BYOK por org, `lib/ai/gateway.ts` por variável de
  * ambiente, `lib/ai/runtime/agent.ts` com um terceiro `switch`) e por sete
@@ -57,13 +57,7 @@
  */
 
 /** O papel que o ponto cumpre — é como a tela agrupa, para quem não é engenheiro. */
-export type PapelDeIa =
-  | "atender"
-  | "entender"
-  | "proteger"
-  | "lembrar"
-  | "perceber"
-  | "melhorar";
+export type PapelDeIa = "atender" | "entender" | "proteger" | "lembrar" | "perceber" | "melhorar";
 
 export const PAPEIS: Record<PapelDeIa, { rotulo: string; explicacao: string }> = {
   atender: {
@@ -122,10 +116,7 @@ export interface CapacidadeExigida {
  * union é o que faz o `tsc` reprovar a volta, em vez de depender de alguém
  * reparar.
  */
-export type DestinoDeTelemetria =
-  | "llm_calls"
-  | "ai_agent_runs"
-  | "nenhum";
+export type DestinoDeTelemetria = "llm_calls" | "ai_agent_runs" | "nenhum";
 
 export interface PontoDeIa {
   /** Casa com o `purpose` passado ao seam, ou com o id do ponto fora dele. */
@@ -160,6 +151,30 @@ export interface PontoDeIa {
 }
 
 export const PONTOS_DE_IA: readonly PontoDeIa[] = [
+  {
+    id: "copilot_query",
+    rotulo: "Perguntar sobre a operação",
+    oQueFaz:
+      "Consulta dados acessíveis do CRM e responde ao time com fontes internas, sem alterar registros.",
+    papel: "entender",
+    exige: { tools: true },
+    emissor: "lib/ai/copilot/run.ts",
+    sintomaDeFalha:
+      "A tela Pergunte à IA informa que não conseguiu analisar a operação e orienta a revisar a configuração do provedor.",
+    registraEm: "llm_calls",
+  },
+  {
+    id: "followup_generate_draft",
+    rotulo: "Montar um fluxo de follow-up",
+    oQueFaz:
+      "Transforma uma descrição do usuário em um rascunho visual de follow-up, sempre sujeito a revisão antes de publicar.",
+    papel: "entender",
+    exige: {},
+    emissor: "lib/followup/ai-draft.ts",
+    sintomaDeFalha:
+      "O rascunho não é criado e o texto original permanece na tela para o usuário corrigir ou tentar novamente.",
+    registraEm: "llm_calls",
+  },
   // ─────────────────────────── Atender o cliente ───────────────────────────
   {
     id: "agent_turn",
@@ -202,8 +217,7 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
   {
     id: "draft_suggestion",
     rotulo: "Sugerir resposta ao atendente",
-    oQueFaz:
-      "Escreve um rascunho de resposta para o atendente humano revisar antes de enviar.",
+    oQueFaz: "Escreve um rascunho de resposta para o atendente humano revisar antes de enviar.",
     papel: "atender",
     exige: {},
     emissor: "lib/agent-engine/agent/draft-reply.ts",
@@ -228,8 +242,7 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
   {
     id: "intent_router",
     rotulo: "Escolher qual agente atende",
-    oQueFaz:
-      "Lê a mensagem que chegou e decide qual dos seus agentes deve pegar aquela conversa.",
+    oQueFaz: "Lê a mensagem que chegou e decide qual dos seus agentes deve pegar aquela conversa.",
     papel: "entender",
     exige: {},
     emissor: "lib/agent-engine/agent/intent-classifier.ts",
@@ -240,8 +253,7 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
   {
     id: "stage_classifier",
     rotulo: "Identificar a etapa do lead",
-    oQueFaz:
-      "Lê a conversa e sugere em que etapa do funil aquele cliente está de verdade.",
+    oQueFaz: "Lê a conversa e sugere em que etapa do funil aquele cliente está de verdade.",
     papel: "entender",
     exige: {},
     emissor: "lib/agent-engine/agent/stage-classifier.ts",
@@ -289,8 +301,7 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
   {
     id: "jailbreak_detect",
     rotulo: "Barrar tentativa de manipulação",
-    oQueFaz:
-      "Percebe quando alguém tenta enganar o agente para ele fugir das suas regras.",
+    oQueFaz: "Percebe quando alguém tenta enganar o agente para ele fugir das suas regras.",
     papel: "proteger",
     exige: {},
     emissor: "lib/agent-engine/guardrails/jailbreak/classifier.ts",
@@ -339,8 +350,7 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
   {
     id: "checkpoint",
     rotulo: "Fechar o atendimento",
-    oQueFaz:
-      "Escreve o resumo de encerramento do turno, que o próximo atendimento lê ao abrir.",
+    oQueFaz: "Escreve o resumo de encerramento do turno, que o próximo atendimento lê ao abrir.",
     papel: "lembrar",
     exige: {},
     emissor: "lib/agent-engine/agent/inbound-turn.ts",
@@ -371,8 +381,7 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
   {
     id: "embedding_consultar",
     rotulo: "Buscar no seu material",
-    oQueFaz:
-      "Encontra, entre os seus documentos, os trechos que respondem à pergunta do cliente.",
+    oQueFaz: "Encontra, entre os seus documentos, os trechos que respondem à pergunta do cliente.",
     papel: "lembrar",
     exige: { embeddingDims: 1536 },
     emissor: "lib/agent-engine/edge/llm/embed.ts",
@@ -411,8 +420,7 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
       // `/v1/audio/transcriptions` com `whisper-1`.
       usa: { provider: "openai", modelId: "whisper-1" },
     },
-    sintomaDeFalha:
-      "O cliente manda áudio e o agente responde como se não tivesse recebido nada.",
+    sintomaDeFalha: "O cliente manda áudio e o agente responde como se não tivesse recebido nada.",
     registraEm: "nenhum",
   },
   {
@@ -463,6 +471,22 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
     emissor: "lib/agent-engine/edge/llm/test-model.ts",
     sintomaDeFalha:
       "O botão de testar não conclui, e você fica sem saber se a configuração está de pé antes de colocar no ar.",
+    registraEm: "llm_calls",
+  },
+  {
+    id: "onboarding_rehearsal",
+    rotulo: "Ensaiar a configuração no onboarding",
+    oQueFaz:
+      "Gera uma resposta de prévia com o provedor, o modelo e a credencial escolhidos no onboarding, sem usar ferramentas nem enviar mensagem ao cliente.",
+    papel: "melhorar",
+    exige: {},
+    emissor: "lib/onboarding/executar-ensaio.ts",
+    fixo: {
+      razao:
+        "Usa a seleção do próprio ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; para testar outra combinação, escolha outro provedor, modelo ou credencial no onboarding e execute um novo ensaio.",
+    },
+    sintomaDeFalha:
+      "A prévia não aparece, e o onboarding mostra que o ensaio falhou para você revisar a configuração ou tentar novamente.",
     registraEm: "llm_calls",
   },
   {

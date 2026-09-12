@@ -1,14 +1,16 @@
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
-import { Stepper } from "./_components/Stepper";
+import { requireRole } from "@/lib/auth/require-role";
+import { lerJornada } from "@/lib/onboarding/jornada";
+import { OnboardingFrame } from "./_components/OnboardingFrame";
 import { OutrasOrganizacoes } from "./_components/OutrasOrganizacoes";
 import { SkipToEnd } from "./_components/SkipToEnd";
-import { branding } from "@/lib/branding";
+import { ExplorarCrm } from "./_components/ExplorarCrm";
 import { passosVisiveis } from "@/lib/onboarding/passos";
 import { env } from "@/lib/env";
 import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
+import { PeriodoDeTesteDaOrganizacao } from "@/components/billing/PeriodoDeTesteDaOrganizacao";
 
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAuth();
@@ -17,8 +19,16 @@ export default async function OnboardingLayout({ children }: { children: React.R
   // `/login` fechava o círculo: quem entrasse de novo voltaria para cá. A saída
   // é a tela que CRIA a organização que falta.
   if (!activeOrg) redirect("/get-started");
+  if (activeOrg.role !== "admin") redirect("/app/inbox");
+  const authz = await requireRole("admin", { resource: "onboarding" });
+  if (!authz.ok) {
+    const { error } = await authz.response.json();
+    if (error.code === "mfa_required") redirect("/login/mfa");
+    // Erro ao revalidar a permissão não pode criar um ciclo app ↔ wizard.
+    redirect("/login");
+  }
 
-  const { state, onboardedAt } = await loadOnboardingState(activeOrg.orgId);
+  const { state, onboardedAt } = await lerJornada(user.id, activeOrg.orgId);
   if (onboardedAt) redirect("/app/inbox");
 
   // Os passos que ESTA instalação oferece, com o que já foi resolvido. O
@@ -33,14 +43,10 @@ export default async function OnboardingLayout({ children }: { children: React.R
 
   return (
     <IdiomaProvider locale={user.locale}>
-      <div className="flex min-h-screen flex-col bg-muted/40">
-        <header className="border-b bg-background">
-          <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-4">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">{branding().name}</p>
-              <h1 className="text-lg font-semibold tracking-tight">{activeOrg.name}</h1>
-            </div>
-            <div className="flex items-center gap-1">
+      <PeriodoDeTesteDaOrganizacao organizationId={activeOrg.orgId} />
+      <OnboardingFrame orgName={activeOrg.name} passos={passos} controls={
+            <>
+              <ExplorarCrm />
               {/*
                 A SAÍDA, para quem tem outra organização. Ver o cabeçalho de
                 `OutrasOrganizacoes`: sem ela, trocar de organização pelo seletor
@@ -53,14 +59,8 @@ export default async function OnboardingLayout({ children }: { children: React.R
                   .map((o) => ({ id: o.organization_id, nome: o.organization_name }))}
               />
               {isDev ? <SkipToEnd /> : null}
-            </div>
-          </div>
-          <div className="mx-auto w-full max-w-3xl px-4 pb-2">
-            <Stepper passos={passos} />
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">{children}</main>
-      </div>
+            </>
+      }>{children}</OnboardingFrame>
     </IdiomaProvider>
   );
 }

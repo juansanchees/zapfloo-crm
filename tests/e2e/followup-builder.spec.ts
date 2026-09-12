@@ -98,6 +98,42 @@ async function loginWithTotp(page: Page, email: string, secret: string): Promise
 }
 
 test.describe("followup flows — lista + criação (Task 6.1)", () => {
+  test("manager descreve um fluxo e recebe um rascunho de IA para revisar", async ({ page }) => {
+    const flowName = `E2E IA ${Date.now()}`;
+    const description = "Espere trinta minutos, envie uma mensagem e encerre se não houver resposta.";
+    await page.route("**/api/v1/ai/followup-flows/generate", async (route) => {
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().postDataJSON()).toEqual({ name: flowName, description });
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            id: "00000000-0000-4000-8000-000000000099",
+            name: flowName,
+            status: "draft",
+            active_version_id: null,
+            handoff_policy: "cancel",
+            updated_at: new Date().toISOString(),
+          },
+        }),
+      });
+    });
+
+    await login(page, creds.users.manager!.email);
+    await page.goto("/app/ai/followups");
+    await page.getByRole("button", { name: "Novo fluxo" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Nome").fill(flowName);
+    await dialog.getByLabel("Descreva o fluxo").fill(description);
+    await expect(dialog.getByText(/Nada entra no ar sem sua revisão/)).toBeVisible();
+    await dialog.getByRole("button", { name: "Gerar rascunho" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator("li", { hasText: flowName })).toContainText("Rascunho");
+    await expect(page.getByText("Rascunho criado com IA. Revise antes de publicar.")).toBeVisible();
+    await page.screenshot({ path: "test-results/followup-ia-rascunho.png", fullPage: true });
+  });
+
   test("manager cria um fluxo e ele aparece na lista com badge Rascunho", async ({ page }) => {
     await login(page, creds.users.manager!.email);
 
@@ -111,8 +147,10 @@ test.describe("followup flows — lista + criação (Task 6.1)", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("Novo fluxo de follow-up")).toBeVisible();
     await page.screenshot({ path: "test-results/followup-6.1-02-dialog-open.png", fullPage: true });
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
 
     const nameInput = dialog.getByLabel("Nome");
+    await nameInput.focus();
     await expect(nameInput).toBeFocused();
     await nameInput.fill(flowName);
     await page.screenshot({ path: "test-results/followup-6.1-03-name-typed.png", fullPage: true });
@@ -196,6 +234,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Builder ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -220,6 +259,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Connect ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -267,6 +307,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Config ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -313,6 +354,7 @@ test.describe("followup flow builder — canvas visual (Task 6.2)", () => {
     const flowName = `E2E Acceptance ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -485,6 +527,7 @@ test.describe("followup flow builder — editor de condição de aresta / ai_cla
     const flowName = `E2E Classify ${Date.now()}`;
     await page.getByRole("button", { name: "Novo fluxo" }).click();
     const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Criar manualmente" }).click();
     await dialog.getByLabel("Nome").fill(flowName);
     await dialog.getByRole("button", { name: "Criar fluxo" }).click();
     await expect(dialog).not.toBeVisible();
@@ -738,6 +781,81 @@ test.describe("followup flow selector no editor do agente (Task 7.2)", () => {
 });
 
 test.describe("followup flow builder — controle de gatilho na PublishBar (Task 8.5)", () => {
+  for (const width of [1280, 390]) {
+    test(`Salvar gatilho fica alcançável com o formulário longo em ${width}×720`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 720 });
+      await login(page, creds.users.manager!.email);
+      const created = await page.request.post("/api/v1/ai/followup-flows", {
+        data: { name: `E2E alcance gatilho ${width} ${Date.now()}` },
+      });
+      expect(created.status()).toBe(201);
+      const { data: flow } = await created.json() as { data: { id: string } };
+      try {
+        await page.goto(`/app/ai/followups/${flow.id}`);
+        await page.getByTestId("trigger-config-button").click();
+        const panel = page.getByTestId("trigger-config-panel");
+        await panel.getByRole("combobox").click();
+        await page.getByRole("option", { name: "Silêncio", exact: true }).click();
+        await panel.getByLabel("Minutos de silêncio").fill("45");
+        const save = panel.getByTestId("trigger-config-save");
+        await expect(save).toBeEnabled();
+
+        // Não basta existir no DOM: o rodapé precisa caber na área pintada e
+        // receber o clique, sem force nem reposicionamento artificial do DOM.
+        const measure = async () => panel.evaluate((element) => {
+          const button = element.querySelector<HTMLButtonElement>('[data-testid="trigger-config-save"]')!;
+          const rect = button.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            viewport: { width: innerWidth, height: innerHeight },
+            panel: element.getBoundingClientRect().toJSON(),
+            button: rect.toJSON(),
+            disabled: button.disabled,
+            clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop,
+            overflowY: style.overflowY,
+            availableHeight: style.getPropertyValue("--radix-popover-content-available-height"),
+            hit: button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)),
+          };
+        });
+        const before = await measure();
+        const evidence = testInfo.outputPath("gatilho-alcance.json");
+        fs.writeFileSync(evidence, JSON.stringify({ before }, null, 2));
+        await testInfo.attach("gatilho-alcance", { path: evidence, contentType: "application/json" });
+        expect(before.hit, "Salvar deve estar alcançável antes de rolar").toBe(true);
+        expect(before.panel.height).toBeLessThanOrEqual(720 * 0.7);
+        expect(before.panel.height).toBeLessThanOrEqual(Number.parseFloat(before.availableHeight));
+        expect(before.button.bottom).toBeLessThanOrEqual(720);
+        // Wheel de verdade sobre o corpo: conteúdo longo pode rolar, mas o
+        // próximo passo não pode escapar junto com ele.
+        const panelBox = await panel.boundingBox();
+        expect(panelBox).not.toBeNull();
+        await page.mouse.move(panelBox!.x + 20, Math.max(10, panelBox!.y + 35));
+        await page.mouse.wheel(0, 500);
+        await expect.poll(async () => (await measure()).hit, { timeout: 5_000 }).toBe(true);
+        const after = await measure();
+        fs.writeFileSync(evidence, JSON.stringify({ before, after }, null, 2));
+        await testInfo.attach("gatilho-alcance-antes-e-depois", { path: evidence, contentType: "application/json" });
+        expect(after.button.height).toBeGreaterThan(0);
+        expect(after.button.top).toBeGreaterThanOrEqual(0);
+        expect(after.button.bottom).toBeLessThanOrEqual(720);
+        expect(after.button.bottom).toBeLessThanOrEqual(after.panel.bottom);
+        expect(after.button.right).toBeLessThanOrEqual(width);
+        await page.screenshot({ path: testInfo.outputPath("gatilho-popover-aberto.png") });
+        const patched = page.waitForResponse((response) =>
+          response.url().endsWith(`/api/v1/ai/followup-flows/${flow.id}`) && response.request().method() === "PATCH",
+        );
+        await save.click();
+        expect((await patched).status()).toBe(200);
+        await page.reload();
+        await expect(page.getByTestId("trigger-config-button")).toHaveText("Gatilho: Silêncio (45 min)");
+        await page.screenshot({ path: testInfo.outputPath("gatilho-alcance.png"), fullPage: true });
+      } finally {
+        // Só limpeza é best-effort: não substituir a causa de uma asserção.
+        await page.request.post(`/api/v1/ai/followup-flows/${flow.id}/disable`, { data: {} }).catch(() => undefined);
+      }
+    });
+  }
+
   test("operador arma o gatilho de Silêncio (threshold) pela UI; oferece só os kinds com motor; PATCH round-trips", async ({
     page,
   }) => {
@@ -817,7 +935,9 @@ test.describe("followup flow builder — controle de gatilho na PublishBar (Task
       // O fluxo nunca foi publicado (fica em 'draft') — nenhum enrollment
       // possível daqui. Desativa mesmo assim (doutrina da task: qualquer
       // fluxo criado pelo spec sai desativado, sem depender de estar 'active').
-      await page.request.post(`/api/v1/ai/followup-flows/${flow.id}/disable`, { data: {} });
+      // Uma exceção no finally substituiria a falha original. Só a limpeza é
+      // best-effort; as asserções e requisições do corpo continuam reprovando.
+      await page.request.post(`/api/v1/ai/followup-flows/${flow.id}/disable`, { data: {} }).catch(() => undefined);
     }
   });
 });

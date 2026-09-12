@@ -61,7 +61,8 @@ export async function finalizeRun(input: FinalizeRunInput): Promise<void> {
     .eq("id", input.runId)
     .eq("organization_id", input.organizationId);
 
-  // Domain event (best-effort).
+  // Eventos de operação não saem de testes. O run e a auditoria abaixo
+  // preservam o diagnóstico sem enfileirar trabalho para consumidores reais.
   const eventType =
     input.status === "completed"
       ? "ai_agent.run_completed"
@@ -69,7 +70,7 @@ export async function finalizeRun(input: FinalizeRunInput): Promise<void> {
         ? "ai_agent.handoff_triggered"
         : "ai_agent.run_failed";
 
-  await admin.rpc("emit_event" as never, {
+  if (!input.isDryRun) await admin.rpc("emit_event" as never, {
     p_event_type: eventType,
     p_entity_kind: "ai_agent_run",
     p_entity_id: input.runId,

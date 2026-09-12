@@ -1,0 +1,436 @@
+
+> deskcomm-crm@0.1.0 e2e:build /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/correcoes-anexos
+> bash scripts/e2e-build.sh
+
+==> Buildando contra http://127.0.0.1:55321
+▲ Next.js 16.3.4 (Turbopack)
+✓ Running next.config.ts took 6.7s
+- Experiments (use with caution):
+  · clientTraceMetadata
+  · optimizePackageImports
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 6.1min
+  Running next.config.js provided runAfterProductionCompile ...
+✓ Completed runAfterProductionCompile in 3.4s
+  Running TypeScript ...
+✓ Finished writing to filesystem cache in 14.8s
+  Finished TypeScript in 86s ...
+  Collecting page data using 7 workers ...
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+  Generating static pages using 7 workers (0/47) ...
+  Generating static pages using 7 workers (11/47) 
+  Generating static pages using 7 workers (23/47) 
+  Generating static pages using 7 workers (35/47) 
+✓ Generating static pages using 7 workers (47/47) in 1482ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /403
+├ ƒ /500
+├ ƒ /503
+├ ƒ /account-suspended
+├ ƒ /admin
+├ ƒ /admin/audit
+├ ƒ /admin/audit/[entryId]
+├ ƒ /admin/dashboard
+├ ƒ /admin/forbidden
+├ ƒ /admin/google
+├ ƒ /admin/inbox
+├ ƒ /admin/inbox/[conversationId]
+├ ƒ /admin/incidents
+├ ƒ /admin/incidents/[id]
+├ ƒ /admin/lgpd
+├ ƒ /admin/lgpd/requests/[id]
+├ ƒ /admin/marca
+├ ƒ /admin/platform-admins
+├ ƒ /admin/tenants
+├ ƒ /admin/tenants/[id]
+├ ƒ /admin/tenants/[id]/health
+├ ƒ /admin/tenants/new
+├ ƒ /admin/usage
+├ ƒ /admin/users
+├ ƒ /admin/users/[id]
+├ ƒ /api/internal/agents/run
+├ ƒ /api/mcp
+├ ƒ /api/v1/admin/audit
+├ ƒ /api/v1/admin/audit/[entryId]
+├ ƒ /api/v1/admin/dashboard/kpis
+├ ƒ /api/v1/admin/impersonate/end
+├ ƒ /api/v1/admin/inbox/conversations
+├ ƒ /api/v1/admin/inbox/conversations/[id]
+├ ƒ /api/v1/admin/incidents
+├ ƒ /api/v1/admin/incidents/[id]
+├ ƒ /api/v1/admin/incidents/[id]/resolve
+├ ƒ /api/v1/admin/lgpd/requests
+├ ƒ /api/v1/admin/lgpd/requests/[id]
+├ ƒ /api/v1/admin/platform-admins
+├ ƒ /api/v1/admin/tenants
+├ ƒ /api/v1/admin/tenants/[id]
+├ ƒ /api/v1/admin/tenants/[id]/health
+├ ƒ /api/v1/admin/tenants/[id]/impersonate
+├ ƒ /api/v1/admin/tenants/[id]/reactivate
+├ ƒ /api/v1/admin/tenants/[id]/suspend
+├ ƒ /api/v1/admin/usage
+├ ƒ /api/v1/admin/users
+├ ƒ /api/v1/admin/users/[id]
+├ ƒ /api/v1/ads/meta/accounts
+├ ƒ /api/v1/ads/meta/campaigns
+├ ƒ /api/v1/agenda/agendamentos
+├ ƒ /api/v1/agenda/google/callback
+├ ƒ /api/v1/agenda/google/connect
+├ ƒ /api/v1/agenda/google/desconectar
+├ ƒ /api/v1/agenda/horarios-livres
+├ ƒ /api/v1/agenda/tipos
+├ ƒ /api/v1/ai/agents
+├ ƒ /api/v1/ai/agents/[id]
+├ ƒ /api/v1/ai/agents/[id]/duplicate
+├ ƒ /api/v1/ai/agents/[id]/pause
+├ ƒ /api/v1/ai/agents/[id]/proposals
+├ ƒ /api/v1/ai/agents/[id]/proposals/[pid]/apply
+├ ƒ /api/v1/ai/agents/[id]/publish
+├ ƒ /api/v1/ai/agents/[id]/runs
+├ ƒ /api/v1/ai/agents/[id]/tool-usage
+├ ƒ /api/v1/ai/agents/[id]/versions
+├ ƒ /api/v1/ai/agents/[id]/versions/[vid]
+├ ƒ /api/v1/ai/agents/[id]/versions/[vid]/test
+├ ƒ /api/v1/ai/agents/assignable
+├ ƒ /api/v1/ai/ask
+├ ƒ /api/v1/ai/automatico-ativo
+├ ƒ /api/v1/ai/budget
+├ ƒ /api/v1/ai/cases
+├ ƒ /api/v1/ai/cases/[id]
+├ ƒ /api/v1/ai/cases/[id]/reply
+├ ƒ /api/v1/ai/credentials
+├ ƒ /api/v1/ai/credentials/[id]
+├ ƒ /api/v1/ai/credentials/[id]/revalidate
+├ ƒ /api/v1/ai/evolution
+├ ƒ /api/v1/ai/followup-flows
+├ ƒ /api/v1/ai/followup-flows/[id]
+├ ƒ /api/v1/ai/followup-flows/[id]/disable
+├ ƒ /api/v1/ai/followup-flows/[id]/publish
+├ ƒ /api/v1/ai/followup-flows/[id]/rollback
+├ ƒ /api/v1/ai/followup-flows/generate
+├ ƒ /api/v1/ai/followups/enrollments
+├ ƒ /api/v1/ai/followups/enrollments/[id]
+├ ƒ /api/v1/ai/followups/enrollments/[id]/cancel
+├ ƒ /api/v1/ai/followups/enrollments/[id]/pause
+├ ƒ /api/v1/ai/followups/enrollments/[id]/resume
+├ ƒ /api/v1/ai/followups/enrollments/[id]/skip
+├ ƒ /api/v1/ai/followups/enrollments/[id]/snooze
+├ ƒ /api/v1/ai/followups/promises/[id]/cancel
+├ ƒ /api/v1/ai/followups/queue
+├ ƒ /api/v1/ai/guardrail-layers
+├ ƒ /api/v1/ai/inbox
+├ ƒ /api/v1/ai/inbox/[id]
+├ ƒ /api/v1/ai/knowledge/chave
+├ ƒ /api/v1/ai/knowledge/sources
+├ ƒ /api/v1/ai/knowledge/sources/[id]
+├ ƒ /api/v1/ai/knowledge/sources/[id]/reindex
+├ ƒ /api/v1/ai/knowledge/sources/[id]/trechos
+├ ƒ /api/v1/ai/knowledge/sources/upload
+├ ƒ /api/v1/ai/memory
+├ ƒ /api/v1/ai/memory/entries
+├ ƒ /api/v1/ai/memory/entries/[id]
+├ ƒ /api/v1/ai/memory/versions/[id]
+├ ƒ /api/v1/ai/operator-metrics
+├ ƒ /api/v1/ai/pacing
+├ ƒ /api/v1/ai/providers
+├ ƒ /api/v1/ai/providers/[provider]/models
+├ ƒ /api/v1/ai/routers
+├ ƒ /api/v1/ai/routers/[id]
+├ ƒ /api/v1/ai/routers/[id]/members
+├ ƒ /api/v1/ai/routers/[id]/test
+├ ƒ /api/v1/ai/runs
+├ ƒ /api/v1/ai/skills
+├ ƒ /api/v1/ai/skills/[name]
+├ ƒ /api/v1/ai/skills/[name]/install
+├ ƒ /api/v1/ai/skills/import
+├ ƒ /api/v1/ai/usage
+├ ƒ /api/v1/attendants/availability
+├ ƒ /api/v1/attendants/availability/[user_id]
+├ ƒ /api/v1/audit
+├ ƒ /api/v1/audit/export
+├ ƒ /api/v1/auth/realtime-token
+├ ƒ /api/v1/automation-rules
+├ ƒ /api/v1/automation-rules/[id]
+├ ƒ /api/v1/automation-rules/[id]/runs
+├ ƒ /api/v1/automation-rules/runs
+├ ƒ /api/v1/automation-rules/runs/[runId]/resend
+├ ƒ /api/v1/channel-sessions
+├ ƒ /api/v1/channel-sessions/[id]
+├ ƒ /api/v1/channel-sessions/[id]/ai-access
+├ ƒ /api/v1/channel-sessions/[id]/qr
+├ ƒ /api/v1/channel-sessions/[id]/reconnect
+├ ƒ /api/v1/channels/official
+├ ƒ /api/v1/channels/partner
+├ ƒ /api/v1/channels/partner/templates
+├ ƒ /api/v1/channels/partner/templates/media
+├ ƒ /api/v1/channels/templates
+├ ƒ /api/v1/contacts
+├ ƒ /api/v1/contacts/[id]
+├ ƒ /api/v1/contacts/[id]/avatar
+├ ƒ /api/v1/contacts/[id]/crm-summary
+├ ƒ /api/v1/contacts/[id]/proposals
+├ ƒ /api/v1/contacts/[id]/proposals/[proposal_id]
+├ ƒ /api/v1/contacts/[id]/timeline
+├ ƒ /api/v1/contacts/duplicates
+├ ƒ /api/v1/contacts/import
+├ ƒ /api/v1/contacts/merge
+├ ƒ /api/v1/conversation-tags
+├ ƒ /api/v1/conversations
+├ ƒ /api/v1/conversations/[id]
+├ ƒ /api/v1/conversations/[id]/claim
+├ ƒ /api/v1/conversations/[id]/close
+├ ƒ /api/v1/conversations/[id]/draft-reply
+├ ƒ /api/v1/conversations/[id]/mark-read
+├ ƒ /api/v1/conversations/[id]/media
+├ ƒ /api/v1/conversations/[id]/messages
+├ ƒ /api/v1/conversations/[id]/notes
+├ ƒ /api/v1/conversations/[id]/notes/[noteId]
+├ ƒ /api/v1/conversations/[id]/pause-ai
+├ ƒ /api/v1/conversations/[id]/reactivate-bot
+├ ƒ /api/v1/conversations/[id]/release
+├ ƒ /api/v1/conversations/[id]/retention
+├ ƒ /api/v1/conversations/[id]/snooze
+├ ƒ /api/v1/conversations/[id]/transfer
+├ ƒ /api/v1/conversations/[id]/usable-for-rag
+├ ƒ /api/v1/conversations/counts
+├ ƒ /api/v1/conversations/open-with-contact
+├ ƒ /api/v1/cron/agenda-google-push
+├ ƒ /api/v1/cron/agenda-google-refresh
+├ ƒ /api/v1/cron/agenda-google-sync
+├ ƒ /api/v1/cron/agent-dispatcher
+├ ƒ /api/v1/cron/attendant-heartbeat
+├ ƒ /api/v1/cron/channel-health
+├ ƒ /api/v1/cron/contact-avatars
+├ ƒ /api/v1/cron/contact-phones
+├ ƒ /api/v1/cron/contact-proposals-watcher
+├ ƒ /api/v1/cron/data-retention
+├ ƒ /api/v1/cron/event-log-drain
+├ ƒ /api/v1/cron/followup-flow-worker
+├ ƒ /api/v1/cron/kb-conversations-batch
+├ ƒ /api/v1/cron/lgpd-sla-watcher
+├ ƒ /api/v1/cron/recover-stuck-messages
+├ ƒ /api/v1/cron/risk-watcher
+├ ƒ /api/v1/cron/routing-worker
+├ ƒ /api/v1/cron/snooze-watcher
+├ ƒ /api/v1/cron/storage-redaction
+├ ƒ /api/v1/cron/sync-model-catalog
+├ ƒ /api/v1/cron/webhook-log-retention
+├ ƒ /api/v1/dashboard/preferences
+├ ƒ /api/v1/demandas/[id]
+├ ƒ /api/v1/health
+├ ƒ /api/v1/integrations/nuvemshop/callback
+├ ƒ /api/v1/lead-captures
+├ ƒ /api/v1/leads
+├ ƒ /api/v1/leads/[id]
+├ ƒ /api/v1/leads/[id]/lose
+├ ƒ /api/v1/leads/[id]/move
+├ ƒ /api/v1/leads/[id]/next-action
+├ ƒ /api/v1/leads/[id]/reactivation
+├ ƒ /api/v1/leads/[id]/timeline
+├ ƒ /api/v1/leads/[id]/win
+├ ƒ /api/v1/leads/at-risk
+├ ƒ /api/v1/leads/bulk
+├ ƒ /api/v1/leads/import
+├ ƒ /api/v1/leads/proposals
+├ ƒ /api/v1/leads/reactivations
+├ ƒ /api/v1/lgpd/anonymize
+├ ƒ /api/v1/lgpd/requests
+├ ƒ /api/v1/lgpd/requests/[id]
+├ ƒ /api/v1/lgpd/requests/[id]/approve
+├ ƒ /api/v1/lgpd/requests/[id]/preview
+├ ƒ /api/v1/marca/logo
+├ ƒ /api/v1/mcp/tools
+├ ƒ /api/v1/message-templates
+├ ƒ /api/v1/message-templates/[id]
+├ ƒ /api/v1/messages
+├ ƒ /api/v1/messages/[id]/media
+├ ƒ /api/v1/metrics/atrito
+├ ƒ /api/v1/metrics/attendants
+├ ƒ /api/v1/notifications/push
+├ ƒ /api/v1/onboarding/whatsapp/qr
+├ ƒ /api/v1/onboarding/whatsapp/session
+├ ƒ /api/v1/pipelines
+├ ƒ /api/v1/pipelines/[id]
+├ ƒ /api/v1/pipelines/[id]/agent-mapping
+├ ƒ /api/v1/pipelines/[id]/board
+├ ƒ /api/v1/pipelines/[id]/stages
+├ ƒ /api/v1/pipelines/[id]/stages/[stageId]
+├ ƒ /api/v1/pipelines/default
+├ ƒ /api/v1/products
+├ ƒ /api/v1/products/[id]
+├ ƒ /api/v1/products/import
+├ ƒ /api/v1/reports/activities
+├ ƒ /api/v1/settings/api-tokens
+├ ƒ /api/v1/settings/api-tokens/[id]/revoke
+├ ƒ /api/v1/settings/routing
+├ ƒ /api/v1/system/agent
+├ ƒ /api/v1/system/instalacao
+├ ƒ /api/v1/system/relogio/tick
+├ ƒ /api/v1/system/update
+├ ƒ /api/v1/system/version
+├ ƒ /api/v1/tasks
+├ ƒ /api/v1/tasks/[id]
+├ ƒ /api/v1/team
+├ ƒ /api/v1/team/[user_id]
+├ ƒ /api/v1/team/[user_id]/revoke
+├ ƒ /api/v1/team/[user_id]/role
+├ ƒ /api/v1/team/assignable
+├ ƒ /api/v1/team/invite
+├ ƒ /api/v1/webhook-sources
+├ ƒ /api/v1/webhook-sources/[id]
+├ ƒ /api/v1/webhook-sources/[id]/events
+├ ƒ /api/v1/webhooks/channel/[token]
+├ ƒ /api/v1/webhooks/in/[token]
+├ ƒ /api/v1/webhooks/meta/[token]
+├ ƒ /api/v1/webhooks/nuvemshop/[event]
+├ ƒ /api/v1/webhooks/nuvemshop/customer-data-request
+├ ƒ /api/v1/webhooks/nuvemshop/customer-redact
+├ ƒ /api/v1/webhooks/nuvemshop/store-redact
+├ ƒ /api/v1/webhooks/waha
+├ ƒ /api/v1/webhooks/waha/[token]
+├ ƒ /app
+├ ƒ /app/activities
+├ ƒ /app/ads/meta
+├ ƒ /app/agenda
+├ ƒ /app/ai
+├ ƒ /app/ai/agents
+├ ƒ /app/ai/agents/[id]
+├ ƒ /app/ai/agents/new
+├ ƒ /app/ai/ask
+├ ƒ /app/ai/cases
+├ ƒ /app/ai/credentials
+├ ƒ /app/ai/evolution
+├ ƒ /app/ai/followups
+├ ƒ /app/ai/followups/[id]
+├ ƒ /app/ai/followups/enrollments/[id]
+├ ƒ /app/ai/inbox
+├ ƒ /app/ai/knowledge/sources
+├ ƒ /app/ai/memory
+├ ƒ /app/ai/proposals
+├ ƒ /app/ai/providers
+├ ƒ /app/ai/routers
+├ ƒ /app/ai/routers/[id]
+├ ƒ /app/ai/runs
+├ ƒ /app/ai/skills
+├ ƒ /app/ai/usage
+├ ƒ /app/analise
+├ ƒ /app/audit
+├ ƒ /app/connections
+├ ƒ /app/contacts
+├ ƒ /app/contacts/[id]
+├ ƒ /app/crm
+├ ƒ /app/inbox
+├ ƒ /app/inbox/[id]
+├ ƒ /app/integrations/nuvemshop
+├ ƒ /app/kanban
+├ ƒ /app/leads
+├ ƒ /app/leads/[id]
+├ ƒ /app/lgpd/requests
+├ ƒ /app/lgpd/requests/[id]
+├ ƒ /app/metrics
+├ ƒ /app/pipelines/[id]
+├ ƒ /app/products
+├ ƒ /app/radar
+├ ƒ /app/settings
+├ ƒ /app/settings/api-tokens
+├ ƒ /app/settings/atendimento
+├ ƒ /app/settings/atualizacao
+├ ƒ /app/settings/billing
+├ ƒ /app/settings/canal-oficial
+├ ƒ /app/settings/conversoes
+├ ƒ /app/settings/marca
+├ ƒ /app/settings/meta-ads
+├ ƒ /app/settings/notifications
+├ ƒ /app/settings/profile
+├ ƒ /app/settings/security
+├ ƒ /app/settings/templates
+├ ƒ /app/settings/tenant
+├ ƒ /app/settings/tenant/agenda
+├ ƒ /app/settings/tenant/pipelines
+├ ƒ /app/settings/tenant/whatsapp
+├ ƒ /app/tasks
+├ ƒ /app/team
+├ ƒ /app/team/invite
+├ ƒ /app/templates
+├ ƒ /app/webhooks
+├ ƒ /auth/confirm
+├ ƒ /design
+├ ƒ /get-started
+├ ƒ /icon
+├ ƒ /legal/data-deletion
+├ ƒ /legal/privacy
+├ ƒ /legal/terms
+├ ƒ /login
+├ ƒ /login/forgot
+├ ƒ /login/mfa
+├ ƒ /login/recovery
+├ ƒ /login/reset
+├ ○ /manifest.webmanifest
+├ ƒ /onboarding
+├ ƒ /onboarding/connect-nuvemshop
+├ ƒ /onboarding/connect-whatsapp
+├ ƒ /onboarding/done
+├ ƒ /onboarding/funil
+├ ƒ /onboarding/invite-team
+├ ƒ /onboarding/setup-ai
+├ ƒ /onboarding/testar
+├ ƒ /onboarding/welcome
+├ ƒ /signup
+├ ƒ /team/accept-invite/[token]
+└ ƒ /vitrine-agenda
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+==> OK (controle): o host local (127.0.0.1:55321) ESTÁ no bundle — o grep está vivo.
+
+exit=0

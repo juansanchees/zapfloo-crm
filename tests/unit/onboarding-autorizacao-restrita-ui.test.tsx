@@ -1,0 +1,31 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, expect, it, vi } from "vitest";
+const f = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn(), saved: vi.fn() }));
+vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
+vi.mock("@/lib/api/client", () => ({ apiClient: { get: f.get, patch: f.patch } }));
+import { ChannelAiAccess } from "@/components/connections/ChannelAiAccess";
+afterEach(() => { cleanup(); vi.clearAllMocks(); });
+it("wizard não libera público nem salva lista vazia e informa somente confirmação salva", async () => {
+  f.get.mockResolvedValue({ data: { mode: "pre_go_live", test_phone_numbers: [], access_revision: "a".repeat(64) } });
+  f.patch.mockResolvedValue({ data: { mode: "pre_go_live", test_phone_numbers: ["+5511999998888"] } });
+  render(<QueryClientProvider client={new QueryClient()}><ChannelAiAccess channelId="11111111-1111-4111-8111-111111111111" restrictedOnly requireAtLeastOne onSaved={f.saved} /></QueryClientProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Configurar acesso da IA" }));
+  const salvar = await screen.findByRole("button", { name: "Salvar lista de teste" });
+  expect(screen.queryByRole("button", { name: "Liberar atendimento ao público" })).toBeNull();
+  fireEvent.click(salvar);
+  expect(await screen.findByRole("alert")).toHaveTextContent("Autorize pelo menos um número");
+  expect(f.patch).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("Números autorizados para teste"), { target: { value: "+5511999998888" } });
+  fireEvent.click(salvar);
+  await waitFor(() => expect(f.saved).toHaveBeenCalledWith({ channelId: "11111111-1111-4111-8111-111111111111", mode: "pre_go_live", count: 1 }));
+  expect(f.patch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ restricted_only: true, expected_access_revision: "a".repeat(64) }));
+});
+it("modo aberto relido no painel restrito não oferece substituir a política", async () => {
+  f.get.mockResolvedValue({ data: { mode: "open", test_phone_numbers: [], access_revision: "b".repeat(64) } });
+  render(<QueryClientProvider client={new QueryClient()}><ChannelAiAccess channelId="11111111-1111-4111-8111-111111111111" restrictedOnly requireAtLeastOne /></QueryClientProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Configurar acesso da IA" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("configuração existente será preservada");
+  expect(screen.queryByRole("button", { name: "Ativar modo de teste" })).toBeNull();
+  expect(f.patch).not.toHaveBeenCalled();
+});

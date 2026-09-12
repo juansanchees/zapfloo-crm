@@ -60,13 +60,37 @@ async function login(page: Page, email: string): Promise<void> {
  */
 async function abrirConversaComMensagens(page: Page): Promise<boolean> {
   await page.goto("/app/inbox?filter=all");
+
+  // ⚠️ O SELETOR ANTIGO NUNCA ABRIU CONVERSA NENHUMA. A linha da lista é um
+  // `<button data-conversation-id>` (components/inbox/ConversationListItem.tsx:174),
+  // e o antigo procurava `li, [role='listitem']` — que no inbox casa com outro
+  // elemento qualquer, ou com nada. O clique caía fora, a conversa não abria, e
+  // o caso ou se pulava sozinho ou morria depois, no hover do botão de
+  // responder. Era o pior dos dois mundos: vermelho que não media o produto.
+  const conversas = page.locator("[data-conversation-id]");
+  if ((await conversas.count()) === 0) {
+    console.warn("[responder-citando] nenhuma conversa no inbox — nada a abrir");
+    return false;
+  }
+
+  await conversas.first().click();
+
   const bolhas = page.locator("[class*='rounded-2xl']");
-  const primeira = page.locator("li, [role='listitem']").first();
-  if (await primeira.count()) await primeira.click();
   await expect(bolhas.first())
     .toBeVisible({ timeout: 8000 })
     .catch(() => undefined);
-  return (await bolhas.count()) > 0;
+
+  const total = await bolhas.count();
+  if (total === 0) {
+    // Distinguir os dois "sem dado" é o que torna o skip acionável em vez de
+    // silencioso: aqui a conversa ABRIU e não tinha mensagem. Nenhum seed da
+    // parte 1 (`seed-e2e-queue`, `seed-e2e-radar`) escreve linha em `messages`
+    // — o radar grava só `last_message_preview`, que é coluna de `conversations`.
+    // Fechar de verdade este caso exige um seed que crie mensagens; enquanto ele
+    // não existe, o skip diz POR QUE pulou.
+    console.warn("[responder-citando] conversa aberta, porém sem mensagens — falta seed de messages");
+  }
+  return total > 0;
 }
 
 test.describe("responder citando", () => {
@@ -108,9 +132,20 @@ test.describe("responder citando", () => {
     await responder.click();
     await expect(page.getByRole("button", { name: /Cancelar resposta/i })).toBeVisible();
 
-    // Volta para a lista e entra em OUTRA conversa.
-    await page.goto("/app/inbox?filter=all");
-    await page.waitForTimeout(1200);
+    // Entra em OUTRA conversa — de verdade, clicando na lista.
+    //
+    // ⚠️ Aqui havia um `page.goto("/app/inbox?filter=all")`. Ele RECARREGA a
+    // página inteira, e recarregar apaga qualquer estado de React: a asserção
+    // seguinte passaria mesmo que trocar de conversa NÃO limpasse a citação —
+    // ela media recarga, não troca. Como o comentário original já dizia, este é
+    // o caso que mais importa do arquivo (sem ele a resposta sai citando a
+    // mensagem de outro cliente), então ele não pode ser o mais fácil de passar.
+    const conversas = page.locator("[data-conversation-id]");
+    test.skip(
+      (await conversas.count()) < 2,
+      "ambiente com uma conversa só — não há para onde trocar",
+    );
+    await conversas.nth(1).click();
 
     await expect(
       page.getByRole("button", { name: /Cancelar resposta/i }),

@@ -1,0 +1,71 @@
+{
+  "source": ".superpowers/leva-final/final/followup-builder-followup--afaeb-formulário-longo-em-390×720-chromium/gatilho-alcance.json",
+  "measurement": {
+    "before": {
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "panel": {
+        "x": 8,
+        "y": 322,
+        "width": 320,
+        "height": 390,
+        "top": 322,
+        "right": 328,
+        "bottom": 712,
+        "left": 8
+      },
+      "button": {
+        "x": 21,
+        "y": 655,
+        "width": 294,
+        "height": 44,
+        "top": 655,
+        "right": 315,
+        "bottom": 699,
+        "left": 21
+      },
+      "disabled": false,
+      "clientHeight": 388,
+      "scrollHeight": 388,
+      "scrollTop": 0,
+      "overflowY": "hidden",
+      "availableHeight": "390px",
+      "hit": true
+    },
+    "after": {
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "panel": {
+        "x": 8,
+        "y": 322,
+        "width": 320,
+        "height": 390,
+        "top": 322,
+        "right": 328,
+        "bottom": 712,
+        "left": 8
+      },
+      "button": {
+        "x": 21,
+        "y": 655,
+        "width": 294,
+        "height": 44,
+        "top": 655,
+        "right": 315,
+        "bottom": 699,
+        "left": 21
+      },
+      "disabled": false,
+      "clientHeight": 388,
+      "scrollHeight": 388,
+      "scrollTop": 0,
+      "overflowY": "hidden",
+      "availableHeight": "390px",
+      "hit": true
+    }
+  }
+}

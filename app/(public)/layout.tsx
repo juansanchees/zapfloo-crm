@@ -44,8 +44,8 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <IdiomaProvider locale={locale}>
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="w-full max-w-sm space-y-6">
+      <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-8">
+        <div className="w-full max-w-md space-y-6 rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-10">
           {marca.logoUrl && (
             <div className="flex justify-center">
               {/*

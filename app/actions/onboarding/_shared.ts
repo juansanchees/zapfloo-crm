@@ -4,7 +4,7 @@
  * UPDATEs scoped explicitly by `organization_id` resolved from the validated
  * session — no body-derived ids ever).
  */
-import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
+import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OnboardingState } from "@/lib/schemas/onboarding";
 
@@ -14,6 +14,7 @@ export class OnboardingError extends Error {
       | "auth_required"
       | "no_active_org"
       | "forbidden"
+      | "mfa_required"
       | "not_found"
       | "db_error",
     message: string,
@@ -33,10 +34,17 @@ export interface OnboardingCtx {
 }
 
 export async function requireOnboardingCtx(): Promise<OnboardingCtx> {
-  const user = await loadAuthUser();
-  if (!user) throw new OnboardingError("auth_required", "Auth required.");
-  const activeOrg = await resolveActiveOrg(user);
-  if (!activeOrg) throw new OnboardingError("no_active_org", "Sem organização ativa.");
+  // Server Actions são entradas públicas: o layout não autoriza a mutação.
+  // Revalida o papel no banco e a prova de MFA antes de usar service role.
+  const authz = await requireRole("admin", { resource: "onboarding" });
+  if (!authz.ok) {
+    const { error } = await authz.response.json();
+    const code = error.code === "unauthenticated" ? "auth_required"
+      : error.code === "forbidden_tenant" ? "no_active_org"
+      : error.code === "mfa_required" ? "mfa_required" : "forbidden";
+    throw new OnboardingError(code, "Não foi possível autorizar a configuração da organização.");
+  }
+  const { user, org: activeOrg } = authz;
   return {
     userId: user.id,
     orgId: activeOrg.orgId,

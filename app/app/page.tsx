@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { Dashboard } from "@/components/dashboard/Dashboard";
+
 export default function AppHome() {
-  redirect("/app/inbox");
+  return <Dashboard />;
 }

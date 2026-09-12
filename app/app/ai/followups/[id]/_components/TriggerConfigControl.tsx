@@ -2,7 +2,7 @@
 
 import { useT } from "@/hooks/i18n/useT";
 
-import { useEffect, useState } from "react";
+import { useId, useState, type Dispatch, type SetStateAction } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +54,7 @@ import { useEtapasDeGatilho } from "@/hooks/followup/useEtapasDeGatilho";
  */
 type TriggerKind = "manual" | "silence" | "stage_change" | "case_opened" | "webhook";
 
-interface TriggerFormState {
+export interface TriggerFormState {
   kind: TriggerKind;
   thresholdMinutes: number;
   segments: string;
@@ -161,28 +161,30 @@ function summaryLabel(
 interface Props {
   flowId: string;
   triggerConfig: Record<string, unknown>;
+  variant?: "popover" | "inline";
+  /** O canvas guarda a edição enquanto outro nó está selecionado. */
+  draftState?: readonly [TriggerFormState | null, Dispatch<SetStateAction<TriggerFormState | null>>];
 }
 
-export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
+export function TriggerConfigControl({ flowId, triggerConfig, variant = "popover", draftState }: Props) {
   const t = useT();
+  const formId = useId();
   const update = useUpdateTriggerConfig(flowId);
   const [open, setOpen] = useState(false);
-  const [saved, setSaved] = useState<TriggerFormState>(() => parseTriggerConfig(triggerConfig));
-  const [form, setForm] = useState<TriggerFormState>(saved);
+  const localDraft = useState<TriggerFormState | null>(null);
+  const [draft, setDraft] = draftState ?? localDraft;
+  const saved = parseTriggerConfig(triggerConfig);
+  // Sem edição local, uma leitura nova atualiza o formulário. Com edição,
+  // nenhum refetch pode tomar o lugar do que o operador ainda está escrevendo.
+  const form = draft ?? saved;
+  const setForm: Dispatch<SetStateAction<TriggerFormState>> = (next) => {
+    setDraft((previous) => typeof next === "function" ? next(previous ?? saved) : next);
+  };
   // A leitura das etapas acompanha o botão, não o popover: o rótulo fechado
   // precisa do nome da etapa para não exibir «Etapa do funil» genérico num
   // fluxo já configurado.
   const { etapas, carregando: etapasCarregando } = useEtapasDeGatilho();
   const etapaSalva = etapas.find((e) => e.stageId === parseTriggerConfig(triggerConfig).stageId);
-
-  // Re-sincroniza com o valor persistido quando o popover está FECHADO — nunca
-  // no meio de uma edição em andamento (mesma doutrina do `savedGraph` do canvas).
-  useEffect(() => {
-    if (open) return;
-    const next = parseTriggerConfig(triggerConfig);
-    setSaved(next);
-    setForm(next);
-  }, [triggerConfig, open]);
 
   const thresholdInvalid =
     form.kind === "silence" && (!Number.isFinite(form.thresholdMinutes) || form.thresholdMinutes < MIN_THRESHOLD_MINUTES);
@@ -199,7 +201,9 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
     if (thresholdInvalid || stageInvalid) return;
     update.mutate(toTriggerConfig(form), {
       onSuccess: () => {
-        setSaved(form);
+        // A resposta pertence à versão enviada. Uma edição mais nova feita
+        // durante a requisição continua pendente, mesmo se o painel fechou.
+        setDraft((current) => JSON.stringify(current) === JSON.stringify(form) ? null : current);
         setOpen(false);
       },
     });
@@ -218,19 +222,15 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
     grupo.etapas.push(etapa);
   }
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" data-testid="trigger-config-button">
-          {summaryLabel(triggerConfig, etapaSalva ?? null, t)}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80" align="end" data-testid="trigger-config-panel">
+  const fields = (
         <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            {t("Salvar gatilho altera a configuração do fluxo, inclusive se ele já estiver publicado.")}
+          </p>
           <div className="space-y-2">
-            <Label htmlFor="trigger-kind">{t("Tipo de gatilho")}</Label>
+            <Label htmlFor={`${formId}-kind`}>{t("Tipo de gatilho")}</Label>
             <Select value={form.kind} onValueChange={(v) => setForm((f) => ({ ...f, kind: v as TriggerKind }))}>
-              <SelectTrigger id="trigger-kind">
+              <SelectTrigger id={`${formId}-kind`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -243,15 +243,28 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
             </Select>
           </div>
 
+          {form.kind === "manual" && <p className="text-xs text-muted-foreground">
+            {t("O modo manual inicia pela API ou por uma integração; não dispara sozinho.")}
+          </p>}
+
+          <div className="space-y-2 rounded-lg border border-border p-3 text-xs text-muted-foreground">
+            <p>{t("As mensagens são enviadas por um canal conectado. Quando houver conversa vinculada, o fluxo mantém o número de origem.")}</p>
+            <a href="/app/connections" target="_blank" rel="noopener noreferrer" className="inline-block text-text underline underline-offset-4">{t("Ver números conectados")}</a>
+            {["stage_change", "silence", "case_opened"].includes(form.kind) && <>
+              <p>{t("Este gatilho também precisa estar habilitado na seção Follow-up de um agente publicado, com este fluxo selecionado.")}</p>
+              <a href="/app/ai/agents" target="_blank" rel="noopener noreferrer" className="inline-block text-text underline underline-offset-4">{t("Vincular ao agente")}</a>
+            </>}
+          </div>
+
           {form.kind === "stage_change" && (
             <div className="space-y-2">
-              <Label htmlFor="trigger-stage">{t("Etapa que dispara o fluxo")}</Label>
+              <Label htmlFor={`${formId}-stage`}>{t("Etapa que dispara o fluxo")}</Label>
               <Select
                 value={form.stageId}
                 onValueChange={(v) => setForm((f) => ({ ...f, stageId: v }))}
                 disabled={etapasCarregando || etapas.length === 0}
               >
-                <SelectTrigger id="trigger-stage" data-testid="trigger-stage-select" aria-invalid={stageInvalid}>
+                <SelectTrigger id={`${formId}-stage`} data-testid="trigger-stage-select" aria-invalid={stageInvalid}>
                   <SelectValue placeholder={etapasCarregando ? "Carregando etapas…" : "Escolha a etapa"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -302,19 +315,22 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
           )}
 
           {form.kind === "webhook" && (
-            <p className="text-xs text-muted-foreground">
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <p>
               {t(
                 "O fluxo começa quando uma regra em Webhooks usa a ação «Iniciar fluxo de mensagem» apontando para este fluxo publicado.",
               )}
-            </p>
+              </p>
+              <a href="/app/webhooks" target="_blank" rel="noopener noreferrer" className="text-text underline underline-offset-4">{t("Configurar regra de entrada")}</a>
+            </div>
           )}
 
           {form.kind === "silence" && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="trigger-threshold">{t("Minutos de silêncio")}</Label>
+                <Label htmlFor={`${formId}-threshold`}>{t("Minutos de silêncio")}</Label>
                 <Input
-                  id="trigger-threshold"
+                  id={`${formId}-threshold`}
                   type="number"
                   min={MIN_THRESHOLD_MINUTES}
                   value={form.thresholdMinutes}
@@ -326,9 +342,9 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="trigger-segments">Segmentos (tags, opcional)</Label>
+                <Label htmlFor={`${formId}-segments`}>Segmentos (tags, opcional)</Label>
                 <Input
-                  id="trigger-segments"
+                  id={`${formId}-segments`}
                   placeholder={t("ex: vip, carrinho-abandonado")}
                   value={form.segments}
                   onChange={(e) => setForm((f) => ({ ...f, segments: e.target.value }))}
@@ -338,14 +354,17 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
           )}
 
           <div className="flex items-center justify-between gap-2">
-            <Label htmlFor="trigger-cancel-on-reply">{t("Cancelar se o lead responder")}</Label>
+            <Label htmlFor={`${formId}-cancel-on-reply`}>{t("Cancelar se o lead responder")}</Label>
             <Switch
-              id="trigger-cancel-on-reply"
+              id={`${formId}-cancel-on-reply`}
               checked={form.cancelOnReply}
               onCheckedChange={(checked) => setForm((f) => ({ ...f, cancelOnReply: checked }))}
             />
           </div>
 
+        </div>
+  );
+  const saveButton = (
           <Button
             type="button"
             size="sm"
@@ -356,7 +375,25 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
           >
             {update.isPending ? t("Salvando…") : t("Salvar gatilho")}
           </Button>
-        </div>
+  );
+
+  // Um único formulário/contrato: o mesmo controle também vive no nó inicial,
+  // onde o usuário procura o disparo, sem duplicar lógica de persistência.
+  if (variant === "inline") return <section className="space-y-3" aria-label={t("Configurar gatilho")}>{fields}{saveButton}</section>;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" size="sm" data-testid="trigger-config-button"
+          className="max-w-full whitespace-normal text-left">
+          {summaryLabel(triggerConfig, etapaSalva ?? null, t)}
+        </Button>
+      </PopoverTrigger>
+      {/* O limite também respeita o espaço abaixo/acima do disparador. Só os
+          campos rolam; a ação permanece dentro da área pintada, mesmo quando
+          o formulário é maior que a viewport disponível. */}
+      <PopoverContent className="flex max-h-[min(70dvh,var(--radix-popover-content-available-height))] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-0" align="end" collisionPadding={8} data-testid="trigger-config-panel">
+        <div className="min-h-0 overflow-y-auto p-4">{fields}</div>
+        <div className="shrink-0 border-t border-border p-3">{saveButton}</div>
       </PopoverContent>
     </Popover>
   );

@@ -166,7 +166,7 @@ interface StubArgs {
     system_prompt: string;
     provider: string;
     model: string;
-    channel_session_id: string;
+    channel_session_id: string | null;
     tool_ids: unknown;
   };
   startedAt: Date;
