@@ -1980,3 +1980,15 @@ O Playwright intercepta apenas a chamada do modelo para produzir uma resposta
 determinística, sem consumir crédito nem expor dado real; autenticação, rota,
 navegação, persistência do dashboard e renderização continuam reais. A suíte não
 prova qualidade semântica de um provedor externo nem autoriza ações de escrita.
+
+## Saída segura do onboarding e primeira impressão `[P0]` — 12/set/2026
+
+O caminho “Explorar o CRM” continua independente de número conectado e chave própria.
+O cliente entrega exceções internas de redirecionamento ao Next antes de diagnosticar
+falhas de aplicação; sessão vencida, indisponibilidade de rede e recusa do servidor
+ganham mensagens distintas, enquanto a causa é enviada ao Sentry sem dados do cliente.
+Os testes de componente sabotam a ação com sessão vencida e verificam mensagem e
+registro. A jornada real foi dirigida pelo Playwright contra o banco local fresco:
+o administrador pendente entrou em `/app/inbox`, recarregou sem voltar ao wizard e
+manteve “Retomar configuração” visível em 1280 px e 390 px. O wizard serial também
+confirmou as duas listas com o título corrigido em português.
