@@ -34,6 +34,19 @@ export const painelEnsaioSchema = z.object({
 });
 export type ProvaEnsaio = z.infer<typeof provaEnsaioSchema>;
 export type PainelEnsaio = z.infer<typeof painelEnsaioSchema>;
+
+// ID confirmado no catálogo curado (migration 0104 + baseline). Só o onboarding
+// escolhe automaticamente; os seletores avançados do agente continuam intactos.
+export const MODELO_PADRAO_ENSAIO = { provider: "openai", model_id: "gpt-5.6-luna" } as const;
+
+/** O catálogo recebido já contém só modelos ativos compatíveis, na ordem da instalação. */
+export function selecionarModeloEnsaio(models: PainelEnsaio["models"]) {
+  // Clones podem ter catálogos diferentes. Sem o padrão, seguimos com o primeiro;
+  // sem catálogo algum, a tela oferece continuar depois em vez de lançar ou inventar ID.
+  return models.find(m => m.provider === MODELO_PADRAO_ENSAIO.provider && m.model_id === MODELO_PADRAO_ENSAIO.model_id)
+    ?? models[0] ?? null;
+}
+
 export type ErroEnsaio = ErroPreparacao | "rehearsal_conflict" | "rehearsal_not_completed" | "rehearsal_invalid_result" | "rehearsal_busy" | "rehearsal_rate_limited";
 export type ResultadoEnsaio = { ok: true; proof: ProvaEnsaio } | { ok: false; error: ErroEnsaio };
 export type LeituraEnsaio = { ok: true; panel: PainelEnsaio } | { ok: false; error: ErroEnsaio };

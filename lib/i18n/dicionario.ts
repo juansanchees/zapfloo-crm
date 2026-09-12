@@ -37,12 +37,15 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "O ensaio precisa ser atualizado. Recarregue a página e prepare novamente; seu rascunho está salvo.": { es: "Es necesario actualizar el ensayo. Recargue la página y prepare de nuevo; su borrador está guardado." },
+  "Não foi possível acessar a IA agora. Tente novamente mais tarde; se persistir, entre em contato com o suporte.": { es: "No se pudo acceder a la IA ahora. Inténtelo más tarde; si persiste, contacte con soporte." },
+  "O ensaio está indisponível no momento. Você pode continuar depois; se persistir, entre em contato com o suporte.": { es: "El ensayo no está disponible en este momento. Puede continuar después; si persiste, contacte con soporte." },
   "Uma atualização não chegou em tempo real. Recuperamos os dados pela verificação de segurança; novas alterações podem demorar para aparecer.": { es: "Una actualización no llegó en tiempo real. Recuperamos los datos mediante la verificación de seguridad; los nuevos cambios pueden tardar en aparecer." },
   "Cadastrar credencial de IA": { es: "Registrar credencial de IA" },
   "Conectar número de WhatsApp": { es: "Conectar un número de WhatsApp" },
   "Ensaiar a configuração no onboarding": { es: "Ensayar la configuración inicial" },
-  "Gera uma resposta de prévia com o provedor, o modelo e a credencial escolhidos no onboarding, sem usar ferramentas nem enviar mensagem ao cliente.": { es: "Genera una respuesta de vista previa con el proveedor, el modelo y la credencial elegidos en la configuración inicial, sin usar herramientas ni enviar mensajes al cliente." },
-  "Usa a seleção do próprio ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; para testar outra combinação, escolha outro provedor, modelo ou credencial no onboarding e execute um novo ensaio.": { es: "Usa la selección del propio ensayo, capturada antes de la llamada. Una elección de este panel no la sustituye; para probar otra combinación, elija otro proveedor, modelo o credencial en la configuración inicial y ejecute un nuevo ensayo." },
+  "Gera uma resposta de prévia com a configuração automática do ensaio, sem usar ferramentas nem enviar mensagem ao cliente.": { es: "Genera una respuesta de vista previa con la configuración automática del ensayo, sin usar herramientas ni enviar mensajes al cliente." },
+  "Usa a configuração automática do ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; configurações personalizadas continuam disponíveis na área avançada dos agentes.": { es: "Usa la configuración automática del ensayo, capturada antes de la llamada. Una elección de este panel no la sustituye; los ajustes personalizados siguen disponibles en el área avanzada de los agentes." },
   "A prévia não aparece, e o onboarding mostra que o ensaio falhou para você revisar a configuração ou tentar novamente.": { es: "La vista previa no aparece y la configuración inicial muestra que el ensayo falló para que revise la configuración o lo intente de nuevo." },
   "Objetivo e regras juntos passam do limite de 20.000 caracteres. Reduza o texto para salvar.": { es: "El objetivo y las reglas juntos superan el límite de 20.000 caracteres. Reduzca el texto para guardar." },
   "Recuperar preparação": { es: "Recuperar preparación" },

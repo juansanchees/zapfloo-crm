@@ -477,13 +477,13 @@ export const PONTOS_DE_IA: readonly PontoDeIa[] = [
     id: "onboarding_rehearsal",
     rotulo: "Ensaiar a configuração no onboarding",
     oQueFaz:
-      "Gera uma resposta de prévia com o provedor, o modelo e a credencial escolhidos no onboarding, sem usar ferramentas nem enviar mensagem ao cliente.",
+      "Gera uma resposta de prévia com a configuração automática do ensaio, sem usar ferramentas nem enviar mensagem ao cliente.",
     papel: "melhorar",
     exige: {},
     emissor: "lib/onboarding/executar-ensaio.ts",
     fixo: {
       razao:
-        "Usa a seleção do próprio ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; para testar outra combinação, escolha outro provedor, modelo ou credencial no onboarding e execute um novo ensaio.",
+        "Usa a configuração automática do ensaio, capturada antes da chamada. Uma escolha deste painel não a substitui; configurações personalizadas continuam disponíveis na área avançada dos agentes.",
     },
     sintomaDeFalha:
       "A prévia não aparece, e o onboarding mostra que o ensaio falhou para você revisar a configuração ou tentar novamente.",
