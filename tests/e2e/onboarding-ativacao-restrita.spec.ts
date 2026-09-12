@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { decidirElegibilidade } from "@/lib/ai/elegibilidade/gate";
 import { lerNumerosDeTeste, numeroPodeTestar } from "@/lib/ai/elegibilidade/pre-go-live";
+import { MODELO_PADRAO_ENSAIO } from "@/lib/onboarding/ensaio";
 
 // HTTP sintético exclusivo do harness. O canal abaixo é fixture de banco:
 // isto prova UI/actions/Postgres/gate, nunca o pareamento ou transporte WAHA.
@@ -24,7 +25,6 @@ test("preparação arquivada é recuperável pela tela sem chave de IA", async (
   try {
     checked(await svc.from("organizations").insert({ id: org, slug: org, legal_name: "QA recuperação", display_name: "QA recuperação", onboarding_state: { welcome: { display_name: "QA recuperação", timezone: "America/Sao_Paulo", accepted_at: new Date().toISOString() } } }));
     checked(await svc.from("user_organizations").insert({ user_id: user, organization_id: org, role: "admin", accepted_at: new Date().toISOString() }));
-    checked(await svc.from("ai_models").upsert({ provider: "openai", model_id: "qa-recuperacao", display_name: "QA recuperação", supports_tools: true }, { onConflict: "provider,model_id" }));
     await page.goto("/login");
     await page.getByLabel(/e-?mail/i).fill(email);
     await page.getByLabel(/Senha/, { exact: true }).fill(password);
@@ -34,7 +34,7 @@ test("preparação arquivada é recuperável pela tela sem chave de IA", async (
     await page.locator("#name").fill("Lia recuperação QA");
     await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Rascunho salvo" })).toBeVisible();
-    await page.locator("#ensaio-model").selectOption("openai/qa-recuperacao");
+    await expect(page.locator("#ensaio-model, #ensaio-credential")).toHaveCount(0);
     await page.getByRole("button", { name: "Preparar ensaio", exact: true }).click();
     await expect(page.getByRole("button", { name: "Preparar ensaio", exact: true })).toBeEnabled();
     const first = await svc.from("onboarding_drafts").select("prepared_agent_id,prepared_version_id").eq("organization_id", org).single();
@@ -76,18 +76,27 @@ test("preparação arquivada é recuperável pela tela sem chave de IA", async (
     checked(await svc.auth.admin.deleteUser(user));
   }
 });
-for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativação restrita em ${locale}`, async ({ page }) => {
+for (const { locale, semModeloPadrao } of [
+  { locale: "pt-BR", semModeloPadrao: false },
+  { locale: "es", semModeloPadrao: false },
+  { locale: "pt-BR", semModeloPadrao: true },
+] as const) test(`jornada revisada até ativação restrita em ${locale}${semModeloPadrao ? " sem modelo padrão no catálogo" : ""}`, async ({ page }) => {
   test.skip(process.env.E2E_ONBOARDING_SYNTHETIC_PROVIDER !== "1", "Exige o preload HTTP sintético do harness; não chamar IA real.");
   if (process.env.OPENAI_API_KEY !== "onboarding-local-provider-only") throw new Error("Somente chave sintética permitida.");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   if (!["127.0.0.1", "localhost"].includes(new URL(url).hostname)) throw new Error("Somente banco local.");
   const svc = createClient<Database>(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const fallbackModel = `qa-ensaio-fallback-${randomUUID()}`;
+  const expectedModel = semModeloPadrao ? fallbackModel : MODELO_PADRAO_ENSAIO.model_id;
+  let defaultDeprecatedAt: string | null | undefined;
+  let fallbackCreated = false;
+  let user: string | undefined;
   const requests: Record<string, unknown>[] = [];
   const receiver = createServer(async (req, res) => {
     let body = ""; for await (const chunk of req) body += chunk;
     requests.push(JSON.parse(body));
     res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify({ id: "resp_qa", object: "response", created_at: 1788894000, status: "completed", model: "qa-jornada-text",
+    res.end(JSON.stringify({ id: "resp_qa", object: "response", created_at: 1788894000, status: "completed", model: expectedModel,
       output: [{ id: "msg_qa", type: "message", role: "assistant", status: "completed", content: [{ type: "output_text", text: "Resposta sintética local: posso ajudar com um orçamento.", annotations: [] }] }],
       usage: { input_tokens: 20, output_tokens: 15, total_tokens: 35, input_tokens_details: { cached_tokens: 0 }, output_tokens_details: { reasoning_tokens: 0 } }, error: null, incomplete_details: null }));
   });
@@ -95,16 +104,34 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
   const org = randomUUID(); const channel = randomUUID();
   const email = `jornada-${randomUUID()}@example.test`; const password = "SomenteFixtureLocal-2026!";
   const translated = (pt: string, es: string) => locale === "es" ? es : pt;
+  const evidenceCase = `${locale}${semModeloPadrao ? "-fallback" : ""}`;
   try {
+    const defaultModel = await svc.from("ai_models").select("deprecated_at,supports_tools")
+      .eq("provider", MODELO_PADRAO_ENSAIO.provider).eq("model_id", MODELO_PADRAO_ENSAIO.model_id).single();
+    if (defaultModel.error) throw defaultModel.error;
+    expect(defaultModel.data).toMatchObject({ deprecated_at: null, supports_tools: true });
+    if (semModeloPadrao) {
+      // Sabotagem reversível só no banco local. Workers=1 serializa o catálogo
+      // compartilhado; o finally restaura até se a prova da tela reprovar.
+      defaultDeprecatedAt = defaultModel.data.deprecated_at;
+      const unavailable = await svc.from("ai_models").update({ deprecated_at: new Date().toISOString() })
+        .eq("provider", MODELO_PADRAO_ENSAIO.provider).eq("model_id", MODELO_PADRAO_ENSAIO.model_id);
+      if (unavailable.error) throw unavailable.error;
+      const fallback = await svc.from("ai_models").insert({ provider: "openai", model_id: fallbackModel, display_name: "", supports_tools: true });
+      if (fallback.error) throw fallback.error;
+      fallbackCreated = true;
+      const first = await svc.from("ai_models").select("provider,model_id")
+        .is("deprecated_at", null).eq("supports_tools", true).order("display_name").limit(1).single();
+      if (first.error) throw first.error;
+      expect(first.data).toEqual({ provider: "openai", model_id: fallbackModel });
+    }
     const created = await svc.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: "Operador sintético QA", locale } });
     if (created.error || !created.data.user) throw created.error ?? new Error("Fixture de usuário falhou");
-    const user = created.data.user.id;
+    user = created.data.user.id;
     const orgWrite = await svc.from("organizations").insert({ id: org, slug: org, legal_name: "Negócio sintético QA", display_name: "Negócio sintético QA", locale });
     if (orgWrite.error) throw orgWrite.error;
     const membership = await svc.from("user_organizations").insert({ user_id: user, organization_id: org, role: "admin", accepted_at: new Date().toISOString() });
     if (membership.error) throw membership.error;
-    const modelWrite = await svc.from("ai_models").upsert({ provider: "openai", model_id: "qa-jornada-text", display_name: "QA jornada local", supports_tools: true }, { onConflict: "provider,model_id" });
-    if (modelWrite.error) throw modelWrite.error;
     await page.goto("/login");
     mkdirSync("evidence/onboarding-jornada", { recursive: true });
     for (const theme of ["light", "dark"]) {
@@ -141,7 +168,10 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     await expect(page.locator("#objetivo")).toHaveValue("Qualificar pedidos de orçamento");
     await expect(page.getByText(/Ele ainda não tem cérebro|Todavía no tiene cerebro/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: translated("Configurar chave de IA", "Configurar clave de IA") })).toBeVisible();
-    await page.locator("#ensaio-model").selectOption("openai/qa-jornada-text");
+    const rehearsal = page.locator('[aria-labelledby="ensaio-title"]');
+    await expect(rehearsal.getByRole("combobox")).toHaveCount(0);
+    await expect(page.locator("#ensaio-model, #ensaio-credential")).toHaveCount(0);
+    await expect(rehearsal).not.toContainText(/créditos de API|créditos de la API/);
     await page.getByRole("button", { name: translated("Preparar ensaio", "Preparar ensayo"), exact: true }).click();
     await expect(page.getByRole("button", { name: translated("Preparar ensaio", "Preparar ensayo"), exact: true })).toBeEnabled();
     await page.locator("#ensaio-message").fill("Olá, preciso de um orçamento fictício.");
@@ -152,8 +182,9 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     await expect(continuar).toBeDisabled();
     await page.getByRole("button", { name: translated("Revisar resposta", "Revisar respuesta"), exact: true }).click();
     await expect(continuar).toBeEnabled();
-    const draft = await svc.from("onboarding_drafts").select("prepared_agent_id,prepared_version_id,configuration").eq("organization_id", org).single();
+    const draft = await svc.from("onboarding_drafts").select("prepared_agent_id,prepared_version_id,prepared_snapshot,configuration").eq("organization_id", org).single();
     if (draft.error) throw draft.error;
+    expect(draft.data.prepared_snapshot).toMatchObject({ provider: "openai", model: expectedModel, credential_id: null });
     const agent = draft.data.prepared_agent_id!; const version = draft.data.prepared_version_id!;
     const assertInactive = async () => {
       const read = await svc.from("ai_agents").select("is_active,published_version_id").eq("id", agent).eq("organization_id", org).single();
@@ -162,8 +193,30 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
     };
     await assertInactive();
     expect(requests).toHaveLength(1); expect(requests[0]!.tools ?? []).toEqual([]);
+    expect(requests[0]!.model).toBe(expectedModel);
     expect(JSON.stringify(requests[0])).toContain("Qualificar pedidos de orçamento");
     expect(JSON.stringify(requests[0])).toContain("Serviços, agência ou obra");
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 720 });
+      await continuar.scrollIntoViewIfNeeded();
+      const measures = await rehearsal.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width, height: rect.height,
+          fontSize: getComputedStyle(el).fontSize, scrollWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth };
+      });
+      expect(measures.width).toBeGreaterThan(0);
+      expect(measures.height).toBeGreaterThan(0);
+      expect(measures.left).toBeGreaterThanOrEqual(0);
+      expect(measures.right).toBeLessThanOrEqual(width);
+      expect(measures.scrollWidth).toBeLessThanOrEqual(measures.viewportWidth);
+      const button = await continuar.boundingBox();
+      expect(button).not.toBeNull();
+      expect(button!.width).toBeGreaterThan(44);
+      expect(button!.height).toBeGreaterThan(0);
+      await test.info().attach(`ensaio-${evidenceCase}-${width}`, { body: JSON.stringify({ ...measures, button }, null, 2), contentType: "application/json" });
+      mkdirSync(".superpowers/evidence/ensaio-sem-escolhas", { recursive: true });
+      await rehearsal.screenshot({ path: `.superpowers/evidence/ensaio-sem-escolhas/${evidenceCase}-${width}.png` });
+    }
     mkdirSync("evidence/onboarding-jornada", { recursive: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.screenshot({ path: `evidence/onboarding-jornada/agente-${locale}-desktop.png`, fullPage: true });
@@ -247,5 +300,24 @@ for (const locale of ["pt-BR", "es"] as const) test(`jornada revisada até ativa
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: `evidence/onboarding-jornada/inbox-${locale}-${theme}.png`, fullPage: true });
     }
-  } finally { await new Promise<void>((resolve, reject) => receiver.close(error => error ? reject(error) : resolve())); }
+  } finally {
+    // Restaurar primeiro o catálogo global; o restante pertence apenas à fixture.
+    try {
+      if (defaultDeprecatedAt !== undefined) {
+        const restored = await svc.from("ai_models").update({ deprecated_at: defaultDeprecatedAt })
+          .eq("provider", MODELO_PADRAO_ENSAIO.provider).eq("model_id", MODELO_PADRAO_ENSAIO.model_id);
+        if (restored.error) throw restored.error;
+      }
+      const removedOrg = await svc.from("organizations").delete().eq("id", org);
+      if (removedOrg.error) throw removedOrg.error;
+      if (user) {
+        const removedUser = await svc.auth.admin.deleteUser(user);
+        if (removedUser.error) throw removedUser.error;
+      }
+      if (fallbackCreated) {
+        const removedModel = await svc.from("ai_models").delete().eq("provider", "openai").eq("model_id", fallbackModel);
+        if (removedModel.error) throw removedModel.error;
+      }
+    } finally { await new Promise<void>((resolve, reject) => receiver.close(error => error ? reject(error) : resolve())); }
+  }
 });

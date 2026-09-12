@@ -5,10 +5,10 @@
   "lanes": [{ "id": "ui", "label": "Interface" }, { "id": "server", "label": "Servidor" }, { "id": "db", "label": "Banco" }],
   "mainPath": ["panel", "actions", "start", "model", "finish", "review"],
   "nodes": [
-    { "id": "panel", "lane": "ui", "col": 1, "type": "service", "label": "setup-ai / seleção explícita, mensagem, resposta e revisão" },
+    { "id": "panel", "lane": "ui", "col": 1, "type": "service", "label": "setup-ai / configuração automática, mensagem, resposta e revisão" },
     { "id": "actions", "lane": "server", "col": 2, "type": "service", "label": "ensaio.ts / admin + MFA + contexto + Zod" },
     { "id": "start", "lane": "db", "col": 3, "type": "database", "label": "fn_iniciar_ensaio_onboarding / snapshot e lease" },
-    { "id": "model", "lane": "server", "col": 4, "type": "service", "label": "runModelCall / modelo explícito, orçamento, sem tools" },
+    { "id": "model", "lane": "server", "col": 4, "type": "service", "label": "runModelCall / padrão com fallback, orçamento, sem tools" },
     { "id": "finish", "lane": "db", "col": 5, "type": "database", "label": "fn_finalizar_ensaio_onboarding / CAS pós-rede + llm_calls" },
     { "id": "review", "lane": "db", "col": 6, "type": "database", "label": "fn_revisar_ensaio_onboarding / confirmação idempotente" },
     { "id": "draft", "lane": "db", "col": 2, "type": "database", "label": "onboarding_drafts / última execução, trigger invalida edição" },
@@ -22,7 +22,7 @@
     { "id": "e5", "from": "finish", "to": "panel", "label": "resposta ou erro honesto, nenhuma ativação" },
     { "id": "e6", "from": "panel", "to": "review", "label": "ação humana separada com run_id" },
     { "id": "e7", "from": "review", "to": "draft", "label": "somente prova concluída do snapshot atual" },
-    { "id": "e8", "from": "draft", "to": "panel", "label": "retoma seleção/prova válida; edição exige novo teste" },
+    { "id": "e8", "from": "draft", "to": "panel", "label": "retoma preparação/prova válida; edição exige novo teste" },
     { "id": "e9", "from": "model", "to": "audit", "label": "consumo/custo pela camada canônica" },
     { "id": "e10", "from": "review", "to": "audit", "label": "um audit por revisão; nenhum texto/segredo" },
     { "id": "e11", "from": "audit", "to": "panel", "label": "call_id sustenta a prova persistida; falha mantém próximo passo" }

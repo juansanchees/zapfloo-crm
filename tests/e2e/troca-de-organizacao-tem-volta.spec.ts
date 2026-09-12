@@ -7,6 +7,7 @@ import * as path from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { MODELO_PADRAO_ENSAIO } from "@/lib/onboarding/ensaio";
 import { loginComoAdmin, lerCreds as lerCredsAdmin } from "./helpers/login-admin";
 
 /**
@@ -77,7 +78,7 @@ async function entrar(page: Page, creds: Creds) {
 
 test.describe.configure({ timeout: 150_000 });
 
-test("ensaio explícito retoma seleção e só revisa resposta concluída da configuração atual", async ({ page }) => {
+test("ensaio sem escolhas técnicas retoma preparação e só revisa resposta concluída da configuração atual", async ({ page }) => {
   const synthetic = process.env.E2E_ONBOARDING_SYNTHETIC_PROVIDER === "1";
   if (!synthetic && process.env.OPENAI_API_KEY) throw new Error("A prova sem chave exige OPENAI_API_KEY ausente.");
   if (synthetic && process.env.OPENAI_API_KEY !== "onboarding-local-provider-only") throw new Error("Somente chave sintética permitida.");
@@ -86,7 +87,7 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
     let body = ""; for await (const chunk of req) body += chunk;
     requests.push(JSON.parse(body));
     res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify({ id: "resp_qa", object: "response", created_at: 1788894000, status: "completed", model: "qa-onboarding-text",
+    res.end(JSON.stringify({ id: "resp_qa", object: "response", created_at: 1788894000, status: "completed", model: MODELO_PADRAO_ENSAIO.model_id,
       output: requests.length === 2
         ? [{ id: "fc_qa", type: "function_call", call_id: "call_qa", name: "crm_send_whatsapp_message", arguments: JSON.stringify({ conversation_id: "11111111-1111-4111-8111-111111111111", body: "Mensagem sintética que não deve sair" }), status: "completed" }]
         : [{ id: "msg_qa", type: "message", role: "assistant", status: "completed", content: [{ type: "output_text", text: requests.length > 2 ? "A ferramenta não foi executada no teste." : "Olá! Esta é a resposta sintética local para revisão.", annotations: [] }] }],
@@ -102,8 +103,10 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
     if (orgError) throw orgError;
     const { error: memberError } = await svc.from("user_organizations").insert({ user_id: creds.users.admin!.id, organization_id: org, role: "admin", accepted_at: new Date().toISOString() });
     if (memberError) throw memberError;
-    const { error: modelError } = await svc.from("ai_models").upsert({ provider: "openai", model_id: "qa-onboarding-text", display_name: "QA texto local", supports_tools: true }, { onConflict: "provider,model_id" });
-    if (modelError) throw modelError;
+    const model = await svc.from("ai_models").select("deprecated_at,supports_tools")
+      .eq("provider", MODELO_PADRAO_ENSAIO.provider).eq("model_id", MODELO_PADRAO_ENSAIO.model_id).single();
+    if (model.error) throw model.error;
+    expect(model.data).toEqual({ deprecated_at: null, supports_tools: true });
     await page.goto("/login");
     await page.context().addCookies([{ name: "active_org", value: creds.org_id, url: new URL(page.url()).origin }]);
     await loginComoAdmin(page, lerCredsAdmin());
@@ -112,19 +115,21 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
     await page.getByLabel("Como ele vai se chamar").fill("Lia ensaio QA");
     await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Rascunho salvo" })).toBeVisible();
-    await expect(page.getByLabel("Modelo do ensaio")).toHaveValue("");
-    await page.getByLabel("Modelo do ensaio").selectOption("openai/qa-onboarding-text");
+    await expect(page.locator("#ensaio-model, #ensaio-credential")).toHaveCount(0);
+    await expect(page.locator('[aria-labelledby="ensaio-title"]').getByRole("combobox")).toHaveCount(0);
     await page.getByRole("button", { name: "Preparar ensaio", exact: true }).click();
     await expect(page.getByRole("button", { name: "Preparar ensaio", exact: true })).toBeEnabled();
     await page.reload();
-    await expect(page.getByLabel("Modelo do ensaio")).toHaveValue("openai/qa-onboarding-text");
+    await expect(page.locator("#ensaio-model, #ensaio-credential")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Testar mensagem", exact: true })).toBeDisabled();
     await page.getByLabel("Mensagem de exemplo").fill("Olá, como funciona o atendimento?");
+    await expect(page.getByRole("button", { name: "Testar mensagem", exact: true })).toBeEnabled();
     await page.getByLabel("Mensagem de exemplo").press("Enter");
     await expect(page).toHaveURL(/\/onboarding\/setup-ai/);
     await page.getByRole("button", { name: "Testar mensagem", exact: true }).click();
     if (synthetic) {
       await expect(page.getByText("Olá! Esta é a resposta sintética local para revisão.", { exact: true })).toBeVisible();
-      expect(requests).toHaveLength(1); expect(requests[0]!.model).toBe("qa-onboarding-text");
+      expect(requests).toHaveLength(1); expect(requests[0]!.model).toBe(MODELO_PADRAO_ENSAIO.model_id);
       expect(requests[0]!.tools ?? []).toEqual([]);
       await expect(page.getByRole("button", { name: "Revisar resposta", exact: true })).toBeEnabled();
       await page.getByRole("button", { name: "Revisar resposta", exact: true }).click();
@@ -146,7 +151,7 @@ test("ensaio explícito retoma seleção e só revisa resposta concluída da con
       expect(requests).toHaveLength(1);
       await other.close();
     } else {
-      await expect(page.getByRole("alert").filter({ hasText: "Não há chave utilizável" })).toBeVisible();
+      await expect(page.getByRole("alert").filter({ hasText: "Não foi possível acessar a IA agora. Tente novamente mais tarde; se persistir, entre em contato com o suporte." })).toBeVisible();
       await expect(page.getByRole("button", { name: "Revisar resposta", exact: true })).toBeDisabled();
       await expect(page.getByLabel("Mensagem de exemplo")).toHaveValue(/Olá, como funciona/);
     }
