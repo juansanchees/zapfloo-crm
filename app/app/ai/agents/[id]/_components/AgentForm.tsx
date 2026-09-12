@@ -87,6 +87,18 @@ interface BaseProps {
   channelSessions: ChannelSessionLite[];
   routerMembership?: { routerId: string; routerName: string } | null;
   readOnly?: boolean;
+  organizationTimezone?: string;
+  /**
+   * Padrões resolvidos no servidor para um agente novo. O formulário não
+   * escolhe provedor/modelo no escuro nem esconde um campo obrigatório vazio.
+   */
+  initialSetup?: {
+    provider: Provider;
+    model: string;
+    credential_id: string;
+    tool_ids: string[];
+    organization_timezone: string;
+  };
 }
 
 interface EditProps extends BaseProps {
@@ -183,22 +195,26 @@ const DEFAULT_TRIGGER: TriggerValue = {
 function buildState(args: {
   agent?: AgentRow;
   version: AgentVersionRow | null;
+  initialSetup?: BaseProps["initialSetup"];
+  singleChannelId?: string;
 }): FormState {
-  const { agent, version } = args;
+  const { agent, version, initialSetup, singleChannelId } = args;
   return {
     name: agent?.name ?? "",
     description: agent?.description ?? "",
     priority: agent?.priority ?? 0,
-    provider: (version?.provider as Provider) ?? "anthropic",
-    model: version?.model ?? "",
+    provider: (version?.provider as Provider) ?? initialSetup?.provider ?? "anthropic",
+    model: version?.model ?? initialSetup?.model ?? "",
     // `null` gravado = a versão usa a chave da instalação. Sem esta tradução,
     // reabrir o agente mostraria o campo em branco e pediria para escolher de novo.
-    credential_id: version ? (version.credential_id ?? CHAVE_DA_INSTALACAO) : "",
-    channel_session_id: version?.channel_session_id ?? "",
+    credential_id: version
+      ? (version.credential_id ?? CHAVE_DA_INSTALACAO)
+      : initialSetup?.credential_id ?? "",
+    channel_session_id: version?.channel_session_id ?? singleChannelId ?? "",
     system_prompt:
       version?.system_prompt ??
       "Você é um atendente. Responda de forma educada e clara, em pt-BR.",
-    tool_ids: version?.tool_ids ?? [],
+    tool_ids: version?.tool_ids ?? initialSetup?.tool_ids ?? [],
     trigger_config: (version?.trigger_config as unknown as TriggerValue) ?? DEFAULT_TRIGGER,
     max_steps: version?.max_steps ?? 10,
     token_budget: version?.token_budget ?? 50_000,
@@ -294,13 +310,19 @@ export function AgentForm(props: Props) {
       const ref = props.base ?? props.draft ?? props.published;
       return buildState({ agent: props.agent, version: ref });
     }
-    return buildState({ version: null });
+    return buildState({
+      version: null,
+      initialSetup: props.initialSetup,
+      singleChannelId:
+        props.channelSessions.length === 1 ? props.channelSessions[0]?.id : undefined,
+    });
   }, [isEdit, props]);
 
   const [form, setForm] = React.useState<FormState>(baseline);
   const [saving, setSaving] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const advancedRef = React.useRef<HTMLDetailsElement>(null);
   /**
    * Qual papel está aberto. Estado LOCAL e não rota: trocar de papel não é
    * navegação — o rascunho é um só, e uma URL por papel faria o usuário achar
@@ -321,6 +343,7 @@ export function AgentForm(props: Props) {
 
   const cred = findCredential(props.credentials, form.credential_id);
   const credSt = cred ? credentialStatus(cred) : null;
+  const usaChaveDaInstalacao = form.credential_id === CHAVE_DA_INSTALACAO;
   const channelSession = props.channelSessions.find((c) => c.id === form.channel_session_id);
   const modelMeta = useModelMeta(form.provider, form.model);
 
@@ -376,7 +399,7 @@ export function AgentForm(props: Props) {
       }
     }
     return errors;
-  }, [form, t]);
+  }, [form, props.provedoresDaInstalacao, t]);
 
   const isValid = Object.keys(validation).length === 0;
 
@@ -385,14 +408,15 @@ export function AgentForm(props: Props) {
     if (!props.draft) return t("Sem rascunho para publicar.");
     if (!isValid) return t("Resolva os erros do formulário.");
     if (dirty) return t("Salve o rascunho antes de publicar.");
-    if (!cred) return t("Escolha a chave de acesso da empresa de inteligência artificial.");
-    if (credSt !== "validated")
+    if (!cred && !usaChaveDaInstalacao)
+      return t("Escolha a chave de acesso da empresa de inteligência artificial.");
+    if (cred && credSt !== "validated")
       return `${t("Credencial")} ${form.provider} ${credSt === "invalid" ? t("inválida") : t("ainda não validada")}.`;
     if (!channelSession) return t("Escolha por qual número de WhatsApp ele atende.");
     if (channelSession.status !== "working" && channelSession.status !== "WORKING")
       return `${t("Número WhatsApp não está conectado (status:")} ${channelSession.status}).`;
     return null;
-  }, [isEdit, props, isValid, dirty, cred, credSt, form.provider, channelSession, t]);
+  }, [isEdit, props, isValid, dirty, cred, credSt, usaChaveDaInstalacao, form.provider, channelSession, t]);
 
   // ---------------------------------------------------------------------
   // Handlers
@@ -665,96 +689,6 @@ export function AgentForm(props: Props) {
                 maxLength={2000}
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="priority">{t("Ordem de preferência (0 a 1000)")}</Label>
-              <Input
-                id="priority"
-                type="number"
-                min={0}
-                max={1000}
-                step={1}
-                value={form.priority}
-                onChange={(e) => patch({ priority: Number(e.target.value) })}
-                disabled={disabled}
-                aria-invalid={!!validation.priority}
-              />
-              {validation.priority ? (
-                <p className="text-xs text-destructive">{validation.priority}</p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
-                {t(
-                  "Quando mais de um agente puder atender a mesma conversa, o de número maior tenta primeiro. Se você só tem um agente, pode deixar como está.",
-                )}
-              </p>
-            </div>
-          </Card>
-
-          {/* Provider + credential + model */}
-          <Card className="space-y-3 p-4">
-            <h3 className="text-sm font-medium">{t("A inteligência que ele usa")}</h3>
-            <div className="space-y-1">
-              <Label htmlFor="provider">{t("Empresa de inteligência artificial")}</Label>
-              <Select
-                value={form.provider}
-                onValueChange={(v) => changeProvider(v as Provider)}
-                disabled={disabled}
-              >
-                <SelectTrigger id="provider">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {/*
-                    Derivado de PROVEDORES, nunca escrito à mão: esta lista tinha
-                    três itens fixos enquanto o sistema executava quatro, e a
-                    OpenRouter — a opção [1] do instalador — não aparecia. Um
-                    agente publicado nela abria com o campo em BRANCO, porque
-                    nenhum item casava com o valor, e o primeiro save silencioso
-                    trocava o provedor do dono por outro.
-                  */}
-                  {PROVEDORES.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.rotulo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <ModelPicker
-              provider={form.provider}
-              value={form.model}
-              onChange={(modelId) => patch({ model: modelId })}
-              disabled={disabled}
-              id="model"
-            />
-            {validation.model ? (
-              <p className="text-xs text-destructive">{validation.model}</p>
-            ) : null}
-
-            <CredentialPicker
-              provider={form.provider}
-              credentials={props.credentials}
-              value={form.credential_id}
-              onChange={(id) => patch({ credential_id: id })}
-              disabled={disabled}
-              id="credential_id"
-              instalacaoTemChave={(props.provedoresDaInstalacao ?? []).includes(form.provider)}
-            />
-            {!readOnly && <Link
-              href="/app/ai/credentials"
-              className="inline-flex text-xs font-medium text-foreground underline underline-offset-2"
-            >
-              {t("Cadastrar credencial de IA")}
-            </Link>}
-            {validation.credential_id ? (
-              <p className="text-xs text-destructive">{validation.credential_id}</p>
-            ) : null}
-            {cred && credSt && credSt !== "validated" ? (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                {t("Credencial selecionada está com status")} {t(STATUS_LABEL[credSt])}
-                {t(". Publish bloqueado até validar.")}
-              </p>
-            ) : null}
           </Card>
 
           {/* WhatsApp session */}
@@ -819,78 +753,6 @@ export function AgentForm(props: Props) {
             </div>
           </Card>
 
-          {/* Limits */}
-          <Card className="space-y-3 p-4">
-            <h3 className="text-sm font-medium">{t("Freios de segurança")}</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="max_steps">{t("Ações por atendimento (1 a 25)")}</Label>
-                <Input
-                  id="max_steps"
-                  type="number"
-                  min={1}
-                  max={25}
-                  value={form.max_steps}
-                  onChange={(e) => patch({ max_steps: Number(e.target.value) })}
-                  disabled={disabled}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="token_budget">{t("Volume de texto por atendimento")}</Label>
-                <Input
-                  id="token_budget"
-                  type="number"
-                  min={1000}
-                  max={500000}
-                  step={1000}
-                  value={form.token_budget}
-                  onChange={(e) => patch({ token_budget: Number(e.target.value) })}
-                  disabled={disabled}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="cost_budget_cents">{t("Custo máximo por atendimento (centavos)")}</Label>
-                <Input
-                  id="cost_budget_cents"
-                  type="number"
-                  min={1}
-                  max={10000}
-                  value={form.cost_budget_cents}
-                  onChange={(e) => patch({ cost_budget_cents: Number(e.target.value) })}
-                  disabled={disabled}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="history_message_window">{t("Mensagens anteriores que ele lê")}</Label>
-                <Input
-                  id="history_message_window"
-                  type="number"
-                  min={0}
-                  max={200}
-                  value={form.history_message_window}
-                  onChange={(e) =>
-                    patch({ history_message_window: Number(e.target.value) })
-                  }
-                  disabled={disabled}
-                />
-              </div>
-              <div className="col-span-2 space-y-1">
-                <Label htmlFor="history_token_window">{t("Tamanho máximo desse histórico")}</Label>
-                <Input
-                  id="history_token_window"
-                  type="number"
-                  min={0}
-                  max={50000}
-                  step={500}
-                  value={form.history_token_window}
-                  onChange={(e) =>
-                    patch({ history_token_window: Number(e.target.value) })
-                  }
-                  disabled={disabled}
-                />
-              </div>
-            </div>
-          </Card>
         </div>
 
         {/* COLUMN 2 */}
@@ -921,6 +783,7 @@ export function AgentForm(props: Props) {
               </div>
             </div>
             <Textarea
+              id="system_prompt"
               value={form.system_prompt}
               onChange={(e) => patch({ system_prompt: e.target.value })}
               disabled={disabled}
@@ -945,46 +808,6 @@ export function AgentForm(props: Props) {
             />
             {validation.system_prompt ? (
               <p className="text-xs text-destructive">{validation.system_prompt}</p>
-            ) : null}
-          </Card>
-
-          {/* Estilo de resposta (split de mensagens — Onda 4) */}
-          <Card className="space-y-3 p-4">
-            <h3 className="text-sm font-medium">{t("Estilo de resposta")}</h3>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="split_messages"
-                checked={form.split_messages}
-                onCheckedChange={(v) => patch({ split_messages: v })}
-                disabled={disabled}
-              />
-              <Label htmlFor="split_messages">
-                {t("Responder em várias mensagens curtas (como uma pessoa digita)")}
-              </Label>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t(
-                "Em vez de um bloco único, a resposta sai em bolhas separadas, espaçadas pelo mesmo ritmo anti-banimento do envio. O agente também é instruído a escrever em parágrafos curtos.",
-              )}
-            </p>
-            {form.split_messages ? (
-              <div className="space-y-1">
-                <Label htmlFor="split_max_chars">{t("Tamanho máximo por bolha (80–4000)")}</Label>
-                <Input
-                  id="split_max_chars"
-                  type="number"
-                  min={80}
-                  max={4000}
-                  step={20}
-                  value={form.split_max_chars}
-                  onChange={(e) => patch({ split_max_chars: Number(e.target.value) })}
-                  disabled={disabled}
-                  aria-invalid={!!validation.split_max_chars}
-                />
-                {validation.split_max_chars ? (
-                  <p className="text-xs text-destructive">{validation.split_max_chars}</p>
-                ) : null}
-              </div>
             ) : null}
           </Card>
 
@@ -1021,6 +844,8 @@ export function AgentForm(props: Props) {
               value={form.trigger_config}
               onChange={(v) => patch({ trigger_config: v })}
               disabled={disabled}
+              section="principal"
+              organizationTimezone={props.organizationTimezone ?? props.initialSetup?.organization_timezone}
             />
           </Card>
 
@@ -1102,6 +927,116 @@ export function AgentForm(props: Props) {
           </Card>
         </div>
       </div>
+
+      {validation.model || validation.credential_id || (cred && credSt !== "validated") ? (
+        <div role="alert" className={papel === "conversa" ? "rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm" : "hidden"}>
+          <p className="font-medium">{t("Falta concluir a configuração da inteligência")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("Esta instalação não encontrou automaticamente um modelo e uma chave compatíveis.")}
+          </p>
+          <button type="button" className="mt-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+            onClick={() => {
+              if (advancedRef.current) advancedRef.current.open = true;
+              advancedRef.current?.scrollIntoView({ block: "nearest" });
+            }}>
+            {t("Abrir configuração avançada")}
+          </button>
+          {(validation.credential_id || (cred && credSt !== "validated")) && !readOnly ? (
+            <Link href="/app/ai/credentials"
+              className="ml-3 inline-flex text-sm font-medium text-foreground underline underline-offset-2">
+              {t("Cadastrar credencial de IA")}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
+      <details
+        ref={advancedRef}
+        data-testid="configuracao-avancada-do-agente"
+        className={papel === "conversa" ? "rounded-xl border border-border bg-surface" : "hidden"}
+      >
+        <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+          {t("Avançado")}
+        </summary>
+        <div className="grid gap-4 border-t border-border p-4 lg:grid-cols-2">
+          <Card className="space-y-3 p-4">
+            <h3 className="text-sm font-medium">{t("Escolha técnica da inteligência")}</h3>
+            <div className="space-y-1">
+              <Label htmlFor="priority">{t("Ordem de preferência (0 a 1000)")}</Label>
+              <Input id="priority" type="number" min={0} max={1000} step={1}
+                value={form.priority} onChange={(e) => patch({ priority: Number(e.target.value) })}
+                disabled={disabled} aria-invalid={!!validation.priority} />
+              {validation.priority ? <p className="text-xs text-destructive">{validation.priority}</p> : null}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="provider">{t("Empresa de inteligência artificial")}</Label>
+              <Select value={form.provider} onValueChange={(v) => changeProvider(v as Provider)} disabled={disabled}>
+                <SelectTrigger id="provider"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PROVEDORES.map((p) => <SelectItem key={p.id} value={p.id}>{p.rotulo}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <ModelPicker provider={form.provider} value={form.model}
+              onChange={(modelId) => patch({ model: modelId })} disabled={disabled} id="model" />
+            {validation.model ? <p className="text-xs text-destructive">{validation.model}</p> : null}
+            <CredentialPicker provider={form.provider} credentials={props.credentials}
+              value={form.credential_id} onChange={(id) => patch({ credential_id: id })}
+              disabled={disabled} id="credential_id"
+              instalacaoTemChave={(props.provedoresDaInstalacao ?? []).includes(form.provider)} />
+            {validation.credential_id ? <p className="text-xs text-destructive">{validation.credential_id}</p> : null}
+            {cred && credSt && credSt !== "validated" ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {t("Credencial selecionada está com status")} {t(STATUS_LABEL[credSt])}
+                {t(". Publish bloqueado até validar.")}
+              </p>
+            ) : null}
+          </Card>
+
+          <Card className="space-y-3 p-4">
+            <h3 className="text-sm font-medium">{t("Limites técnicos")}</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {([
+                ["max_steps", t("Ações por atendimento (1 a 25)"), 1, 25, 1],
+                ["token_budget", t("Volume de texto por atendimento"), 1000, 500000, 1000],
+                ["cost_budget_cents", t("Custo máximo por atendimento (centavos)"), 1, 10000, 1],
+                ["history_message_window", t("Mensagens anteriores que ele lê"), 0, 200, 1],
+                ["history_token_window", t("Tamanho máximo desse histórico"), 0, 50000, 500],
+              ] as const).map(([id, label, min, max, step]) => (
+                <div className="space-y-1" key={id}>
+                  <Label htmlFor={id}>{label}</Label>
+                  <Input id={id} type="number" min={min} max={max} step={step}
+                    value={form[id]} onChange={(e) => patch({ [id]: Number(e.target.value) })}
+                    disabled={disabled} />
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="space-y-3 p-4">
+            <h3 className="text-sm font-medium">{t("Formato das respostas")}</h3>
+            <div className="flex items-center gap-2">
+              <Switch id="split_messages" checked={form.split_messages}
+                onCheckedChange={(v) => patch({ split_messages: v })} disabled={disabled} />
+              <Label htmlFor="split_messages">{t("Responder em várias mensagens curtas (como uma pessoa digita)")}</Label>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="split_max_chars">{t("Tamanho máximo por bolha (80–4000)")}</Label>
+              <Input id="split_max_chars" type="number" min={80} max={4000} step={20}
+                value={form.split_max_chars} onChange={(e) => patch({ split_max_chars: Number(e.target.value) })}
+                disabled={disabled} aria-invalid={!!validation.split_max_chars} />
+              {validation.split_max_chars ? <p className="text-xs text-destructive">{validation.split_max_chars}</p> : null}
+            </div>
+          </Card>
+
+          <Card className="space-y-3 p-4">
+            <h3 className="text-sm font-medium">{t("Disparo e fuso")}</h3>
+            <TriggerEditor value={form.trigger_config}
+              onChange={(v) => patch({ trigger_config: v })} disabled={disabled}
+              section="avancado" organizationTimezone={props.organizationTimezone ?? props.initialSetup?.organization_timezone} />
+          </Card>
+        </div>
+      </details>
 
       {/* Publish dialog */}
       {isEdit && props.draft ? (

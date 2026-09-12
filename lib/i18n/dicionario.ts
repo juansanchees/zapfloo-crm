@@ -157,7 +157,24 @@ export const DICIONARIO: Traducoes = {
   "Rascunho salvo. Nenhum atendimento foi ativado.": { es: "Borrador guardado. No se activó ninguna atención." },
   "Explorar o CRM": { es: "Explorar el CRM" },
   "Abrindo o CRM…": { es: "Abriendo el CRM…" },
-  "Não foi possível abrir o CRM. Recarregue a página e tente novamente.": { es: "No se pudo abrir el CRM. Recarga la página e inténtalo de nuevo." },
+  "Sua sessão expirou. Entre novamente para abrir o CRM.": {
+    es: "Tu sesión expiró. Inicia sesión de nuevo para abrir el CRM.",
+  },
+  "Não encontramos uma empresa ativa para abrir o CRM.": {
+    es: "No encontramos una empresa activa para abrir el CRM.",
+  },
+  "Seu acesso não permite abrir esta organização.": {
+    es: "Tu acceso no permite abrir esta organización.",
+  },
+  "Confirme sua verificação de segurança para abrir o CRM.": {
+    es: "Confirma tu verificación de seguridad para abrir el CRM.",
+  },
+  "O servidor não conseguiu preparar o CRM. Tente novamente em instantes.": {
+    es: "El servidor no pudo preparar el CRM. Inténtalo de nuevo en unos instantes.",
+  },
+  "Não foi possível falar com o servidor. Confira sua conexão e tente novamente.": {
+    es: "No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+  },
   "Você está explorando o CRM. A configuração da organização continua pendente.": { es: "Estás explorando el CRM. La configuración de la organización sigue pendiente." },
   "Retomar configuração": { es: "Retomar configuración" },
   "números de teste autorizados": { es: "números de prueba autorizados" },
@@ -521,8 +538,7 @@ export const DICIONARIO: Traducoes = {
   "Central de avisos": { es: "Central de avisos" },
   "em aberto": { es: "abiertos" },
   // ─── Agentes de IA: lista ───
-  "Agents de IA": { es: "Agentes de IA" },
-  "Configure o comportamento dos agents que respondem no WhatsApp.": {
+  "Configure o comportamento dos agentes que respondem no WhatsApp.": {
     es: "Configura el comportamiento de los agentes que responden en WhatsApp.",
   },
   "Nenhum agent configurado": { es: "Ningún agente configurado" },
@@ -643,6 +659,13 @@ export const DICIONARIO: Traducoes = {
     es: "Cuando más de un agente pueda atender la misma conversación, el de número mayor lo intenta primero. Si solo tienes un agente, puedes dejarlo como está.",
   },
   "A inteligência que ele usa": { es: "La inteligencia que usa" },
+  "Escolha técnica da inteligência": { es: "Elección técnica de la inteligencia" },
+  "Limites técnicos": { es: "Límites técnicos" },
+  "Formato das respostas": { es: "Formato de las respuestas" },
+  "Disparo e fuso": { es: "Activación y zona horaria" },
+  "Herdado da organização. Altere somente se este agente atender em outro fuso.": {
+    es: "Heredado de la organización. Cámbialo solo si este agente atiende en otra zona horaria.",
+  },
   "Empresa de inteligência artificial": { es: "Empresa de inteligencia artificial" },
   "Credencial selecionada está com status": {
     es: "La credencial seleccionada tiene el estado",
@@ -672,6 +695,30 @@ export const DICIONARIO: Traducoes = {
   },
   "Tamanho máximo por bolha (80–4000)": { es: "Tamaño máximo por burbuja (80–4000)" },
   "O que o agente pode fazer": { es: "Lo que el agente puede hacer" },
+  "ligadas": { es: "activadas" },
+  "teto de": { es: "límite de" },
+  "disponíveis": { es: "disponibles" },
+  "Configuração pronta para clínica": { es: "Configuración lista para clínica" },
+  "Atende, registra o interesse, agenda horários e acompanha o cliente usando o pacote já validado pelo sistema.": {
+    es: "Atiende, registra el interés, agenda horarios y acompaña al cliente usando el paquete ya validado por el sistema.",
+  },
+  "Ocultar prévia": { es: "Ocultar vista previa" },
+  "Ver o que será ligado": { es: "Ver qué se activará" },
+  "Estas ações não serão ligadas pelo pacote. Você decide uma a uma no modo avançado:": {
+    es: "Estas acciones no serán activadas por el paquete. Tú decides una por una en el modo avanzado:",
+  },
+  "Aplicar configuração de clínica": { es: "Aplicar configuración de clínica" },
+  "A configuração de clínica não cabe no limite atual. Desligue uma capacidade antes.": {
+    es: "La configuración de clínica no cabe en el límite actual. Desactiva una capacidad antes.",
+  },
+  "Ajustar por objetivo": { es: "Ajustar por objetivo" },
+  "Falta concluir a configuração da inteligência": {
+    es: "Falta completar la configuración de la inteligencia",
+  },
+  "Esta instalação não encontrou automaticamente um modelo e uma chave compatíveis.": {
+    es: "Esta instalación no encontró automáticamente un modelo y una clave compatibles.",
+  },
+  "Abrir configuração avançada": { es: "Abrir configuración avanzada" },
   "Ligue por jornada de trabalho. O agente só consegue fazer o que estiver ligado aqui — e o que estiver ligado, ele fará sozinho durante o atendimento.": {
     es: "Actívalo según la jornada de trabajo. El agente solo puede hacer lo que esté activado aquí — y lo que esté activado, lo hará solo durante la atención.",
   },
@@ -4631,7 +4678,9 @@ export const DICIONARIO: Traducoes = {
     es: "Lo que vale para cualquier atención aquí. Puedes dejarlo en blanco ahora y escribirlo después — aprende contigo con el tiempo.",
   },
   "Ele já vem sabendo": { es: "Ya viene sabiendo" },
-  "E nunca vai fazer": { es: "Y nunca va a hacer" },
+  "O que ele sempre confere antes de enviar": {
+    es: "Lo que siempre verifica antes de enviar",
+  },
   "Essas conferências acontecem antes de cada mensagem sair, e não têm interruptor.": {
     es: "Estas verificaciones ocurren antes de que salga cada mensaje, y no tienen interruptor.",
   },
@@ -4975,7 +5024,7 @@ export const DICIONARIO: Traducoes = {
   "Ver ficha do cliente": { es: "Ver ficha del cliente" },
   "Ver as etapas de um funil": { es: "Ver las etapas de un embudo" },
 
-  // ─── Onboarding: conferências de saída (guardrails), "E nunca vai fazer" ───
+  // ─── Onboarding: conferências de saída (guardrails) ───
   "Respeitar quem pediu para parar": { es: "Respetar a quien pidió parar" },
   "Respeitar dados apagados e a base legal": { es: "Respetar datos borrados y la base legal" },
   "Segurar o ritmo de envio": { es: "Mantener el ritmo de envío" },
