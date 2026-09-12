@@ -22,6 +22,7 @@ import { guardarCredencial } from "@/lib/ai/credenciais/guardar";
 import { IDS_DE_PROVEDOR } from "@/lib/ai/pontos/provedores";
 import type { Provider } from "@/lib/ai/provider-validators";
 import { requireOnboardingCtx, OnboardingError } from "./_shared";
+import { loadAuthUser } from "@/lib/auth/server";
 
 export type ResultadoDaChave = { ok: true; final: string } | { ok: false; erro: string };
 
@@ -34,10 +35,12 @@ export async function salvarChaveDaIa(formData: FormData): Promise<ResultadoDaCh
     throw err;
   }
 
-  // Guardar chave de provedor é ação de administrador, igual à rota REST. Quem
-  // faz o onboarding é o dono, mas o papel é verificado e não presumido.
-  if (ctx.role !== "admin") {
-    return { ok: false, erro: "Só um administrador pode cadastrar a chave da inteligência artificial." };
+  // Compatibilidade com o componente legado, que já não é renderizado. Mesmo
+  // assim a Server Action é uma superfície chamável: só a autoridade da
+  // plataforma pode gravar uma credencial por este caminho alternativo.
+  const user = await loadAuthUser();
+  if (!user || user.id !== ctx.userId || !user.is_platform_admin) {
+    return { ok: false, erro: "A chave é administrada pela equipe da plataforma." };
   }
 
   const provider = String(formData.get("provider") ?? "");

@@ -1,5 +1,5 @@
 /**
- * DELETE /api/v1/ai/credentials/:id (admin)
+ * DELETE /api/v1/ai/credentials/:id (administração da plataforma)
  *
  * Bloqueia se a credential é referenciada por uma `ai_agent_versions` que é a
  * `published_version_id` de algum agent não-arquivado da org.
@@ -25,7 +25,11 @@ export async function DELETE(
   const requestId = randomUUID();
   const { id } = await ctx.params;
 
-  const authz = await requireRole("admin", { requestId, resource: "ai_credentials" });
+  const authz = await requireRole("viewer", {
+    requestId,
+    resource: "ai_credentials",
+    platformOnly: true,
+  });
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user: authUser, org: activeOrg } = authz;

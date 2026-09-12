@@ -13,7 +13,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 // o backend legado continua coberto em onboarding-agente-nao-publicado.
 it.each(["draft_model_unavailable", "draft_credential_unavailable"])("%s conserva mensagem e saída sem avançar", async (error) => {
   f.prepare.mockResolvedValue({ ok: false, error });
-  render(<Ensaio context={"a".repeat(64)} revision={1} dirty={false} epoch={0} onBusy={() => {}} initial={{ ok: true, panel: { selection: null, proof: null, models: [{ provider: "openai", model_id: "qa", display_name: "QA" }], credentials: [] } }} />);
+  render(<Ensaio context={"a".repeat(64)} revision={1} dirty={false} epoch={0} onBusy={() => {}} initial={{ ok: true, panel: { selection: null, proof: null, models: [{ provider: "openai", model_id: "qa", display_name: "QA" }] } }} />);
   fireEvent.change(screen.getByLabelText("Mensagem de exemplo"), { target: { value: "Pergunta sintética QA" } });
   fireEvent.click(screen.getByRole("button", { name: "Preparar ensaio" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(error === "draft_model_unavailable"

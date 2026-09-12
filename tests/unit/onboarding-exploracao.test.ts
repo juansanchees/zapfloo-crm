@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.admin }));
 vi.mock("@/lib/env", () => ({ env: { NEXT_PUBLIC_APP_URL: "https://crm.example.test" } }));
 vi.mock("@/lib/logger", () => ({ logger: { error: mocks.logError } }));
 
-import { explorarCrm, configurarChaveDoOnboarding, gerenciarAgenteDoOnboarding } from "@/app/actions/onboarding/explorar";
+import { explorarCrm, gerenciarAgenteDoOnboarding } from "@/app/actions/onboarding/explorar";
 import { exploracaoPertenceA } from "@/lib/onboarding/exploracao";
 import { env } from "@/lib/env";
 
@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 describe("explorar não conclui nem ativa a organização", () => {
-  it.each([[configurarChaveDoOnboarding, "/app/ai/credentials"], [gerenciarAgenteDoOnboarding, "/app/ai/agents"]] as const)("gestão específica usa a mesma exploração e guard", async (action, destination) => {
+  it.each([[gerenciarAgenteDoOnboarding, "/app/ai/agents"]] as const)("gestão específica usa a mesma exploração e guard", async (action, destination) => {
     await expect(action()).rejects.toThrow("REDIRECT:" + destination);
     expect(mocks.set).toHaveBeenCalledOnce();
     expect(mocks.admin).not.toHaveBeenCalled();

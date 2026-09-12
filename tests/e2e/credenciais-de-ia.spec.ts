@@ -2,15 +2,21 @@
  * Jornada: admin cola uma chave de IA e entende o resultado sem ler código.
  * Antes, o card mostrava `auth_failed_401` e a lista de modelos colada por vírgula.
  */
+import { execFileSync } from "node:child_process";
+
 import { test, expect } from "@playwright/test";
 
-import { lerCreds, loginComoAdmin } from "./helpers/login-admin";
+import { lerCreds, loginComoDono } from "./helpers/login-admin";
 
 let creds = lerCreds();
 
 test.describe("Chaves de acesso à IA", () => {
+  test.beforeAll(() => {
+    execFileSync("npx", ["tsx", "scripts/seed-e2e-system-update.ts"], { stdio: "inherit" });
+  });
+
   test("[P0] chave inválida vira frase legível, e a tela diz onde pegar outra", async ({ page }) => {
-    creds = await loginComoAdmin(page, creds);
+    creds = await loginComoDono(page, creds);
     await page.goto("/app/ai/credentials");
 
     const rotulo = `E2E ${Date.now()}`;

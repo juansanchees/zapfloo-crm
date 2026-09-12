@@ -34,6 +34,9 @@ import {
 import { publishAgentVersion } from "@/lib/ai/agents/publish";
 import { escolherVersoesDaTela } from "@/lib/ai/agents/versoes-da-tela";
 import { VALID_TOOL_IDS } from "@/lib/mcp/tools";
+import { podeManterSelecaoDeCredencial } from "@/lib/ai/credenciais/selecao";
+import { resolverCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
+import { lerAmbiente } from "@/lib/instalacao/ambiente";
 
 const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -195,7 +198,7 @@ export async function saveAgentDraftAction(
   //      `draft`.
   const { data: versoes } = await admin
     .from("ai_agent_versions")
-    .select("id, version_number, status")
+    .select("id, version_number, status, credential_id, provider")
     .eq("organization_id", activeOrg.orgId)
     .eq("agent_id", agentId)
     .order("version_number", { ascending: false });
@@ -221,7 +224,44 @@ export async function saveAgentDraftAction(
     if (!patchValidated.success) {
       return { ok: false, error: "validation_failed", details: patchValidated.error.flatten() };
     }
+    if (!podeManterSelecaoDeCredencial({
+      isPlatformAdmin: authUser.is_platform_admin,
+      solicitada: patchValidated.data.credential_id,
+      atual: existingDraft.credential_id,
+      providerSolicitado: patchValidated.data.provider ?? existingDraft.provider,
+      providerAtual: existingDraft.provider,
+    })) {
+      return {
+        ok: false,
+        error: "forbidden_role",
+        message: "A credencial de inteligência é administrada pela equipe da plataforma.",
+      };
+    }
     const update: Record<string, unknown> = { ...patchValidated.data };
+    const providerMudou =
+      patchValidated.data.provider !== undefined &&
+      patchValidated.data.provider !== existingDraft.provider;
+    if (
+      !authUser.is_platform_admin &&
+      (providerMudou ||
+        (existingDraft.credential_id === null && patchValidated.data.credential_id === null))
+    ) {
+      const provider = patchValidated.data.provider ?? existingDraft.provider;
+      const gerenciada = await resolverCredencialGerenciada({
+        db: admin,
+        organizationId: activeOrg.orgId,
+        provider,
+        instalacaoTemChave: lerAmbiente().chavesDeProvedor[provider] === true,
+      });
+      if (!gerenciada.ok) {
+        return {
+          ok: false,
+          error: gerenciada.erro === "consulta_falhou" ? "internal_error" : "credential_required",
+          message: "A equipe da plataforma precisa configurar uma chave compatível antes de salvar este agente.",
+        };
+      }
+      update.credential_id = gerenciada.credentialId;
+    }
     const { data: updated, error } = await admin
       .from("ai_agent_versions")
       .update(update)
@@ -279,12 +319,42 @@ export async function saveAgentDraftAction(
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data: maxRow } = await admin
       .from("ai_agent_versions")
-      .select("version_number")
+      .select("version_number, credential_id, provider")
       .eq("agent_id", agentId)
       .eq("organization_id", activeOrg.orgId)
       .order("version_number", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (!podeManterSelecaoDeCredencial({
+      isPlatformAdmin: authUser.is_platform_admin,
+      solicitada: v.credential_id,
+      atual: maxRow?.credential_id,
+      providerSolicitado: v.provider,
+      providerAtual: maxRow?.provider,
+    })) {
+      return {
+        ok: false,
+        error: "forbidden_role",
+        message: "A credencial de inteligência é administrada pela equipe da plataforma.",
+      };
+    }
+    let credentialId = v.credential_id;
+    if (!authUser.is_platform_admin && credentialId === null) {
+      const gerenciada = await resolverCredencialGerenciada({
+        db: admin,
+        organizationId: activeOrg.orgId,
+        provider: v.provider,
+        instalacaoTemChave: lerAmbiente().chavesDeProvedor[v.provider] === true,
+      });
+      if (!gerenciada.ok) {
+        return {
+          ok: false,
+          error: gerenciada.erro === "consulta_falhou" ? "internal_error" : "credential_required",
+          message: "A equipe da plataforma precisa configurar uma chave compatível antes de salvar este agente.",
+        };
+      }
+      credentialId = gerenciada.credentialId;
+    }
     const nextNumber = (maxRow?.version_number ?? 0) + 1;
 
     const { data: created, error } = await admin
@@ -296,7 +366,7 @@ export async function saveAgentDraftAction(
         system_prompt: v.system_prompt,
         provider: v.provider,
         model: v.model,
-        credential_id: v.credential_id,
+        credential_id: credentialId,
         tool_ids: v.tool_ids,
         trigger_config: v.trigger_config ?? undefined,
         channel_session_id: v.channel_session_id,
@@ -668,8 +738,39 @@ export async function createMcpAgentAction(
     return { ok: false, error: "validation_failed", details: parsed.error.flatten() };
   }
 
+  if (!podeManterSelecaoDeCredencial({
+    isPlatformAdmin: authUser.is_platform_admin,
+    solicitada: parsed.data.version.credential_id,
+    atual: undefined,
+  })) {
+    return {
+      ok: false,
+      error: "forbidden_role",
+      message: "A credencial de inteligência é administrada pela equipe da plataforma.",
+    };
+  }
+
   const requestId = randomUUID();
   const admin = createAdminClient();
+  let credentialId = parsed.data.version.credential_id;
+  if (!authUser.is_platform_admin) {
+    const provider = parsed.data.version.provider;
+    const gerenciada = await resolverCredencialGerenciada({
+      db: admin,
+      organizationId: activeOrg.orgId,
+      provider,
+      instalacaoTemChave: lerAmbiente().chavesDeProvedor[provider] === true,
+    });
+    if (!gerenciada.ok) {
+      return {
+        ok: false,
+        error: gerenciada.erro === "consulta_falhou" ? "internal_error" : "credential_required",
+        message:
+          "A equipe da plataforma precisa configurar uma chave compatível antes de criar este agente.",
+      };
+    }
+    credentialId = gerenciada.credentialId;
+  }
 
   // Cria agent kind='mcp_agent' + v1 draft. Compensa rollback se versão falhar.
   const { data: agentRow, error: agentErr } = await admin
@@ -701,7 +802,7 @@ export async function createMcpAgentAction(
     system_prompt: v.system_prompt,
     provider: v.provider,
     model: v.model,
-    credential_id: v.credential_id,
+    credential_id: credentialId,
     tool_ids: v.tool_ids,
     trigger_config: v.trigger_config ?? undefined,
     channel_session_id: v.channel_session_id,

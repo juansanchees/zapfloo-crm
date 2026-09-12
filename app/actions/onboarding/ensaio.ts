@@ -8,6 +8,8 @@ import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { erroDaPreparacao } from "@/lib/onboarding/preparar";
 import { inicioEnsaioSchema, iniciarEnsaioSchema, painelEnsaioSchema, provaEnsaioSchema, revisarEnsaioSchema, type ErroEnsaio, type LeituraEnsaio, type ResultadoEnsaio } from "@/lib/onboarding/ensaio";
 import { OnboardingError, requireOnboardingCtx } from "./_shared";
+import { provedoresComCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
+import { lerAmbiente } from "@/lib/instalacao/ambiente";
 
 function erro(message: string): ErroEnsaio {
   return message === "rehearsal_conflict" || message === "rehearsal_not_completed" || message === "rehearsal_invalid_result" || message === "rehearsal_busy" ? message : erroDaPreparacao(message);
@@ -60,12 +62,19 @@ export async function lerEnsaio(input: unknown): Promise<LeituraEnsaio> {
     if (!p.success) return { ok: false, error: "invalid_input" };
     if (p.data.expected_context !== contextoDoRascunho(ctx.userId, ctx.orgId)) return { ok: false, error: "draft_context_changed" };
     const admin = createAdminClient();
-    const [draft, models, credentials] = await Promise.all([
+    const ambiente = lerAmbiente();
+    const [draft, models, provedoresDisponiveis] = await Promise.all([
       admin.from("onboarding_drafts").select("revision,prepared_revision,prepared_agent_id,prepared_version_id,prepared_snapshot,rehearsal").eq("organization_id", ctx.orgId).maybeSingle(),
       admin.from("ai_models").select("provider,model_id,display_name").is("deprecated_at", null).eq("supports_tools", true).order("display_name"),
-      admin.from("ai_provider_credentials").select("id,provider,label").eq("organization_id", ctx.orgId).eq("is_active", true).not("validated_at", "is", null),
+      provedoresComCredencialGerenciada({
+        db: admin,
+        organizationId: ctx.orgId,
+        provedoresDaInstalacao: Object.entries(ambiente.chavesDeProvedor)
+          .filter(([, disponivel]) => disponivel)
+          .map(([provider]) => provider),
+      }),
     ]);
-    if (draft.error || models.error || credentials.error) return { ok: false, error: "db_error" };
+    if (draft.error || models.error) return { ok: false, error: "db_error" };
     let selection = null; let proof = null;
     // Recuperabilidade não depende de o ensaio ainda corresponder à revisão salva.
     // A RPC de recuperação repete as verificações sob lock; isto só projeta a saída na tela.
@@ -93,7 +102,11 @@ export async function lerEnsaio(input: unknown): Promise<LeituraEnsaio> {
         return { ok: false, error: erro(valid.error.message) };
       }
     }
-    const parsed = painelEnsaioSchema.safeParse({ selection, proof, models: models.data, credentials: credentials.data, recovery_available: recoveryAvailable });
+    const conjuntoDisponivel = new Set<string>(provedoresDisponiveis);
+    const modelosDisponiveis = (models.data ?? []).filter((model) =>
+      conjuntoDisponivel.has(String(model.provider)),
+    );
+    const parsed = painelEnsaioSchema.safeParse({ selection, proof, models: modelosDisponiveis, recovery_available: recoveryAvailable });
     return parsed.success ? { ok: true, panel: parsed.data } : { ok: false, error: "db_error" };
   } catch (error) { return { ok: false, error: error instanceof OnboardingError ? error.code : "db_error" }; }
 }

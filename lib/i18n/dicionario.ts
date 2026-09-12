@@ -37,6 +37,16 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "A chave é administrada pela equipe da plataforma.": { es: "La clave es administrada por el equipo de la plataforma." },
+  "A chave e o endereço do provedor são administrados pela equipe da plataforma.": { es: "La clave y la dirección del proveedor son administradas por el equipo de la plataforma." },
+  "A equipe da plataforma precisa configurar uma chave compatível antes de criar este agente.": { es: "El equipo de la plataforma debe configurar una clave compatible antes de crear este agente." },
+  "A equipe da plataforma precisa configurar uma chave compatível antes de salvar este agente.": { es: "El equipo de la plataforma debe configurar una clave compatible antes de guardar este agente." },
+  "A equipe da plataforma precisa configurar uma chave compatível para este provedor.": { es: "El equipo de la plataforma debe configurar una clave compatible para este proveedor." },
+  "não foi possível ler a configuração atual": { es: "no se pudo leer la configuración actual" },
+  "Credenciais técnicas da instalação. A chave é guardada criptografada e nunca mais aparece na tela depois de salva.": { es: "Credenciales técnicas de la instalación. La clave se guarda cifrada y no vuelve a mostrarse en la pantalla después de guardarla." },
+  "A preparação dos materiais está temporariamente indisponível": { es: "La preparación de los materiales no está disponible temporalmente" },
+  "A equipe da plataforma precisa concluir a configuração da inteligência. Você pode cadastrar o material agora; ele ficará aguardando sem falhar em silêncio.": { es: "El equipo de la plataforma debe completar la configuración de la inteligencia. Puedes registrar el material ahora; quedará en espera sin fallar en silencio." },
+  "Acesso restrito à administração da plataforma.": { es: "Acceso restringido a la administración de la plataforma." },
   "O ensaio precisa ser atualizado. Recarregue a página e prepare novamente; seu rascunho está salvo.": { es: "Es necesario actualizar el ensayo. Recargue la página y prepare de nuevo; su borrador está guardado." },
   "Não foi possível acessar a IA agora. Tente novamente mais tarde; se persistir, entre em contato com o suporte.": { es: "No se pudo acceder a la IA ahora. Inténtelo más tarde; si persiste, contacte con soporte." },
   "O ensaio está indisponível no momento. Você pode continuar depois; se persistir, entre em contato com o suporte.": { es: "El ensayo no está disponible en este momento. Puede continuar después; si persiste, contacte con soporte." },

@@ -1,5 +1,5 @@
 /**
- * POST /api/v1/ai/credentials/:id/revalidate (admin)
+ * POST /api/v1/ai/credentials/:id/revalidate (administração da plataforma)
  *
  * Decifra a credential, faz ping síncrono ao provider e atualiza
  * `validated_at` / `validation_error` / `models_available`. Diferente do POST
@@ -28,7 +28,11 @@ export async function POST(
   const requestId = randomUUID();
   const { id } = await ctx.params;
 
-  const authz = await requireRole("admin", { requestId, resource: "ai_credentials" });
+  const authz = await requireRole("viewer", {
+    requestId,
+    resource: "ai_credentials",
+    platformOnly: true,
+  });
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user: authUser, org: activeOrg } = authz;

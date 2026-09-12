@@ -20,7 +20,11 @@ export async function POST(
   const requestId = randomUUID();
   const { id } = await ctx.params;
 
-  const authz = await requireRole("admin", { requestId, resource: "api_tokens" });
+  const authz = await requireRole("viewer", {
+    requestId,
+    resource: "api_tokens",
+    platformOnly: true,
+  });
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user: authUser, org: activeOrg } = authz;

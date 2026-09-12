@@ -94,6 +94,7 @@ interface Dados {
   credenciais: Credencial[];
   modelos: Modelo[];
   podeEditar: boolean;
+  podeGerenciarCredenciais: boolean;
 }
 
 export function PainelDeProvedores() {
@@ -184,7 +185,7 @@ export function PainelDeProvedores() {
         </p>
       </header>
 
-      {semChave && (
+      {semChave && dados.podeGerenciarCredenciais && (
         <Card className="mb-6 border-amber-500/40 bg-amber-500/5 p-4" data-testid="aviso-sem-chave">
           <p className="text-sm">
             {t(
@@ -301,13 +302,15 @@ function CartaoDoPonto({
           purpose: ponto.id,
           provider,
           model_id: modelId,
-          credential_id: credentialId || null,
+          ...(dados.podeGerenciarCredenciais ? { credential_id: credentialId || null } : {}),
           // A coluna existia, o PUT a aceitava e o registry a honrava — e nada
           // na tela a enviava. Quem quisesse apontar para um gateway próprio (o
           // caso declarado como motivação da coluna, e o degrau para modelo
           // local) só conseguia pela API. Configuração sem superfície é
           // capacidade que ninguém alcança.
-          base_url: aceitaEndpointProprio && baseUrl.trim() !== "" ? baseUrl.trim() : null,
+          ...(dados.podeGerenciarCredenciais
+            ? { base_url: aceitaEndpointProprio && baseUrl.trim() !== "" ? baseUrl.trim() : null }
+            : {}),
         }),
       });
       const json = await res.json();
@@ -450,7 +453,7 @@ function CartaoDoPonto({
             )}
           </div>
 
-          <div>
+          {dados.podeGerenciarCredenciais ? <div>
             <Label className="text-xs">{t("Chave")}</Label>
             <Select value={credentialId} onValueChange={setCredentialId}>
               <SelectTrigger data-testid={`chave-${ponto.id}`}>
@@ -464,9 +467,9 @@ function CartaoDoPonto({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div> : null}
 
-          {aceitaEndpointProprio && (
+          {aceitaEndpointProprio && dados.podeGerenciarCredenciais && (
             <div className="sm:col-span-3">
               <Label className="text-xs">{t("Endereço próprio (opcional)")}</Label>
               <Input

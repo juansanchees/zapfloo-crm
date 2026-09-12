@@ -23,6 +23,9 @@ import { mensagemDoEscopo, validarEscopoDaVersao } from "@/lib/ai/agents/escopo"
 import { agentCreateSchema } from "@/lib/ai/guardrails-schema";
 import { agentMcpCreateSchema } from "@/lib/ai/agents/validation";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { podeManterSelecaoDeCredencial } from "@/lib/ai/credenciais/selecao";
+import { resolverCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
+import { lerAmbiente } from "@/lib/instalacao/ambiente";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +117,38 @@ export async function POST(req: NextRequest): Promise<Response> {
     const input = parsed.data;
     const v = input.version;
 
+    if (!podeManterSelecaoDeCredencial({
+      isPlatformAdmin: authUser.is_platform_admin,
+      solicitada: v.credential_id,
+      atual: undefined,
+    })) {
+      return fail(
+        "forbidden_role",
+        t("A credencial de inteligência é administrada pela equipe da plataforma."),
+        403,
+        { requestId },
+      );
+    }
+
+    let credentialId = v.credential_id;
+    if (!authUser.is_platform_admin) {
+      const gerenciada = await resolverCredencialGerenciada({
+        db: admin,
+        organizationId: activeOrg.orgId,
+        provider: v.provider,
+        instalacaoTemChave: lerAmbiente().chavesDeProvedor[v.provider] === true,
+      });
+      if (!gerenciada.ok) {
+        return fail(
+          gerenciada.erro === "consulta_falhou" ? "internal_error" : "credential_required",
+          t("A equipe da plataforma precisa configurar uma chave compatível antes de criar este agente."),
+          gerenciada.erro === "consulta_falhou" ? 500 : 422,
+          { requestId },
+        );
+      }
+      credentialId = gerenciada.credentialId;
+    }
+
     // Insert agent first (no published_version_id yet).
     const { data: agentRow, error: agentErr } = await admin
       .from("ai_agents")
@@ -157,7 +192,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         system_prompt: v.system_prompt,
         provider: v.provider,
         model: v.model,
-        credential_id: v.credential_id,
+        credential_id: credentialId,
         tool_ids: v.tool_ids,
         trigger_config: v.trigger_config ?? undefined,
         channel_session_id: v.channel_session_id,

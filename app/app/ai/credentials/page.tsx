@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import type { CredentialRow } from "@/hooks/ai/useCredentials";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -18,7 +17,7 @@ export default async function CredentialsPage() {
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");
   const idioma = user.idioma;
-  if (ROLE_RANK[activeOrg.role] < ROLE_RANK.manager) {
+  if (!user.is_platform_admin) {
     redirect("/403");
   }
 
@@ -30,7 +29,7 @@ export default async function CredentialsPage() {
     .order("created_at", { ascending: false });
 
   const credentials = (data ?? []) as unknown as CredentialRow[];
-  const canWrite = ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin;
+  const canWrite = true;
 
   // Mesma regra do DELETE: só conta a versão PUBLICADA de agente não arquivado.
   let usageMap: Record<string, number> = {};
@@ -51,7 +50,7 @@ export default async function CredentialsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">{traduzir("Chaves de acesso à IA", idioma)}</h1>
         <p className="text-sm text-muted-foreground">
           {traduzir(
-            "A conta de inteligência artificial é sua: você contrata direto na Anthropic, OpenAI ou Google e cola a chave aqui. Ela é guardada criptografada e nunca mais aparece na tela depois de salva — nem para você.",
+            "Credenciais técnicas da instalação. A chave é guardada criptografada e nunca mais aparece na tela depois de salva.",
             idioma,
           )}
         </p>

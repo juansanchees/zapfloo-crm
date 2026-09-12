@@ -22,6 +22,8 @@ const ADMIN = { platform: false, role: "admin" as const };
 const MANAGER = { platform: false, role: "manager" as const };
 const AGENT = { platform: false, role: "agent" as const };
 const VIEWER = { platform: false, role: "viewer" as const };
+const DOIS_AGENTES = { activeAgentCount: 2 };
+const UM_AGENTE = { activeAgentCount: 1 };
 
 function dest(href: string) {
   const d = NAV_DESTINATIONS.find((x) => x.href === href);
@@ -59,32 +61,47 @@ describe("integridade do registro", () => {
 
 describe("canSee", () => {
   it("nega quem está abaixo do minRole", () => {
-    expect(canSee(dest("/app/audit"), MANAGER.platform, MANAGER.role)).toBe(true);
-    expect(canSee(dest("/app/audit"), AGENT.platform, AGENT.role)).toBe(false);
+    expect(canSee(dest("/app/audit"), MANAGER.platform, MANAGER.role, DOIS_AGENTES)).toBe(true);
+    expect(canSee(dest("/app/audit"), AGENT.platform, AGENT.role, DOIS_AGENTES)).toBe(false);
   });
 
   it("destino sem minRole é visível até para viewer", () => {
-    expect(canSee(dest("/app/inbox"), VIEWER.platform, VIEWER.role)).toBe(true);
+    expect(canSee(dest("/app/inbox"), VIEWER.platform, VIEWER.role, DOIS_AGENTES)).toBe(true);
   });
 
   it("platform admin vê tudo, inclusive sem org ativa", () => {
-    for (const d of NAV_DESTINATIONS) expect(canSee(d, true, null)).toBe(true);
+    for (const d of NAV_DESTINATIONS) expect(canSee(d, true, null, DOIS_AGENTES)).toBe(true);
   });
 
   it("sem papel e sem ser platform admin não vê nada", () => {
-    expect(canSee(dest("/app/inbox"), false, null)).toBe(false);
+    expect(canSee(dest("/app/inbox"), false, null, DOIS_AGENTES)).toBe(false);
+  });
+
+  it.each([VIEWER, AGENT, MANAGER, ADMIN])("credenciais e tokens nunca aparecem para papel tenant $role", (ator) => {
+    expect(canSee(dest("/app/ai/credentials"), ator.platform, ator.role, DOIS_AGENTES)).toBe(false);
+    expect(canSee(dest("/app/settings/api-tokens"), ator.platform, ator.role, DOIS_AGENTES)).toBe(false);
+  });
+
+  it("credenciais e tokens aparecem para a administração da plataforma", () => {
+    expect(canSee(dest("/app/ai/credentials"), true, null, DOIS_AGENTES)).toBe(true);
+    expect(canSee(dest("/app/settings/api-tokens"), true, null, DOIS_AGENTES)).toBe(true);
+  });
+
+  it("roteadores somem com um agente e aparecem com dois, sem virar regra de papel", () => {
+    expect(canSee(dest("/app/ai/routers"), MANAGER.platform, MANAGER.role, UM_AGENTE)).toBe(false);
+    expect(canSee(dest("/app/ai/routers"), MANAGER.platform, MANAGER.role, DOIS_AGENTES)).toBe(true);
   });
 });
 
 describe("sidebarGroups", () => {
   it("devolve os grupos na ordem declarada em NAV_GROUPS", () => {
-    const ordem = sidebarGroups(true, null).map((g) => g.group.id);
+    const ordem = sidebarGroups(true, null, DOIS_AGENTES).map((g) => g.group.id);
     const esperada = NAV_GROUPS.map((g) => g.id).filter((id) => ordem.includes(id));
     expect(ordem).toEqual(esperada);
   });
 
   it("só inclui destino marcado como sidebar", () => {
-    const hrefs = sidebarGroups(true, null).flatMap((g) => g.items.map((i) => i.href));
+    const hrefs = sidebarGroups(true, null, DOIS_AGENTES).flatMap((g) => g.items.map((i) => i.href));
     // Conhecimento existe no registro, mas é do hub — não do sidebar.
     expect(hrefs).not.toContain("/app/ai/knowledge/sources");
     expect(hrefs).toContain("/app/ai/agents");
@@ -101,7 +118,7 @@ describe("sidebarGroups", () => {
     // O que NÃO pode voltar é o destino trocar de grupo: é isso que a primeira
     // asserção prende, e ela não depende de onde o item é desenhado.
     expect(dest("/app/settings/tenant/pipelines").group).toBe("crm");
-    const hub = hubSections("crm", true, null).flatMap((s) => s.items.map((i) => i.href));
+    const hub = hubSections("crm", true, null, DOIS_AGENTES).flatMap((s) => s.items.map((i) => i.href));
     expect(hub).toContain("/app/settings/tenant/pipelines");
   });
 
@@ -113,7 +130,7 @@ describe("sidebarGroups", () => {
     //
     // A lista é EXATA de propósito. `toContain` deixaria um sexto item entrar
     // calado no sidebar e reabrir a mesma corrida por pixel.
-    const crm = sidebarGroups(true, null).find((g) => g.group.id === "crm");
+    const crm = sidebarGroups(true, null, DOIS_AGENTES).find((g) => g.group.id === "crm");
     expect(crm?.items.map((i) => i.href)).toEqual([
       "/app/leads",
       "/app/contacts",
@@ -124,7 +141,7 @@ describe("sidebarGroups", () => {
 
   it("omite o grupo inteiro quando o papel não vê nenhum item dele", () => {
     // CANAIS é todo manager+/admin: um agent não deve ver o título órfão.
-    const ids = sidebarGroups(AGENT.platform, AGENT.role).map((g) => g.group.id);
+    const ids = sidebarGroups(AGENT.platform, AGENT.role, DOIS_AGENTES).map((g) => g.group.id);
     expect(ids).not.toContain("canais");
     expect(ids).toContain("atendimento");
   });
@@ -134,7 +151,7 @@ describe("sidebarGroups", () => {
     // sidebar estourou a dobra em 900px (e2e `navegacao.spec.ts`). Elas seguem
     // o padrão das outras nove telas do grupo — alcançáveis pelo hub "Ver tudo
     // em IA", que é o desenho existente para tela de configuração.
-    const ia = sidebarGroups(true, null).find((g) => g.group.id === "ia");
+    const ia = sidebarGroups(true, null, DOIS_AGENTES).find((g) => g.group.id === "ia");
     expect(ia?.items.map((i) => i.href)).toEqual([
       "/app/ai/agents",
       "/app/ai/followups",
@@ -145,7 +162,7 @@ describe("sidebarGroups", () => {
 
 describe("compactAreas", () => {
   it("organiza o menu compacto em operação e crescimento", () => {
-    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+    const areas = compactAreas(ADMIN.platform, ADMIN.role, DOIS_AGENTES);
 
     expect(areas.map((area) => [area.position, area.label, area.href])).toEqual([
       ["main", "Painel de controle", "/app"],
@@ -161,7 +178,7 @@ describe("compactAreas", () => {
   });
 
   it("expõe as telas retiradas do sidebar como abas contextuais", () => {
-    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+    const areas = compactAreas(ADMIN.platform, ADMIN.role, DOIS_AGENTES);
     const abas = (rotulo: string) =>
       areas.find((area) => area.label === rotulo)?.tabs.map((tab) => [tab.label, tab.href]);
 
@@ -183,7 +200,7 @@ describe("compactAreas", () => {
   });
 
   it("mantém o mesmo filtro de permissão do registro", () => {
-    const viewer = compactAreas(VIEWER.platform, VIEWER.role);
+    const viewer = compactAreas(VIEWER.platform, VIEWER.role, DOIS_AGENTES);
 
     expect(viewer.map((area) => area.label)).not.toContain("Agentes de IA");
     expect(
@@ -191,14 +208,14 @@ describe("compactAreas", () => {
     ).not.toContain("/app/connections");
     expect(viewer.find((area) => area.label === "Configurações")?.healthDot).toBe(false);
     expect(
-      compactAreas(ADMIN.platform, ADMIN.role).find(
+      compactAreas(ADMIN.platform, ADMIN.role, DOIS_AGENTES).find(
         (area) => area.label === "Configurações",
       )?.healthDot,
     ).toBe(true);
   });
 
   it("mantém Contatos ativo também no detalhe de uma pessoa", () => {
-    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+    const areas = compactAreas(ADMIN.platform, ADMIN.role, DOIS_AGENTES);
     expect(compactAreaForPath("/app/contacts/contato-1", areas)?.id).toBe("contatos");
   });
 });
@@ -208,7 +225,7 @@ describe("hubSections", () => {
     // As seções são a régua do sidebar escrita por extenso — o que se abre todo
     // dia contra o que se define uma vez. Lista EXATA: `toContain` deixaria uma
     // tela nova entrar sem que ninguém decidisse de que lado dela ela cai.
-    const secoes = hubSections("crm", true, null);
+    const secoes = hubSections("crm", true, null, DOIS_AGENTES);
     expect(secoes.map((s) => s.section)).toEqual(["O dia a dia da venda", "Preparar a venda"]);
     expect(secoes.flatMap((s) => s.items.map((i) => i.href))).toEqual([
       "/app/leads",
@@ -221,7 +238,7 @@ describe("hubSections", () => {
   });
 
   it("separa o copiloto das três etapas de configuração do agente", () => {
-    const secoes = hubSections("ia", true, null).map((s) => s.section);
+    const secoes = hubSections("ia", true, null, DOIS_AGENTES).map((s) => s.section);
     expect(secoes).toEqual([
       "Trabalhar com a IA",
       "Montar o agente",
@@ -231,13 +248,13 @@ describe("hubSections", () => {
   });
 
   it("o hub mostra também o que já está no sidebar — é inventário, não sobra", () => {
-    const hrefs = hubSections("ia", true, null).flatMap((s) => s.items.map((i) => i.href));
+    const hrefs = hubSections("ia", true, null, DOIS_AGENTES).flatMap((s) => s.items.map((i) => i.href));
     expect(hrefs).toContain("/app/ai/agents");
     expect(hrefs).toContain("/app/ai/knowledge/sources");
   });
 
   it("não vaza destino acima do papel", () => {
-    const hrefs = hubSections("organizacao", VIEWER.platform, VIEWER.role).flatMap((s) =>
+    const hrefs = hubSections("organizacao", VIEWER.platform, VIEWER.role, DOIS_AGENTES).flatMap((s) =>
       s.items.map((i) => i.href),
     );
     expect(hrefs).not.toContain("/app/settings/api-tokens");
@@ -245,20 +262,20 @@ describe("hubSections", () => {
   });
 
   it("some com a seção que ficou vazia pela permissão", () => {
-    const secoes = hubSections("organizacao", VIEWER.platform, VIEWER.role).map((s) => s.section);
+    const secoes = hubSections("organizacao", VIEWER.platform, VIEWER.role, DOIS_AGENTES).map((s) => s.section);
     expect(secoes).not.toContain("Dados e acesso");
   });
 });
 
 describe("searchable", () => {
   it("expõe todo destino visível, do sidebar ou não", () => {
-    const hrefs = searchable(ADMIN.platform, ADMIN.role).map((d) => d.href);
+    const hrefs = searchable(ADMIN.platform, ADMIN.role, DOIS_AGENTES).map((d) => d.href);
     expect(hrefs).toContain("/app/ai/knowledge/sources");
     expect(hrefs).toContain("/app/inbox");
   });
 
   it("respeita o papel", () => {
-    const hrefs = searchable(AGENT.platform, AGENT.role).map((d) => d.href);
+    const hrefs = searchable(AGENT.platform, AGENT.role, DOIS_AGENTES).map((d) => d.href);
     expect(hrefs).not.toContain("/app/audit");
   });
 });

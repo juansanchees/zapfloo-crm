@@ -9,6 +9,7 @@ import { rascunhoSchema } from "@/lib/onboarding/rascunho";
 import { promptDoRascunho } from "@/lib/onboarding/prompt";
 import { erroDaPreparacao, prepararRascunhoSchema, versaoPreparadaSchema, type ResultadoPreparacao } from "@/lib/onboarding/preparar";
 import { OnboardingError, requireOnboardingCtx } from "./_shared";
+import { loadAuthUser } from "@/lib/auth/server";
 
 /** Preparação isolada: não chama o criador legado, runtime, memória ou publicação. */
 export async function prepararRascunho(input: unknown): Promise<ResultadoPreparacao> {
@@ -18,6 +19,11 @@ export async function prepararRascunho(input: unknown): Promise<ResultadoPrepara
     if (!parsed.success) return { ok: false, error: "invalid_input" };
     if (parsed.data.expected_context !== contextoDoRascunho(ctx.userId, ctx.orgId)) {
       return { ok: false, error: "draft_context_changed" };
+    }
+    const user = await loadAuthUser();
+    if (!user || user.id !== ctx.userId) return { ok: false, error: "auth_required" };
+    if (!user.is_platform_admin && parsed.data.credential_id !== null) {
+      return { ok: false, error: "forbidden" };
     }
     const admin = createAdminClient();
     const [draftRead, orgRead] = await Promise.all([

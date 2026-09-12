@@ -5,7 +5,7 @@
  * mínimo da matriz, exercitando os Route Handlers REAIS (auth e Supabase
  * mockados; a decisão de autorização é a de produção via requireRole).
  *
- * Grupos cobertos: settings/api-tokens (admin), team (read manager+/write
+ * Grupos cobertos: credenciais/tokens (platform admin), team (read manager+/write
  * admin), audit (manager+), inbox/conversations (read viewer+/write agent+),
  * leads (read viewer+/write agent+). Billing: nenhuma rota existe hoje —
  * célula admin-only da matriz fica coberta quando a rota nascer.
@@ -74,14 +74,18 @@ function makeSupabaseStub(role: Role | null, tables: Record<string, unknown> = {
   };
 }
 
-function session(role: Role | null, tables: Record<string, unknown> = {}) {
+function session(
+  role: Role | null,
+  tables: Record<string, unknown> = {},
+  isPlatformAdmin = false,
+) {
   const user: AuthUser | null = role
     ? {
         id: USER_ID,
         email: "user@example.com",
         full_name: null,
         avatar_url: null,
-        is_platform_admin: false,
+        is_platform_admin: isPlatformAdmin,
         idioma: "pt-BR" as const,
         organizations: [{ organization_id: ORG_ID, organization_name: "Org", role }],
       }
@@ -108,21 +112,42 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// settings/api-tokens — admin only (spec 13 §4: api_tokens = none abaixo de admin)
+// credenciais e tokens — só administrador da plataforma
 // ---------------------------------------------------------------------------
-describe("grupo settings/api-tokens (admin)", () => {
-  it("GET nega 403 para manager", async () => {
-    session("manager");
+describe("grupo credenciais/tokens (platform admin)", () => {
+  it.each(["viewer", "agent", "manager", "admin"] as const)(
+    "GET /settings/api-tokens nega 403 para %s do tenant",
+    async (role) => {
+      session(role);
+      const { GET } = await import("@/app/api/v1/settings/api-tokens/route");
+      const res = await GET(req("/api/v1/settings/api-tokens"));
+      expect(res.status).toBe(403);
+      expect(await errorCode(res)).toBe("forbidden_role");
+    },
+  );
+
+  it("GET /settings/api-tokens permite 200 para administrador da plataforma", async () => {
+    session("viewer", {}, true);
     const { GET } = await import("@/app/api/v1/settings/api-tokens/route");
     const res = await GET(req("/api/v1/settings/api-tokens"));
-    expect(res.status).toBe(403);
-    expect(await errorCode(res)).toBe("forbidden_role");
+    expect(res.status).toBe(200);
   });
 
-  it("GET permite 200 para admin", async () => {
-    session("admin");
-    const { GET } = await import("@/app/api/v1/settings/api-tokens/route");
-    const res = await GET(req("/api/v1/settings/api-tokens"));
+  it.each(["viewer", "agent", "manager", "admin"] as const)(
+    "GET /ai/credentials nega 403 para %s do tenant",
+    async (role) => {
+      session(role);
+      const { GET } = await import("@/app/api/v1/ai/credentials/route");
+      const res = await GET();
+      expect(res.status).toBe(403);
+      expect(await errorCode(res)).toBe("forbidden_role");
+    },
+  );
+
+  it("GET /ai/credentials permite 200 para administrador da plataforma", async () => {
+    session("viewer", {}, true);
+    const { GET } = await import("@/app/api/v1/ai/credentials/route");
+    const res = await GET();
     expect(res.status).toBe(200);
   });
 });

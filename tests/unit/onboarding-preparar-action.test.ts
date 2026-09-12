@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 
-const fake = vi.hoisted(() => ({ ctx: vi.fn(), rpc: vi.fn(), readDraft: vi.fn(), readOrg: vi.fn(), eqDraft: vi.fn(), eqOrg: vi.fn(), admin: vi.fn() }));
+const fake = vi.hoisted(() => ({ auth: vi.fn(), ctx: vi.fn(), rpc: vi.fn(), readDraft: vi.fn(), readOrg: vi.fn(), eqDraft: vi.fn(), eqOrg: vi.fn(), admin: vi.fn() }));
 vi.mock("@/app/actions/onboarding/_shared", async original => ({ ...await original<typeof import("@/app/actions/onboarding/_shared")>(), requireOnboardingCtx: fake.ctx }));
+vi.mock("@/lib/auth/server", () => ({ loadAuthUser: fake.auth }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: fake.admin }));
 import { OnboardingError } from "@/app/actions/onboarding/_shared";
 import { prepararRascunho } from "@/app/actions/onboarding/prepararRascunho";
@@ -14,6 +15,7 @@ const prepared = { revision: 1, agent_id: "00000000-0000-4000-8000-000000000001"
 beforeEach(() => {
   vi.clearAllMocks();
   fake.ctx.mockResolvedValue({ userId: "ator-confiavel", orgId: "org-confiavel" });
+  fake.auth.mockResolvedValue({ id: "ator-confiavel", is_platform_admin: false });
   fake.readDraft.mockResolvedValue({ data: { revision: 1, configuration }, error: null });
   fake.readOrg.mockResolvedValue({ data: { display_name: "Negócio QA", legal_name: "QA", onboarding_state: {} }, error: null });
   fake.eqDraft.mockReturnValue({ maybeSingle: fake.readDraft }); fake.eqOrg.mockReturnValue({ maybeSingle: fake.readOrg });
@@ -40,6 +42,15 @@ describe("preparar rascunho: entrada sem publicação ou escolha implícita", ()
   it("troca de organização não grava no novo contexto", async () => {
     fake.ctx.mockResolvedValue({ userId: "ator-confiavel", orgId: "outra-org" });
     expect(await prepararRascunho(input)).toEqual({ ok: false, error: "draft_context_changed" });
+    expect(fake.admin).not.toHaveBeenCalled();
+  });
+  it("tenant não escolhe uma credencial técnica chamando a action diretamente", async () => {
+    expect(
+      await prepararRascunho({
+        ...input,
+        credential_id: "00000000-0000-4000-8000-000000000009",
+      }),
+    ).toEqual({ ok: false, error: "forbidden" });
     expect(fake.admin).not.toHaveBeenCalled();
   });
   it.each([{ model: "" }, { provider: "inventado" }, { organization_id: "outra" }, { system_prompt: "forjado" }])("não aceita seleção ausente nem conteúdo/identidade forjados: %j", async patch => {

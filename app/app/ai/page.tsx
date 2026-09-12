@@ -1,5 +1,6 @@
 import { NavHub } from "@/components/shell/NavHub";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +15,21 @@ export const dynamic = "force-dynamic";
 export default async function AiHubPage() {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
+  const { count } = activeOrg
+    ? await createAdminClient()
+        .from("ai_agents")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", activeOrg.orgId)
+        .eq("is_active", true)
+        .is("archived_at", null)
+    : { count: 0 };
 
   return (
     <NavHub
       group="ia"
       isPlatformAdmin={user.is_platform_admin}
       role={activeOrg?.role ?? null}
+      activeAgentCount={count ?? 0}
       title="Agente de IA"
       subtitle="Tudo que define quem atende por você — e como acompanhar o que ele faz."
     />

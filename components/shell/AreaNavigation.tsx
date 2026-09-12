@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 /** Segunda camada do menu compacto: aparece apenas onde há escolhas irmãs. */
 export function AreaNavigation() {
   const pathname = usePathname();
-  const { user, activeOrg } = useAuth();
+  const { user, activeOrg, activeAgentCount } = useAuth();
   const t = useT();
-  const areas = compactAreas(user.is_platform_admin, activeOrg?.role ?? null);
+  const areas = compactAreas(user.is_platform_admin, activeOrg?.role ?? null, { activeAgentCount });
   const area = compactAreaForPath(pathname, areas);
 
   if (!area || area.tabs.length < 2) return null;

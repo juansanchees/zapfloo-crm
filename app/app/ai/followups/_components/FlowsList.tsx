@@ -17,6 +17,7 @@ import { NewFlowDialog } from "./NewFlowDialog";
 interface Props {
   initialData: FollowupFlowPointerRow[];
   canWrite: boolean;
+  canManageCredentials: boolean;
 }
 
 function formatUpdatedAt(iso: string, idioma: string): string {
@@ -27,7 +28,7 @@ function formatUpdatedAt(iso: string, idioma: string): string {
   });
 }
 
-export function FlowsList({ initialData, canWrite }: Props) {
+export function FlowsList({ initialData, canWrite, canManageCredentials }: Props) {
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
   const { data } = useFollowupFlows({ initialData });
@@ -54,7 +55,7 @@ export function FlowsList({ initialData, canWrite }: Props) {
           </p>
           {canWrite && <div className="mt-1">{newFlowButton}</div>}
         </Card>
-        {canWrite && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
+        {canWrite && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} canManageCredentials={canManageCredentials} />}
       </>
     );
   }
@@ -100,7 +101,7 @@ export function FlowsList({ initialData, canWrite }: Props) {
         ))}
       </ul>
 
-      {canWrite && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
+      {canWrite && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} canManageCredentials={canManageCredentials} />}
     </div>
   );
 }

@@ -37,6 +37,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const store = await cookies();
   let onboardingPendente = false;
   let fimDoTeste: string | null = null;
+  // Falha fechada: sem contagem confiável, a porta opcional de distribuição
+  // some; a URL do editor continua funcionando.
+  let activeAgentCount = 0;
 
   /**
    * A cor desta organização, serializada, ou `null` quando ela não tem uma.
@@ -52,11 +55,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // EPIC-11: gate /app/* on org not being suspended (S-11.08).
   if (activeOrg) {
     const admin = createAdminClient();
-    const { data: orgRow } = await admin
-      .from("organizations")
-      .select("onboarded_at, status, settings, created_at")
-      .eq("id", activeOrg.orgId)
-      .maybeSingle();
+    const [{ data: orgRow }, { count: quantidadeDeAgentes }] = await Promise.all([
+      admin
+        .from("organizations")
+        .select("onboarded_at, status, settings, created_at")
+        .eq("id", activeOrg.orgId)
+        .maybeSingle(),
+      admin
+        .from("ai_agents")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", activeOrg.orgId)
+        .eq("is_active", true)
+        .is("archived_at", null),
+    ]);
+    activeAgentCount = quantidadeDeAgentes ?? 0;
     if (orgRow?.status === "suspended") redirect("/account-suspended");
     fimDoTeste = fimDoPeriodoDeTeste(orgRow?.created_at);
     // A configuração é administrativa: membros convidados não podem concluí-la
@@ -188,7 +200,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // pergunta quem está logado. Ver `lib/i18n/IdiomaProvider`: foi o
     // acoplamento com a autenticação que derrubou 32 casos.
     <IdiomaProvider locale={user.idioma}>
-    <AuthProvider user={user} activeOrg={activeOrg}>
+    <AuthProvider user={user} activeOrg={activeOrg} activeAgentCount={activeAgentCount}>
       {/*
         O MARCADOR da marca da organização — o elemento cuja existência define o
         escopo `body:has([data-marca-org])` (lib/branding/css.ts).

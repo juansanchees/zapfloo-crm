@@ -64,6 +64,7 @@ function abrirNovo() {
           tool_ids: ["crm_find_free_slots"],
           organization_timezone: "America/Recife",
         }}
+        podeGerenciarCredenciais
       />
     </QueryClientProvider>,
   );
@@ -165,6 +166,7 @@ function abrirEdicao(
         published={opcoes.usaChaveDaInstalacao ? null : version as never}
         base={version as never}
         draftObsoleto={null}
+        podeGerenciarCredenciais
       />
     </QueryClientProvider>,
   );

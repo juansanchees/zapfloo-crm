@@ -64,7 +64,7 @@ const CANAL = "22222222-2222-4222-8222-222222222222";
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({
-  loadAuthUser: vi.fn(async () => ({ id: "user-1", email: "u@example.com" })),
+  loadAuthUser: vi.fn(async () => ({ id: "user-1", email: "u@example.com", is_platform_admin: false })),
   resolveActiveOrg: vi.fn(async () => ({ orgId: ORG, name: "Org", role: "admin" })),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -101,6 +101,11 @@ function versao(n: number, status: string, prompt: string): VersaoRow {
     version_number: n,
     status,
     system_prompt: prompt,
+    // A consulta de produção seleciona provider; omiti-lo fazia o dublê
+    // simular uma troca de provedor em todo salvamento e acionar, sem querer,
+    // a resolução de credencial gerenciada que não é o assunto desta suíte.
+    provider: "anthropic",
+    credential_id: CREDENCIAL,
   };
 }
 

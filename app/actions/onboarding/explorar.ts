@@ -63,11 +63,7 @@ export async function gerenciarAgenteDoOnboarding(): Promise<void> {
   return entrarNoCrm("/app/ai/agents");
 }
 
-export async function configurarChaveDoOnboarding(): Promise<void> {
-  return entrarNoCrm("/app/ai/credentials");
-}
-
-async function entrarNoCrm(destination: "/app/inbox" | "/app/ai/agents" | "/app/ai/credentials"): Promise<void> {
+async function entrarNoCrm(destination: "/app/inbox" | "/app/ai/agents"): Promise<void> {
   const ctx = await requireOnboardingCtx();
   const store = await cookies();
   store.set(COOKIE_EXPLORACAO, valorDaExploracao(ctx.userId, ctx.orgId), {

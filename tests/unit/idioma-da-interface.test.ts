@@ -168,7 +168,7 @@ describe("o dicionário acompanha o registro de navegação", () => {
   });
 
   it("toda área e aba do menu compacto tem tradução", () => {
-    const rotulos = compactAreas(true, null).flatMap((area) => [
+    const rotulos = compactAreas(true, null, { activeAgentCount: 2 }).flatMap((area) => [
       area.label,
       ...area.tabs.map((tab) => tab.label),
     ]);

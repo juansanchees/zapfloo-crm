@@ -1,6 +1,6 @@
 # Papéis e telas do Zapfloo
 
-> Estado: decisão comercial confirmada; aplicação técnica parcial em 12/09/2026.
+> Estado: decisão comercial e implementação confirmadas em 12/09/2026.
 
 ## A linguagem usada na venda
 
@@ -16,7 +16,7 @@ existindo para instalações self-host e para o bootstrap atual, mas não deve s
 confundido com administrador de plataforma, que é uma autoridade transversal
 separada (`is_platform_admin`).
 
-## Matriz pretendida para o serviço gerenciado
+## Matriz do serviço gerenciado
 
 | Área | Atendente | Gerente da clínica | Plataforma |
 |---|---:|---:|---:|
@@ -24,26 +24,35 @@ separada (`is_platform_admin`).
 | Painel e relatórios operacionais | consultar | acompanhar | suporte |
 | Agentes e automações | não configurar | configurar regras de negócio | suporte técnico |
 | Equipe e distribuição diária | usar a própria fila | organizar | suporte técnico |
-| Webhooks, credenciais, tokens de API e distribuição técnica de agentes | não ver | não ver | configurar |
+| Webhooks | não configurar | configurar integrações da própria organização | suporte técnico |
+| Credenciais de IA e tokens de API | não ver | não ver | configurar |
+| Distribuição entre agentes | não configurar | acompanhar quando houver pelo menos dois agentes ativos | suporte técnico; alterações continuam com o admin da organização |
 
-## O que o código realmente garante hoje
+## O que o código garante
 
-A navegação e o backend ainda não implementam integralmente a última linha da
-matriz pretendida:
+A autorização separa autoridade de tenant e de plataforma em quatro fronteiras:
 
-- Webhooks e a página de distribuição aceitam `manager` em parte de suas
-  operações.
-- Credenciais podem ser lidas por `manager` e alteradas pelo `admin` do tenant.
-- Tokens de API já exigem `admin` do tenant, não administrador de plataforma.
-- O registro de navegação expressa apenas a hierarquia do tenant; escrever
-  `minRole: "admin"` **não** significa “somente plataforma”.
-- As políticas RLS do banco também concedem capacidades a papéis do tenant.
+- **Navegação:** credenciais e tokens só são projetados para
+  `is_platform_admin`. Distribuição só aparece com dois ou mais agentes ativos.
+- **URL direta:** credenciais e tokens redirecionam todos os papéis do tenant
+  para `/403`; distribuição continua aberta a `manager` e `admin`, mesmo com um
+  único agente, porque a contagem é relevância e não autorização.
+- **API:** todas as rotas dedicadas de credenciais e tokens usam a autoridade
+  `platformOnly`. Entradas indiretas de versões, provedores, conhecimento e o
+  componente legado do onboarding não permitem escolher ou trocar credencial
+  pelo tenant. O endereço próprio que recebe a autorização do provedor segue a
+  mesma fronteira e não é exposto ao assinante.
+- **PostgREST:** a migration 0230 remove as políticas por papel do tenant e
+  exige `fn_is_platform_admin()` para as duas tabelas. A mesma migration impede
+  que o admin do tenant troque a referência da chave por versões ou bindings,
+  ou aponte um binding para endpoint próprio.
+  `anon` não recebe privilégio e `service_role` preserva os caminhos internos.
 
-Portanto, esconder esses links sem alterar página, API, caminhos alternativos e
-RLS seria apenas aparência de segurança. A mudança de autorização precisa de uma
-decisão explícita sobre instalações existentes e, se confirmada, deve sair numa
-migration nova com baseline e manifesto, acompanhada de testes de URL, API e
-PostgREST para os quatro papéis.
+Credenciais já ligadas a versões e pontos de IA são preservadas quando o tenant
+edita regras de negócio. Tokens já emitidos continuam sendo validados pelo MCP.
+Onboarding e execução do agente continuam usando a chave da instalação ou a
+credencial resolvida pelo serviço; a mudança retira administração técnica do
+assinante, não a capacidade de atendimento.
 
 ## Regra para novas telas
 

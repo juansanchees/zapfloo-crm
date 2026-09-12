@@ -93,6 +93,7 @@ const CHAVE_OK: EstadoDaChave = {
   chave_em_uso: "Chave principal",
   avisos: [],
   credenciais_openai: [],
+  pode_gerenciar_credenciais: false,
 };
 
 beforeEach(() => {
@@ -276,10 +277,10 @@ describe("KnowledgeSourceCard — só oferece controle onde existe ação", () =
 });
 
 describe("ChaveDeConhecimento — o beco vira saída", () => {
-  it("sem chave, avisa E oferece cadastrar ali mesmo", () => {
+  it("sem chave, a plataforma pode cadastrar ali mesmo", () => {
     render(
       <ChaveDeConhecimento
-        estado={{ ...CHAVE_OK, pode_indexar: false, chave_em_uso: null }}
+        estado={{ ...CHAVE_OK, pode_indexar: false, chave_em_uso: null, pode_gerenciar_credenciais: true }}
         onChaveCadastrada={() => {}}
       />,
     );
@@ -288,6 +289,17 @@ describe("ChaveDeConhecimento — o beco vira saída", () => {
     // fazer com — o defeito que este componente existe para acabar.
     fireEvent.click(screen.getByTestId("conhecimento-cadastrar-chave"));
     expect(screen.getByTestId("conhecimento-chave-input")).toBeInTheDocument();
+  });
+
+  it("sem chave, o tenant recebe estado claro sem acesso ao cadastro técnico", () => {
+    render(
+      <ChaveDeConhecimento
+        estado={{ ...CHAVE_OK, pode_indexar: false, chave_em_uso: null }}
+        onChaveCadastrada={() => {}}
+      />,
+    );
+    expect(screen.getByText(/equipe da plataforma precisa concluir/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("conhecimento-cadastrar-chave")).not.toBeInTheDocument();
   });
 
   it("com chave, diz QUAL está valendo", () => {

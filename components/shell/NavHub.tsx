@@ -10,6 +10,7 @@ interface NavHubProps {
   group: NavGroupId;
   isPlatformAdmin: boolean;
   role: Role | null;
+  activeAgentCount?: number;
   title: string;
   subtitle: string;
   /**
@@ -47,8 +48,8 @@ function slug(texto: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function NavHub({ group, isPlatformAdmin, role, title, subtitle, locale = IDIOMA_PADRAO }: NavHubProps) {
-  const secoes = hubSections(group, isPlatformAdmin, role);
+export function NavHub({ group, isPlatformAdmin, role, activeAgentCount = 0, title, subtitle, locale = IDIOMA_PADRAO }: NavHubProps) {
+  const secoes = hubSections(group, isPlatformAdmin, role, { activeAgentCount });
 
   return (
     <div className="flex h-full flex-col gap-8 p-6">

@@ -21,6 +21,7 @@
  * NUNCA teria como funcionar.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { PROVIDERS, type Provider } from "@/lib/ai/agents/validation";
 
 /** Um modelo oferecível, já com o provedor que precisa viajar junto dele. */
 export interface ClassifierModelOption {
@@ -32,10 +33,7 @@ export interface ClassifierModelOption {
 }
 
 /** Chaves de plataforma disponíveis, por provedor. */
-export interface PlatformKeys {
-  anthropic: boolean;
-  openai: boolean;
-}
+export type PlatformKeys = Partial<Record<Provider, boolean>>;
 
 export async function listClassifierModels(
   db: SupabaseClient,
@@ -57,11 +55,10 @@ export async function listClassifierModels(
   for (const c of (creds ?? []) as Array<{ provider: string }>) {
     origemPorProvider.set(c.provider, "org");
   }
-  if (platformKeys.anthropic && !origemPorProvider.has("anthropic")) {
-    origemPorProvider.set("anthropic", "plataforma");
-  }
-  if (platformKeys.openai && !origemPorProvider.has("openai")) {
-    origemPorProvider.set("openai", "plataforma");
+  for (const provider of PROVIDERS) {
+    if (platformKeys[provider] && !origemPorProvider.has(provider)) {
+      origemPorProvider.set(provider, "plataforma");
+    }
   }
   if (origemPorProvider.size === 0) return [];
 

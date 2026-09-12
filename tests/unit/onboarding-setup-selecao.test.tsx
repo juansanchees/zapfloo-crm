@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-const f = vi.hoisted(() => ({ retrato: vi.fn().mockResolvedValue({ inteligencia: { origemDaChave: "nenhuma", provedor: "anthropic", rotulo: "Anthropic" } }), key: vi.fn() }));
+const f = vi.hoisted(() => ({ retrato: vi.fn().mockResolvedValue({ inteligencia: { origemDaChave: "nenhuma", provedor: "anthropic", rotulo: "Anthropic" } }) }));
 vi.mock("@/lib/auth/server", () => ({ requireAuth: async () => ({ id: "user", idioma: "pt-BR" }), resolveActiveOrg: async () => ({ orgId: "org" }) }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/instalacao/retrato", () => ({ lerRetratoDaInstalacao: f.retrato }));
@@ -8,13 +8,14 @@ vi.mock("@/app/onboarding/setup-ai/_inteligencia", () => ({ InteligenciaDele: ()
 vi.mock("@/app/onboarding/setup-ai/_form", () => ({ SetupAiForm: () => <p>Seleção explícita do ensaio</p> }));
 vi.mock("@/app/actions/onboarding/_shared", () => ({ loadOnboardingState: async () => ({ state: { welcome: { display_name: "QA" } } }) }));
 vi.mock("@/app/actions/onboarding/rascunho", () => ({ lerRascunho: async () => ({ ok: true, context: "a".repeat(64) }) }));
-vi.mock("@/app/actions/onboarding/ensaio", () => ({ lerEnsaio: async () => ({ ok: true, panel: { models: [], credentials: [] } }) }));
-vi.mock("@/app/actions/onboarding/explorar", () => ({ gerenciarAgenteDoOnboarding: vi.fn(), configurarChaveDoOnboarding: f.key }));
+vi.mock("@/app/actions/onboarding/ensaio", () => ({ lerEnsaio: async () => ({ ok: true, panel: { models: [] } }) }));
+vi.mock("@/app/actions/onboarding/explorar", () => ({ gerenciarAgenteDoOnboarding: vi.fn() }));
 import SetupAiPage from "@/app/onboarding/setup-ai/page";
 afterEach(cleanup);
-it("o setup não presume provider default nem dispara prova automática; oferece gestão de chave", async () => {
+it("o setup não expõe configuração técnica da chave ao assinante", async () => {
   render(await SetupAiPage());
   expect(screen.queryByText(/ainda não tem cérebro|Anthropic/)).not.toBeInTheDocument();
   expect(f.retrato).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: "Configurar chave de IA" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Configurar chave de IA" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/credencial|créditos de API/i)).not.toBeInTheDocument();
 });

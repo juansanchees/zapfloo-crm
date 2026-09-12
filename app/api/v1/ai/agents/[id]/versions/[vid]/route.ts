@@ -14,6 +14,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { versionPatchSchema } from "@/lib/ai/agents/validation";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { podeManterSelecaoDeCredencial } from "@/lib/ai/credenciais/selecao";
+import { resolverCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
+import { lerAmbiente } from "@/lib/instalacao/ambiente";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +86,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx): Promise<Response> {
   const admin = createAdminClient();
   const { data: existing } = await admin
     .from("ai_agent_versions")
-    .select("id, status, agent_id, organization_id")
+    .select("id, status, agent_id, organization_id, credential_id, provider")
     .eq("id", vid)
     .eq("organization_id", activeOrg.orgId)
     .eq("agent_id", id)
@@ -97,11 +100,48 @@ export async function PATCH(req: NextRequest, ctx: Ctx): Promise<Response> {
     });
   }
 
+  if (!podeManterSelecaoDeCredencial({
+    isPlatformAdmin: authUser.is_platform_admin,
+    solicitada: patch.credential_id,
+    atual: existing.credential_id,
+    providerSolicitado: patch.provider ?? existing.provider,
+    providerAtual: existing.provider,
+  })) {
+    return fail(
+      "forbidden_role",
+      t("A credencial de inteligência é administrada pela equipe da plataforma."),
+      403,
+      { requestId },
+    );
+  }
+
   const update: Record<string, unknown> = {};
   if (patch.system_prompt !== undefined) update.system_prompt = patch.system_prompt;
   if (patch.provider !== undefined) update.provider = patch.provider;
   if (patch.model !== undefined) update.model = patch.model;
   if (patch.credential_id !== undefined) update.credential_id = patch.credential_id;
+  const providerMudou = patch.provider !== undefined && patch.provider !== existing.provider;
+  if (
+    !authUser.is_platform_admin &&
+    (providerMudou || (existing.credential_id === null && patch.credential_id === null))
+  ) {
+    const provider = patch.provider ?? existing.provider;
+    const gerenciada = await resolverCredencialGerenciada({
+      db: admin,
+      organizationId: activeOrg.orgId,
+      provider,
+      instalacaoTemChave: lerAmbiente().chavesDeProvedor[provider] === true,
+    });
+    if (!gerenciada.ok) {
+      return fail(
+        gerenciada.erro === "consulta_falhou" ? "internal_error" : "credential_required",
+        t("A equipe da plataforma precisa configurar uma chave compatível antes de salvar este agente."),
+        gerenciada.erro === "consulta_falhou" ? 500 : 422,
+        { requestId },
+      );
+    }
+    update.credential_id = gerenciada.credentialId;
+  }
   if (patch.tool_ids !== undefined) update.tool_ids = patch.tool_ids;
   if (patch.trigger_config !== undefined) update.trigger_config = patch.trigger_config;
   if (patch.channel_session_id !== undefined) update.channel_session_id = patch.channel_session_id;

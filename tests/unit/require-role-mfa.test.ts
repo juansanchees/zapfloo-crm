@@ -136,6 +136,16 @@ describe("requireRole — MFA é política de sessão, não de cadastro", () => 
     expect(r.ok).toBe(false);
   });
 
+  it("platformOnly não contorna a dívida de MFA da administração da plataforma", async () => {
+    preparar({ role: "viewer", temFator: true, aal: "aal1", isPlatformAdmin: true });
+    const r = await requireRole("viewer", { platformOnly: true, requestId: "req-platform" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      const corpo = (await r.response.json()) as { error: { code: string } };
+      expect(corpo.error.code).toBe("mfa_required");
+    }
+  });
+
   it("falta de PAPEL continua respondendo forbidden_role, não mfa_required", async () => {
     // A ordem importa: quem nem tem papel para chegar lá não deve descobrir,
     // pela resposta, o estado de MFA de ninguém.

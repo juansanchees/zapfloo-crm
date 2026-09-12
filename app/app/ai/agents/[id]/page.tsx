@@ -4,6 +4,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { listSelectableChannels } from "@/lib/channels/selectable";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { AgentRow } from "@/hooks/ai/useAgent";
 import type { AgentVersionRow } from "@/hooks/ai/useAgentVersions";
 import type { CredentialRow } from "@/hooks/ai/useCredentials";
@@ -17,6 +18,7 @@ import type { CoberturaPorFunil } from "./_components/FunisDoAgente";
 import { lerAmbiente } from "@/lib/instalacao/ambiente";
 import { escolherVersoesDaTela } from "@/lib/ai/agents/versoes-da-tela";
 import { FUSO_PADRAO, fusoValido } from "@/lib/tempo/fusos";
+import { provedoresComCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,7 @@ export default async function AgentEditorPage({
   }
 
   const supabase = await createClient();
+  const admin = createAdminClient();
   const { data: agentRow } = await supabase
     .from("ai_agents")
     .select(AGENT_COLUMNS)
@@ -89,7 +92,8 @@ export default async function AgentEditorPage({
   }
 
   // mcp_agent: busca versions + lookups.
-  const [versionsRes, credentialsRes, channelSessions, routerMemberRes, funisRes, acervoRes, orgRes] =
+  const provedoresInstalados = provedoresDaInstalacao();
+  const [versionsRes, credentialsRes, channelSessions, routerMemberRes, funisRes, acervoRes, orgRes, provedoresDisponiveis] =
     await Promise.all([
     supabase
       .from("ai_agent_versions")
@@ -132,6 +136,11 @@ export default async function AgentEditorPage({
       .select("timezone")
       .eq("id", activeOrg.orgId)
       .maybeSingle(),
+    provedoresComCredencialGerenciada({
+      db: admin,
+      organizationId: activeOrg.orgId,
+      provedoresDaInstalacao: provedoresInstalados,
+    }),
   ]);
 
   const versions = (versionsRes.data ?? []) as unknown as AgentVersionRow[];
@@ -177,13 +186,15 @@ export default async function AgentEditorPage({
     <div className="flex h-full flex-col gap-6 p-6">
       <AgentTabs
         agent={agent}
+        podeGerenciarCredenciais={user.is_platform_admin}
         draft={draft}
         published={published}
         base={base}
         draftObsoleto={draftObsoleto}
         versions={versions}
         credentials={credentials}
-        provedoresDaInstalacao={provedoresDaInstalacao()}
+        provedoresDaInstalacao={provedoresInstalados}
+        provedoresComCredencialDisponivel={provedoresDisponiveis}
         channelSessions={channelSessions}
         funis={funis}
         cobertura={cobertura}

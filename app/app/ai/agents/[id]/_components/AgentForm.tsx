@@ -84,10 +84,16 @@ interface BaseProps {
    * conseguia salvar nada.
    */
   provedoresDaInstalacao?: string[];
+  /**
+   * Projeção server-side sem metadados: provedores que têm uma credencial
+   * gerenciada válida, seja da organização ou da instalação.
+   */
+  provedoresComCredencialDisponivel?: string[];
   channelSessions: ChannelSessionLite[];
   routerMembership?: { routerId: string; routerName: string } | null;
   readOnly?: boolean;
   organizationTimezone?: string;
+  podeGerenciarCredenciais?: boolean;
   /**
    * Padrões resolvidos no servidor para um agente novo. O formulário não
    * escolhe provedor/modelo no escuro nem esconde um campo obrigatório vazio.
@@ -301,6 +307,8 @@ export function AgentForm(props: Props) {
   const router = useRouter();
   const isEdit = props.mode === "edit";
   const readOnly = props.readOnly ?? false;
+  const provedoresDisponiveis =
+    props.provedoresComCredencialDisponivel ?? props.provedoresDaInstalacao ?? [];
 
   const baseline = React.useMemo(() => {
     if (isEdit) {
@@ -338,7 +346,14 @@ export function AgentForm(props: Props) {
 
   // Quando provider muda, limpa credential e modelo (eles dependem do provider).
   function changeProvider(p: Provider) {
-    patch({ provider: p, credential_id: "", model: "" });
+    patch({
+      provider: p,
+      // O tenant escolhe o provedor; o servidor escolhe uma chave compatível
+      // sem expor qual delas foi usada. A plataforma continua escolhendo a
+      // credencial explicitamente.
+      credential_id: props.podeGerenciarCredenciais ? "" : CHAVE_DA_INSTALACAO,
+      model: "",
+    });
   }
 
   const cred = findCredential(props.credentials, form.credential_id);
@@ -374,14 +389,14 @@ export function AgentForm(props: Props) {
         `${t("As instruções têm")} ${tamanhoDoPrompt.toLocaleString("pt-BR")} ${t("caracteres, e o máximo é 20.000. Corte")} ` +
         `${(tamanhoDoPrompt - 20000).toLocaleString("pt-BR")} ${t("para conseguir salvar.")}`;
     if (!form.model) errors.model = t("Escolha o modelo de inteligência artificial.");
-    if (!form.credential_id)
+    if (props.podeGerenciarCredenciais && !form.credential_id)
       errors.credential_id = t("Escolha a chave de acesso da empresa de inteligência artificial.");
     // Escolher "a chave desta instalação" para um provedor que a instalação NÃO
     // tem seria publicar um agente que morre em toda mensagem. A mesma recusa
     // existe no servidor (rota de versões); aqui ela chega antes do clique.
     if (
       form.credential_id === CHAVE_DA_INSTALACAO &&
-      !(props.provedoresDaInstalacao ?? []).includes(form.provider)
+      !provedoresDisponiveis.includes(form.provider)
     )
       errors.credential_id = `${t("Esta instalação não tem chave de")} ${form.provider}. ${t("Escolha outra empresa de IA ou cadastre uma chave.")}`;
     if (!form.channel_session_id)
@@ -399,7 +414,7 @@ export function AgentForm(props: Props) {
       }
     }
     return errors;
-  }, [form, props.provedoresDaInstalacao, t]);
+  }, [form, props.podeGerenciarCredenciais, provedoresDisponiveis, t]);
 
   const isValid = Object.keys(validation).length === 0;
 
@@ -408,9 +423,9 @@ export function AgentForm(props: Props) {
     if (!props.draft) return t("Sem rascunho para publicar.");
     if (!isValid) return t("Resolva os erros do formulário.");
     if (dirty) return t("Salve o rascunho antes de publicar.");
-    if (!cred && !usaChaveDaInstalacao)
+    if (props.podeGerenciarCredenciais && !cred && !usaChaveDaInstalacao)
       return t("Escolha a chave de acesso da empresa de inteligência artificial.");
-    if (cred && credSt !== "validated")
+    if (props.podeGerenciarCredenciais && cred && credSt !== "validated")
       return `${t("Credencial")} ${form.provider} ${credSt === "invalid" ? t("inválida") : t("ainda não validada")}.`;
     if (!channelSession) return t("Escolha por qual número de WhatsApp ele atende.");
     if (channelSession.status !== "working" && channelSession.status !== "WORKING")
@@ -941,7 +956,7 @@ export function AgentForm(props: Props) {
             }}>
             {t("Abrir configuração avançada")}
           </button>
-          {(validation.credential_id || (cred && credSt !== "validated")) && !readOnly ? (
+          {(validation.credential_id || (cred && credSt !== "validated")) && !readOnly && props.podeGerenciarCredenciais ? (
             <Link href="/app/ai/credentials"
               className="ml-3 inline-flex text-sm font-medium text-foreground underline underline-offset-2">
               {t("Cadastrar credencial de IA")}
@@ -983,7 +998,8 @@ export function AgentForm(props: Props) {
             <CredentialPicker provider={form.provider} credentials={props.credentials}
               value={form.credential_id} onChange={(id) => patch({ credential_id: id })}
               disabled={disabled} id="credential_id"
-              instalacaoTemChave={(props.provedoresDaInstalacao ?? []).includes(form.provider)} />
+              instalacaoTemChave={(props.provedoresDaInstalacao ?? []).includes(form.provider)}
+              podeGerenciarCredenciais={props.podeGerenciarCredenciais} />
             {validation.credential_id ? <p className="text-xs text-destructive">{validation.credential_id}</p> : null}
             {cred && credSt && credSt !== "validated" ? (
               <p className="text-xs text-amber-600 dark:text-amber-400">

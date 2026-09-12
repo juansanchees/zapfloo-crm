@@ -57,7 +57,7 @@ export default async function FollowupFlowsPage() {
           <TabsTrigger value="fila">Fila</TabsTrigger>
         </TabsList>
         <TabsContent value="fluxos">
-          <FlowsList initialData={flows} canWrite={canWrite} />
+          <FlowsList initialData={flows} canWrite={canWrite} canManageCredentials={user.is_platform_admin} />
         </TabsContent>
         <TabsContent value="fila">
           <QueueTab canWrite={canWrite} />

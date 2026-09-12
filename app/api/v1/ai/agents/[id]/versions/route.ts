@@ -18,6 +18,8 @@ import { mensagemDoEscopo, validarEscopoDaVersao } from "@/lib/ai/agents/escopo"
 import { versionCreateSchema } from "@/lib/ai/agents/validation";
 import { lerAmbiente } from "@/lib/instalacao/ambiente";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { podeManterSelecaoDeCredencial } from "@/lib/ai/credenciais/selecao";
+import { resolverCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
 
 export const dynamic = "force-dynamic";
 
@@ -101,19 +103,51 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data: maxRow } = await admin
       .from("ai_agent_versions")
-      .select("version_number")
+      .select("version_number, credential_id, provider")
       .eq("agent_id", id)
       .eq("organization_id", activeOrg.orgId)
       .order("version_number", { ascending: false })
       .limit(1)
       .maybeSingle();
 
+    if (!podeManterSelecaoDeCredencial({
+      isPlatformAdmin: authUser.is_platform_admin,
+      solicitada: v.credential_id,
+      atual: maxRow?.credential_id,
+      providerSolicitado: v.provider,
+      providerAtual: maxRow?.provider,
+    })) {
+      return fail(
+        "forbidden_role",
+        t("A credencial de inteligência é administrada pela equipe da plataforma."),
+        403,
+        { requestId },
+      );
+    }
+
     // ⚠️ FALHA FECHADA: `credential_id: null` significa "usa a chave da
     // instalação". Se ela não existir para este provedor, a versão seria
     // publicada para morrer em toda mensagem — e o dono só descobriria com o
     // primeiro cliente. O schema valida FORMA; quem conhece o ambiente do
     // servidor é esta rota.
-    if (v.credential_id === null && lerAmbiente().chavesDeProvedor[v.provider] !== true) {
+    let credentialId = v.credential_id;
+    if (!authUser.is_platform_admin && credentialId === null) {
+      const gerenciada = await resolverCredencialGerenciada({
+        db: admin,
+        organizationId: activeOrg.orgId,
+        provider: v.provider,
+        instalacaoTemChave: lerAmbiente().chavesDeProvedor[v.provider] === true,
+      });
+      if (!gerenciada.ok) {
+        return fail(
+          gerenciada.erro === "consulta_falhou" ? "internal_error" : "credential_required",
+          t("A equipe da plataforma precisa configurar uma chave compatível antes de salvar este agente."),
+          gerenciada.erro === "consulta_falhou" ? 500 : 422,
+          { requestId },
+        );
+      }
+      credentialId = gerenciada.credentialId;
+    } else if (credentialId === null && lerAmbiente().chavesDeProvedor[v.provider] !== true) {
       return fail(
         "credential_required",
         `Esta instalação não tem chave de ${v.provider} no ambiente. Cadastre uma chave em IA › Credenciais ou escolha outra empresa de inteligência artificial.`,
@@ -145,7 +179,7 @@ export async function POST(req: NextRequest, ctx: Ctx): Promise<Response> {
         system_prompt: v.system_prompt,
         provider: v.provider,
         model: v.model,
-        credential_id: v.credential_id,
+        credential_id: credentialId,
         tool_ids: v.tool_ids,
         trigger_config: v.trigger_config ?? undefined,
         channel_session_id: v.channel_session_id,

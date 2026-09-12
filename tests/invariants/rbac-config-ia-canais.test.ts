@@ -146,13 +146,13 @@ describe("0150 — o segredo cifrado some da superfície do browser", () => {
     );
   });
 
-  it("CONTROLE POSITIVO: a view segura continua legível (é o que a tela consome)", () => {
+  it("a view segura conserva o grant authenticated; a RLS 0230 decide quais linhas aparecem", () => {
     expect(
       podeLer(GOV_ADMIN, `select count(*) from public.ai_provider_credentials_safe;`),
     ).toBe(true);
   });
 
-  it("CONTROLE POSITIVO: as colunas não-sensíveis continuam legíveis na tabela base", () => {
+  it("a tabela base conserva grants por coluna; a RLS 0230 ainda filtra as linhas", () => {
     expect(
       podeLer(GOV_ADMIN, `select provider, label, api_key_last4 from public.ai_provider_credentials;`),
     ).toBe(true);
@@ -198,11 +198,11 @@ const DIVIDA_RBAC_CONHECIDA = new Set([
   "user_recovery_codes",
 ]);
 
-describe("0150 — a dívida de RBAC não cresce", () => {
-  it("as tabelas já corrigidas têm policy de escrita com fn_role_at_least", () => {
+describe("0150/0230 — a dívida de RBAC não cresce", () => {
+  it("as tabelas corrigidas por papel têm policy de escrita com fn_role_at_least", () => {
     const corrigidas = [
       "channel_sessions", "ai_agents", "ai_agent_versions", "ai_budgets",
-      "ai_routers", "ai_router_members", "ai_purpose_bindings", "ai_provider_credentials",
+      "ai_routers", "ai_router_members", "ai_purpose_bindings",
       // As quatro do acervo entraram na 0181, pelo mesmo motivo e no mesmo
       // formato: um `viewer` DELETAVA `ai_chunks` da própria organização
       // falando direto com o PostgREST, com o JWT dele.
@@ -223,7 +223,8 @@ describe("0150 — a dívida de RBAC não cresce", () => {
       select coalesce(string_agg(distinct tablename, ',' order by tablename), '') from pg_policies
        where schemaname = 'public'
          and cmd = 'ALL'
-         and (coalesce(qual, '') || coalesce(with_check, '')) not like '%role_at_least%';
+         and (coalesce(qual, '') || coalesce(with_check, '')) not like '%role_at_least%'
+         and (coalesce(qual, '') || coalesce(with_check, '')) not like '%fn_is_platform_admin%';
     `)
       .trim()
       .split(",")

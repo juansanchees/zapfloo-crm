@@ -92,9 +92,12 @@ export default async function AcervoPage() {
     pode_indexar: chave !== null,
     origem: chave?.origem ?? null,
     explicacao: chave ? EXPLICACAO_DA_ORIGEM[chave.origem] : null,
-    chave_em_uso: chave?.rotulo ?? null,
+    chave_em_uso: user.is_platform_admin ? chave?.rotulo ?? null : null,
     avisos: chave?.avisos ?? [],
-    credenciais_openai: (credenciais ?? []) as EstadoDaChave["credenciais_openai"],
+    credenciais_openai: user.is_platform_admin
+      ? (credenciais ?? []) as EstadoDaChave["credenciais_openai"]
+      : [],
+    pode_gerenciar_credenciais: user.is_platform_admin,
   };
 
   return (

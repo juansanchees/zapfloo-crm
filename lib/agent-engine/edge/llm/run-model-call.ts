@@ -367,6 +367,12 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
     ? await resolveOrgLlmConfig(db, cfg, input.tenantId, {
         provider: decisao.provider,
         credentialId: decisao.credentialId,
+        // Endpoint próprio recebe Authorization. Se a credencial vinculada
+        // sumiu, nunca substituí-la pela chave global da instalação e enviá-la
+        // para esse host: falha fechada até a plataforma corrigir o binding.
+        ...(decisao.baseUrl !== null && decisao.credentialId !== null
+          ? { strictCredential: true }
+          : {}),
       })
     : padrao;
 

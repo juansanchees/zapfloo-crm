@@ -9,7 +9,7 @@ import { traduzir } from "@/lib/i18n/dicionario";
 import { lerRascunho } from "@/app/actions/onboarding/rascunho";
 import { lerEnsaio } from "@/app/actions/onboarding/ensaio";
 import { loadOnboardingState } from "@/app/actions/onboarding/_shared";
-import { configurarChaveDoOnboarding, gerenciarAgenteDoOnboarding } from "@/app/actions/onboarding/explorar";
+import { gerenciarAgenteDoOnboarding } from "@/app/actions/onboarding/explorar";
 
 export const dynamic = "force-dynamic";
 
@@ -58,11 +58,9 @@ export default async function SetupAiPage() {
           {traduzir("Quem ele é, como fala e o que pode prometer. Dá para mudar tudo depois.", idioma)}
         </p>
       </header>
-      {/* O ensaio usa seu padrão e o acesso disponível automaticamente; não diagnosticar
-          o default da organização nem disparar a prova automática do card legado. */}
-      <form action={configurarChaveDoOnboarding}>
-        <button className="text-sm underline underline-offset-4">{traduzir("Configurar chave de IA", idioma)}</button>
-      </form>
+      {/* O ensaio usa o modelo e a chave da plataforma automaticamente. O
+          assinante treina o atendimento; a equipe da plataforma cuida da
+          infraestrutura técnica fora deste fluxo. */}
       <SetupAiForm key={activeOrg.orgId} negocio={state.welcome.display_name} capacidades={capacidades} conferencias={conferencias} rascunhoInicial={rascunho} ensaioInicial={ensaio} />
     </div>
   );

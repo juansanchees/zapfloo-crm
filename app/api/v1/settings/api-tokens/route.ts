@@ -23,7 +23,11 @@ const SELECT_COLS =
 
 export async function GET(_req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("admin", { requestId, resource: "api_tokens" });
+  const authz = await requireRole("viewer", {
+    requestId,
+    resource: "api_tokens",
+    platformOnly: true,
+  });
   if (!authz.ok) return authz.response;
   const { org: activeOrg } = authz;
 
@@ -39,7 +43,11 @@ export async function GET(_req: NextRequest): Promise<Response> {
 
 export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("admin", { requestId, resource: "api_tokens" });
+  const authz = await requireRole("viewer", {
+    requestId,
+    resource: "api_tokens",
+    platformOnly: true,
+  });
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user: authUser, org: activeOrg } = authz;

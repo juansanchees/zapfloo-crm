@@ -18,9 +18,9 @@ const models: PainelEnsaio["models"] = [
   { provider: "openai", model_id: "gpt-5.6-luna", display_name: "GPT-5.6 Luna" },
 ];
 const draft = { ok: true as const, context: "a".repeat(64), draft: { revision: 1, configuration: { name: "Atendente QA", prompt_template: "support_minimal" as const, regras_da_casa: "" } } };
-function setup(prepared = false, catalog = models) { return render(<SetupAiForm capacidades={[]} conferencias={[]} rascunhoInicial={draft} ensaioInicial={{ ok: true, panel: { selection: prepared ? selection : null, proof: prepared ? proof : null, models: catalog, credentials: [] } }} />); }
+function setup(prepared = false, catalog = models) { return render(<SetupAiForm capacidades={[]} conferencias={[]} rascunhoInicial={draft} ensaioInicial={{ ok: true, panel: { selection: prepared ? selection : null, proof: prepared ? proof : null, models: catalog } }} />); }
 afterEach(cleanup);
-beforeEach(() => { vi.clearAllMocks(); f.prepare.mockResolvedValue({ ok: true, ...selection }); f.read.mockResolvedValue({ ok: true, panel: { selection, proof: null, models, credentials: [] } }); f.start.mockResolvedValue({ ok: true, proof }); f.review.mockResolvedValue({ ok: true, proof: { ...proof, reviewed: true } }); });
+beforeEach(() => { vi.clearAllMocks(); f.prepare.mockResolvedValue({ ok: true, ...selection }); f.read.mockResolvedValue({ ok: true, panel: { selection, proof: null, models } }); f.start.mockResolvedValue({ ok: true, proof }); f.review.mockResolvedValue({ ok: true, proof: { ...proof, reviewed: true } }); });
 describe("ensaio integrado na tela", () => {
   it("continuação separada exige revisão corrente e sucesso confirmado sem criar agente legado", async () => {
     setup(true);
@@ -69,7 +69,7 @@ describe("ensaio integrado na tela", () => {
     const catalog = models.filter(m => m.model_id !== "gpt-5.6-luna");
     const fallback = { ...selection, provider: catalog[0]!.provider, model: catalog[0]!.model_id };
     f.prepare.mockResolvedValue({ ok: true, ...fallback });
-    f.read.mockResolvedValue({ ok: true, panel: { selection: fallback, proof: null, models: catalog, credentials: [] } });
+    f.read.mockResolvedValue({ ok: true, panel: { selection: fallback, proof: null, models: catalog } });
     setup(false, catalog);
     expect(screen.getByRole("button", { name: "Preparar ensaio" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Preparar ensaio" }));

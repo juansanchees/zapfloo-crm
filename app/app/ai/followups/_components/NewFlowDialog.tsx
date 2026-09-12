@@ -21,9 +21,10 @@ import { useCreateFollowupFlow, useGenerateFollowupFlow } from "@/hooks/followup
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  canManageCredentials?: boolean;
 }
 
-export function NewFlowDialog({ open, onOpenChange }: Props) {
+export function NewFlowDialog({ open, onOpenChange, canManageCredentials = false }: Props) {
   const t = useT();
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"ai" | "manual">("ai");
@@ -145,7 +146,7 @@ export function NewFlowDialog({ open, onOpenChange }: Props) {
               {erroDeConfiguracao && <>
                 <p className="text-text-muted">{t("Revise a chave e o modelo em outra aba. Seu texto continua aqui para tentar novamente.")}</p>
                 <div className="flex flex-wrap gap-4">
-                  <a href="/app/ai/credentials" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("Revisar chaves de IA")}</a>
+                  {canManageCredentials ? <a href="/app/ai/credentials" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("Revisar chaves de IA")}</a> : null}
                   <a href="/app/ai/providers" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("Revisar modelo de IA")}</a>
                 </div>
               </>}

@@ -37,8 +37,8 @@ export function SidebarContent({
   const t = useT();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
-  const { user, activeOrg } = useAuth();
-  const areas = compactAreas(user.is_platform_admin, activeOrg?.role ?? null);
+  const { user, activeOrg, activeAgentCount } = useAuth();
+  const areas = compactAreas(user.is_platform_admin, activeOrg?.role ?? null, { activeAgentCount });
   const areaAtiva = compactAreaForPath(pathname, areas);
   const principais = areas.filter((area) => area.position === "main");
   const operacao = principais.filter((area) => area.section === "operacao");

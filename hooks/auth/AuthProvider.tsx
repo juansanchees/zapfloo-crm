@@ -17,6 +17,8 @@ interface AuthCtx {
   activeOrg: ActiveOrg | null;
   isAuthenticated: true;
   refreshing: boolean;
+  /** Agentes aptos a receber conversas nesta organização. */
+  activeAgentCount: number;
   signOut: () => Promise<void>;
 }
 
@@ -25,10 +27,12 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({
   user,
   activeOrg,
+  activeAgentCount,
   children,
 }: {
   user: AuthUser;
   activeOrg: ActiveOrg | null;
+  activeAgentCount: number;
   children: ReactNode;
 }) {
   const [refreshing, setRefreshing] = useState(false);
@@ -56,12 +60,13 @@ export function AuthProvider({
       activeOrg,
       isAuthenticated: true,
       refreshing,
+      activeAgentCount,
       signOut: async () => {
         const { signOut } = await import("@/app/actions/auth/signOut");
         await signOut();
       },
     }),
-    [user, activeOrg, refreshing],
+    [user, activeOrg, activeAgentCount, refreshing],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -110,13 +115,19 @@ const ACTION_MIN_ROLE: Record<string, Role> = {
   "ai.routers.view": "manager",
   "ai.evolution.view": "manager",
   "ai.routers.manage": "admin",
-  "ai.credentials.view": "manager",
-  "ai.credentials.write": "admin",
   "webhooks.manage": "manager",
 };
 
+const PLATFORM_ONLY_ACTIONS = new Set([
+  "ai.credentials.view",
+  "ai.credentials.write",
+  "settings.api_tokens.view",
+  "settings.api_tokens.write",
+]);
+
 export function usePermission(action: string): boolean {
   const { user, activeOrg } = useAuth();
+  if (PLATFORM_ONLY_ACTIONS.has(action)) return user.is_platform_admin;
   if (user.is_platform_admin) return true;
   if (!activeOrg) return false;
   const required = ACTION_MIN_ROLE[action];

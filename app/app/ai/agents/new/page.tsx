@@ -4,6 +4,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { listSelectableChannels } from "@/lib/channels/selectable";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { CredentialRow } from "@/hooks/ai/useCredentials";
 
 import { lerAmbiente } from "@/lib/instalacao/ambiente";
@@ -11,9 +12,11 @@ import { lerAmbiente } from "@/lib/instalacao/ambiente";
 import { AgentForm } from "../[id]/_components/AgentForm";
 import { escolherModeloDoProvedor } from "@/lib/ai/agents/escolher-modelo";
 import {
+  CHAVE_DA_INSTALACAO,
   escolherCredencialInicial,
   provedorDaConfiguracaoDaOrganizacao,
 } from "@/lib/ai/agents/configuracao-inicial";
+import { provedoresComCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
 import { FUSO_PADRAO, fusoValido } from "@/lib/tempo/fusos";
 import { logger } from "@/lib/logger";
 
@@ -46,6 +49,7 @@ export default async function NewAgentPage() {
   }
 
   const supabase = await createClient();
+  const admin = createAdminClient();
   const { data: organizacao, error: organizacaoError } = await supabase
     .from("organizations")
     .select("settings,timezone")
@@ -60,7 +64,8 @@ export default async function NewAgentPage() {
     });
   }
 
-  const [credentialsRes, channelSessions, modelosRes] = await Promise.all([
+  const provedoresInstalados = provedoresDaInstalacao();
+  const [credentialsRes, channelSessions, modelosRes, provedoresDisponiveis] = await Promise.all([
     supabase
       .from("ai_provider_credentials_safe")
       .select(CREDENTIAL_COLUMNS)
@@ -71,6 +76,11 @@ export default async function NewAgentPage() {
       .select("model_id,is_default_for_provider,supports_tools,input_price_per_million_cents,output_price_per_million_cents")
       .eq("provider", provider)
       .is("deprecated_at", null),
+    provedoresComCredencialGerenciada({
+      db: admin,
+      organizationId: activeOrg.orgId,
+      provedoresDaInstalacao: provedoresInstalados,
+    }),
   ]);
 
   const credentials = (credentialsRes.data ?? []) as unknown as CredentialRow[];
@@ -79,12 +89,11 @@ export default async function NewAgentPage() {
   // até ela ser validada. Preferimos a validada, mas não devolvemos a decisão
   // técnica ao usuário só porque a instalação ainda precisa concluir o teste
   // da chave que já cadastrou.
-  const provedoresInstalados = provedoresDaInstalacao();
-  const credencialInicial = escolherCredencialInicial(
-    credentials,
-    provider,
-    provedoresInstalados.includes(provider),
-  );
+  const credencialInicial = user.is_platform_admin
+    ? escolherCredencialInicial(credentials, provider, provedoresInstalados.includes(provider))
+    : provedoresDisponiveis.includes(provider)
+      ? CHAVE_DA_INSTALACAO
+      : null;
   const timezone =
     typeof organizacao?.timezone === "string" && fusoValido(organizacao.timezone)
       ? organizacao.timezone
@@ -94,8 +103,10 @@ export default async function NewAgentPage() {
     <div className="flex h-full flex-col gap-6 p-6">
       <AgentForm
         mode="create"
+        podeGerenciarCredenciais={user.is_platform_admin}
         credentials={credentials}
         provedoresDaInstalacao={provedoresInstalados}
+        provedoresComCredencialDisponivel={provedoresDisponiveis}
         channelSessions={channelSessions}
         initialSetup={{
           provider,

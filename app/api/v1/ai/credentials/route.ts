@@ -1,8 +1,8 @@
 /**
- * GET  /api/v1/ai/credentials — lista credentials da org ativa (manager+).
+ * GET  /api/v1/ai/credentials — lista credenciais da org ativa (plataforma).
  *                                Lê da view `ai_provider_credentials_safe`,
  *                                que NUNCA expõe campos cifrados.
- * POST /api/v1/ai/credentials — cria credential (admin). Plaintext da api_key
+ * POST /api/v1/ai/credentials — cria credencial (plataforma). Plaintext da api_key
  *                                entra apenas neste endpoint, é cifrado AES-GCM
  *                                e descartado da memória. Validação async não
  *                                bloqueia a resposta.
@@ -39,7 +39,11 @@ const createSchema = z.object({
 
 export async function GET(): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("manager", { requestId, resource: "ai_credentials" });
+  const authz = await requireRole("viewer", {
+    requestId,
+    resource: "ai_credentials",
+    platformOnly: true,
+  });
   if (!authz.ok) return authz.response;
   const { org: activeOrg } = authz;
 
@@ -58,7 +62,11 @@ export async function GET(): Promise<Response> {
 
 export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("admin", { requestId, resource: "ai_credentials" });
+  const authz = await requireRole("viewer", {
+    requestId,
+    resource: "ai_credentials",
+    platformOnly: true,
+  });
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user: authUser, org: activeOrg } = authz;

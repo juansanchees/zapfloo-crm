@@ -1985,11 +1985,13 @@ navegação, persistência do dashboard e renderização continuam reais. A suí
 prova qualidade semântica de um provedor externo nem autoriza ações de escrita.
 ### Ensaio inicial sem escolhas técnicas `[P0]` — 12/set/2026
 
-O passo de ensaio escolhe automaticamente `openai/gpt-5.6-luna`, com o identificador
+O passo de ensaio prefere automaticamente `openai/gpt-5.6-luna`, com o identificador
 centralizado em `lib/onboarding/ensaio.ts`, e envia `credential_id = null` para o
 resolvedor já existente escolher a chave válida da organização ou da instalação.
-Se o padrão não estiver no catálogo ativo, usa o primeiro modelo devolvido; catálogo
-vazio mostra indisponibilidade e mantém “Explorar o CRM” como saída. A sequência
+Antes de escolher, o servidor reduz o catálogo aos provedores que realmente têm
+chave utilizável. Se OpenAI não estiver disponível, usa o primeiro modelo desse
+catálogo utilizável; catálogo vazio mostra indisponibilidade e mantém “Explorar o
+CRM” como saída. A sequência
 preparar → testar → revisar → continuar não mudou. Cobertura: unitários de seleção e
 componente; Playwright em banco fresco pelo `baseline.sql`, incluindo retirada
 temporária e reversível do padrão, PT-BR/ES e medidas em 1280×720 e 390×720.
@@ -2007,3 +2009,22 @@ registro. A jornada real foi dirigida pelo Playwright contra o banco local fresc
 o administrador pendente entrou em `/app/inbox`, recarregou sem voltar ao wizard e
 manteve “Retomar configuração” visível em 1280 px e 390 px. O wizard serial também
 confirmou as duas listas com o título corrigido em português.
+
+## Superfícies técnicas por papel `[P0]` — 12/set/2026
+
+Uma matriz real de quatro papéis tenant (`viewer`, `agent`, `manager`, `admin`)
+confirmou que Credenciais de IA e Tokens de API não aparecem na navegação,
+recusam a URL direta e devolvem 403 na API. O controle positivo entrou com um
+administrador da plataforma autenticado com MFA, que vê as portas e recebe 200.
+
+Para Roteadores, a jornada confirmou a regra distinta de relevância: com um
+agente ativo, a porta some; após cadastrar o segundo, ela aparece na navegação.
+A URL direta permaneceu acessível nos dois estados. A prova rodou em Chromium
+real contra Supabase local atualizado pelo `baseline.sql`, junto das jornadas de
+credenciais e do wizard: 16 casos verdes. O invariante de banco separou a prova
+de PostgREST: quatro papéis tenant sem leitura/escrita, anon key recusada,
+plataforma permitida e `service_role` preservado. A mesma prova recusa que o
+tenant aponte uma chave gerenciada para endpoint próprio.
+
+Relatório, sabotagens e limites:
+`docs/superpowers/reports/2026-09-12-superficies-por-papel.md`.

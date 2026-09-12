@@ -81,6 +81,13 @@ export interface NavDestination {
   section?: string;
   /** Ausente = viewer. Ver a regra de escolha abaixo. */
   minRole?: Role;
+  /** Autoridade transversal: nenhum papel do tenant substitui este gate. */
+  platformOnly?: boolean;
+  /**
+   * Condição de RELEVÂNCIA da porta, não de autorização da rota.
+   * O destino continua acessível pela URL quando a contagem é menor.
+   */
+  minimumActiveAgents?: number;
   /** Ausente = só no hub. `true` = uso diário, sobe para o sidebar. */
   sidebar?: boolean;
   healthDot?: boolean;
@@ -528,6 +535,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     group: "ia",
     section: "Montar o agente",
     minRole: "manager",
+    minimumActiveAgents: 2,
     sidebar: true,
   },
   {
@@ -537,7 +545,8 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: Key,
     group: "ia",
     section: "Montar o agente",
-    minRole: "manager",
+    minRole: "viewer",
+    platformOnly: true,
   },
   {
     // O sistema chama modelo em 23 lugares e, até esta tela, a escolha vivia
@@ -895,7 +904,8 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: Lock,
     group: "organizacao",
     section: "Dados e acesso",
-    minRole: "admin",
+    minRole: "viewer",
+    platformOnly: true,
   },
 ];
 
@@ -906,7 +916,20 @@ export const NAV_DESTINATIONS: NavDestination[] = [
  * — hooks não rodam em laço condicional, então cada permissão exigia sua linha.
  * Como função pura, um `.filter()` resolve todas.
  */
-export function canSee(d: NavDestination, isPlatformAdmin: boolean, role: Role | null): boolean {
+export interface NavigationContext {
+  activeAgentCount: number;
+}
+
+export function canSee(
+  d: NavDestination,
+  isPlatformAdmin: boolean,
+  role: Role | null,
+  context: NavigationContext,
+): boolean {
+  if (d.minimumActiveAgents !== undefined && context.activeAgentCount < d.minimumActiveAgents) {
+    return false;
+  }
+  if (d.platformOnly) return isPlatformAdmin;
   if (isPlatformAdmin) return true;
   if (!role) return false;
   return ROLE_RANK[role] >= ROLE_RANK[d.minRole ?? "viewer"];
@@ -916,11 +939,12 @@ export function canSee(d: NavDestination, isPlatformAdmin: boolean, role: Role |
 export function sidebarGroups(
   isPlatformAdmin: boolean,
   role: Role | null,
+  context: NavigationContext,
 ): Array<{ group: NavGroup; items: NavDestination[] }> {
   return NAV_GROUPS.map((group) => ({
     group,
     items: NAV_DESTINATIONS.filter(
-      (d) => d.group === group.id && d.sidebar && canSee(d, isPlatformAdmin, role),
+      (d) => d.group === group.id && d.sidebar && canSee(d, isPlatformAdmin, role, context),
     ),
   })).filter((g) => g.items.length > 0);
 }
@@ -945,12 +969,16 @@ function rotuloDoHref(href: string): string | undefined {
  * Configurações, mas não recebe o atalho de Conexões (admin) nem Webhooks
  * (manager). O destino segue alcançável para quem tem papel suficiente.
  */
-export function compactAreas(isPlatformAdmin: boolean, role: Role | null): CompactArea[] {
+export function compactAreas(
+  isPlatformAdmin: boolean,
+  role: Role | null,
+  context: NavigationContext,
+): CompactArea[] {
   return COMPACT_AREA_SPECS.filter((area) => podeVerPapel(area.minRole, isPlatformAdmin, role)).map(
     (area) => {
       const tabs = area.tabs.flatMap((tab) => {
         const destination = NAV_DESTINATIONS.find((item) => item.href === tab.href);
-        if (destination && !canSee(destination, isPlatformAdmin, role)) return [];
+        if (destination && !canSee(destination, isPlatformAdmin, role, context)) return [];
 
         // Hubs não são destinos duplicados: a permissão deles é a da própria
         // área, já filtrada acima. Todo outro href precisa existir no registro.
@@ -1043,10 +1071,11 @@ export function hubSections(
   group: NavGroupId,
   isPlatformAdmin: boolean,
   role: Role | null,
+  context: NavigationContext,
 ): Array<{ section: string; items: NavDestination[] }> {
   const porSecao = new Map<string, NavDestination[]>();
   for (const d of NAV_DESTINATIONS) {
-    if (d.group !== group || !canSee(d, isPlatformAdmin, role)) continue;
+    if (d.group !== group || !canSee(d, isPlatformAdmin, role, context)) continue;
     const secao = d.section ?? "";
     const atual = porSecao.get(secao);
     if (atual) atual.push(d);
@@ -1056,6 +1085,10 @@ export function hubSections(
 }
 
 /** Projeção do ⌘K: todo destino visível, do sidebar ou não. */
-export function searchable(isPlatformAdmin: boolean, role: Role | null): NavDestination[] {
-  return NAV_DESTINATIONS.filter((d) => canSee(d, isPlatformAdmin, role));
+export function searchable(
+  isPlatformAdmin: boolean,
+  role: Role | null,
+  context: NavigationContext,
+): NavDestination[] {
+  return NAV_DESTINATIONS.filter((d) => canSee(d, isPlatformAdmin, role, context));
 }

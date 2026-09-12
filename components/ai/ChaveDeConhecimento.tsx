@@ -39,6 +39,7 @@ export interface EstadoDaChave {
   explicacao: string | null;
   chave_em_uso: string | null;
   avisos: string[];
+  pode_gerenciar_credenciais: boolean;
   credenciais_openai: Array<{
     id: string;
     label: string;
@@ -137,6 +138,27 @@ export function ChaveDeConhecimento({ estado, onChaveCadastrada }: Props) {
           </span>
         ))}
       </div>
+    );
+  }
+
+  if (!estado.pode_gerenciar_credenciais) {
+    return (
+      <Card
+        data-testid="conhecimento-sem-chave"
+        className="space-y-2 border-warning-bg bg-warning-bg/20 p-4"
+      >
+        <div className="flex items-start gap-2">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" aria-hidden />
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium">
+              {t("A preparação dos materiais está temporariamente indisponível")}
+            </h3>
+            <p className="text-xs text-text-muted">
+              {t("A equipe da plataforma precisa concluir a configuração da inteligência. Você pode cadastrar o material agora; ele ficará aguardando sem falhar em silêncio.")}
+            </p>
+          </div>
+        </div>
+      </Card>
     );
   }
 

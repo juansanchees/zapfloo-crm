@@ -38,11 +38,11 @@ function respondeCom(resposta: (opts: OpcoesDeMutacao) => void): void {
   });
 }
 
-function montar() {
+function montar(canManageCredentials = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <NewFlowDialog open onOpenChange={() => {}} />
+      <NewFlowDialog open onOpenChange={() => {}} canManageCredentials={canManageCredentials} />
     </QueryClientProvider>,
   );
 }
@@ -58,7 +58,7 @@ describe("NewFlowDialog — o POST que falha não pode sumir", () => {
       opts.onError?.(new ApiError(503, "ai_credential_error", undefined, "fixture", "Revise a credencial do provedor de IA."));
     });
     const user = userEvent.setup({ delay: null });
-    montar();
+    montar(true);
     await user.type(screen.getByLabelText("Nome"), "Boas-vindas");
     const description = "Envie uma mensagem após trinta minutos e encerre.";
     await user.type(screen.getByLabelText("Descreva o fluxo"), description);
@@ -67,6 +67,20 @@ describe("NewFlowDialog — o POST que falha não pode sumir", () => {
     expect(link).toHaveAttribute("href", "/app/ai/credentials");
     expect(link).toHaveAttribute("target", "_blank");
     expect(screen.getByLabelText("Descreva o fluxo")).toHaveValue(description);
+  });
+
+  it("não oferece a tela técnica de credenciais para quem administra só o tenant", async () => {
+    gerar.mockImplementation((_input: unknown, opts: OpcoesDeMutacao) => {
+      opts.onError?.(new ApiError(503, "ai_credential_error", undefined, "fixture", "Revise a configuração de IA."));
+    });
+    const user = userEvent.setup({ delay: null });
+    montar();
+    await user.type(screen.getByLabelText("Nome"), "Boas-vindas");
+    await user.type(screen.getByLabelText("Descreva o fluxo"), "Envie uma mensagem após trinta minutos e encerre.");
+    await user.click(screen.getByRole("button", { name: "Gerar rascunho" }));
+
+    expect(screen.queryByRole("link", { name: "Revisar chaves de IA" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Revisar modelo de IA" })).toHaveAttribute("href", "/app/ai/providers");
   });
 
   it("mostra a mensagem do servidor e mantém o nome digitado", async () => {

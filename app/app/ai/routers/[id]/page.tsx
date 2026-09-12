@@ -5,6 +5,8 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { listClassifierModels } from "@/lib/ai/classifier-models";
 import { listSelectableChannels } from "@/lib/channels/selectable";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { lerAmbiente } from "@/lib/instalacao/ambiente";
 import type { RouterDetailState } from "@/hooks/ai/useRouters";
 import { RouterEditorClient } from "./_client";
 
@@ -24,6 +26,7 @@ export default async function RouterEditorPage({ params }: { params: Promise<{ i
   }
 
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const [{ data: routerRow }, { data: memberRows }, { data: agentRows }, channelSessions] =
     await Promise.all([
@@ -52,10 +55,11 @@ export default async function RouterEditorPage({ params }: { params: Promise<{ i
 
   // Só os modelos que esta organização consegue usar de fato — ver a razão em
   // lib/ai/classifier-models.
-  const classifierModels = await listClassifierModels(supabase, activeOrg.orgId, {
-    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
-    openai: Boolean(process.env.OPENAI_API_KEY),
-  });
+  const classifierModels = await listClassifierModels(
+    admin,
+    activeOrg.orgId,
+    lerAmbiente().chavesDeProvedor,
+  );
 
   const initialState: RouterDetailState = {
     router: routerRow as RouterDetailState["router"],

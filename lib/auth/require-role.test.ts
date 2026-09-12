@@ -201,4 +201,32 @@ describe("requireRole — helper único (spec 13 §4)", () => {
     const granted = await requireRole("admin", { allowPlatformAdmin: true });
     expect(granted.ok).toBe(true);
   });
+
+  it.each(["viewer", "agent", "manager", "admin"] as const)(
+    "platformOnly nega o papel tenant %s, inclusive admin",
+    async (role) => {
+      session(role);
+      const denied = await requireRole("viewer", {
+        platformOnly: true,
+        resource: "superficie_tecnica",
+      });
+      expect(denied.ok).toBe(false);
+      if (denied.ok) throw new Error("unreachable");
+      expect(denied.response.status).toBe(403);
+      expect((await denied.response.json()).error.code).toBe("forbidden_role");
+      expect(audit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "authz.denied",
+          metadata: { reason: "platform_admin_required" },
+        }),
+      );
+    },
+  );
+
+  it("platformOnly permite o administrador da plataforma sem consultar rank do tenant", async () => {
+    session("viewer", { platformAdmin: true, dbRole: null });
+    const granted = await requireRole("viewer", { platformOnly: true });
+    expect(granted.ok).toBe(true);
+    expect(createClient).not.toHaveBeenCalled();
+  });
 });

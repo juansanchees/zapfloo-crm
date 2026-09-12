@@ -35,10 +35,13 @@ interface Props {
   credentials: CredentialRow[];
   /** Provedores cuja chave veio na instalação — ver `AgentForm`. */
   provedoresDaInstalacao?: string[];
+  /** Provedores utilizáveis sem revelar qual credencial gerenciada será usada. */
+  provedoresComCredencialDisponivel?: string[];
   channelSessions: ChannelSessionLite[];
   routerMembership?: { routerId: string; routerName: string } | null;
   readOnly?: boolean;
   organizationTimezone?: string;
+  podeGerenciarCredenciais?: boolean;
 }
 
 export function AgentTabs(props: Props) {
@@ -75,6 +78,7 @@ export function AgentTabs(props: Props) {
           draftObsoleto={props.draftObsoleto}
           credentials={props.credentials}
           provedoresDaInstalacao={props.provedoresDaInstalacao}
+          provedoresComCredencialDisponivel={props.provedoresComCredencialDisponivel}
           channelSessions={props.channelSessions}
           funis={props.funis}
           cobertura={props.cobertura}
@@ -82,6 +86,7 @@ export function AgentTabs(props: Props) {
           routerMembership={props.routerMembership}
           readOnly={props.readOnly}
           organizationTimezone={props.organizationTimezone}
+          podeGerenciarCredenciais={props.podeGerenciarCredenciais}
         />
       </TabsContent>
 

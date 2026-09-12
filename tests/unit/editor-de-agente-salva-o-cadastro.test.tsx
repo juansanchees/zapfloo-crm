@@ -279,7 +279,7 @@ function adminDuble(agente: Record<string, unknown>) {
           eq: () => sel,
           order: () => sel,
           limit: () => sel,
-          maybeSingle: async () => ({ data: { version_number: 1 }, error: null }),
+          maybeSingle: async () => ({ data: { version_number: 1, credential_id: CREDENCIAL }, error: null }),
           then: (r: (v: { data: unknown[]; error: null }) => unknown) =>
             r({ data: [], error: null }),
         };

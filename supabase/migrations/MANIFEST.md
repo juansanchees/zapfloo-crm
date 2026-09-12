@@ -270,6 +270,7 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260910141154` | `0228_onboarding_recover_preparation` | Recuperação explícita e auditada da preparação arquivada/removida: limpa vínculos e prova obsoletos sem reativar agente, com admin/tenant e CAS. |
 
 | `20260910141734` | `0229_limite_exato_prompt_onboarding` | Alinha salvar e preparar ao teto total de 20.000 unidades UTF-16 sem truncar rascunhos antigos. |
+| `20260912140000` | `0230_credenciais_e_tokens_so_da_plataforma` | Credenciais de IA e tokens de API passam a exigir administrador da instalação também na RLS; todos os papéis do tenant e a anon key ficam sem acesso, referências de credencial e endpoints próprios em versões/bindings são protegidos por trigger e service_role preserva os fluxos internos. |
 
 ## Tables created (33 total, all RLS enabled)
 

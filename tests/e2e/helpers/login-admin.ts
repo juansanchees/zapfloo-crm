@@ -30,6 +30,7 @@ export interface CredsE2E {
   password: string;
   users: Record<string, { email: string }>;
   admin_totp?: { secret: string; factor_id?: string };
+  dono_totp?: { secret: string; factor_id?: string };
   /**
    * O agente que o seed de credenciais cria. **É um `rag_bot`** — a tela de
    * configuração por papéis é do `mcp_agent`, então não serve para ela.
@@ -40,8 +41,12 @@ export interface CredsE2E {
 }
 
 export function lerCreds(): CredsE2E {
-  if (!fs.existsSync(CREDS_PATH)) semearCredenciais();
-  return JSON.parse(fs.readFileSync(CREDS_PATH, "utf8")) as CredsE2E;
+  if (!fs.existsSync(CREDS_PATH)) return semearCredenciais();
+  const atuais = JSON.parse(fs.readFileSync(CREDS_PATH, "utf8")) as CredsE2E;
+  if (!atuais.users?.admin || !atuais.admin_totp?.secret || !atuais.users?.dono || !atuais.dono_totp?.secret) {
+    return semearCredenciais();
+  }
+  return atuais;
 }
 
 /**
@@ -123,6 +128,33 @@ export async function loginComoAdmin(page: Page, creds: CredsE2E): Promise<Creds
   expect(
     false,
     "MFA do admin falhou mesmo depois de re-semear as credenciais — o problema não é o fator rotacionado",
+  ).toBe(true);
+  return atuais;
+}
+
+/** Login do usuário dedicado que o seed promove a administrador da instalação. */
+export async function loginComoDono(page: Page, creds: CredsE2E): Promise<CredsE2E> {
+  let atuais = creds;
+
+  for (let volta = 0; volta < 2; volta++) {
+    await page.goto("/login");
+    await page.locator("#email").fill(atuais.users.dono!.email);
+    await page.locator("#password").fill(atuais.password);
+    await page.getByRole("button", { name: /entrar/i }).click();
+    await page.waitForURL(/\/login\/mfa/, { timeout: 30_000 });
+
+    if (await tentarMfa(page, atuais.dono_totp!.secret, 3)) return atuais;
+
+    if (volta === 0) {
+      atuais = semearCredenciais();
+      execFileSync("npx", ["tsx", "scripts/seed-e2e-system-update.ts"], { stdio: "inherit" });
+      ultimoCodigoEnviado = null;
+    }
+  }
+
+  expect(
+    false,
+    "MFA do dono da instalação falhou mesmo depois de reconstituir o seed",
   ).toBe(true);
   return atuais;
 }

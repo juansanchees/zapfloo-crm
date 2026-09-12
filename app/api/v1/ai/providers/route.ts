@@ -30,7 +30,11 @@ import { PAPEIS, PONTOS_DE_IA, PONTO_POR_ID } from "@/lib/ai/pontos/registro";
 import { PROVEDORES, ehProvedorSuportado } from "@/lib/ai/pontos/provedores";
 import { validarBinding } from "@/lib/ai/pontos/validar-binding";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { resolverCredencialGerenciada } from "@/lib/ai/credenciais/gerenciada";
+import type { Provider } from "@/lib/ai/agents/validation";
+import { lerAmbiente } from "@/lib/instalacao/ambiente";
 
 export const dynamic = "force-dynamic";
 
@@ -165,8 +169,11 @@ export async function GET(): Promise<Response> {
       efetivo: {
         provider: decisao.provider,
         modelId: decisao.modelId,
-        credentialId: decisao.credentialId,
-        baseUrl: decisao.baseUrl,
+        credentialId: authz.user.is_platform_admin ? decisao.credentialId : null,
+        // Um endpoint próprio recebe a mesma chave enviada ao provedor. Assim
+        // como o identificador da credencial, ele é infraestrutura da
+        // plataforma e não atravessa a projeção entregue ao tenant.
+        baseUrl: authz.user.is_platform_admin ? decisao.baseUrl : null,
         origem: decisao.origem,
         porQue: EXPLICACAO_DA_ORIGEM[decisao.origem],
       },
@@ -187,9 +194,12 @@ export async function GET(): Promise<Response> {
     papeis: PAPEIS,
     pontos,
     provedores: PROVEDORES,
-    credenciais: credsRes.data ?? [],
+    // A tela de negócio continua podendo escolher modelo e propósito. Rótulo,
+    // últimos dígitos e id de credencial são infraestrutura da plataforma.
+    credenciais: authz.user.is_platform_admin ? (credsRes.data ?? []) : [],
     modelos,
     podeEditar: roleAtLeast(org.role, "admin"),
+    podeGerenciarCredenciais: authz.user.is_platform_admin,
   });
 }
 
@@ -226,6 +236,17 @@ export async function PUT(req: NextRequest): Promise<Response> {
   }
   const corpo = parsed.data;
 
+  if (
+    !authz.user.is_platform_admin &&
+    (corpo.credential_id !== undefined || corpo.base_url !== undefined)
+  ) {
+    return fail(
+      "forbidden_role",
+      t("A chave e o endereço do provedor são administrados pela equipe da plataforma."),
+      403,
+    );
+  }
+
   const ponto = PONTO_POR_ID.get(corpo.purpose);
   if (!ponto) return fail("ponto_desconhecido", `"${corpo.purpose}" não é um ponto do sistema`, 404);
 
@@ -250,7 +271,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
       // avisava "não enxerga imagens" sobre modelo que enxerga. Ver
       // `lib/ai/pontos/capacidade-em-vigor.ts`.
       supports_vision: enxergaImagem({
-        provider: corpo.provider,
+        provider: corpo.provider as Provider,
         modelId: corpo.model_id,
         doCatalogo: modelo?.supports_vision ?? null,
       }),
@@ -264,7 +285,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
   // A credencial precisa ser DESTA organização. O client de sessão já aplica
   // RLS, mas a checagem explícita devolve mensagem em vez de um silencioso
   // "0 linhas" que a tela leria como sucesso.
-  if (corpo.credential_id) {
+  if (authz.user.is_platform_admin && corpo.credential_id) {
     const { data: cred } = await db
       .from("ai_provider_credentials")
       .select("id, provider")
@@ -282,7 +303,51 @@ export async function PUT(req: NextRequest): Promise<Response> {
     }
   }
 
-  const { data: gravado, error } = await db
+  // O assinante pode ajustar o modelo sem apagar, trocar ou sequer precisar
+  // conhecer a credencial já vinculada. Preservar é obrigatório para que a
+  // mudança de política não desligue instalações existentes.
+  let credentialId = corpo.credential_id ?? null;
+  let baseUrl = corpo.base_url ?? null;
+  let bancoDeEscrita = db;
+  if (!authz.user.is_platform_admin) {
+    const admin = createAdminClient();
+    // A trigger 0230 impede que um JWT do tenant escolha uma FK de credencial
+    // diretamente. Esta rota resolve a chave a partir da organização confiável
+    // da sessão e grava pelo caminho interno, sempre com escopo explícito.
+    bancoDeEscrita = admin;
+    const { data: bindingAtual, error: erroDoBinding } = await admin
+      .from("ai_purpose_bindings")
+      .select("credential_id, provider, base_url")
+      .eq("organization_id", org.orgId)
+      .eq("purpose", corpo.purpose)
+      .maybeSingle();
+    if (erroDoBinding) return fail("save_failed", t("não foi possível ler a configuração atual"), 500);
+
+    if (bindingAtual?.credential_id && bindingAtual.provider === corpo.provider) {
+      credentialId = bindingAtual.credential_id;
+    } else {
+      const gerenciada = await resolverCredencialGerenciada({
+        db: admin,
+        organizationId: org.orgId,
+        provider: corpo.provider as Provider,
+        instalacaoTemChave: lerAmbiente().chavesDeProvedor[corpo.provider] === true,
+      });
+      if (!gerenciada.ok) {
+        return fail(
+          gerenciada.erro === "consulta_falhou" ? "save_failed" : "credential_required",
+          t("A equipe da plataforma precisa configurar uma chave compatível para este provedor."),
+          gerenciada.erro === "consulta_falhou" ? 500 : 422,
+        );
+      }
+      credentialId = gerenciada.credentialId;
+    }
+    // O tenant altera a decisão de negócio (modelo/provedor), mas não pode
+    // plantar nem apagar o endpoint que receberá a chave. A rota preserva o
+    // valor existente pela leitura escopada da organização.
+    baseUrl = bindingAtual?.base_url ?? null;
+  }
+
+  const { data: gravado, error } = await bancoDeEscrita
     .from("ai_purpose_bindings")
     .upsert(
       {
@@ -290,8 +355,8 @@ export async function PUT(req: NextRequest): Promise<Response> {
         purpose: corpo.purpose,
         provider: corpo.provider,
         model_id: corpo.model_id,
-        credential_id: corpo.credential_id ?? null,
-        base_url: corpo.base_url ?? null,
+        credential_id: credentialId,
+        base_url: baseUrl,
         is_enabled: corpo.is_enabled ?? true,
       },
       { onConflict: "organization_id,purpose" },
@@ -326,7 +391,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
       purpose: corpo.purpose,
       provider: corpo.provider,
       model_id: corpo.model_id,
-      tem_endpoint_proprio: Boolean(corpo.base_url),
+      tem_endpoint_proprio: Boolean(baseUrl),
     },
   });
 

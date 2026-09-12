@@ -53,13 +53,13 @@ export function CommandPalette({
 function Resultados({ aoEscolher }: { aoEscolher: () => void }) {
   const t = useT();
   const router = useRouter();
-  const { user, activeOrg } = useAuth();
+  const { user, activeOrg, activeAgentCount } = useAuth();
   const [busca, setBusca] = useState("");
   const [destacado, setDestacado] = useState(0);
 
   const visiveis = useMemo(
-    () => searchable(user.is_platform_admin, activeOrg?.role ?? null),
-    [user.is_platform_admin, activeOrg?.role],
+    () => searchable(user.is_platform_admin, activeOrg?.role ?? null, { activeAgentCount }),
+    [user.is_platform_admin, activeOrg?.role, activeAgentCount],
   );
 
   const resultados = useMemo(() => {

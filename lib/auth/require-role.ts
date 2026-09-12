@@ -37,6 +37,14 @@ interface RequireRoleOpts {
   /** Platform admin (role transversal) bypassa o rank do tenant. */
   allowPlatformAdmin?: boolean;
   /**
+   * Fecha a rota para qualquer papel do tenant, inclusive `admin`.
+   *
+   * Isto não é `minRole: "admin"`: administrador da organização e
+   * administrador da plataforma são autoridades diferentes. Use nas
+   * superfícies técnicas custeadas e operadas pela plataforma.
+   */
+  platformOnly?: boolean;
+  /**
    * Override da org onde o role é resolvido (default: org ativa do cookie).
    * Use quando a autorização é sobre a org do RECURSO (ex.: LGPD anonymize —
    * admin na org do CONTATO), resolvida de fonte confiável (query RLS-scoped),
@@ -50,7 +58,13 @@ interface RequireRoleOpts {
  * `if (!authz.ok) return authz.response;`
  */
 export async function requireRole(min: Role, opts: RequireRoleOpts = {}): Promise<RoleCheck> {
-  const { requestId, resource, allowPlatformAdmin = false, organizationId } = opts;
+  const {
+    requestId,
+    resource,
+    allowPlatformAdmin = false,
+    platformOnly = false,
+    organizationId,
+  } = opts;
 
   const user = await loadAuthUser();
   if (!user) {
@@ -78,6 +92,51 @@ export async function requireRole(min: Role, opts: RequireRoleOpts = {}): Promis
       ok: false,
       response: fail("forbidden_tenant", t("Sem organização ativa."), 403, { requestId }),
     };
+  }
+
+  if (platformOnly && !user.is_platform_admin) {
+    void audit({
+      action: "authz.denied",
+      actorUserId: user.id,
+      organizationId: org.orgId,
+      resourceType: resource ?? null,
+      requestId,
+      metadata: { reason: "platform_admin_required" },
+    });
+    return {
+      ok: false,
+      response: fail(
+        "forbidden_role",
+        t("Acesso restrito à administração da plataforma."),
+        403,
+        { requestId },
+      ),
+    };
+  }
+
+  if (platformOnly && user.is_platform_admin) {
+    if (await mfaEmDivida()) {
+      void audit({
+        action: "authz.denied",
+        actorUserId: user.id,
+        organizationId: org.orgId,
+        resourceType: resource ?? null,
+        requestId,
+        metadata: { reason: "mfa_required", authority: "platform_admin" },
+      });
+      return {
+        ok: false,
+        response: fail(
+          "mfa_required",
+          t(
+            "Esta sessão precisa da verificação em duas etapas. Entre novamente com o código do aplicativo.",
+          ),
+          403,
+          { requestId },
+        ),
+      };
+    }
+    return { ok: true, user, org };
   }
 
   if (allowPlatformAdmin && user.is_platform_admin) {

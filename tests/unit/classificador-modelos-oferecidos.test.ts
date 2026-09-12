@@ -66,6 +66,16 @@ describe("listClassifierModels", () => {
     expect(pedidos).toEqual(["anthropic"]);
   });
 
+  it("reconhece OpenRouter quando ela é a única chave da instalação", async () => {
+    let pedidos: unknown = null;
+    await listClassifierModels(
+      db({ creds: { data: [] }, models: { data: [] }, onIn: (v) => (pedidos = v) }),
+      "org1",
+      { openrouter: true },
+    );
+    expect(pedidos).toEqual(["openrouter"]);
+  });
+
   it("credencial da organização vence a chave da instalação na marcação de origem", async () => {
     const out = await listClassifierModels(
       db({

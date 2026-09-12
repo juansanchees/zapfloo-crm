@@ -175,37 +175,15 @@ test.describe("o wizard monta um funcionário", () => {
   // apareceram. Consertar um revela o próximo; é o comportamento esperado de uma
   // suíte serial, não um efeito colateral do conserto.
 
-  test("treinar não é um beco: a chave de IA tem caminho na própria tela", async ({ page }) => {
-    // ⚠️ ESTE CASO MEDIA UM CARD QUE SAIU DA TELA — de propósito.
-    //
-    // Ele cobrava `/cérebro/i`, `#api_key_da_ia`, `#provedor_da_ia`, "guardar a
-    // chave" e "guardada cifrada". Tudo isso é de `InteligenciaDele`
-    // (app/onboarding/setup-ai/_inteligencia.tsx), que
-    // app/onboarding/setup-ai/page.tsx DEIXOU DE RENDERIZAR — o comentário de lá
-    // diz o porquê com todas as letras: "não diagnosticar o default da
-    // organização nem disparar a prova automática do card legado". No lugar
-    // ficou um caminho explícito, `configurarChaveDoOnboarding`.
-    //
-    // O componente ainda existe no repositório, então `grep` por "cérebro"
-    // encontra e engana: ele não chega mais a ESTA tela. E "guardada cifrada"
-    // hoje só vive em app/admin/(protected)/google/_form.tsx, que é outra tela
-    // inteira — a asserção mirava em nada.
-    //
-    // O QUE NÃO MUDOU é o que este caso sempre quis guardar, e que segue valendo:
-    // a tela nunca deixa a pessoa sabendo que falta a chave sem dizer o que
-    // fazer. Antes o passo escrevia "Falta a chave da inteligência artificial" e
-    // o assunto morria ali — diagnóstico certo, saída nenhuma. Então a asserção
-    // passa a ser a SAÍDA, que é o invariante "nenhuma demanda sem próximo
-    // passo" da doutrina do Sistema Vivo. Medir o texto do card velho era medir
-    // a implementação; medir a saída é medir a promessa.
+  test("treinar não transfere decisões técnicas da plataforma ao assinante", async ({ page }) => {
     await login(page);
     await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
 
     await expect(page.getByRole("heading", { name: /treine seu funcionário/i })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /configurar chave de ia/i }),
-      "o passo exige chave de IA e precisa dizer ONDE se consegue uma",
-    ).toBeVisible();
+    await expect(page.locator("#ensaio-model")).toHaveCount(0);
+    await expect(page.locator("#ensaio-credential")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /configurar chave de ia/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /preparar ensaio/i })).toBeVisible();
   });
 
   test("treinar mostra o que ele já sabe fazer e o que sempre confere", async ({ page }) => {

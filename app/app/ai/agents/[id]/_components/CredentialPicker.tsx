@@ -28,6 +28,7 @@ interface Props {
   id?: string;
   /** A instalação tem chave deste provedor no `.env`? */
   instalacaoTemChave?: boolean;
+  podeGerenciarCredenciais?: boolean;
 }
 
 export const STATUS_LABEL: Record<ReturnType<typeof credentialStatus>, string> = {
@@ -53,12 +54,24 @@ export function CredentialPicker({
   disabled,
   id,
   instalacaoTemChave = false,
+  podeGerenciarCredenciais = false,
 }: Props) {
   const t = useT();
   const filtered = credentials.filter((c) => c.provider === provider);
   // Sem nenhuma das duas origens não há o que escolher — e é aí que o atalho
   // para cadastrar precisa aparecer.
   const semOpcao = filtered.length === 0 && !instalacaoTemChave;
+
+  if (!podeGerenciarCredenciais) {
+    return (
+      <div className="space-y-1">
+        <Label>{t("Chave de acesso")}</Label>
+        <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+          {t("A chave é administrada pela equipe da plataforma.")}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1">
@@ -94,7 +107,7 @@ export function CredentialPicker({
           ) : null}
         </SelectContent>
       </Select>
-      {semOpcao ? (
+      {semOpcao && podeGerenciarCredenciais ? (
         <p className="text-xs text-muted-foreground">
           <Link
             href="/app/ai/credentials"
@@ -103,6 +116,10 @@ export function CredentialPicker({
             {t("Cadastrar credencial")} {provider}
           </Link>{" "}
           {t("na aba Credenciais.")}
+        </p>
+      ) : semOpcao ? (
+        <p className="text-xs text-muted-foreground">
+          {t("A chave é administrada pela equipe da plataforma.")}
         </p>
       ) : null}
     </div>

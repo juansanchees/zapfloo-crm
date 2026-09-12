@@ -10,16 +10,16 @@
  *
  * A resposta diz três coisas, e as três são acionáveis na tela:
  *   * se dá para indexar agora;
- *   * de ONDE a chave sai (a pessoa precisa saber qual está valendo);
- *   * quais chaves OpenAI a organização já tem, para escolher em vez de digitar
- *     outra.
+ *   * de ONDE a chave sai, sem revelar o identificador técnico ao tenant;
+ *   * quais chaves OpenAI existem, somente quando quem consulta é a autoridade
+ *     da plataforma.
  *
  * Nunca devolve material de credencial: só rótulo e os quatro últimos dígitos,
  * que é o que a view `ai_provider_credentials_safe` expõe.
  */
 
 import { randomUUID } from "node:crypto";
-import { ok, fail } from "@/lib/api/wrappers";
+import { ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -51,9 +51,10 @@ export async function GET(): Promise<Response> {
       pode_indexar: chave !== null,
       origem: chave?.origem ?? null,
       explicacao: chave ? EXPLICACAO_DA_ORIGEM[chave.origem] : null,
-      chave_em_uso: chave?.rotulo ?? null,
+      chave_em_uso: authz.user.is_platform_admin ? (chave?.rotulo ?? null) : null,
       avisos: chave?.avisos ?? [],
-      credenciais_openai: credenciais ?? [],
+      credenciais_openai: authz.user.is_platform_admin ? (credenciais ?? []) : [],
+      pode_gerenciar_credenciais: authz.user.is_platform_admin,
     },
     { requestId },
   );

@@ -14,18 +14,18 @@ afterEach(cleanup);
 describe("saída visível para preparação arquivada", () => {
   it("agente apagado com a tela aberta atualiza o CAS antes de recuperar", async () => {
     f.recover.mockResolvedValue({ ok: true, revision: 1 });
-    f.read.mockResolvedValue({ ok: true, panel: { selection: null, proof: null, models, credentials: [], recovery_available: true } });
+    f.read.mockResolvedValue({ ok: true, panel: { selection: null, proof: null, models, recovery_available: true } });
     f.prepare.mockResolvedValue({ ok: false, error: "draft_unavailable" });
-    render(<Ensaio initial={{ ok: true, panel: { selection: { revision: 1, agent_id: id, version_id: id, provider: "openai", model: "qa", credential_id: null }, proof: null, models, credentials: [] } }} context={"a".repeat(64)} revision={1} dirty={false} epoch={0} onBusy={() => {}} />);
+    render(<Ensaio initial={{ ok: true, panel: { selection: { revision: 1, agent_id: id, version_id: id, provider: "openai", model: "qa", credential_id: null }, proof: null, models } }} context={"a".repeat(64)} revision={1} dirty={false} epoch={0} onBusy={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Preparar ensaio" }));
     fireEvent.click(await screen.findByRole("button", { name: "Recuperar preparação" }));
     await waitFor(() => expect(f.recover).toHaveBeenLastCalledWith(expect.objectContaining({ expected_version_id: null })));
   });
   it("recupera e volta a permitir preparar sem reutilizar versão obsoleta", async () => {
     f.recover.mockResolvedValue({ ok: true, revision: 1 });
-    f.read.mockResolvedValue({ ok: true, panel: { selection: null, proof: null, models, credentials: [] } });
+    f.read.mockResolvedValue({ ok: true, panel: { selection: null, proof: null, models } });
     f.prepare.mockResolvedValue({ ok: false, error: "draft_name_conflict" });
-    render(<Ensaio initial={{ ok: true, panel: { selection: { revision: 1, agent_id: id, version_id: id, provider: "openai", model: "qa", credential_id: null }, proof: null, models, credentials: [], recovery_available: true } }} context={"a".repeat(64)} revision={1} dirty={false} epoch={0} onBusy={() => {}} />);
+    render(<Ensaio initial={{ ok: true, panel: { selection: { revision: 1, agent_id: id, version_id: id, provider: "openai", model: "qa", credential_id: null }, proof: null, models, recovery_available: true } }} context={"a".repeat(64)} revision={1} dirty={false} epoch={0} onBusy={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Recuperar preparação" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Preparar ensaio" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Preparar ensaio" }));

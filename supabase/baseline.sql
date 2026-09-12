@@ -20062,6 +20062,99 @@ grant execute on function public.fn_prepare_onboarding_draft(uuid,uuid,integer,u
 
 notify pgrst, 'reload schema';
 
+-- ---- Credenciais de IA e tokens de API só para a plataforma (migration 0230) ----
+-- O apêndice é idempotente e fica antes da varredura anon final. service_role
+-- continua como o caminho interno; nenhum papel do tenant atravessa o PostgREST.
+drop policy if exists tenant_isolation_ai_provider_credentials_select
+  on public.ai_provider_credentials;
+drop policy if exists tenant_isolation_ai_provider_credentials_modify
+  on public.ai_provider_credentials;
+drop policy if exists tenant_isolation_ai_provider_credentials_write
+  on public.ai_provider_credentials;
+drop policy if exists ai_provider_credentials_platform_admin_only on public.ai_provider_credentials;
+create policy ai_provider_credentials_platform_admin_only
+  on public.ai_provider_credentials
+  for all
+  to authenticated
+  using (public.fn_is_platform_admin())
+  with check (public.fn_is_platform_admin());
+
+drop policy if exists api_tokens_admin_only on public.api_tokens;
+drop policy if exists api_tokens_platform_admin_only on public.api_tokens;
+create policy api_tokens_platform_admin_only
+  on public.api_tokens
+  for all
+  to authenticated
+  using (public.fn_is_platform_admin())
+  with check (public.fn_is_platform_admin());
+
+revoke all on table public.ai_provider_credentials from anon;
+revoke all on table public.ai_provider_credentials_safe from anon;
+revoke all on table public.api_tokens from anon;
+
+-- RLS da credencial não protege as FKs guardadas nas versões e bindings. O
+-- endpoint próprio do binding também é infraestrutura: ele recebe o header de
+-- autorização e não pode ser apontado pelo tenant para um host arbitrário.
+-- O tenant continua configurando modelo/provedor; chave e endpoint são
+-- escolhidos apenas pelo servidor ou pelo administrador da instalação.
+-- Um endpoint antigo sem credencial explícita não pode receber a chave global.
+update public.ai_purpose_bindings
+set base_url = null
+where base_url is not null and credential_id is null;
+
+create or replace function public.fn_proteger_referencia_de_credencial_gerenciada()
+returns trigger
+language plpgsql
+set search_path to 'public', 'pg_temp'
+as $$
+begin
+  if current_user in ('postgres', 'service_role', 'supabase_admin')
+     or public.fn_is_platform_admin() then
+    return new;
+  end if;
+
+  if tg_table_name = 'ai_agent_versions' then
+    if (tg_op = 'INSERT' and new.credential_id is not null)
+       or (tg_op = 'UPDATE' and (
+         new.credential_id is distinct from old.credential_id
+         or (new.credential_id is not null and new.provider is distinct from old.provider)
+       )) then
+      raise insufficient_privilege using
+        message = 'ai_provider_infrastructure_platform_only';
+    end if;
+  elsif tg_op = 'INSERT' then
+    if new.credential_id is not null or new.base_url is not null then
+      raise insufficient_privilege using
+        message = 'ai_provider_infrastructure_platform_only';
+    end if;
+  elsif new.credential_id is distinct from old.credential_id
+     or new.base_url is distinct from old.base_url
+     or (new.credential_id is not null and new.provider is distinct from old.provider) then
+    raise insufficient_privilege using
+      message = 'ai_provider_infrastructure_platform_only';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.fn_proteger_referencia_de_credencial_gerenciada()
+  from public, anon, authenticated;
+
+drop trigger if exists ai_agent_versions_credential_platform_only
+  on public.ai_agent_versions;
+create trigger ai_agent_versions_credential_platform_only
+  before insert or update of credential_id, provider on public.ai_agent_versions
+  for each row execute function public.fn_proteger_referencia_de_credencial_gerenciada();
+
+drop trigger if exists ai_purpose_bindings_credential_platform_only
+  on public.ai_purpose_bindings;
+create trigger ai_purpose_bindings_credential_platform_only
+  before insert or update of credential_id, provider, base_url on public.ai_purpose_bindings
+  for each row execute function public.fn_proteger_referencia_de_credencial_gerenciada();
+
+notify pgrst, 'reload schema';
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES
