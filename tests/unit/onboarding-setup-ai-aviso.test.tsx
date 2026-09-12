@@ -14,10 +14,11 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it.each(["draft_model_unavailable", "draft_credential_unavailable"])("%s conserva mensagem e saída sem avançar", async (error) => {
   f.prepare.mockResolvedValue({ ok: false, error });
   render(<Ensaio context={"a".repeat(64)} revision={1} dirty={false} epoch={0} onBusy={() => {}} initial={{ ok: true, panel: { selection: null, proof: null, models: [{ provider: "openai", model_id: "qa", display_name: "QA" }], credentials: [] } }} />);
-  fireEvent.change(screen.getByLabelText("Modelo do ensaio"), { target: { value: "openai/qa" } });
   fireEvent.change(screen.getByLabelText("Mensagem de exemplo"), { target: { value: "Pergunta sintética QA" } });
   fireEvent.click(screen.getByRole("button", { name: "Preparar ensaio" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(error === "draft_model_unavailable" ? "Este modelo não está disponível" : "Esta credencial não está disponível");
+  expect(await screen.findByRole("alert")).toHaveTextContent(error === "draft_model_unavailable"
+    ? "O ensaio precisa ser atualizado. Recarregue a página e prepare novamente; seu rascunho está salvo."
+    : "Não foi possível acessar a IA agora. Tente novamente mais tarde; se persistir, entre em contato com o suporte.");
   expect(screen.getByLabelText("Mensagem de exemplo")).toHaveValue("Pergunta sintética QA");
   expect(screen.getByRole("button", { name: "Continuar para conexão" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Explorar o CRM" })).toBeEnabled();
