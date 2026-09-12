@@ -15,6 +15,7 @@ import { promptDoOnboarding } from "@/lib/onboarding/prompt";
 import { capacidadesPadraoDoOnboarding } from "@/lib/ai/agents/capacidades-padrao";
 import { publicarMemoriaDaOrg } from "@/lib/ai/memoria-da-org";
 import { escolherModeloDoProvedor } from "@/lib/ai/agents/escolher-modelo";
+import { provedorDaConfiguracaoDaOrganizacao } from "@/lib/ai/agents/configuracao-inicial";
 import { chaveDePlataforma } from "@/lib/ai/runtime/agent";
 import {
   requireOnboardingCtx,
@@ -91,12 +92,6 @@ type PublishOutcome =
  *
  * `settings` é jsonb livre: leitura defensiva, igual à do agent-engine.
  */
-function provedorDaInstalacao(settings: unknown): string {
-  const llm = (settings as { llm?: unknown } | null)?.llm;
-  const provider = (llm as { provider?: unknown } | null | undefined)?.provider;
-  return typeof provider === "string" && provider.trim() !== "" ? provider : "anthropic";
-}
-
 function mensagemDoErro(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -153,7 +148,7 @@ async function publishFirstVersion(
     .maybeSingle();
   if (orgErr) return { published: false, reason: "failed", message: orgErr.message };
 
-  const provider = provedorDaInstalacao(org?.settings);
+  const provider = provedorDaConfiguracaoDaOrganizacao(org?.settings);
 
   // O modelo daquele provedor. Não existe fallback literal: um id de outro
   // provedor (ou inventado) produz o pior desfecho do produto — o agente

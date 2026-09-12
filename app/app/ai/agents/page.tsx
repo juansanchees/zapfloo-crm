@@ -57,8 +57,8 @@ export default async function AgentsListPage() {
     <OperationalPage
       className="p-6"
       eyebrow={traduzir("AUTOMAÇÃO INTELIGENTE", idioma)}
-      title={traduzir("Agents de IA", idioma)}
-      description={traduzir("Configure o comportamento dos agents que respondem no WhatsApp.", idioma)}
+      title={traduzir("Agentes de IA", idioma)}
+      description={traduzir("Configure o comportamento dos agentes que respondem no WhatsApp.", idioma)}
     >
       <AgentsList initialData={agents} canWrite={canWrite} />
     </OperationalPage>

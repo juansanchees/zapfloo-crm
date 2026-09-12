@@ -242,6 +242,9 @@ Recorte local de 2026-09-08. `prepararRascunho` materializa configuração salva
 | J3.13 | A escolha sobrevive ao salvar e recarregar | o servidor aceita a lista (o mesmo teto da tela, `TETO_TOOLS_POR_AGENTE`, fonte única) e o estado volta igual · **PASS** |
 | J3.14 | Ver se o que está ligado está funcionando (aba Capacidades) | usos, falhas, quantos vieram de teste, última vez — e o que fazer com cada número · **PASS** (números escritos pelo emissor real de audit) |
 | J3.15 | O teto recusa a passagem, explicando em português | **PASS** — exercitável desde que o catálogo cresceu (57 capacidades). `capacidades-do-agente.spec.ts` liga "Atender" sobre as 8 do seed e prova a recusa por 1 vaga. A afirmação "não exercitável hoje, com 16 capacidades no catálogo" VENCEU |
+| J3.16 | Criar agente sem tomar decisões técnicas | modelo, credencial da instalação, fuso da organização e o único número conectado chegam preenchidos; os controles técnicos continuam editáveis em “Avançado” · **PASS unitário + E2E** (`editor-agente-avancado.test.tsx`, `configuracao-inicial-do-agente.test.ts`, `agente-novo-e-uso.spec.ts`) |
+| J3.17 | Preparar um agente de clínica sem ligar risco irreversível | a prévia mostra o pacote canônico “vender” antes de aplicar e mantém capacidades críticas para escolha individual · **PASS unitário + E2E** (`preset-clinica-do-agente.test.ts`, `agente-novo-e-uso.spec.ts`) |
+| J3.18 | Entender as duas réguas das capacidades | o editor enuncia, na mesma frase, quantas estão ligadas, o teto e quantas existem no catálogo · **PASS E2E** (`capacidades-do-agente.spec.ts`) |
 
 ## Chaves de acesso à IA `[P0]`
 
@@ -1992,3 +1995,15 @@ componente; Playwright em banco fresco pelo `baseline.sql`, incluindo retirada
 temporária e reversível do padrão, PT-BR/ES e medidas em 1280×720 e 390×720.
 Medição final: as duas specs tocadas terminaram com `8 passed`; a suíte unitária
 completa terminou com `754` arquivos e `7.875` casos verdes em Node 22.
+
+## Saída segura do onboarding e primeira impressão `[P0]` — 12/set/2026
+
+O caminho “Explorar o CRM” continua independente de número conectado e chave própria.
+O cliente entrega exceções internas de redirecionamento ao Next antes de diagnosticar
+falhas de aplicação; sessão vencida, indisponibilidade de rede e recusa do servidor
+ganham mensagens distintas, enquanto a causa é enviada ao Sentry sem dados do cliente.
+Os testes de componente sabotam a ação com sessão vencida e verificam mensagem e
+registro. A jornada real foi dirigida pelo Playwright contra o banco local fresco:
+o administrador pendente entrou em `/app/inbox`, recarregou sem voltar ao wizard e
+manteve “Retomar configuração” visível em 1280 px e 390 px. O wizard serial também
+confirmou as duas listas com o título corrigido em português.

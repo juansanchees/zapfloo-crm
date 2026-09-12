@@ -119,6 +119,10 @@ async function abrirConfiguracao(page: Page): Promise<void> {
   // A primeira renderização desta rota em `next start` leva dezenas de
   // segundos (medido: >30s no primeiro acesso, 4s nos seguintes).
   await page.getByTestId("tool-picker").waitFor({ state: "visible", timeout: 90_000 });
+  // Os pacotes por jornada continuam disponíveis, agora atrás de uma única
+  // escolha progressiva para não ocupar a tela principal inteira.
+  await page.getByText("Ajustar por objetivo", { exact: true }).click();
+  await expect(page.getByTestId("pacote-vender")).toBeVisible();
 }
 
 /** Marcada ou não, lido do atributo que o componente publica. */
@@ -209,7 +213,9 @@ test.describe("Configurar o que o agente pode fazer", () => {
     // capacidades de agenda. Literal em asserção transforma decisão de produto
     // em quebra de CI, e faz a próxima pessoa "consertar" o teste em vez de ler
     // por que o número mudou.
-    expect(antes).toMatch(new RegExp(`de ${TETO_TOOLS_POR_AGENTE}$`));
+    expect(antes).toMatch(
+      new RegExp(`\\d+ ligadas · teto de ${TETO_TOOLS_POR_AGENTE} · \\d+ disponíveis`),
+    );
 
     // O TETO ENTRA NA JORNADA (issue #162), e entra antes do clique.
     //
@@ -310,7 +316,7 @@ test.describe("Configurar o que o agente pode fazer", () => {
     // Espera a configuração CARREGAR. Ler o estado antes disso devolve lista
     // vazia, e um teste que compara vazio com vazio passa sem medir nada.
     await expect(page.getByTestId("consumo-teto")).toHaveText(
-      `${TOOLS_DO_SEED.length} de ${TETO_TOOLS_POR_AGENTE}`,
+      new RegExp(`^${TOOLS_DO_SEED.length} ligadas · teto de ${TETO_TOOLS_POR_AGENTE} · \\d+ disponíveis$`),
     );
 
     await page.getByTestId("switch-pacote-vender").click();
@@ -332,7 +338,7 @@ test.describe("Configurar o que o agente pode fazer", () => {
     await page.reload();
     await page.getByTestId("tool-picker").waitFor({ state: "visible" });
     await expect(page.getByTestId("consumo-teto")).toHaveText(
-      `${TOOLS_DO_SEED.length} de ${TETO_TOOLS_POR_AGENTE}`,
+      new RegExp(`^${TOOLS_DO_SEED.length} ligadas · teto de ${TETO_TOOLS_POR_AGENTE} · \\d+ disponíveis$`),
     );
   });
 });

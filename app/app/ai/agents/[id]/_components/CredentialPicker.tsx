@@ -15,6 +15,9 @@ import {
   type Provider,
   credentialStatus,
 } from "@/hooks/ai/useCredentials";
+import { CHAVE_DA_INSTALACAO } from "@/lib/ai/agents/configuracao-inicial";
+
+export { CHAVE_DA_INSTALACAO } from "@/lib/ai/agents/configuracao-inicial";
 
 interface Props {
   provider: Provider;
@@ -42,8 +45,6 @@ export const STATUS_LABEL: Record<ReturnType<typeof credentialStatus>, string> =
  * escolhida" no formulário — daí o token. Ele NÃO chega ao servidor: o
  * formulário o traduz em `credential_id: null`, que é o contrato da versão.
  */
-export const CHAVE_DA_INSTALACAO = "__instalacao__";
-
 export function CredentialPicker({
   provider,
   credentials,
