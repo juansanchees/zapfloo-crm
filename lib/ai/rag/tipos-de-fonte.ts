@@ -51,6 +51,8 @@ export interface TipoDeFonte {
    * pareciam o mesmo.
    */
   comoChega?: string;
+  /** Gerado por outro fluxo: editável depois, mas não criado no diálogo genérico. */
+  somenteGerado?: boolean;
 }
 
 export const TIPOS_DE_FONTE = [
@@ -60,6 +62,13 @@ export const TIPOS_DE_FONTE = [
     oQueE:
       "As dúvidas que se repetem, com a resposta pronta. É o formato que o agente cita melhor, porque cada resposta chega inteira.",
     comoSePreenche: "texto_colado",
+  },
+  {
+    id: "site",
+    rotulo: "Perguntas do seu site",
+    oQueE: "Perguntas encontradas no site do negócio, que só entram no atendimento depois da sua conferência.",
+    comoSePreenche: "texto_colado",
+    somenteGerado: true,
   },
   {
     id: "documento",
@@ -115,6 +124,8 @@ export function canonizarTipoDeFonte(bruto: string): TipoDeFonteId | null {
   switch (t) {
     case "faq":
       return "faq";
+    case "site":
+      return "site";
     case "documento":
     case "policy":
       return "documento";
@@ -155,4 +166,8 @@ export function aceitaArquivo(id: string): boolean {
 /** A pessoa alimenta este material, ou uma rotina alimenta sozinha? */
 export function ePreenchidoPorRotina(id: string): boolean {
   return TIPO_DE_FONTE_POR_ID.get(id)?.comoSePreenche === "automatico";
+}
+
+export function permiteCadastroManual(id: string): boolean {
+  return TIPO_DE_FONTE_POR_ID.get(id)?.somenteGerado !== true;
 }

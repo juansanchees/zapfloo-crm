@@ -43,27 +43,41 @@ interface Props {
   aberto: boolean;
   onFechar: () => void;
   onSalvo: () => void;
+  /** Material lido do site requer uma conferência explícita antes do primeiro uso. */
+  confirmarSite?: boolean;
 }
 
 function paraMarkdown(itens: ItemDaFaq[]): string {
   return itens.map((i) => `## Pergunta: ${i.question}\n## Resposta: ${i.answer}`).join("\n\n");
 }
 
-export function EditarFaqDialog({ sourceId, nome, aberto, onFechar, onSalvo }: Props) {
+export function EditarFaqDialog({
+  sourceId,
+  nome,
+  aberto,
+  onFechar,
+  onSalvo,
+  confirmarSite = false,
+}: Props) {
   const t = useT();
   const [texto, setTexto] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [conferido, setConferido] = useState(false);
+  const [carregado, setCarregado] = useState(false);
 
   useEffect(() => {
     if (!aberto) return;
     let vivo = true;
     setCarregando(true);
+    setCarregado(false);
+    setConferido(false);
     apiClient
       .get<{ data: { items: ItemDaFaq[] } }>(`/api/v1/ai/knowledge/sources/${sourceId}`)
       .then((res) => {
         if (!vivo) return;
         setTexto(paraMarkdown(res.data.items ?? []));
+        setCarregado(true);
       })
       .catch((err) => {
         if (vivo) showApiError(err);
@@ -77,6 +91,7 @@ export function EditarFaqDialog({ sourceId, nome, aberto, onFechar, onSalvo }: P
   }, [aberto, sourceId]);
 
   async function salvar(): Promise<void> {
+    if (!carregado || (confirmarSite && !conferido)) return;
     const itens = parseFaqMarkdown(texto);
     if (itens.length === 0) {
       // `## Pergunta:`/`## Resposta:` NÃO entram na tradução: são os marcadores
@@ -93,7 +108,10 @@ export function EditarFaqDialog({ sourceId, nome, aberto, onFechar, onSalvo }: P
     }
     setSalvando(true);
     try {
-      await apiClient.patch(`/api/v1/ai/knowledge/sources/${sourceId}`, { items: itens });
+      await apiClient.patch(`/api/v1/ai/knowledge/sources/${sourceId}`, {
+        items: itens,
+        ...(confirmarSite ? { confirmar_site: true } : {}),
+      });
       toast.success(t("Conteúdo salvo. Estou preparando de novo — leva alguns instantes."));
       onSalvo();
       onFechar();
@@ -112,9 +130,13 @@ export function EditarFaqDialog({ sourceId, nome, aberto, onFechar, onSalvo }: P
             {t("Editar")} “{nome}”
           </DialogTitle>
           <DialogDescription>
-            {t(
-              "O que você salvar aqui substitui o conteúdo atual, e o agente é preparado de novo.",
-            )}
+            {confirmarSite
+              ? t(
+                  "Confira cada resposta antes de permitir que o agente use este material. Os preços dos produtos são confirmados separadamente no catálogo.",
+                )
+              : t(
+                  "O que você salvar aqui substitui o conteúdo atual, e o agente é preparado de novo.",
+                )}
           </DialogDescription>
         </DialogHeader>
 
@@ -125,13 +147,29 @@ export function EditarFaqDialog({ sourceId, nome, aberto, onFechar, onSalvo }: P
             data-testid="faq-editar-texto"
             rows={14}
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              setConferido(false);
+            }}
             disabled={carregando || salvando}
           />
           <p className="text-xs text-text-muted">
             {t("Uma linha")} <code>## Pergunta:</code> {t("e uma")} <code>## Resposta:</code>{" "}
             {t("por item, separados por uma linha em branco.")}
           </p>
+          {confirmarSite ? (
+            <label className="flex items-start gap-2 text-sm" htmlFor="faq-site-conferido">
+              <input
+                id="faq-site-conferido"
+                type="checkbox"
+                checked={conferido}
+                onChange={(event) => setConferido(event.target.checked)}
+                disabled={carregando || salvando || !carregado}
+                className="mt-1"
+              />
+              <span>{t("Conferi as perguntas e respostas e autorizo o uso pelo agente.")}</span>
+            </label>
+          ) : null}
         </div>
 
         <DialogFooter>
@@ -140,10 +178,14 @@ export function EditarFaqDialog({ sourceId, nome, aberto, onFechar, onSalvo }: P
           </Button>
           <Button
             onClick={salvar}
-            disabled={carregando || salvando}
+            disabled={carregando || salvando || !carregado || (confirmarSite && !conferido)}
             data-testid="faq-editar-salvar"
           >
-            {salvando ? t("Salvando…") : t("Salvar conteúdo")}
+            {salvando
+              ? t("Salvando…")
+              : confirmarSite
+                ? t("Confirmar perguntas")
+                : t("Salvar conteúdo")}
           </Button>
         </DialogFooter>
       </DialogContent>

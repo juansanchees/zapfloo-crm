@@ -18,6 +18,9 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: admin }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+// O teste decide autorização antes de qualquer serviço privilegiado; o leitor
+// possui cobertura própria de persistência e nunca deve ser alcançado aqui.
+vi.mock("@/lib/onboarding/site/servico", () => ({ processarSiteDaOrganizacao: vi.fn(), lerContextoDoSite: vi.fn(async () => null) }));
 
 import { acceptWelcome } from "@/app/actions/onboarding/acceptWelcome";
 import { requireOnboardingCtx } from "@/app/actions/onboarding/_shared";

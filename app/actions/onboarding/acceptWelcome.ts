@@ -6,6 +6,7 @@
  */
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 
 import { audit } from "@/lib/audit";
@@ -13,6 +14,7 @@ import { welcomeSchema } from "@/lib/schemas/onboarding";
 import { requireOnboardingCtx, loadOnboardingState, OnboardingError } from "./_shared";
 import { contextoDoRascunho } from "@/lib/onboarding/contexto-rascunho";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { processarSiteDaOrganizacao } from "@/lib/onboarding/site/servico";
 
 export type AcceptWelcomeResult =
   | { ok: true }
@@ -32,6 +34,7 @@ export async function acceptWelcome(formData: FormData): Promise<AcceptWelcomeRe
     display_name: String(formData.get("display_name") ?? "").trim(),
     segmento: String(formData.get("segmento") ?? "").trim() || undefined,
     o_que_faz: String(formData.get("o_que_faz") ?? "").trim() || undefined,
+    site_do_negocio: String(formData.get("site_do_negocio") ?? "").trim() || undefined,
     timezone: String(formData.get("timezone") ?? "America/Sao_Paulo"),
     accepted_terms_at: new Date().toISOString(),
   };
@@ -57,6 +60,7 @@ export async function acceptWelcome(formData: FormData): Promise<AcceptWelcomeRe
           display_name: input.display_name,
           ...(input.segmento ? { segmento: input.segmento } : {}),
           ...(input.o_que_faz ? { o_que_faz: input.o_que_faz } : {}),
+          ...(input.site_do_negocio ? { site_do_negocio: input.site_do_negocio, site_leitura_pendente: true } : {}),
         },
     };
     const { data, error } = await createAdminClient().from("organizations")
@@ -68,6 +72,11 @@ export async function acceptWelcome(formData: FormData): Promise<AcceptWelcomeRe
     if (err instanceof OnboardingError) return { ok: false, error: "db_error", details: err.message };
     throw err;
   }
+
+  // Não há espera por HTTP/IA neste passo. A intenção de leitura já está no
+  // mesmo UPDATE do welcome; o cron consegue retomá-la mesmo se o servidor
+  // parar antes deste callback. O serviço revalida a URL e o tenant persistidos.
+  if (input.site_do_negocio) after(() => processarSiteDaOrganizacao(ctx.orgId));
 
   // MEDIDO percorrendo o wizard: o cabeçalho continuava dizendo "Minha Empresa"
   // (o nome que o instalador deixa) durante TODO o resto do onboarding, mesmo

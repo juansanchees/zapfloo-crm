@@ -5,6 +5,7 @@ import { proximoPasso, resumoDoOnboarding } from "@/lib/onboarding/passos";
 import { env } from "@/lib/env";
 import { oQueMaisExiste } from "@/lib/onboarding/o-que-mais-existe";
 import { DoneClient } from "./_client";
+import { lerPendenciasDoSite } from "@/lib/onboarding/site/servico";
 
 export const dynamic = "force-dynamic";
 
@@ -23,5 +24,6 @@ export default async function DonePage() {
   // acusando a pessoa de não fazer o que ninguém lhe pediu.
   const itens = resumoDoOnboarding(state, { lojaLigada: env.NUVEMSHOP_ENABLED });
 
-  return <DoneClient itens={itens} pecas={oQueMaisExiste()} />;
+  const site = await lerPendenciasDoSite(activeOrg.orgId);
+  return <DoneClient itens={itens} pecas={oQueMaisExiste()} orgId={activeOrg.orgId} site={site} />;
 }

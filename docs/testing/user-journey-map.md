@@ -10,6 +10,14 @@
 
 ## Convenções
 
+Leitor opcional de site no welcome `[P0]`: contrato, limites, integração com
+funil/catálogo/acervo e estado das provas em [onboarding-site.md](onboarding-site.md).
+Não acrescenta passo; a jornada não aguarda leitura externa. A execução E2E
+fica distinguida dos testes focados e das integrações externas não medidas.
+Medição pós-merge em 13/set/2026: `onboarding-leitor-de-site` teve 3 PASS e
+2 FAIL no funil; seleção exige agente padrão, mas o wizard ativa um agente
+não padrão. Done/revisão do site válido não foram alcançados; detalhes no relatório.
+
 - `[P0]` primeira impressão — bug aqui é vergonha pública; prioridade máxima.
 - `[P1]` rotina diária do operador/atendente.
 - `[P2]` exploração/edge.

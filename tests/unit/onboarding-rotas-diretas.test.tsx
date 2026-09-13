@@ -3,6 +3,7 @@ const f = vi.hoisted(() => ({ read: vi.fn(), from: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: (to: string) => { throw new Error("REDIRECT:" + to); } }));
 vi.mock("@/lib/auth/server", () => ({ requireAuth: async () => ({ id: "user", idioma: "pt-BR" }), resolveActiveOrg: async () => ({ orgId: "org" }) }));
 vi.mock("@/lib/onboarding/jornada", () => ({ lerJornada: f.read }));
+vi.mock("@/lib/onboarding/site/servico", () => ({ lerPendenciasDoSite: vi.fn(async () => ({ produtos: 0, perguntas: 0, fonteId: null })) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: f.from }) }));
 vi.mock("@/lib/env", () => ({ env: { NUVEMSHOP_ENABLED: false } }));
 vi.mock("@/app/onboarding/done/_client", () => ({ DoneClient: () => null }));
