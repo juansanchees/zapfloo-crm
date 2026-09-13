@@ -87,7 +87,7 @@ envio. Não se promete ausência de gasto de IA em falha de banco.
 |---|---|
 | Entrada | `ativarAgenteParaTeste` + RPC com revisão, versão, canal e recibo verificados. Para os registros existentes: recibo e `api_audit_log`. |
 | Saída | `ai_agents.is_default` alimenta `cerebroDoFuncionario`, lista de agentes e proteções existentes de exclusão/arquivamento. |
-| Log | Ativação mantém `onboarding.restricted_activation`; correção de dados informa contagens por NOTICE. Evidência de cada execução fica no relatório de testes. |
+| Log | Ativação mantém `onboarding.restricted_activation`. Cada promoção também emite `ai_agents.updated` pelo trigger existente `trg_ai_agents_audit`; reaplicar sem efeito não emite outro update. Correção de dados informa contagens por NOTICE. |
 | Tela | Passo de quadro deixa de cair no pacote por ausência da marca; lista mostra `Padrão`. |
 | Porta | Jornada de onboarding e `/app/ai/agents` existentes; nenhuma tela/rota nova. |
 | Anti-morte | Principal é eleito na ativação; reparo idempotente alcança registros anteriores comprovados. Perder a disputa não perde a ativação. |
@@ -98,10 +98,54 @@ envio. Não se promete ausência de gasto de IA em falha de banco.
 
 ## Provas e não medido
 
-Resultados desta implementação serão registrados após execução. Não confundir a
-auditoria de fonte acima com testes executados. A prova das duas jornadas de site
-do PR #14 usa integração local isolada; a branch do #14 só será atualizada depois
-que esta correção entrar na main.
+Provas executadas em Node 22, banco local descartável e baseline INSTALL + UPDATE:
+
+| Prova | Resultado medido |
+|---|---|
+| `onboarding-concluir`, `onboarding-principal-backfill` e `onboarding-principal-restricao` | 3 arquivos, 38 casos verdes; incluem principal preexistente/arquivado, retry e concorrência. |
+| Retirar a promoção inicial | Mesmo teste vermelho: `is_default:false` em vez de `true`. |
+| Retirar somente a promoção do retry | Mesmo teste vermelho: marca não recuperada; versão/recibo continuam sendo os originais. |
+| Retirar captura da colisão no índice | Mesmo teste vermelho: `23505`, `ai_agents_one_default_per_org`, rotina `_bt_check_unique`. |
+| Retirar exigência da auditoria no reparo | Mesmo teste vermelho: promove 3 organizações em vez de 2; o recibo sem auditoria passa indevidamente. Restauração: 1/1 verde. |
+| Retirar guarda pré-go-live do reenvio | Mesmo teste vermelho: 2 envios HTTP em vez de 1. Restauração: 1/1 verde e diff do runtime zerado. |
+| Duas jornadas de site válido do #14 | Mesmas specs, verde 2/2 → promoção sabotada, vermelho 2/2 → restauração, verde 2/2. |
+
+O teste de concorrência usa duas transações e observa o bloqueio. **Somente o
+escritor adversarial** usa `SET LOCAL session_replication_role=replica` para não
+serializar a disputa antes do índice pelos triggers de auditoria/FK. O índice único
+permanece ativo; a sessão da ativação mantém todas as guardas e auditorias. A primeira
+sonda testava um bloqueio anterior: a sabotagem revelou o falso verde e a prova foi
+corrigida, sem alteração de produto para acomodá-la.
+
+Na matriz sintética de 15 organizações, o NOTICE capturado foi:
+
+```text
+onboarding_funcionario_principal: promovidas=2, ignoradas_por_default=2, ignoradas_por_falta_de_evidencia=11, defaults_arquivados=1
+onboarding_funcionario_principal: promovidas=0, ignoradas_por_default=4, ignoradas_por_falta_de_evidencia=11, defaults_arquivados=1
+```
+
+A segunda linha é a reaplicação. Publicação, estado ativo, canal e lista ficaram
+idênticos. As duas promoções geraram dois `ai_agents.updated` pelo trigger existente;
+a reaplicação não gerou outros. Esses números **não são de produção**.
+
+A prova de restrição cria o agente pelas RPCs reais, confirma a promoção por SQL e
+PostgREST, executa a consulta de elegibilidade e o `redriveQueued` até um receiver
+HTTP local: autorizado recebe um envio; externo, mesmo anteriormente autorizado,
+recebe zero e fica `failed/pre_go_live`. As respostas enfileiradas e o resultado do
+ensaio são fixtures. Isso não é prova de inbound completo, LLM comercial, pareamento
+ou entrega num celular; tampouco exercita o sink inicial `sendMessageHandler`.
+
+A prova das duas jornadas de site do PR #14 usa integração local isolada, sem mudar
+as specs ou `montarQuadro`. A branch do #14 só será atualizada depois que esta
+correção entrar na main. Logs literais, comandos e medidas estão em
+`.superpowers/evidence/funcionario-principal/`, incluindo `provas-banco.md` e
+`e2e/RELATORIO.md`; o PR reproduz os vermelhos relevantes.
+
+Uma rodada de fixture original falhou com `rehearsal_invalid_result`; a causa não
+foi confirmada e os retestes passaram. Foi acrescentado diagnóstico temporal, sem
+alterar timestamps ou afrouxar a validação. A primeira execução completa também
+detectou o apêndice depois da varredura final de permissões; os blocos foram movidos
+para antes dela e o guardião original passou novamente (3 arquivos, 16 casos).
 
 Não há consulta a produção, contagem real dos tenants em produção, WhatsApp
 comercial, consumo de IA comercial, release ou deploy nesta tarefa.
