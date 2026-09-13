@@ -1,0 +1,78 @@
+
+> deskcomm-crm@0.1.0 test:db /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+> bash scripts/test-db.sh tests/invariants/onboarding-principal-restricao.test.ts -t 'default promovido envia ao testador e bloqueia fora da lista mesmo com autorização anterior' --reporter\=verbose
+
+==> subindo pgvector/pgvector:pg15 como deskcomm-test-db-35084 (worktree /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding, branch codex/funcionario-principal-no-onboarding)
+    ✓ publicado em 127.0.0.1:32846
+==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)
+==> conferindo que o banco efêmero é o do PRODUTO (antes do baseline)
+    ✓ definer nova nasce com grant direto a anon (armadilha do produto reproduzida)
+==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1
+ set_config 
+------------
+ 
+(1 row)
+
+psql:<stdin>:5007: WARNING:  wal_level is insufficient to publish logical changes
+HINT:  Set wal_level to "logical" before creating subscriptions.
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ install ok
+==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)
+ set_config 
+------------
+ 
+(1 row)
+
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ update ok (zero erro na re-aplicação)
+==> banco `postgres` a partir do molde (o setupFile o recria a cada arquivo)
+==> invariantes: vitest (tests/invariants) — banco novo por ARQUIVO, ordem sorteada
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.db.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+      Running tests with seed "1789312055235"
+
+{"ts":"2026-09-13T15:07:36.171Z","level":"info","msg":"watchdog: mensagem presa reenviada","message_id":"51ca59b6-fca5-4a32-9e68-6202d6970321","has_external_id":true}
+{"ts":"2026-09-13T15:07:36.178Z","level":"info","msg":"watchdog: mensagem presa reenviada","message_id":"77ed7c36-9cde-49e0-b42b-7d586adbcc0a","has_external_id":true}
+ × tests/invariants/onboarding-principal-restricao.test.ts > funcionário principal mantém a ativação restrita no transporte real > default promovido envia ao testador e bloqueia fora da lista mesmo com autorização anterior 92ms
+   → expected 2 to be 1 // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/invariants/onboarding-principal-restricao.test.ts > funcionário principal mantém a ativação restrita no transporte real > default promovido envia ao testador e bloqueia fora da lista mesmo com autorização anterior
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ tests/invariants/onboarding-principal-restricao.test.ts:141:61
+    139|       redriveSpacingMs: 1,
+    140|     };
+    141|     expect(await redriveQueued(db, config, createLogger())).toBe(1);
+       |                                                             ^
+    142|     expect(recebidos).toEqual([{
+    143|       session: canal,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  12:07:35
+   Duration  1.02s (transform 69ms, setup 157ms, import 186ms, tests 568ms, environment 0ms)
+
+==> teardown: removendo container deskcomm-test-db-35084
+ ELIFECYCLE  Command failed with exit code 1.

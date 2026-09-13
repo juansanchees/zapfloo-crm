@@ -102,6 +102,8 @@ Provas executadas em Node 22, banco local descartável e baseline INSTALL + UPDA
 
 | Prova | Resultado medido |
 |---|---|
+| `corepack pnpm gov:verify` completo | Exit 0: typecheck, lint, lint:channels, lint:role-rank e 759 arquivos / 7.897 testes unitários aprovados. |
+| `corepack pnpm test:db --reporter=verbose` completo | Exit 0: baseline INSTALL + UPDATE, 169 arquivos / 1.380 casos aprovados. Um skip preexistente de rate limit em `webhooks-inbound.test.ts:539`, já presente em `origin/main`; nenhum skip novo. |
 | `onboarding-concluir`, `onboarding-principal-backfill` e `onboarding-principal-restricao` | 3 arquivos, 38 casos verdes; incluem principal preexistente/arquivado, retry e concorrência. |
 | Retirar a promoção inicial | Mesmo teste vermelho: `is_default:false` em vez de `true`. |
 | Retirar somente a promoção do retry | Mesmo teste vermelho: marca não recuperada; versão/recibo continuam sendo os originais. |
@@ -109,6 +111,7 @@ Provas executadas em Node 22, banco local descartável e baseline INSTALL + UPDA
 | Retirar exigência da auditoria no reparo | Mesmo teste vermelho: promove 3 organizações em vez de 2; o recibo sem auditoria passa indevidamente. Restauração: 1/1 verde. |
 | Retirar guarda pré-go-live do reenvio | Mesmo teste vermelho: 2 envios HTTP em vez de 1. Restauração: 1/1 verde e diff do runtime zerado. |
 | Duas jornadas de site válido do #14 | Mesmas specs, verde 2/2 → promoção sabotada, vermelho 2/2 → restauração, verde 2/2. |
+| Duas jornadas com a ordem final do baseline | Baseline inteiro reaplicado; mesmos dois nomes, 2/2 aprovados em 32,5s, exit 0. |
 
 O teste de concorrência usa duas transações e observa o bloqueio. **Somente o
 escritor adversarial** usa `SET LOCAL session_replication_role=replica` para não
@@ -140,6 +143,13 @@ as specs ou `montarQuadro`. A branch do #14 só será atualizada depois que esta
 correção entrar na main. Logs literais, comandos e medidas estão em
 `.superpowers/evidence/funcionario-principal/`, incluindo `provas-banco.md` e
 `e2e/RELATORIO.md`; o PR reproduz os vermelhos relevantes.
+
+As suítes completas rodaram neste worktree de correção, não no checkout principal.
+Logs finais: `gov-verify-concluido.log` e `test-db-completo.log`. A integração E2E
+temporária terminou em `a4eeabd4a452d52bba317e4ddb243a9e6b26b0ed`; o #14 permaneceu
+em `fd36bec8304aef955a41b400eca1e414db16c989` sem modificações. Traces e JSON de
+Playwright permanecem locais por conterem sessões descartáveis de autenticação;
+logs selecionados e capturas de dados sintéticos acompanham a evidência versionada.
 
 Uma rodada de fixture original falhou com `rehearsal_invalid_result`; a causa não
 foi confirmada e os retestes passaram. Foi acrescentado diagnóstico temporal, sem

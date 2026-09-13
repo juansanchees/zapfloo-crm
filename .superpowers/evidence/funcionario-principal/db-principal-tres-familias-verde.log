@@ -1,0 +1,94 @@
+
+> deskcomm-crm@0.1.0 test:db /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+> bash scripts/test-db.sh tests/invariants/onboarding-concluir.test.ts tests/invariants/onboarding-principal-backfill.test.ts tests/invariants/onboarding-principal-restricao.test.ts --reporter\=verbose
+
+==> subindo pgvector/pgvector:pg15 como deskcomm-test-db-37716 (worktree /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding, branch codex/funcionario-principal-no-onboarding)
+    ✓ publicado em 127.0.0.1:32855
+==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)
+==> conferindo que o banco efêmero é o do PRODUTO (antes do baseline)
+    ✓ definer nova nasce com grant direto a anon (armadilha do produto reproduzida)
+==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1
+ set_config 
+------------
+ 
+(1 row)
+
+psql:<stdin>:5007: WARNING:  wal_level is insufficient to publish logical changes
+HINT:  Set wal_level to "logical" before creating subscriptions.
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ install ok
+==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)
+ set_config 
+------------
+ 
+(1 row)
+
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ update ok (zero erro na re-aplicação)
+==> banco `postgres` a partir do molde (o setupFile o recria a cada arquivo)
+==> invariantes: vitest (tests/invariants) — banco novo por ARQUIVO, ordem sorteada
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.db.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+      Running tests with seed "1789312373482"
+
+{"ts":"2026-09-13T15:12:57.163Z","level":"info","msg":"watchdog: mensagem presa reenviada","message_id":"3091b961-82d1-4774-a283-2546cd0624af","has_external_id":true}
+{"ts":"2026-09-13T15:12:57.184Z","level":"info","msg":"watchdog: reenvio bloqueado pelo modo de teste","message_id":"9bde0204-16f9-47fa-9946-5529f8089075"}
+ ✓ tests/invariants/onboarding-principal-restricao.test.ts > funcionário principal mantém a ativação restrita no transporte real > default promovido envia ao testador e bloqueia fora da lista mesmo com autorização anterior 828ms
+NOTICE: onboarding_funcionario_principal: promovidas=2, ignoradas_por_default=2, ignoradas_por_falta_de_evidencia=11, defaults_arquivados=1
+NOTICE: onboarding_funcionario_principal: promovidas=0, ignoradas_por_default=4, ignoradas_por_falta_de_evidencia=11, defaults_arquivados=1
+ ✓ tests/invariants/onboarding-principal-backfill.test.ts > correção conservadora do funcionário principal pelo recibo > backfill promove só publicação evidenciada da própria organização, preserva restrição e declara quatro contagens idempotentes 3664ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > ativa e promove o funcionário ensaiado quando a organização não tem principal 657ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > default arquivado conserva a marca e não impede concluir a ativação 207ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry de recibo válido promove principal ausente sem republicar nem duplicar audit 459ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > default criado em concorrência vence a marca sem abortar a ativação bloqueada no índice único 840ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > confirmar exige revisão corrente, mantém tudo inativo e é idempotente 508ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > publica exatamente a versão ensaiada só no canal escolhido e preserva default/outros canais 230ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal ausente falha sem bind/publicação parcial 176ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal desconectado falha sem bind/publicação parcial 221ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal arquivado falha sem bind/publicação parcial 327ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal público aberto falha sem bind/publicação parcial 268ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal lista vazia falha sem bind/publicação parcial 322ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal outra organização falha sem bind/publicação parcial 1035ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com metadata vazio falha fechado sem ativação nem audit 978ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com ai_gate ausente falha fechado sem ativação nem audit 565ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com ai_gate nulo falha fechado sem ativação nem audit 333ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com modo ausente falha fechado sem ativação nem audit 282ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com modo nulo falha fechado sem ativação nem audit 243ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista ausente falha fechado sem ativação nem audit 634ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista nula falha fechado sem ativação nem audit 786ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista objeto falha fechado sem ativação nem audit 261ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista com null falha fechado sem ativação nem audit 197ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista com número inválido falha fechado sem ativação nem audit 165ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > revoked depois da confirmação retira a autoridade sem mutação parcial 178ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > suspended depois da confirmação retira a autoridade sem mutação parcial 147ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > completed depois da confirmação retira a autoridade sem mutação parcial 141ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > run/revisão/versão antigos e edição posterior não autorizam ativação 717ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > chave ausente ou credencial revogada falha sem publicação 348ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > usa credencial válida da organização sem gravá-la na versão nem exigir chave da instalação 159ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > não substitui agente ativo já publicado no canal 195ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry não sobrescreve alteração posterior nem duplica audit 269ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry detecta adulteração posterior em version_snapshot e não sobrescreve evidência 165ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry detecta adulteração posterior em receipt_snapshot e não sobrescreve evidência 101ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry detecta adulteração posterior em audit_snapshot e não sobrescreve evidência 139ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > duas ativações concorrentes convergem para o mesmo recibo e um audit 109ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > RPCs são service-only e isolam duas organizações 114ms
+ ✓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > mutante real sem lista não vazia aceita indevidamente e rollback restaura recusa 158ms
+
+ Test Files  3 passed (3)
+      Tests  38 passed (38)
+   Start at  12:12:53
+   Duration  22.64s (transform 392ms, setup 1.32s, import 724ms, tests 19.28s, environment 0ms)
+
+==> test:db verde
+==> teardown: removendo container deskcomm-test-db-37716
