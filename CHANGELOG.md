@@ -8,6 +8,18 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.19.1] — 2026-09-13
+
+### Alterado
+
+- **Tema claro no primeiro acesso** Quem ainda não escolheu um tema abre o sistema em modo claro, mesmo quando o
+  computador está em modo escuro. As escolhas salvas de claro, escuro ou sistema
+  continuam respeitadas, e o seletor mantém as três opções. Nenhuma configuração
+  manual é necessária após atualizar.
+
+  Ao recarregar, o botão de tema também reflete a preferência salva, sem manter
+  o ícone ou o rótulo inicial do servidor e sem piscar a cor da página.
+
 ## [1.19.0] — 2026-09-13
 
 ### Adicionado
@@ -3334,7 +3346,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.0...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.1...HEAD
+[1.19.1]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.0...v1.19.1
 [1.19.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.16.1...v1.17.0
