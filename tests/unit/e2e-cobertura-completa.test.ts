@@ -41,6 +41,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 import { describe, expect, it } from "vitest";
 
@@ -66,6 +67,56 @@ function listaDoWorkflow(yml: string, chave: string): string[] {
     .filter((s) => s.endsWith(".spec.ts"));
 }
 
+const SPEC_LEITOR_SITE = "onboarding-leitor-de-site.spec.ts";
+
+/**
+ * Esta spec sai de LISTA porque precisa de dois receivers e preloads próprios.
+ * Estar citada em SPECS_PARTE_2, portanto, já não prova que ela será executada.
+ * Recorta PASSOS YAML pela indentação; comentários e prosa não são comandos.
+ * O parser é estreito como o das listas: uma mudança de forma exige rever a
+ * prova, em vez de aceitar um comentário como se fosse uma execução.
+ */
+function passosDoWorkflow(workflow: string): string[] {
+  return [...workflow.matchAll(/^ {6}- [^\n]*(?:\n(?! {6}- | {2}\S)[^\n]*)*/gm)]
+    .map((m) => m[0]);
+}
+
+function executaLeitorSite(passo: string): boolean {
+  const run = /^ {8}run: (.+)$/m.exec(passo)?.[1];
+  return run === `pnpm exec playwright test tests/e2e/${SPEC_LEITOR_SITE} --workers=1 --reporter=list`;
+}
+
+function pulaTeste(fonte: string): boolean {
+  const arvore = ts.createSourceFile("spec.ts", fonte, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let pula = false;
+  const visitar = (no: ts.Node) => {
+    if (ts.isCallExpression(no) && /^(?:test|test\.describe)\.(?:skip|fixme)$/.test(no.expression.getText(arvore))) {
+      pula = true;
+    }
+    ts.forEachChild(no, visitar);
+  };
+  visitar(arvore);
+  return pula;
+}
+
+function errosDaExecucaoDedicadaSite(workflow: string, spec: string): string[] {
+  const erros: string[] = [];
+  if (!listaDoWorkflow(workflow, "SPECS_PARTE_2").includes(SPEC_LEITOR_SITE)) erros.push("spec fora da parte 2");
+  if (listaDoWorkflow(workflow, "FORA_DO_CI").includes(SPEC_LEITOR_SITE)) erros.push("spec declarada fora do CI");
+  const passos = passosDoWorkflow(workflow).filter(executaLeitorSite);
+  if (passos.length !== 1) erros.push("falta uma execução dedicada real do leitor de site");
+  for (const passo of passos) {
+    if (/^ {8}if: (.+)$/m.exec(passo)?.[1] !== "matrix.parte == 2") erros.push("execução dedicada pode ser pulada");
+    if (/^ {8}continue-on-error:\s*(?:true|["']true["'])\s*$/m.test(passo)) erros.push("falha dedicada é ignorada");
+    const env = /^ {8}env:\s*\n((?: {10}[^\n]*\n)+)/m.exec(passo)?.[1] ?? "";
+    for (const flag of ["E2E_ONBOARDING_SITE_FIXTURE", "E2E_ONBOARDING_SYNTHETIC_PROVIDER"]) {
+      if (!new RegExp(`^ {10}${flag}: ["']?1["']?$`, "m").test(env)) erros.push(`flag ausente: ${flag}`);
+    }
+  }
+  if (pulaTeste(spec)) erros.push("spec contém skip/fixme");
+  return erros;
+}
+
 const yml = readFileSync(WORKFLOW, "utf8");
 const parte1 = listaDoWorkflow(yml, "SPECS_PARTE_1");
 const parte2 = listaDoWorkflow(yml, "SPECS_PARTE_2");
@@ -74,6 +125,7 @@ const foraDoCi = listaDoWorkflow(yml, "FORA_DO_CI");
 const noDisco = readdirSync(DIR_SPECS)
   .filter((f) => f.endsWith(".spec.ts"))
   .sort();
+const specLeitorSite = readFileSync(path.join(DIR_SPECS, SPEC_LEITOR_SITE), "utf8");
 
 describe("cobertura do e2e no CI", () => {
   it("o parser está vivo — controle positivo antes de qualquer conclusão", () => {
@@ -162,5 +214,42 @@ describe("cobertura do e2e no CI", () => {
     expect(agregador, "o controle só vale enquanto o agregador ainda fizer checkout").toMatch(
       /^      - uses: actions\/checkout@v7$/m,
     );
+  });
+
+  it("o leitor de site tem execução dedicada com os dois preloads e não ganha skip", () => {
+    expect(errosDaExecucaoDedicadaSite(yml, specLeitorSite)).toEqual([]);
+  });
+
+  it("SABOTAGEM: apagar o passo dedicado reprova, mesmo com o nome ainda na lista e num comentário", () => {
+    const passo = passosDoWorkflow(yml).find(executaLeitorSite);
+    expect(passo, "controle positivo: o passo real precisa existir antes de removê-lo").toBeDefined();
+    const sabotado = yml.replace(passo!, `      # run: pnpm exec playwright test tests/e2e/${SPEC_LEITOR_SITE} --workers=1 --reporter=list`);
+    expect(listaDoWorkflow(sabotado, "SPECS_PARTE_2")).toContain(SPEC_LEITOR_SITE);
+    expect(errosDaExecucaoDedicadaSite(sabotado, specLeitorSite)).toContain("falta uma execução dedicada real do leitor de site");
+  });
+
+  it.each(["E2E_ONBOARDING_SITE_FIXTURE", "E2E_ONBOARDING_SYNTHETIC_PROVIDER"])(
+    "SABOTAGEM: retirar %s só do passo do leitor reprova mesmo que outro passo ainda a tenha", (flag) => {
+      const passo = passosDoWorkflow(yml).find(executaLeitorSite)!;
+      const sabotado = yml.replace(passo, passo.replace(new RegExp(`^ {10}${flag}:.*\\n`, "m"), ""));
+      expect(errosDaExecucaoDedicadaSite(sabotado, specLeitorSite)).toContain(`flag ausente: ${flag}`);
+    },
+  );
+
+  it("SABOTAGEM: desativar o passo ou ignorar sua falha reprova", () => {
+    const passo = passosDoWorkflow(yml).find(executaLeitorSite)!;
+    expect(errosDaExecucaoDedicadaSite(yml.replace(passo, passo.replace("if: matrix.parte == 2", "if: false")), specLeitorSite))
+      .toContain("execução dedicada pode ser pulada");
+    expect(errosDaExecucaoDedicadaSite(yml.replace(passo, `${passo}\n        continue-on-error: true`), specLeitorSite))
+      .toContain("falha dedicada é ignorada");
+  });
+
+  it("SABOTAGEM: declarar a spec fora ou adicionar skip/fixme reprova; comentário não é skip", () => {
+    expect(errosDaExecucaoDedicadaSite(yml.replace(/FORA_DO_CI:\s*>-/, `FORA_DO_CI: >-\n        ${SPEC_LEITOR_SITE}`), specLeitorSite))
+      .toContain("spec declarada fora do CI");
+    for (const desvio of ["test.skip(true)", "test.describe.skip('jornada', () => {})", "test.fixme(true)"]) {
+      expect(errosDaExecucaoDedicadaSite(yml, `${specLeitorSite}\n${desvio}`)).toContain("spec contém skip/fixme");
+    }
+    expect(errosDaExecucaoDedicadaSite(yml, `${specLeitorSite}\n// test.skip(true)`)).toEqual([]);
   });
 });

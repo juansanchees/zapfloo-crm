@@ -24,6 +24,7 @@ import {
 } from "@/lib/onboarding/proposta-de-funil";
 import { escolherPacotePorTexto, sugerirFunil, type Sugestao } from "@/lib/onboarding/sugerir-funil";
 import { requireOnboardingCtx, patchOnboardingState, loadOnboardingState, OnboardingError } from "./_shared";
+import { lerContextoDoSite } from "@/lib/onboarding/site/servico";
 
 /** O funil que o gatilho semeou — o que a pessoa tem antes deste passo. */
 export interface QuadroAtual {
@@ -138,7 +139,10 @@ export async function dadosDoPasso(): Promise<DadosDoPasso> {
     oQueFaz = "";
   }
 
-  const ctx = { nome: negocio, oQueFaz };
+  // Só lê o retrato que já existe no banco: não dispara nem espera o leitor.
+  // Fonte ainda em andamento/falha devolve null e preserva o caminho anterior.
+  const site = await lerContextoDoSite(orgId);
+  const ctx = { nome: negocio, oQueFaz, site };
   const cerebro = await cerebroDoFuncionario(admin, orgId);
 
   if ("erro" in cerebro) {

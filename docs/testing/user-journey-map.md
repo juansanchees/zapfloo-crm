@@ -10,6 +10,11 @@
 
 ## Convenções
 
+Leitor opcional de site no welcome `[P0]`: contrato, limites, integração com
+funil/catálogo/acervo e estado das provas em [onboarding-site.md](onboarding-site.md).
+Não acrescenta passo; a jornada não aguarda leitura externa. A execução E2E
+fica distinguida dos testes focados e das integrações externas não medidas.
+
 - `[P0]` primeira impressão — bug aqui é vergonha pública; prioridade máxima.
 - `[P1]` rotina diária do operador/atendente.
 - `[P2]` exploração/edge.

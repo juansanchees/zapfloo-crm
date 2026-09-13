@@ -6,6 +6,7 @@
  * event the first time `onboarded_at` flips from NULL.
  */
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { audit } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,7 +19,7 @@ export type FinishOnboardingResult =
   | { ok: true; alreadyOnboarded: boolean }
   | { ok: false; error: OnboardingError["code"]; details?: unknown };
 
-export async function finishOnboarding(): Promise<FinishOnboardingResult> {
+export async function finishOnboarding(destino?: string): Promise<FinishOnboardingResult> {
   let ctx;
   try {
     ctx = await requireOnboardingCtx();
@@ -26,6 +27,13 @@ export async function finishOnboarding(): Promise<FinishOnboardingResult> {
     if (err instanceof OnboardingError) return { ok: false, error: err.code };
     throw err;
   }
+
+  // A revisão do site usa a MESMA conclusão: link direto para /app antes do
+  // onboarded_at voltaria ao wizard. Não é um redirect aberto nem um atalho
+  // para pular as verificações de passos pendentes abaixo.
+  const alvo = z.enum(["/app/inbox", "/app/products", "/app/ai/knowledge/sources"])
+    .default("/app/inbox").safeParse(destino);
+  if (!alvo.success) return { ok: false, error: "forbidden" };
 
   const admin = createAdminClient();
 
@@ -69,5 +77,5 @@ export async function finishOnboarding(): Promise<FinishOnboardingResult> {
     });
   }
 
-  redirect("/app/inbox");
+  redirect(alvo.data);
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ORIGEM_SITE } from "@/lib/catalogo/tipos";
 
 /**
  * O CONTRATO DO CATÁLOGO — um só, lido pela tela E pela rota.
@@ -11,7 +12,7 @@ import { z } from "zod";
  */
 
 /** Como o produto entrou no catálogo. Vocabulário ABERTO, sem CHECK no banco. */
-export const ORIGENS_DO_PRODUTO = ["manual", "planilha", "nuvemshop"] as const;
+export const ORIGENS_DO_PRODUTO = ["manual", "planilha", "nuvemshop", ORIGEM_SITE] as const;
 export type OrigemDoProduto = (typeof ORIGENS_DO_PRODUTO)[number];
 
 /**

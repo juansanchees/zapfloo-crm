@@ -52,6 +52,10 @@ export const chaveQueryKey = () => ["ai", "knowledge", "chave"] as const;
 export function useKnowledgeSources(opts?: { initialData?: SourceRow[] }) {
   return useQuery({
     queryKey: sourcesQueryKey(),
+    // Só consulta enquanto há trabalho real em andamento. Conclusão da leitura
+    // ou lease de revisão recuperável aparece sem exigir F5 de quem usa a tela.
+    refetchInterval: (query) => query.state.data?.some((source) =>
+      source.status === "building" || source.last_index_status === "indexando") ? 2_000 : false,
     queryFn: async () => {
       try {
         const res = await apiClient.get<ListResponse>("/api/v1/ai/knowledge/sources");

@@ -42,6 +42,8 @@ import {
 import { acquireDebounce } from "@/lib/ai/rag/debounce";
 import { chunkText, computeContentHash } from "@/lib/ai/rag/chunker";
 import { canonizarTipoDeFonte } from "@/lib/ai/rag/tipos-de-fonte";
+import { lerEstadoDoSite, siteFoiRevisado } from "@/lib/onboarding/site/estado";
+import { hashPerguntasDoSite } from "@/lib/onboarding/site/faq-confirmada";
 import { extrairTextoDoArquivo, ErroDeExtracao } from "@/lib/ai/rag/ingest/documento";
 import { estimateTokens } from "@/lib/ai/runtime/history";
 import { formatProductForRag, type NuvemshopProduct } from "@/lib/ai/rag/format-product";
@@ -189,8 +191,14 @@ async function pedacosDeFaq(fonte: FonteRow): Promise<Pedaco[]> {
 
   if (error) throw new Error(`itens_da_faq: ${error.message}`);
 
+  const itens = (data ?? []) as Array<{ question: string; answer: string }>;
+  if (canonizarTipoDeFonte(fonte.source_type) === "site" &&
+      lerEstadoDoSite(fonte.source_metadata)?.revisaoConteudoHash !== hashPerguntasDoSite(itens)) {
+    throw new Error("site_revisao_conteudo_alterado");
+  }
+
   const pedacos: Pedaco[] = [];
-  for (const it of (data ?? []) as Array<{ question: string; answer: string }>) {
+  for (const it of itens) {
     const texto = `Pergunta: ${it.question}\nResposta: ${it.answer}`;
     for (const c of chunkText(texto)) {
       pedacos.push({ content: c, metadata: { source_type: "faq", pergunta: it.question } });
@@ -328,6 +336,8 @@ async function indexarFonte(
   try {
     switch (tipo) {
       case "faq":
+      case "site":
+        // O resumo bruto do site NÃO vira conhecimento: só pares conferidos.
         pedacos = await pedacosDeFaq(fonte);
         break;
       case "documento":
@@ -516,6 +526,9 @@ export async function processRagIndexer(row: EventRow): Promise<HandlerResult> {
     }
     if (!fonte.is_active || fonte.status === "archived") {
       return { consumer_key: consumerKey, status: "skipped", detail: "fonte_arquivada" };
+    }
+    if (canonizarTipoDeFonte(fonte.source_type) === "site" && !siteFoiRevisado(fonte.source_metadata)) {
+      return { consumer_key: consumerKey, status: "skipped", detail: "site_aguarda_conferencia" };
     }
 
     // Debounce por FONTE (antes era por agente): duas edições seguidas do mesmo

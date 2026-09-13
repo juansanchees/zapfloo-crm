@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useT } from "@/hooks/i18n/useT";
 import type { OnboardingState } from "@/lib/schemas/onboarding";
 import { PACOTES } from "@/lib/onboarding/pacotes-de-funil";
+import { normalizarSiteDoNegocio } from "@/lib/onboarding/site/url";
 
 import { acceptWelcome } from "@/app/actions/onboarding/acceptWelcome";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,8 @@ export function WelcomeForm({ defaultOrgName, initial, context }: { defaultOrgNa
   const t = useT();
   const [displayName, setDisplayName] = useState(initial?.display_name ?? defaultOrgName);
   const [oQueFaz, setOQueFaz] = useState(initial?.o_que_faz ?? "");
+  const [siteDoNegocio, setSiteDoNegocio] = useState(initial?.site_do_negocio ?? "");
+  const [erroDoSite, setErroDoSite] = useState<string | null>(null);
   const [segmento, setSegmento] = useState(initial?.segmento ?? "");
   const [timezone, setTimezone] = useState(initial?.timezone ?? "America/Sao_Paulo");
   const [accepted, setAccepted] = useState(Boolean(initial?.accepted_at));
@@ -52,6 +55,11 @@ export function WelcomeForm({ defaultOrgName, initial, context }: { defaultOrgNa
       id="seu-negocio"
       className="space-y-5 rounded-lg border bg-background p-6"
       action={(formData) => {
+        const site = normalizarSiteDoNegocio(siteDoNegocio);
+        if (!site.ok) {
+          setErroDoSite(site.motivo);
+          return;
+        }
         if (!accepted) {
           toast.error(t("Aceite os termos para continuar."));
           return;
@@ -110,6 +118,43 @@ export function WelcomeForm({ defaultOrgName, initial, context }: { defaultOrgNa
             "Uma linha basta. É com isso que seu funcionário aprende com quem ele está falando — e que a gente monta o quadro de clientes do seu jeito.",
           )}
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="site_do_negocio">{t("Site do seu negócio (opcional)")}</Label>
+        <Input
+          id="site_do_negocio"
+          name="site_do_negocio"
+          value={siteDoNegocio}
+          inputMode="url"
+          autoCapitalize="none"
+          autoCorrect="off"
+          maxLength={2_000}
+          placeholder={t("minhaloja.com.br")}
+          aria-describedby={erroDoSite ? "site-ajuda site-erro" : "site-ajuda"}
+          aria-invalid={Boolean(erroDoSite)}
+          onChange={(e) => {
+            setSiteDoNegocio(e.target.value);
+            const site = normalizarSiteDoNegocio(e.target.value);
+            // Rede social é uma recusa imediata. Os outros erros esperam a
+            // pessoa terminar de digitar, em vez de reclamar a cada letra.
+            setErroDoSite(!site.ok && site.motivo === "site_rede_social" ? site.motivo : null);
+          }}
+          onBlur={() => {
+            const site = normalizarSiteDoNegocio(siteDoNegocio);
+            setErroDoSite(site.ok ? null : site.motivo);
+          }}
+        />
+        <p id="site-ajuda" className="text-xs text-muted-foreground">
+          {t("Se você tiver, eu leio e já deixo seu funcionário sabendo o que você vende.")}
+        </p>
+        {erroDoSite ? (
+          <p id="site-erro" role="alert" className="text-sm text-error">
+            {erroDoSite === "site_rede_social"
+              ? t("Não consigo ler o Instagram ou o Facebook — se tiver um site, cole aqui.")
+              : t("Não consigo ler este endereço. Use o site público do seu negócio, sem senha, ou deixe em branco.")}
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": { "title": "Site do negócio — leitura limitada, revisão antes do atendimento", "subtitle": "Sem novo passo ou schema; estado e catálogo existentes", "output": "onboarding-site.html", "quality_profile": "standard" },
+  "lanes": [{ "id": "ui", "label": "Pessoa" }, { "id": "server", "label": "Servidor" }, { "id": "db", "label": "Banco" }],
+  "mainPath": ["welcome", "intencao", "leitor", "fonte", "revisao", "atendimento"],
+  "nodes": [
+    { "id": "welcome", "lane": "ui", "col": 0, "type": "frontend", "label": "welcome / site opcional; domínio normalizado" },
+    { "id": "intencao", "lane": "db", "col": 1, "type": "database", "label": "organizations.onboarding_state.welcome / URL + site_leitura_pendente" },
+    { "id": "cron", "lane": "server", "col": 1, "type": "service", "label": "scheduler → cron/onboarding-sites / bearer; fila limitada" },
+    { "id": "leitor", "lane": "server", "col": 2, "type": "service", "label": "site/leitura.ts / guards textual + DNS por requisição; seis tentativas" },
+    { "id": "fonte", "lane": "db", "col": 3, "type": "database", "label": "ai_knowledge_sources + ai_faq_items / site inativo, estado e recusas" },
+    { "id": "produtos", "lane": "db", "col": 3, "type": "database", "label": "catalog_products / origem site + ativo false; conflito não sobrescreve" },
+    { "id": "funil", "lane": "ui", "col": 4, "type": "frontend", "label": "funil / snapshot disponível; fallback pacote com motivo" },
+    { "id": "revisao", "lane": "ui", "col": 4, "type": "frontend", "label": "done → products / knowledge/sources; Depois é legítimo" },
+    { "id": "atendimento", "lane": "server", "col": 5, "type": "service", "label": "crm_search_products ativo=true / RAG só FAQs conferidas com hash" },
+    { "id": "audit", "lane": "db", "col": 5, "type": "database", "label": "api_audit_log / leitura, retry, confirmação; sem conteúdo externo" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "welcome", "to": "intencao", "label": "acceptWelcome; guarda junto com o passo" },
+    { "id": "e2", "from": "intencao", "to": "leitor", "label": "after imediato; cron recupera intenção durável" },
+    { "id": "e3", "from": "cron", "to": "leitor", "label": "CAS da fonte + lease; sem leitura duplicada" },
+    { "id": "e4", "from": "leitor", "to": "fonte", "label": "conteúdo externo não confiável, sem indexar" },
+    { "id": "e5", "from": "leitor", "to": "produtos", "label": "somente preço exato; rascunho inativo" },
+    { "id": "e6", "from": "fonte", "to": "funil", "label": "resumo delimitado; nunca aguarda site" },
+    { "id": "e7", "from": "fonte", "to": "revisao", "label": "FAQ pendente + falha/limite visíveis" },
+    { "id": "e8", "from": "produtos", "to": "revisao", "label": "conferir preços e confirmar IDs apresentados" },
+    { "id": "e9", "from": "revisao", "to": "atendimento", "label": "confirmação explícita; FAQ com reserva e hash do conteúdo" },
+    { "id": "e10", "from": "revisao", "to": "cron", "label": "retry limitado da falha; conteúdo manual como saída" },
+    { "id": "e11", "from": "leitor", "to": "audit", "label": "resultado, páginas, contagens e limites" },
+    { "id": "e12", "from": "revisao", "to": "audit", "label": "ator da confirmação e pedido de retry" }
+  ],
+  "non_connections": ["Não publica agente, não conecta número e não envia WhatsApp.", "Não indexa resumo bruto, não executa JavaScript do site e não coleta redes sociais.", "Não substitui aprovação humana do preço nem cria etapa adicional no wizard."]
+}

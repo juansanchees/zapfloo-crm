@@ -87,7 +87,7 @@ export function QuadroClient({
       */}
       {sugestao.origem === "ia" ? (
         <p className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
-          {t(
+          {sugestao.siteUsado ? t("Li o seu site ({endereco}). Montei este quadro a partir do que encontrei.").replace("{endereco}", sugestao.siteUsado) : t(
             "Seu funcionário montou este quadro olhando o que você me contou sobre o negócio. Ajuste o que quiser.",
           )}
         </p>

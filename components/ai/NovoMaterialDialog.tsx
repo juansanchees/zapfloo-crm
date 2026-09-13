@@ -43,6 +43,7 @@ import {
   aceitaArquivo,
   ePerguntaEResposta,
   ePreenchidoPorRotina,
+  permiteCadastroManual,
   type TipoDeFonteId,
 } from "@/lib/ai/rag/tipos-de-fonte";
 
@@ -160,7 +161,7 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
             <Label>{t("Que tipo de material é")}</Label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="material-tipos">
               {/* `tf`, e não `t`: o `t` do `useT()` já ocupa o nome aqui. */}
-              {TIPOS_DE_FONTE.map((tf) => {
+              {TIPOS_DE_FONTE.filter((tf) => permiteCadastroManual(tf.id)).map((tf) => {
                 const rotina = ePreenchidoPorRotina(tf.id);
                 const marcado = tipo === tf.id;
                 return (
