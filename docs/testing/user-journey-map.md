@@ -2015,3 +2015,26 @@ registro. A jornada real foi dirigida pelo Playwright contra o banco local fresc
 o administrador pendente entrou em `/app/inbox`, recarregou sem voltar ao wizard e
 manteve “Retomar configuração” visível em 1280 px e 390 px. O wizard serial também
 confirmou as duas listas com o título corrigido em português.
+
+## Funcionário principal após ativação restrita `[P0]` — 13/set/2026
+
+Defeito confirmado: a preparação criava corretamente um agente não principal, mas
+a ativação não atribuía a marca quando a organização não tinha principal. O leitor
+`cerebroDoFuncionario` caía no quadro pronto apesar do treinamento publicado.
+
+Cobertura adicionada: `onboarding-concluir.test.ts` prova promoção, retry, preservação
+de principal existente/arquivado e disputa no índice; `onboarding-principal-backfill`
+prova reparo idempotente pelo recibo + audit, isolamento e NOTICE com contagens;
+`onboarding-principal-restricao` liga a ativação real à elegibilidade e ao reenvio
+HTTP real, barrando número fora da lista mesmo com autorização anterior.
+
+As duas jornadas de site válido do PR #14 foram executadas em integração local
+isolada: passam com a promoção, falham retirando somente essa promoção e voltam a
+passar restaurando-a. Nenhum ajuste nas specs ou no leitor do quadro. A branch do
+#14 não foi atualizada antecipadamente. Limites: ensaio/modelo e respostas queued
+sintéticos; sem envio comercial, celular ou prova completa de inbound. Principal
+arquivado continua sendo um caso fora de escopo do leitor, apenas contado.
+
+Auditoria de leitores, instrumentação da concorrência, sabotagens e limites em
+`docs/testing/onboarding-funcionario-principal.md`; evidências em
+`.superpowers/evidence/funcionario-principal/`.
