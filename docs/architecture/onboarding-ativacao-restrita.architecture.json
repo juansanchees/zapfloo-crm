@@ -29,7 +29,8 @@
     { "id": "org_state", "lane": "db", "col": 3, "type": "database", "label": "organizations.onboarding_state / marcador e recibo histórico" },
     { "id": "channel", "lane": "db", "col": 7, "type": "database", "label": "channel_sessions / WORKING + allowlist + pre_go_live + telefones" },
     { "id": "version", "lane": "db", "col": 8, "type": "database", "label": "ai_agent_versions / a versão ensaiada vira published no canal escolhido" },
-    { "id": "agent", "lane": "db", "col": 9, "type": "database", "label": "ai_agents / o preparado vira ativo, nunca default" },
+    { "id": "agent", "lane": "db", "col": 9, "type": "database", "label": "ai_agents / ativo e principal somente se a organização não tem outro; disputa não aborta ativação" },
+    { "id": "quadro", "lane": "server", "col": 9, "type": "service", "label": "cerebroDoFuncionario / principal publicado alimenta a sugestão do quadro" },
     { "id": "audit", "lane": "db", "col": 7, "type": "database", "label": "api_audit_log / IDs, hash e contagem sem texto ou telefone" },
     { "id": "dispatcher", "lane": "runtime", "col": 9, "type": "service", "label": "dispatcher existente / continua relendo o gate do canal a cada envio" }
   ],
@@ -58,7 +59,9 @@
     { "id": "e12", "from": "activate_rpc", "to": "org_state", "label": "retry verifica hash da versão e campos canônicos de recibo e audit" },
     { "id": "e13", "from": "activate_rpc", "to": "audit", "label": "um audit idempotente, sem payload de mensagem" },
     { "id": "e14", "from": "agent", "to": "dispatcher", "label": "runtime só pode atender pelo canal publicado" },
-    { "id": "e15", "from": "channel", "to": "dispatcher", "label": "allowlist pré-go-live segue sendo a trava canônica em tempo de envio" }
+    { "id": "e15", "from": "channel", "to": "dispatcher", "label": "allowlist pré-go-live segue sendo a trava canônica em tempo de envio" },
+    { "id": "e16", "from": "agent", "to": "quadro", "label": "marca principal conecta o funcionário ativado ao leitor existente do quadro" },
+    { "id": "e17", "from": "version", "to": "quadro", "label": "usa o treinamento publicado que foi ensaiado e revisado" }
   ],
   "non_connections": [
     "Salvar, preparar, ensaiar, revisar e confirmar não ativam o agente; somente ativarAgenteParaTeste chama a RPC de publicação.",
