@@ -8,6 +8,52 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.19.0] — 2026-09-13
+
+### Adicionado
+
+- **O site do negócio ajuda a preparar o atendimento** Na configuração inicial, agora é possível informar o site do negócio. A leitura
+  acontece em segundo plano, sem impedir a continuação, e ajuda a sugerir o quadro
+  comercial quando o conteúdo já está disponível. Produtos com preço e perguntas
+  frequentes ficam esperando conferência nas telas existentes. O agente não usa
+  produtos nem respostas do site antes da confirmação. Endereços recusados,
+  preços ambíguos e leituras incompletas aparecem com motivo e próximo passo.
+
+  Não é necessário configurar chave nova nem editar arquivos da instalação.
+
+### Alterado
+
+- **Agentes novos já chegam prontos para atender** O editor de agentes passou a deixar escolhas técnicas recolhidas em “Avançado”.
+  Agentes novos herdam o modelo, a chave e o fuso disponíveis, usam o único número
+  conectado quando não há escolha a fazer e não ligam permissões em silêncio.
+  Clínicas podem conferir e aplicar uma configuração pronta de capacidades sem ligar
+  ações irreversíveis.
+
+- **Ensaio inicial sem escolhas técnicas** O ensaio da configuração inicial escolhe a IA e o acesso disponível automaticamente,
+  sem pedir modelo, credencial ou exibir aviso de créditos de API. O padrão fica
+  centralizado; instalações sem esse modelo usam o primeiro disponível no catálogo.
+  Preparar, testar, revisar e continuar permanecem separados, sem ativar atendimento
+  antes da revisão. As opções avançadas dos agentes continuam disponíveis.
+  Não é necessário alterar a configuração da instalação.
+
+### Corrigido
+
+- **Funcionário treinado reconhecido na configuração inicial** O funcionário ativado na configuração inicial passa a ser reconhecido como principal
+  quando a organização ainda não tem um. Isso permite montar o quadro com o treinamento
+  revisado, sem cair no quadro pronto por falta dessa identificação.
+  Um principal existente nunca é substituído, e uma disputa por essa identificação não
+  interrompe a ativação. O atendimento continua limitado aos números autorizados para teste.
+
+  A atualização também corrige registros anteriores quando o recibo de ativação e sua
+  auditoria comprovam o vínculo, e informa quantos foram corrigidos ou ignorados. Não
+  reativa agentes arquivados nem altera canais ou listas de números autorizados.
+
+- **A saída do onboarding volta a abrir o CRM e explica falhas reais** O botão “Explorar o CRM” não confunde mais o redirecionamento normal com um erro.
+  Quando a sessão ou o servidor realmente falha, a tela informa a causa em linguagem
+  direta e registra o diagnóstico para o suporte. O treinamento também apresenta as
+  conferências de segurança pelo que elas são, e os cartões de agentes deixam de expor
+  identificadores técnicos.
+
 ## [1.18.0] — 2026-09-12
 
 ### Adicionado
@@ -3288,7 +3334,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.18.0...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.0...HEAD
+[1.19.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.16.1...v1.17.0
 [1.16.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.16.0...v1.16.1
