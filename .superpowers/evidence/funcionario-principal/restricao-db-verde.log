@@ -1,0 +1,55 @@
+
+> deskcomm-crm@0.1.0 test:db /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+> bash scripts/test-db.sh tests/invariants/onboarding-principal-restricao.test.ts -t 'default promovido envia ao testador e bloqueia fora da lista mesmo com autorização anterior' --reporter\=verbose
+
+==> subindo pgvector/pgvector:pg15 como deskcomm-test-db-34613 (worktree /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding, branch codex/funcionario-principal-no-onboarding)
+    ✓ publicado em 127.0.0.1:32842
+==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)
+==> conferindo que o banco efêmero é o do PRODUTO (antes do baseline)
+    ✓ definer nova nasce com grant direto a anon (armadilha do produto reproduzida)
+==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1
+ set_config 
+------------
+ 
+(1 row)
+
+psql:<stdin>:5007: WARNING:  wal_level is insufficient to publish logical changes
+HINT:  Set wal_level to "logical" before creating subscriptions.
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ install ok
+==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)
+ set_config 
+------------
+ 
+(1 row)
+
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ update ok (zero erro na re-aplicação)
+==> banco `postgres` a partir do molde (o setupFile o recria a cada arquivo)
+==> invariantes: vitest (tests/invariants) — banco novo por ARQUIVO, ordem sorteada
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.db.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+      Running tests with seed "1789311892313"
+
+{"ts":"2026-09-13T15:04:54.323Z","level":"info","msg":"watchdog: mensagem presa reenviada","message_id":"e9834412-945c-47f5-acb9-117da38d7ac7","has_external_id":true}
+{"ts":"2026-09-13T15:04:54.332Z","level":"info","msg":"watchdog: reenvio bloqueado pelo modo de teste","message_id":"c22cf71f-915b-40b1-9eb1-e2e41e88977b"}
+ ✓ tests/invariants/onboarding-principal-restricao.test.ts > funcionário principal mantém a ativação restrita no transporte real > default promovido envia ao testador e bloqueia fora da lista mesmo com autorização anterior 207ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  12:04:52
+   Duration  2.48s (transform 110ms, setup 338ms, import 275ms, tests 1.68s, environment 0ms)
+
+==> test:db verde
+==> teardown: removendo container deskcomm-test-db-34613

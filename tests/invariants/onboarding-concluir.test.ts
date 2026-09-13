@@ -1,200 +1,107 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
-import pg from "pg";
-
-if (!process.env.TEST_DB_CONTAINER) throw new Error("Execute via pnpm test:db.");
-const db = new pg.Pool({
-  connectionString: `postgresql://postgres:postgres@127.0.0.1:${process.env.TEST_DB_PORT ?? "54329"}/postgres`,
-  max: 4,
-});
-afterAll(async () => {
-  await db.end();
-});
-
-type Fixture = Awaited<ReturnType<typeof fixture>>;
-
-async function fixture(
-  options: { reviewed?: boolean; credential?: boolean; useCredentialInVersion?: boolean } = {},
-) {
-  const org = randomUUID();
-  const user = randomUUID();
-  const credential = options.credential ? randomUUID() : null;
-  await db.query("insert into auth.users(id,email) values($1,$2)", [user, `${user}@example.test`]);
-  await db.query(
-    "insert into organizations(id,slug,legal_name,display_name) values($1,$2,'Negócio QA','Negócio QA')",
-    [org, org],
-  );
-  await db.query(
-    "insert into user_organizations(user_id,organization_id,role,accepted_at) values($1,$2,'admin',now())",
-    [user, org],
-  );
-  await db.query(
-    "insert into ai_models(provider,model_id,display_name,supports_tools) values('openai','qa-concluir','QA concluir',true) on conflict(provider,model_id) do nothing",
-  );
-  if (credential) {
-    await db.query(
-      "insert into ai_provider_credentials(id,organization_id,provider,label,api_key_encrypted,api_key_iv,api_key_tag,api_key_last4,validated_at) values($1,$2,'openai','QA','sintetico','iv','tag','0000',now())",
-      [credential, org],
-    );
-  }
-  await db.query("select fn_save_onboarding_draft($1,$2,0,$3)", [
-    org,
-    user,
-    { name: "Atendente QA", prompt_template: "support_minimal", regras_da_casa: "Sem descontos" },
-  ]);
-  const prepared = (
-    await db.query("select fn_prepare_onboarding_draft($1,$2,1,null,$3,$4) r", [
-      org,
-      user,
-      { display_name: "Negócio QA", o_que_faz: null },
-      {
-        system_prompt: "Atenda com cuidado, clareza e sem descontos.",
-        provider: "openai",
-        model: "qa-concluir",
-        credential_id: options.useCredentialInVersion === false ? null : credential,
-        tool_ids: [],
-      },
-    ])
-  ).rows[0].r;
-  const run = (
-    await db.query("select fn_iniciar_ensaio_onboarding($1,$2,1,$3,$4) r", [
-      org,
-      user,
-      prepared.version_id,
-      "Olá, como funciona?",
-    ])
-  ).rows[0].r;
-  const call = randomUUID();
-  await db.query(
-    "insert into llm_calls(id,organization_id,agent_id,purpose,provider,model,status,input_tokens,output_tokens,latency_ms) values($1,$2,$3,'onboarding_rehearsal','openai','qa-concluir','ok',10,10,1)",
-    [call, org, prepared.agent_id],
-  );
-  await db.query("select fn_finalizar_ensaio_onboarding($1,$2,1,$3,$4,$5,$6,null)", [
-    org,
-    user,
-    prepared.version_id,
-    run.run_id,
-    "Olá! Posso ajudar com segurança.",
-    call,
-  ]);
-  if (options.reviewed !== false) {
-    await db.query("select fn_revisar_ensaio_onboarding($1,$2,1,$3,$4)", [
-      org,
-      user,
-      prepared.version_id,
-      run.run_id,
-    ]);
-  }
-  return {
-    org,
-    user,
-    agent: prepared.agent_id as string,
-    version: prepared.version_id as string,
-    run: run.run_id as string,
-    call,
-    credential,
-  };
-}
-
-async function channel(
-  org: string,
-  options: {
-    status?: string;
-    archived?: boolean;
-    mode?: "open" | "pre_go_live";
-    numbers?: string[];
-    metadata?: Record<string, unknown>;
-  } = {},
-) {
-  const id = randomUUID();
-  const mode = options.mode ?? "pre_go_live";
-  const metadata = options.metadata ??
-    {
-      ai_gate: mode === "pre_go_live" ? "allowlist" : "open",
-      ai_gate_mode: "pre_go_live",
-      ai_test_phone_numbers: options.numbers ?? ["+5511999998888"],
-      transport: { preserved: true },
-    };
-  await db.query(
-    "insert into channel_sessions(id,organization_id,waha_session_name,status,webhook_secret_encrypted,metadata,archived_at) values($1,$2,$3,$4,'\\x00',$5,$6)",
-    [id, org, id, options.status ?? "WORKING", metadata, options.archived ? new Date() : null],
-  );
-  return id;
-}
-
-async function confirm(f: Fixture, overrides: Partial<Pick<Fixture, "org" | "user" | "version" | "run">> = {}) {
-  return (
-    await db.query("select fn_confirmar_agente_revisado_onboarding($1,$2,1,$3,$4) r", [
-      overrides.org ?? f.org,
-      overrides.user ?? f.user,
-      overrides.version ?? f.version,
-      overrides.run ?? f.run,
-    ])
-  ).rows[0].r;
-}
-
-async function activate(
-  f: Fixture,
-  channelId: string,
-  overrides: Partial<Pick<Fixture, "org" | "user" | "version" | "run">> & {
-    revision?: number;
-    installationKey?: boolean;
-  } = {},
-) {
-  return (
-    await db.query("select fn_ativar_agente_teste_onboarding($1,$2,$3,$4,$5,$6,$7) r", [
-      overrides.org ?? f.org,
-      overrides.user ?? f.user,
-      overrides.revision ?? 1,
-      overrides.version ?? f.version,
-      overrides.run ?? f.run,
-      channelId,
-      overrides.installationKey ?? true,
-    ])
-  ).rows[0].r;
-}
-
-async function agentState(f: Fixture) {
-  return (
-    await db.query(
-      "select is_active,is_default,published_version_id from ai_agents where id=$1 and organization_id=$2",
-      [f.agent, f.org],
-    )
-  ).rows[0];
-}
-
-async function versionState(f: Fixture) {
-  return (
-    await db.query(
-      "select status,channel_session_id,published_at from ai_agent_versions where id=$1 and organization_id=$2",
-      [f.version, f.org],
-    )
-  ).rows[0];
-}
-
-async function expectInactive(f: Fixture) {
-  expect(await agentState(f)).toEqual({
-    is_active: false,
-    is_default: false,
-    published_version_id: null,
-  });
-  expect(await versionState(f)).toEqual({
-    status: "draft",
-    channel_session_id: null,
-    published_at: null,
-  });
-}
-
-async function auditCount(f: Fixture, action: string) {
-  return (
-    await db.query(
-      "select count(*)::int n from api_audit_log where organization_id=$1 and action=$2",
-      [f.org, action],
-    )
-  ).rows[0].n as number;
-}
+import { describe, expect, it } from "vitest";
+import {
+  db, fixture, channel, confirm, activate, agentState, versionState, expectInactive, auditCount,
+} from "../db/onboarding-concluir-fixture";
 
 describe("revisão confirmada e ativação restrita do onboarding", () => {
+  it("ativa e promove o funcionário ensaiado quando a organização não tem principal", async () => {
+    const f = await fixture();
+    await confirm(f);
+    const selected = await channel(f.org);
+    const metadataBefore = (await db.query("select metadata from channel_sessions where id=$1", [selected])).rows[0].metadata;
+
+    const receipt = await activate(f, selected);
+    expect(receipt).toMatchObject({ agent_id: f.agent, version_id: f.version, channel_session_id: selected });
+    expect(await agentState(f)).toEqual({ is_active: true, is_default: true, published_version_id: f.version });
+    expect(await versionState(f)).toMatchObject({ status: "published", channel_session_id: selected });
+    expect((await db.query("select metadata from channel_sessions where id=$1", [selected])).rows[0].metadata).toEqual(metadataBefore);
+    expect((await db.query("select count(*)::int n from event_log where organization_id=$1", [f.org])).rows[0].n).toBe(0);
+    expect(await activate(f, selected)).toEqual(receipt);
+    expect(await auditCount(f, "onboarding.restricted_activation")).toBe(1);
+  });
+
+  it("default arquivado conserva a marca e não impede concluir a ativação", async () => {
+    const f = await fixture();
+    await confirm(f);
+    const selected = await channel(f.org);
+    const owner = randomUUID();
+    await db.query(
+      "insert into ai_agents(id,organization_id,name,system_prompt,model,kind,is_active,is_default,archived_at) values($1,$2,'Principal arquivado','Não reativar','qa-concluir','mcp_agent',false,true,now())",
+      [owner, f.org],
+    );
+
+    await expect(activate(f, selected)).resolves.toMatchObject({ agent_id: f.agent, version_id: f.version });
+    expect(await agentState(f)).toEqual({ is_active: true, is_default: false, published_version_id: f.version });
+    expect((await db.query("select is_default,is_active,archived_at is not null archived from ai_agents where id=$1", [owner])).rows[0]).toEqual({ is_default: true, is_active: false, archived: true });
+  });
+
+  it("retry de recibo válido promove principal ausente sem republicar nem duplicar audit", async () => {
+    const f = await fixture();
+    await confirm(f);
+    const selected = await channel(f.org);
+    const receipt = await activate(f, selected);
+    const versionBefore = await versionState(f);
+    await db.query("update ai_agents set is_default=false where id=$1", [f.agent]);
+
+    expect(await activate(f, selected)).toEqual(receipt);
+    expect(await agentState(f)).toEqual({ is_active: true, is_default: true, published_version_id: f.version });
+    expect(await versionState(f)).toEqual(versionBefore);
+    expect(await auditCount(f, "onboarding.restricted_activation")).toBe(1);
+  });
+
+  it("default criado em concorrência vence a marca sem abortar a ativação bloqueada no índice único", async () => {
+    const f = await fixture();
+    await confirm(f);
+    const selected = await channel(f.org);
+    const owner = randomUUID();
+    // A linha existe antes, mas a marca é criada por OUTRA transação ainda
+    // não confirmada. INSERT seguraria também o FK da organização e testaria
+    // um bloqueio anterior, não a disputa real no índice de defaults.
+    await db.query(
+      "insert into ai_agents(id,organization_id,name,system_prompt,model,kind,is_active,is_default) values($1,$2,'Principal concorrente','Preservar','qa-concluir','mcp_agent',true,false)",
+      [owner, f.org],
+    );
+    const winner = await db.connect();
+    const activator = await db.connect();
+    let pending: Promise<unknown> | undefined;
+    try {
+      await winner.query("begin");
+      // Instrumentação adversarial SÓ neste escritor do banco descartável:
+      // o audit trigger obteria um FK lock na organização e serializaria a
+      // corrida ANTES da promoção. Replica desliga esses triggers incidentais,
+      // mas NÃO o índice único. A sessão ativadora permanece inteiramente normal.
+      // Sem capturar unique_violation, este mesmo teste deve falhar com 23505.
+      await winner.query("set local session_replication_role=replica");
+      await winner.query("update ai_agents set is_default=true where id=$1", [owner]);
+      const winnerPid = (await winner.query("select pg_backend_pid() pid")).rows[0].pid as number;
+      const activatorPid = (await activator.query("select pg_backend_pid() pid")).rows[0].pid as number;
+      pending = activator.query("select fn_ativar_agente_teste_onboarding($1,$2,1,$3,$4,$5,true) r", [f.org, f.user, f.version, f.run, selected]);
+      // Anexa um observador imediatamente para um mutante não virar rejection
+      // não tratada. A asserção abaixo ainda exige a resolução original.
+      void pending.catch(() => undefined);
+      let observed: { wait_event: string; blockers: number[] } | undefined;
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline) {
+        observed = (await db.query("select wait_event,pg_blocking_pids(pid) blockers from pg_stat_activity where pid=$1", [activatorPid])).rows[0];
+        if (observed?.blockers.includes(winnerPid)) break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(observed).toEqual({ wait_event: "transactionid", blockers: [winnerPid] });
+      await winner.query("commit");
+      await expect(pending).resolves.toMatchObject({ rows: [{ r: { agent_id: f.agent, version_id: f.version } }] });
+    } finally {
+      await winner.query("rollback");
+      await pending?.catch(() => undefined);
+      winner.release();
+      activator.release();
+    }
+    expect(await agentState(f)).toEqual({ is_active: true, is_default: false, published_version_id: f.version });
+    expect((await db.query("select id from ai_agents where organization_id=$1 and is_default", [f.org])).rows).toEqual([{ id: owner }]);
+    expect(await auditCount(f, "onboarding.restricted_activation")).toBe(1);
+    await expect(activate(f, selected)).resolves.toMatchObject({ agent_id: f.agent, version_id: f.version });
+  });
+
   it("confirmar exige revisão corrente, mantém tudo inativo e é idempotente", async () => {
     const unreviewed = await fixture({ reviewed: false });
     await expect(confirm(unreviewed)).rejects.toThrow("rehearsal_not_completed");
@@ -501,6 +408,7 @@ describe("revisão confirmada e ativação restrita do onboarding", () => {
       channel_session_id: selected,
     });
     expect(second).toEqual(first);
+    expect(await agentState(f)).toEqual({ is_active: true, is_default: true, published_version_id: f.version });
     expect(await auditCount(f, "onboarding.restricted_activation")).toBe(1);
   });
 

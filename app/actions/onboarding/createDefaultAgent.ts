@@ -343,10 +343,10 @@ export async function createDefaultAgent(formData: FormData): Promise<CreateAgen
 
   // O agente padrão do onboarding é UM por organização, e o banco já garante
   // isso: `ai_agents_one_default_per_org` é índice único parcial em
-  // (organization_id) where is_default. Nenhum outro caminho do produto grava
-  // `is_default = true` (todos os outros INSERTs em `ai_agents` gravam false),
-  // então "o default desta org" É "o agente que este passo criou" — chave de
-  // reaproveitamento que não depende de nenhuma escrita anterior ter dado certo.
+  // (organization_id) where is_default. A ativação restrita do onboarding também
+  // promove o funcionário revisado, somente quando a marca está livre (RPC
+  // fn_ativar_agente_teste_onboarding). Este caminho legado reaproveita o principal
+  // que já existe; não presume que foi ele quem criou esse agente.
   //
   // O código antes fazia o oposto: rebaixava o default existente e inseria
   // outro. Enquanto o passo só terminava em redirect isso nunca aparecia; agora

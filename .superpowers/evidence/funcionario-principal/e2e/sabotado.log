@@ -1,0 +1,102 @@
+[WebServer] (node:37041) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+[WebServer] Invalid Sentry Dsn: off
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+Running 2 tests using 1 worker
+
+(node:37071) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [env] Nenhuma chave de IA configurada (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY ou OPENROUTER_API_KEY) — o agente vai pular toda resposta com reason='ai_gateway_key_missing'.
+[WebServer] [env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+  ✘  1 [chromium] › tests/e2e/onboarding-leitor-de-site.spec.ts:237:59 › site lido: revisar é uma saída real e confirmar libera só o produto conferido (14.9s)
+(node:37186) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/e2e/onboarding-leitor-de-site.spec.ts:237:59 › site lido: depois é uma saída real e confirmar libera só o produto conferido (13.9s)
+
+
+  1) [chromium] › tests/e2e/onboarding-leitor-de-site.spec.ts:237:59 › site lido: revisar é uma saída real e confirmar libera só o produto conferido 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText(/Li o seu site \(https:\/\/valido\.onboarding-site\.test\/?\)/)
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText(/Li o seu site \(https:\/\/valido\.onboarding-site\.test\/?\)/)
+
+
+      249 |     expect(produtos.data).toEqual([expect.objectContaining({ nome: "Consulta inicial de demonstração", preco_cents: 12990, ativo: false })]);
+      250 |     await irAteFunil(page, fixture.canal);
+    > 251 |     await expect(page.getByText(/Li o seu site \(https:\/\/valido\.onboarding-site\.test\/?\)/)).toBeVisible();
+          |                                                                                                  ^
+      252 |     expect(chamadasIa.some(call => JSON.stringify(call).includes("DADOS_DO_SITE") && JSON.stringify(call).includes("valido.onboarding-site.test"))).toBe(true);
+      253 |     await finalizarQuadro(page);
+      254 |     const cartao = page.getByRole("region", { name: "Também preparei, do seu site:", exact: true });
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/prova-site-funcionario-principal/tests/e2e/onboarding-leitor-de-site.spec.ts:251:98
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--bff0a-bera-só-o-produto-conferido-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--bff0a-bera-só-o-produto-conferido-chromium/error-context.md
+
+    Error Context: ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--bff0a-bera-só-o-produto-conferido-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--bff0a-bera-só-o-produto-conferido-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--bff0a-bera-só-o-produto-conferido-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/e2e/onboarding-leitor-de-site.spec.ts:237:59 › site lido: depois é uma saída real e confirmar libera só o produto conferido 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText(/Li o seu site \(https:\/\/valido\.onboarding-site\.test\/?\)/)
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText(/Li o seu site \(https:\/\/valido\.onboarding-site\.test\/?\)/)
+
+
+      249 |     expect(produtos.data).toEqual([expect.objectContaining({ nome: "Consulta inicial de demonstração", preco_cents: 12990, ativo: false })]);
+      250 |     await irAteFunil(page, fixture.canal);
+    > 251 |     await expect(page.getByText(/Li o seu site \(https:\/\/valido\.onboarding-site\.test\/?\)/)).toBeVisible();
+          |                                                                                                  ^
+      252 |     expect(chamadasIa.some(call => JSON.stringify(call).includes("DADOS_DO_SITE") && JSON.stringify(call).includes("valido.onboarding-site.test"))).toBe(true);
+      253 |     await finalizarQuadro(page);
+      254 |     const cartao = page.getByRole("region", { name: "Também preparei, do seu site:", exact: true });
+        at /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/prova-site-funcionario-principal/tests/e2e/onboarding-leitor-de-site.spec.ts:251:98
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--1cb9c-bera-só-o-produto-conferido-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--1cb9c-bera-só-o-produto-conferido-chromium/error-context.md
+
+    Error Context: ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--1cb9c-bera-só-o-produto-conferido-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--1cb9c-bera-só-o-produto-conferido-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../funcionario-principal-no-onboarding/.superpowers/evidence/funcionario-principal/e2e/sabotado-artefatos/onboarding-leitor-de-site--1cb9c-bera-só-o-produto-conferido-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/e2e/onboarding-leitor-de-site.spec.ts:237:59 › site lido: revisar é uma saída real e confirmar libera só o produto conferido 
+    [chromium] › tests/e2e/onboarding-leitor-de-site.spec.ts:237:59 › site lido: depois é uma saída real e confirmar libera só o produto conferido 

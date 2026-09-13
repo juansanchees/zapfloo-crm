@@ -1,0 +1,32 @@
+
+> deskcomm-crm@0.1.0 test:unit /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+> vitest run tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts tests/unit/manifest-x-migrations.test.ts tests/unit/baseline-reaplicavel.test.ts --reporter\=verbose
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+
+ ✓ tests/unit/manifest-x-migrations.test.ts > MANIFEST × arquivos de migration > o MANIFEST não vem vazio (guarda de vacuidade) 3ms
+ ✓ tests/unit/manifest-x-migrations.test.ts > MANIFEST × arquivos de migration > toda linha do MANIFEST aponta para um arquivo que existe 3ms
+ ✓ tests/unit/manifest-x-migrations.test.ts > MANIFEST × arquivos de migration > toda migration tem linha no MANIFEST 2ms
+ ✓ tests/unit/manifest-x-migrations.test.ts > MANIFEST × arquivos de migration > nenhum número de migration é usado duas vezes 1ms
+ ✓ tests/unit/manifest-x-migrations.test.ts > MANIFEST × arquivos de migration > nenhum timestamp é usado duas vezes 1ms
+ ✓ tests/unit/manifest-x-migrations.test.ts > MANIFEST × arquivos de migration > as divergências declaradas continuam existindo (a lista não pode envelhecer) 2ms
+ ✓ tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts > baseline.sql — a varredura de anon é o último bloco > o instrumento acha o que precisa achar (guarda de vacuidade) 4ms
+ ✓ tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts > baseline.sql — a varredura de anon é o último bloco > nenhuma função é criada depois da varredura 5ms
+ ✓ tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts > baseline.sql — a varredura de anon é o último bloco > nenhum grant devolve anon depois da varredura 2ms
+ ✓ tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts > baseline.sql — a varredura de anon é o último bloco > o instrumento enxerga a violação quando ela existe (controle negativo) 122ms
+ ✓ tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts > baseline.sql — a varredura de anon é o último bloco > a prosa do próprio bloco não é confundida com código 0ms
+ ✓ tests/unit/baseline-reaplicavel.test.ts > baseline.sql é re-aplicável > o instrumento está vivo: acha o corpo, o apêndice e a fronteira 2ms
+ ✓ tests/unit/baseline-reaplicavel.test.ts > baseline.sql é re-aplicável > todo CREATE INDEX do corpo tem IF NOT EXISTS 2ms
+ ✓ tests/unit/baseline-reaplicavel.test.ts > baseline.sql é re-aplicável > todo ADD CONSTRAINT está dentro de guarda 1ms
+ ✓ tests/unit/baseline-reaplicavel.test.ts > baseline.sql é re-aplicável > todo `add constraint` do APÊNDICE está guardado — e é lá que schema novo entra 4ms
+ ✓ tests/unit/baseline-reaplicavel.test.ts > baseline.sql é re-aplicável > toda CREATE POLICY está guardada — e cada zona com a forma que lhe cabe 454ms
+
+ Test Files  3 passed (3)
+      Tests  16 passed (16)
+   Start at  12:16:03
+   Duration  2.12s (transform 134ms, setup 912ms, import 81ms, tests 614ms, environment 3.23s)
+
