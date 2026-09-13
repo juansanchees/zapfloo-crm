@@ -19,14 +19,14 @@ type ThemeContextValue = {
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 function readStoredTheme(): Theme {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") return "light";
   try {
     const v = window.localStorage.getItem(STORAGE_KEY);
     if (v === "light" || v === "dark" || v === "system") return v;
   } catch {
     // localStorage indisponível (modo privado, sandbox) — segue com default.
   }
-  return "system";
+  return "light";
 }
 
 function getSystemTheme(): ResolvedTheme {
@@ -40,9 +40,17 @@ function applyTheme(resolved: ResolvedTheme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Lê do storage no primeiro render do client (não causa hydration mismatch
-  // porque o inline script no layout já setou o data-theme antes do paint).
-  const [theme, setThemeState] = React.useState<Theme>(() => readStoredTheme());
+  // O script corrige o <html>, mas não os rótulos/ícones dos consumidores.
+  // Eles precisam do mesmo primeiro render no servidor e na hidratação:
+  // caso contrário, React deixa atributos do SSR mesmo com o tema já escuro.
+  // Mesmo marcador de hidratação usado em CampoDeLogo; não persiste escolhas.
+  const hydrated = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const [storedTheme, setThemeState] = React.useState<Theme>(() => readStoredTheme());
+  const theme: Theme = hydrated ? storedTheme : "light";
   const [systemTheme, setSystemTheme] = React.useState<ResolvedTheme>(() =>
     getSystemTheme(),
   );
@@ -61,8 +69,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Aplica no DOM sempre que o tema efetivo muda.
   React.useEffect(() => {
+    // Até hidratar, o tema do script síncrono prevalece. Aplicar o default
+    // do SSR aqui causaria o pisca dark → light → dark no recarregamento.
+    if (!hydrated) return;
     applyTheme(resolvedTheme);
-  }, [resolvedTheme]);
+  }, [hydrated, resolvedTheme]);
 
   const setTheme = React.useCallback((next: Theme) => {
     setThemeState(next);
