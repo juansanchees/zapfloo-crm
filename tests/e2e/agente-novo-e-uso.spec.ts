@@ -20,7 +20,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 import { loginComoAdmin, lerCreds, type CredsE2E } from "./helpers/login-admin";
 
@@ -41,23 +41,53 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("Criar um agente pela tela", () => {
-  test("o formulário abre e diz o que falta antes de deixar criar", async ({ page }) => {
+  test("o formulário abre com as escolhas técnicas prontas e recolhidas", async ({ page }) => {
     await page.goto("/app/ai/agents/new");
     await expect(page.getByRole("heading", { name: /novo agent/i })).toBeVisible();
 
-    // O botão nasce bloqueado: a tela não deixa criar um agente pela metade.
+    // O botão nasce bloqueado porque ainda falta o NOME — uma decisão de
+    // negócio. Modelo e credencial já foram resolvidos pelo servidor.
     const criar = page.getByRole("button", { name: /criar agent/i });
     await expect(criar).toBeDisabled();
 
-    // E ela diz o que falta — as três exigências que o servidor também impõe.
-    // Escritas como instrução, não como acusação — um formulário recém-aberto
-    // que já diz "obrigatório" em vermelho trata o usuário como quem errou.
-    for (const exigencia of [
-      /escolha o modelo/i,
-      /escolha a chave de acesso/i,
-      /escolha por qual número de whatsapp/i,
-    ]) {
-      await expect(page.getByText(exigencia).first()).toBeVisible();
+    const avancado = page.getByTestId("configuracao-avancada-do-agente");
+    await expect(avancado).not.toHaveAttribute("open");
+    const resumoAvancado = avancado.locator("summary");
+    await resumoAvancado.focus();
+    await page.keyboard.press("Enter");
+    await expect(avancado).toHaveAttribute("open");
+    await page.keyboard.press("Enter");
+    await expect(avancado).not.toHaveAttribute("open");
+    for (const id of ["provider", "model", "credential_id", "max_steps", "bh_tz"]) {
+      await expect(avancado.locator(`#${id}`)).toBeHidden();
+    }
+    for (const id of ["name", "description", "channel_session_id", "handoff_kw", "ignore_groups", "bh_enabled"]) {
+      await expect(page.locator(`#${id}`)).toBeVisible();
+    }
+
+    // A régua é geométrica: o conteúdo não pode criar rolagem horizontal e o
+    // alvo que abre Avançado continua tocável em desktop, tablet e celular.
+    for (const largura of [1280, 768, 390]) {
+      await page.setViewportSize({ width: largura, height: 720 });
+      const medida = await page.evaluate(() => {
+        const resumo = document.querySelector<HTMLDetailsElement>(
+          '[data-testid="configuracao-avancada-do-agente"] > summary',
+        );
+        const caixa = resumo?.getBoundingClientRect();
+        return {
+          viewport: document.documentElement.clientWidth,
+          conteudo: document.documentElement.scrollWidth,
+          alturaDoAlvo: caixa?.height ?? 0,
+          esquerda: caixa?.left ?? -1,
+          direita: caixa?.right ?? Number.POSITIVE_INFINITY,
+        };
+      });
+      expect(medida.conteudo, `transbordo horizontal em ${largura}px`).toBeLessThanOrEqual(
+        medida.viewport,
+      );
+      expect(medida.alturaDoAlvo).toBeGreaterThanOrEqual(40);
+      expect(medida.esquerda).toBeGreaterThanOrEqual(0);
+      expect(medida.direita).toBeLessThanOrEqual(medida.viewport);
     }
 
     await page.screenshot({
@@ -74,30 +104,29 @@ test.describe("Criar um agente pela tela", () => {
 
     await page.locator("#name").fill(nome);
     await page
-      .locator("textarea")
-      .first()
+      .locator("#system_prompt")
       .fill(
         "Você é a recepção de uma clínica odontológica. Atenda com educação, responda dúvidas sobre horários e ajude a marcar consulta.",
       );
 
-    // Os três campos que a tela exige. São comboboxes do Radix, NÃO `<select>`
-    // nativo: não existe `<option>` no DOM até o menu abrir, e procurar por
-    // `option` devolve zero — que lê como "a tela não tem modelo nenhum" quando
-    // na verdade o instrumento é que estava olhando o lugar errado.
-    for (const id of ["model", "credential_id", "channel_session_id"]) {
-      const gatilho = page.locator(`#${id}`);
-      if ((await gatilho.count()) === 0) continue;
+    // Com mais de um número a escolha continua sendo do negócio; quando só há
+    // um, ele já vem selecionado e a pessoa não ganha uma decisão artificial.
+    const gatilho = page.locator("#channel_session_id");
+    if (/Selecione/i.test((await gatilho.textContent()) ?? "")) {
       await gatilho.click();
       const opcoes = page.getByRole("option");
       const quantas = await opcoes.count();
-      expect(quantas, `o campo "${id}" abriu sem nenhuma opção para escolher`).toBeGreaterThan(0);
+      expect(quantas, "o campo de número abriu sem nenhuma opção").toBeGreaterThan(0);
       await opcoes.first().click();
       await expect(gatilho).not.toContainText(/^Selecione/);
     }
 
-    // Liga uma jornada de trabalho — o caminho que a W1 entregou.
-    await page.getByTestId("switch-pacote-atender").click();
-    await expect(page.getByTestId("pacote-atender")).toHaveAttribute("data-estado", "ligado");
+    // A configuração de clínica mostra a prévia antes de alterar o agente.
+    await page.getByRole("button", { name: /ver o que será ligado/i }).click();
+    const previa = page.getByTestId("preview-preset-clinica");
+    await expect(previa).toBeVisible();
+    await expect(previa).toContainText(/não serão ligadas pelo pacote/i);
+    await page.getByRole("button", { name: /aplicar configuração de clínica/i }).click();
     const ligadas = await page.getByTestId("consumo-teto").textContent();
 
     await page.screenshot({
@@ -106,6 +135,13 @@ test.describe("Criar um agente pela tela", () => {
     });
 
     const criar = page.getByRole("button", { name: /criar agent/i });
+    const errosDoFormulario = await page
+      .locator('[aria-invalid="true"]')
+      .allTextContents();
+    expect(
+      errosDoFormulario.map((texto) => texto.trim()).filter(Boolean),
+      "a tela manteve uma exigência sem explicar qual decisão ainda falta",
+    ).toEqual([]);
     await expect(criar).toBeEnabled();
     await criar.click();
 
@@ -117,7 +153,8 @@ test.describe("Criar um agente pela tela", () => {
     // é aqui que uma tela de criação costuma perder metade do formulário.
     await page.getByTestId("tool-picker").waitFor({ state: "visible", timeout: 60_000 });
     await expect(page.getByTestId("consumo-teto")).toHaveText(ligadas!.trim());
-    await expect(page.getByTestId("pacote-atender")).toHaveAttribute("data-estado", "ligado");
+    await page.getByText("Ajustar por objetivo", { exact: true }).click();
+    await expect(page.getByTestId("pacote-vender")).toHaveAttribute("data-estado", "ligado");
 
     await page.screenshot({
       path: path.join(EVIDENCIA, "w1-nova-03-agente-criado.png"),

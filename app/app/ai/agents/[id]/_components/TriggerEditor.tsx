@@ -35,6 +35,8 @@ interface Props {
   value: TriggerValue;
   onChange: (v: TriggerValue) => void;
   disabled?: boolean;
+  section?: "principal" | "avancado" | "completo";
+  organizationTimezone?: string;
 }
 
 const WEEKDAYS = [
@@ -47,7 +49,13 @@ const WEEKDAYS = [
   { id: 6, label: "Sáb" },
 ];
 
-export function TriggerEditor({ value, onChange, disabled }: Props) {
+export function TriggerEditor({
+  value,
+  onChange,
+  disabled,
+  section = "completo",
+  organizationTimezone = "America/Sao_Paulo",
+}: Props) {
   const t = useT();
   function patchFilters(p: Partial<TriggerValue["filters"]>) {
     onChange({ ...value, filters: { ...value.filters, ...p } });
@@ -59,7 +67,7 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
     patchFilters({
       business_hours: enabled
         ? bh ?? {
-            timezone: "America/Sao_Paulo",
+            timezone: organizationTimezone,
             start: "08:00",
             end: "20:00",
             weekdays: [1, 2, 3, 4, 5],
@@ -81,8 +89,8 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
+    <div className="space-y-4" data-testid={`gatilho-${section}`}>
+      {section !== "principal" ? <div>
         <Label>{t("O que faz ele responder")}</Label>
         <div className="mt-1 flex flex-wrap gap-2">
           {(["message"] as const).map((ev) => {
@@ -113,10 +121,10 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
             );
           })}
         </div>
-      </div>
+      </div> : null}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="flex items-center gap-2">
+        {section !== "avancado" ? <div className="flex items-center gap-2">
           <Switch
             checked={value.filters.ignore_groups}
             onCheckedChange={(v) => patchFilters({ ignore_groups: v })}
@@ -124,8 +132,8 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
             id="ignore_groups"
           />
           <Label htmlFor="ignore_groups">{t("Não responder em grupos")}</Label>
-        </div>
-        <div className="flex items-center gap-2">
+        </div> : null}
+        {section !== "principal" ? <div className="flex items-center gap-2">
           <Switch
             checked={value.filters.ignore_self}
             onCheckedChange={(v) => patchFilters({ ignore_self: v })}
@@ -133,10 +141,10 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
             id="ignore_self"
           />
           <Label htmlFor="ignore_self">{t("Não responder às mensagens que saem do seu próprio número")}</Label>
-        </div>
+        </div> : null}
       </div>
 
-      <div className="space-y-1">
+      {section !== "principal" ? <div className="space-y-1">
         <Label htmlFor="keyword_regex">{t("Só responder quando a mensagem falar de algo específico (opcional)")}</Label>
         <Input
           id="keyword_regex"
@@ -153,9 +161,9 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
             "Deixe em branco para o agente responder a tudo. Se preencher, ele só entra quando a mensagem contiver uma dessas palavras — separe por barra vertical (|). Aceita expressão regular, para quem já conhece.",
           )}
         </p>
-      </div>
+      </div> : null}
 
-      <div className="space-y-1">
+      {section !== "principal" ? <div className="space-y-1">
         <Label>{t("Quantos atendimentos ao mesmo tempo")}</Label>
         <Select
           value={value.concurrency}
@@ -170,9 +178,9 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
             <SelectItem value="one_per_contact">{t("Um de cada vez por cliente")}</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div> : null}
 
-      <div className="space-y-2 rounded-md border border-border/60 p-3">
+      {section !== "avancado" ? <div className="space-y-2 rounded-md border border-border/60 p-3">
         <div className="flex items-center gap-2">
           <Switch
             checked={!!bh}
@@ -184,16 +192,7 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
         </div>
         {bh ? (
           <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="bh_tz">{t("Fuso horário")}</Label>
-                <Input
-                  id="bh_tz"
-                  value={bh.timezone}
-                  onChange={(e) => patchBh({ timezone: e.target.value })}
-                  disabled={disabled}
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label htmlFor="bh_start">{t("Início")}</Label>
                 <Input
@@ -240,7 +239,22 @@ export function TriggerEditor({ value, onChange, disabled }: Props) {
             </div>
           </div>
         ) : null}
-      </div>
+      </div> : null}
+
+      {section !== "principal" && bh ? (
+        <div className="space-y-1">
+          <Label htmlFor="bh_tz">{t("Fuso horário")}</Label>
+          <Input
+            id="bh_tz"
+            value={bh.timezone}
+            onChange={(e) => patchBh({ timezone: e.target.value })}
+            disabled={disabled}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("Herdado da organização. Altere somente se este agente atender em outro fuso.")}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -23,6 +23,11 @@ const COM_LOJA: ContextoDoPasso = { lojaLigada: true };
 const VAZIO: OnboardingState = {};
 
 describe("passos visíveis", () => {
+  it("o site opcional não cria um sétimo passo nem expõe loja desligada", () => {
+    expect(passosVisiveis(COM_LOJA)).toHaveLength(6);
+    expect(passosVisiveis(SEM_LOJA)).toHaveLength(5);
+    expect(passosVisiveis(COM_LOJA).map((p) => p.segmento)).not.toContain("site");
+  });
   it("instalação pelo kit não vê passo de loja em lugar nenhum", () => {
     const segmentos = passosVisiveis(SEM_LOJA).map((p) => p.segmento);
     expect(segmentos).not.toContain("connect-nuvemshop");

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
+import { ORIGEM_SITE } from "@/lib/catalogo/tipos";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { COLUNAS_DO_PRODUTO, type Produto } from "@/lib/schemas/produtos";
 import { createClient } from "@/lib/supabase/server";
@@ -36,17 +37,29 @@ export default async function ProdutosPage() {
   const podeEditar = user.is_platform_admin || ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
 
   const supabase = await createClient();
-  const { data } = await supabase
+  const [catalogo, rascunhos] = await Promise.all([supabase
     .from("catalog_products")
     .select(COLUNAS_DO_PRODUTO)
     .eq("organization_id", activeOrg.orgId)
     .order("ativo", { ascending: false })
     .order("nome")
-    .limit(500);
+    .limit(500), supabase
+    .from("catalog_products")
+    .select(COLUNAS_DO_PRODUTO)
+    .eq("organization_id", activeOrg.orgId)
+    .eq("origem", ORIGEM_SITE)
+    .eq("ativo", false)
+    .order("nome")
+    .limit(500),
+  ]);
+  // O limite da listagem normal não pode esconder rascunhos depois de 500
+  // produtos ativos: são justamente eles que a pessoa veio conferir.
+  const linhas = [...(rascunhos.data ?? []), ...(catalogo.data ?? [])] as unknown as Produto[];
+  const inicial = Array.from(new Map(linhas.map((produto) => [produto.id, produto])).values());
 
   return (
     <ProdutosClient
-      inicial={(data ?? []) as unknown as Produto[]}
+      inicial={inicial}
       podeEditar={podeEditar}
       textos={{
         titulo: t("Produtos"),

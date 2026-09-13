@@ -17,6 +17,7 @@ import { useT } from "@/hooks/i18n/useT";
  * aceita — controle que não controla nada gasta a confiança de quem clicou.
  */
 import { useState } from "react";
+import Link from "next/link";
 import {
   BookOpen,
   FileText,
@@ -25,10 +26,20 @@ import {
   Package,
   RefreshCw,
   Trash2,
+  Globe,
 } from "lucide-react";
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { apiClient } from "@/lib/api/client";
+import { showApiError } from "@/components/feedback/ApiErrorToast";
+import {
+  lerEstadoDoSite,
+  revisaoDoSiteExpirou,
+  siteFoiRevisado,
+} from "@/lib/onboarding/site/estado";
+import { mensagemDoSite } from "@/lib/onboarding/site/mensagens";
 import { SourceStatusBadge, deriveBadgeStatus } from "@/components/ai/SourceStatusBadge";
 import { TrechosDoMaterialDialog } from "@/components/ai/TrechosDoMaterialDialog";
 import { EditarFaqDialog } from "@/components/ai/EditarFaqDialog";
@@ -44,6 +55,7 @@ const ICONE_POR_TIPO: Record<string, typeof HelpCircle> = {
   documento: FileText,
   conversas: MessageSquare,
   catalogo: Package,
+  site: Globe,
 };
 
 interface Props {
@@ -86,6 +98,7 @@ export function KnowledgeSourceCard({
   const tagDoIdioma = useTagDeIdioma();
   const [vendoTrechos, setVendoTrechos] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [relendo, setRelendo] = useState(false);
 
   const tipo = canonizarTipoDeFonte(source.source_type) ?? "faq";
   const meta = TIPO_DE_FONTE_POR_ID.get(tipo);
@@ -96,16 +109,57 @@ export function KnowledgeSourceCard({
   const mostraErro =
     (derived === "failed" || derived === "sem_credencial") && source.last_index_error;
   const temTrechos = (source.chunks_count ?? 0) > 0;
+  const site = tipo === "site" ? lerEstadoDoSite(source.source_metadata) : null;
+  const aguardaRevisao =
+    tipo === "site" &&
+    !arquivado &&
+    (!source.is_active || !siteFoiRevisado(source.source_metadata));
+  const revisaoExpirada = revisaoDoSiteExpirou(site);
+  const lendoSite = tipo === "site" && source.status === "building" && !site?.revisaoToken;
+  const revisandoSite =
+    tipo === "site" &&
+    source.status === "building" &&
+    Boolean(site?.revisaoToken) &&
+    !revisaoExpirada;
+  const falhouLeitura = tipo === "site" && source.status === "failed";
+  const temPerguntasSite = Boolean(site && site.perguntas !== 0);
+  const erroDoSite = tipo === "site"
+    ? (source.last_index_error ?? site?.motivo ?? (!site ? "site_estado_invalido" : null))
+    : null;
+
+  async function relerSite(): Promise<void> {
+    setRelendo(true);
+    try {
+      await apiClient.post("/api/v1/onboarding/site/retry", { source_id: source.id });
+      onMudou();
+    } catch (err) {
+      showApiError(err);
+    } finally {
+      setRelendo(false);
+    }
+  }
 
   return (
     <Card className="flex h-full flex-col" data-testid={`material-${source.id}`}>
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-2">
             <Icon className="h-5 w-5 shrink-0 text-accent" aria-hidden />
-            <CardTitle className="text-base">{source.name}</CardTitle>
+            <CardTitle className="min-w-0 break-words text-base">{source.name}</CardTitle>
           </div>
-          <SourceStatusBadge source={source} />
+          {tipo === "site" && !site ? <Badge variant="error">{t("Não entrou")}</Badge> : aguardaRevisao && !falhouLeitura ? (
+            <Badge variant={lendoSite || revisandoSite ? "info" : "warning"}>
+              {lendoSite
+                ? t("Lendo o seu site…")
+                : revisandoSite
+                  ? t("Salvando…")
+                  : temPerguntasSite
+                    ? t("Aguardando sua conferência")
+                    : t("Leitura concluída")}
+            </Badge>
+          ) : (
+            <SourceStatusBadge source={source} />
+          )}
         </div>
         <p className="text-sm text-text-muted">
           {meta?.rotulo ? t(meta.rotulo) : source.source_type}
@@ -113,6 +167,62 @@ export function KnowledgeSourceCard({
       </CardHeader>
 
       <CardContent className="flex-1 space-y-2 text-sm">
+        {site ? (
+          <div className="space-y-2" data-testid={`material-site-${source.id}`}>
+            <p className="break-all text-text-muted">{site.url}</p>
+            {aguardaRevisao && temPerguntasSite && !lendoSite && !falhouLeitura ? (
+              <p className="text-warning-fg">
+                {t(
+                  "As perguntas do site ainda não são usadas pelo agente. Confira o conteúdo antes de confirmar.",
+                )}
+              </p>
+            ) : null}
+            {!temPerguntasSite && !lendoSite && !falhouLeitura ? (
+              <p className="text-text-muted">
+                {t(
+                  "Não encontrei perguntas frequentes neste site. Você pode adicionar outro material manualmente.",
+                )}
+              </p>
+            ) : null}
+            {site.limiteAtingido ? (
+              <p className="text-text-muted">
+                {t(
+                  "Li até o limite de páginas desta leitura. Você pode completar o conteúdo na revisão.",
+                )}
+              </p>
+            ) : null}
+            {site.recusas.length > 0 ? (
+              <details className="rounded-md border border-border p-2 text-xs">
+                <summary className="cursor-pointer font-medium">{t("O que não importei")}</summary>
+                <ul className="mt-2 space-y-2">
+                  {site.recusas.map((recusa, index) => (
+                    <li key={`${recusa.url}-${recusa.linha}-${index}`} className="break-words">
+                      <span className="break-all">{recusa.url}</span>
+                      {" · "}
+                      {t("Linha")} {recusa.linha}
+                      {": "}
+                      {recusa.item ? (
+                        <span>
+                          {recusa.item}
+                          {" — "}
+                        </span>
+                      ) : null}
+                      {t(mensagemDoSite(recusa.motivo))}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </div>
+        ) : null}
+        {erroDoSite ? (
+          <p
+            role="status"
+            className="rounded-md border border-error-bg bg-error-bg/30 p-2 text-xs text-error-fg"
+          >
+            {t(mensagemDoSite(erroDoSite))}
+          </p>
+        ) : null}
         <div className="flex items-baseline justify-between">
           <span className="text-text-muted">{t("Preparado")}</span>
           <span>{formatRelative(source.last_indexed_at, tagDoIdioma, t)}</span>
@@ -137,28 +247,53 @@ export function KnowledgeSourceCard({
           </span>
         </div>
 
-        {mostraErro ? (
+        {mostraErro && tipo !== "site" ? (
           <details className="rounded-md border border-error-bg bg-error-bg/30 p-2 text-xs text-error-fg">
             <summary className="cursor-pointer font-medium">{t("Por que não entrou")}</summary>
-            <p className="mt-1 whitespace-pre-wrap break-words">{source.last_index_error}</p>
+            <p className="mt-1 break-words whitespace-pre-wrap">{source.last_index_error}</p>
           </details>
         ) : null}
       </CardContent>
 
       <CardFooter className="flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={arquivado || isReindexing}
-          onClick={onReindex}
-          data-testid={`material-reindexar-${source.id}`}
-        >
-          <RefreshCw
-            className={`mr-2 h-3.5 w-3.5 ${isReindexing ? "animate-spin" : ""}`}
-            aria-hidden
-          />
-          {isReindexing ? t("Preparando…") : t("Preparar de novo")}
-        </Button>
+        {!aguardaRevisao ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={arquivado || isReindexing}
+            onClick={onReindex}
+            data-testid={`material-reindexar-${source.id}`}
+          >
+            <RefreshCw
+              className={`mr-2 h-3.5 w-3.5 ${isReindexing ? "animate-spin" : ""}`}
+              aria-hidden
+            />
+            {isReindexing ? t("Preparando…") : t("Preparar de novo")}
+          </Button>
+        ) : null}
+        {falhouLeitura && site && site.tentativas < 3 ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={relendo}
+            onClick={relerSite}
+            data-testid={`material-reler-site-${source.id}`}
+          >
+            {relendo ? t("Solicitando nova leitura…") : t("Tentar ler o site de novo")}
+          </Button>
+        ) : null}
+        {falhouLeitura && site && site.tentativas >= 3 ? (
+          <p className="text-xs text-text-muted">
+            {t(
+              "Não consegui ler este site após três tentativas. Você pode adicionar o conteúdo manualmente em outro material.",
+            )}
+          </p>
+        ) : null}
+        {tipo === "site" ? (
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/app/products">{t("Conferir produtos")}</Link>
+          </Button>
+        ) : null}
 
         {temTrechos ? (
           <>
@@ -184,7 +319,12 @@ export function KnowledgeSourceCard({
           </>
         ) : null}
 
-        {aceitaTextoColado(tipo) && !arquivado ? (
+        {aceitaTextoColado(tipo) &&
+        !arquivado &&
+        !lendoSite &&
+        !revisandoSite &&
+        !falhouLeitura &&
+        (tipo !== "site" || temPerguntasSite) ? (
           <>
             <Button
               variant="ghost"
@@ -192,7 +332,7 @@ export function KnowledgeSourceCard({
               onClick={() => setEditando(true)}
               data-testid={`material-editar-${source.id}`}
             >
-              {t("Editar conteúdo")}
+              {tipo === "site" ? t("Revisar perguntas") : t("Editar conteúdo")}
             </Button>
             {editando ? (
               <EditarFaqDialog
@@ -201,6 +341,7 @@ export function KnowledgeSourceCard({
                 aberto
                 onFechar={() => setEditando(false)}
                 onSalvo={onMudou}
+                confirmarSite={tipo === "site"}
               />
             ) : null}
           </>

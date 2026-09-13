@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { toast } from "sonner";
 import { useT } from "@/hooks/i18n/useT";
 
@@ -9,16 +9,52 @@ import { finishOnboarding } from "@/app/actions/onboarding/finishOnboarding";
 import type { ItemDoResumo } from "@/lib/onboarding/passos";
 import type { PecaDoSistema } from "@/lib/onboarding/o-que-mais-existe";
 
+function observarDispensa(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
 export function DoneClient({
   itens,
   pecas,
+  orgId,
+  site,
 }: {
   itens: ItemDoResumo[];
   pecas: PecaDoSistema[];
+  orgId: string;
+  site: { produtos: number; perguntas: number; fonteId: string | null };
 }) {
   const t = useT();
   const [pending, startTransition] = useTransition();
   const pendentes = itens.filter((i) => !i.feito);
+  const [dispensaLocal, setDispensaLocal] = useState<string | null>(null);
+  const [revisandoSite, setRevisandoSite] = useState(false);
+  const chaveDaDispensa = `onboarding-site-depois:${orgId}`;
+
+  const dispensado = useSyncExternalStore(observarDispensa, () => {
+    try {
+      return sessionStorage.getItem(chaveDaDispensa) === "sim";
+    } catch {
+      // Armazenamento desativado não impede usar o CRM nem dispensar o cartão.
+      return false;
+    }
+  }, () => true);
+  // O servidor não conhece a dispensa local. Esperar a hidratação evita
+  // piscar um convite que a pessoa já dispensou ao recarregar esta página.
+  const ocultarSite = dispensado || dispensaLocal === chaveDaDispensa;
+
+  function deixarParaDepois() {
+    setDispensaLocal(chaveDaDispensa);
+    try { sessionStorage.setItem(chaveDaDispensa, "sim"); } catch { /* A dispensa em memória continua valendo. */ }
+  }
+
+  function concluirParaRevisar(destino: "/app/products" | "/app/ai/knowledge/sources") {
+    startTransition(async () => {
+      const res = await finishOnboarding(destino);
+      if (res && !res.ok) toast.error(`${t("Falha:")} ${res.error}`);
+    });
+  }
 
   return (
     <div className="space-y-6 rounded-lg border bg-background p-6">
@@ -54,6 +90,26 @@ export function DoneClient({
           </li>
         ))}
       </ul>
+
+      {!ocultarSite && (site.produtos > 0 || site.perguntas > 0) ? (
+        <section aria-labelledby="pendencias-do-site" className="space-y-3 rounded-lg border bg-background p-4">
+          <h3 id="pendencias-do-site" className="text-sm font-medium">{t("Também preparei, do seu site:")}</h3>
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            {site.produtos > 0 ? <li>{site.produtos} {t("produtos com preço — aguardando sua conferência")}</li> : null}
+            {site.perguntas > 0 ? <li>{site.perguntas} {t("perguntas frequentes — aguardando sua conferência")}</li> : null}
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => setRevisandoSite(true)}>{t("Revisar agora")}</Button>
+            <Button type="button" variant="ghost" onClick={deixarParaDepois}>{t("Depois")}</Button>
+          </div>
+          {revisandoSite ? (
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              {site.produtos > 0 ? <button type="button" disabled={pending} onClick={() => concluirParaRevisar("/app/products")} className="text-left underline underline-offset-2 disabled:opacity-50">{t("Conferir produtos e preços")}</button> : null}
+              {site.perguntas > 0 ? <button type="button" disabled={pending} onClick={() => concluirParaRevisar("/app/ai/knowledge/sources")} className="text-left underline underline-offset-2 disabled:opacity-50">{t("Conferir perguntas frequentes")}</button> : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {/*
         O wizard acabava aqui, com um botão que entregava a pessoa numa caixa de

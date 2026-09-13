@@ -1,0 +1,79 @@
+
+> deskcomm-crm@0.1.0 test:db /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+> bash scripts/test-db.sh tests/invariants/onboarding-principal-backfill.test.ts -t 'backfill promove só publicação evidenciada' --reporter\=verbose
+
+==> subindo pgvector/pgvector:pg15 como deskcomm-test-db-38647 (worktree /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding, branch codex/funcionario-principal-no-onboarding)
+    ✓ publicado em 127.0.0.1:32857
+==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)
+==> conferindo que o banco efêmero é o do PRODUTO (antes do baseline)
+    ✓ definer nova nasce com grant direto a anon (armadilha do produto reproduzida)
+==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1
+ set_config 
+------------
+ 
+(1 row)
+
+psql:<stdin>:5007: WARNING:  wal_level is insufficient to publish logical changes
+HINT:  Set wal_level to "logical" before creating subscriptions.
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ install ok
+==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)
+ set_config 
+------------
+ 
+(1 row)
+
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ update ok (zero erro na re-aplicação)
+==> banco `postgres` a partir do molde (o setupFile o recria a cada arquivo)
+==> invariantes: vitest (tests/invariants) — banco novo por ARQUIVO, ordem sorteada
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.db.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+      Running tests with seed "1789312566324"
+
+NOTICE: onboarding_funcionario_principal: promovidas=3, ignoradas_por_default=2, ignoradas_por_falta_de_evidencia=10, defaults_arquivados=1
+ × tests/invariants/onboarding-principal-backfill.test.ts > correção conservadora do funcionário principal pelo recibo > backfill promove só publicação evidenciada da própria organização, preserva restrição e declara quatro contagens idempotentes 389ms
+   → expected [ Array(1) ] to deeply equal [ Array(1) ]
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/invariants/onboarding-principal-backfill.test.ts > correção conservadora do funcionário principal pelo recibo > backfill promove só publicação evidenciada da própria organização, preserva restrição e declara quatro contagens idempotentes
+AssertionError: expected [ Array(1) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
+-   "onboarding_funcionario_principal: promovidas=2, ignoradas_por_default=2, ignoradas_por_falta_de_evidencia=11, defaults_arquivados=1",
++   "onboarding_funcionario_principal: promovidas=3, ignoradas_por_default=2, ignoradas_por_falta_de_evidencia=10, defaults_arquivados=1",
+  ]
+
+ ❯ tests/invariants/onboarding-principal-backfill.test.ts:86:88
+     84|     try {
+     85|       await client.query(migration);
+     86|       expect(notices.filter((n) => n.startsWith("onboarding_funcionari…
+       |                                                                                        ^
+     87|         `onboarding_funcionario_principal: promovidas=2, ignoradas_por…
+     88|       ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  12:16:06
+   Duration  751ms (transform 31ms, setup 176ms, import 53ms, tests 390ms, environment 0ms)
+
+==> teardown: removendo container deskcomm-test-db-38647
+ ELIFECYCLE  Command failed with exit code 1.

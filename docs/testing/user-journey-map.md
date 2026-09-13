@@ -10,6 +10,14 @@
 
 ## Convenções
 
+Leitor opcional de site no welcome `[P0]`: contrato, limites, integração com
+funil/catálogo/acervo e estado das provas em [onboarding-site.md](onboarding-site.md).
+Não acrescenta passo; a jornada não aguarda leitura externa. A execução E2E
+fica distinguida dos testes focados e das integrações externas não medidas.
+Medição pós-merge em 13/set/2026: `onboarding-leitor-de-site` teve 3 PASS e
+2 FAIL no funil; seleção exige agente padrão, mas o wizard ativa um agente
+não padrão. Done/revisão do site válido não foram alcançados; detalhes no relatório.
+
 - `[P0]` primeira impressão — bug aqui é vergonha pública; prioridade máxima.
 - `[P1]` rotina diária do operador/atendente.
 - `[P2]` exploração/edge.
@@ -261,6 +269,9 @@ Recorte local de 2026-09-08. `prepararRascunho` materializa configuração salva
 | J3.13 | A escolha sobrevive ao salvar e recarregar | o servidor aceita a lista (o mesmo teto da tela, `TETO_TOOLS_POR_AGENTE`, fonte única) e o estado volta igual · **PASS** |
 | J3.14 | Ver se o que está ligado está funcionando (aba Capacidades) | usos, falhas, quantos vieram de teste, última vez — e o que fazer com cada número · **PASS** (números escritos pelo emissor real de audit) |
 | J3.15 | O teto recusa a passagem, explicando em português | **PASS** — exercitável desde que o catálogo cresceu (57 capacidades). `capacidades-do-agente.spec.ts` liga "Atender" sobre as 8 do seed e prova a recusa por 1 vaga. A afirmação "não exercitável hoje, com 16 capacidades no catálogo" VENCEU |
+| J3.16 | Criar agente sem tomar decisões técnicas | modelo, credencial da instalação, fuso da organização e o único número conectado chegam preenchidos; os controles técnicos continuam editáveis em “Avançado” · **PASS unitário + E2E** (`editor-agente-avancado.test.tsx`, `configuracao-inicial-do-agente.test.ts`, `agente-novo-e-uso.spec.ts`) |
+| J3.17 | Preparar um agente de clínica sem ligar risco irreversível | a prévia mostra o pacote canônico “vender” antes de aplicar e mantém capacidades críticas para escolha individual · **PASS unitário + E2E** (`preset-clinica-do-agente.test.ts`, `agente-novo-e-uso.spec.ts`) |
+| J3.18 | Entender as duas réguas das capacidades | o editor enuncia, na mesma frase, quantas estão ligadas, o teto e quantas existem no catálogo · **PASS E2E** (`capacidades-do-agente.spec.ts`) |
 
 ## Chaves de acesso à IA `[P0]`
 
@@ -1999,3 +2010,50 @@ O Playwright intercepta apenas a chamada do modelo para produzir uma resposta
 determinística, sem consumir crédito nem expor dado real; autenticação, rota,
 navegação, persistência do dashboard e renderização continuam reais. A suíte não
 prova qualidade semântica de um provedor externo nem autoriza ações de escrita.
+### Ensaio inicial sem escolhas técnicas `[P0]` — 12/set/2026
+
+O passo de ensaio escolhe automaticamente `openai/gpt-5.6-luna`, com o identificador
+centralizado em `lib/onboarding/ensaio.ts`, e envia `credential_id = null` para o
+resolvedor já existente escolher a chave válida da organização ou da instalação.
+Se o padrão não estiver no catálogo ativo, usa o primeiro modelo devolvido; catálogo
+vazio mostra indisponibilidade e mantém “Explorar o CRM” como saída. A sequência
+preparar → testar → revisar → continuar não mudou. Cobertura: unitários de seleção e
+componente; Playwright em banco fresco pelo `baseline.sql`, incluindo retirada
+temporária e reversível do padrão, PT-BR/ES e medidas em 1280×720 e 390×720.
+Medição final: as duas specs tocadas terminaram com `8 passed`; a suíte unitária
+completa terminou com `754` arquivos e `7.875` casos verdes em Node 22.
+
+## Saída segura do onboarding e primeira impressão `[P0]` — 12/set/2026
+
+O caminho “Explorar o CRM” continua independente de número conectado e chave própria.
+O cliente entrega exceções internas de redirecionamento ao Next antes de diagnosticar
+falhas de aplicação; sessão vencida, indisponibilidade de rede e recusa do servidor
+ganham mensagens distintas, enquanto a causa é enviada ao Sentry sem dados do cliente.
+Os testes de componente sabotam a ação com sessão vencida e verificam mensagem e
+registro. A jornada real foi dirigida pelo Playwright contra o banco local fresco:
+o administrador pendente entrou em `/app/inbox`, recarregou sem voltar ao wizard e
+manteve “Retomar configuração” visível em 1280 px e 390 px. O wizard serial também
+confirmou as duas listas com o título corrigido em português.
+
+## Funcionário principal após ativação restrita `[P0]` — 13/set/2026
+
+Defeito confirmado: a preparação criava corretamente um agente não principal, mas
+a ativação não atribuía a marca quando a organização não tinha principal. O leitor
+`cerebroDoFuncionario` caía no quadro pronto apesar do treinamento publicado.
+
+Cobertura adicionada: `onboarding-concluir.test.ts` prova promoção, retry, preservação
+de principal existente/arquivado e disputa no índice; `onboarding-principal-backfill`
+prova reparo idempotente pelo recibo + audit, isolamento e NOTICE com contagens;
+`onboarding-principal-restricao` liga a ativação real à elegibilidade e ao reenvio
+HTTP real, barrando número fora da lista mesmo com autorização anterior.
+
+As duas jornadas de site válido do PR #14 foram executadas em integração local
+isolada: passam com a promoção, falham retirando somente essa promoção e voltam a
+passar restaurando-a. Nenhum ajuste nas specs ou no leitor do quadro. A branch do
+#14 não foi atualizada antecipadamente. Limites: ensaio/modelo e respostas queued
+sintéticos; sem envio comercial, celular ou prova completa de inbound. Principal
+arquivado continua sendo um caso fora de escopo do leitor, apenas contado.
+
+Auditoria de leitores, instrumentação da concorrência, sabotagens e limites em
+`docs/testing/onboarding-funcionario-principal.md`; evidências em
+`.superpowers/evidence/funcionario-principal/`.

@@ -26,6 +26,7 @@ import {
   canonizarTipoDeFonte,
   ePerguntaEResposta,
   rotuloDoTipo,
+  permiteCadastroManual,
 } from "@/lib/ai/rag/tipos-de-fonte";
 import { BUCKET_DE_CONHECIMENTO } from "@/lib/ai/rag/ingest/documento";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -135,6 +136,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       422,
       { requestId },
     );
+  }
+  if (!permiteCadastroManual(tipo)) {
+    return fail("unprocessable_entity", t("O material do site é criado pela leitura do endereço informado na configuração inicial."), 422, { requestId });
   }
 
   // Conteúdo mandado para um tipo que esta rota não ingere era ACEITO e

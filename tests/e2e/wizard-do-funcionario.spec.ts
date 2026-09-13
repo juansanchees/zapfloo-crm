@@ -208,7 +208,7 @@ test.describe("o wizard monta um funcionário", () => {
     ).toBeVisible();
   });
 
-  test("treinar mostra o que ele já sabe fazer e o que nunca vai fazer", async ({ page }) => {
+  test("treinar mostra o que ele já sabe fazer e o que sempre confere", async ({ page }) => {
     await login(page);
     await page.waitForURL(/\/onboarding\/setup-ai/, { timeout: 30_000 });
 
@@ -217,7 +217,7 @@ test.describe("o wizard monta um funcionário", () => {
     // ANTES de qualquer chave — e é o que a pessoa lê para entender o que
     // contratou, na única tela do wizard que explica o produto.
     await expect(page.getByText(/ele já vem sabendo/i)).toBeVisible();
-    await expect(page.getByText(/e nunca vai fazer/i)).toBeVisible();
+    await expect(page.getByText(/o que ele sempre confere antes de enviar/i)).toBeVisible();
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

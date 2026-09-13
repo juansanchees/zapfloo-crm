@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useT } from "@/hooks/i18n/useT";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api/client";
+import { produtoDoSiteAguardandoConferencia } from "@/lib/catalogo/tipos";
 import { formatCents } from "@/lib/money";
 import { precoParaCentavos, type Produto } from "@/lib/schemas/produtos";
 
@@ -85,6 +87,7 @@ export function ProdutosClient({
   const [rascunho, setRascunho] = React.useState<Rascunho>(VAZIO);
   const [salvando, setSalvando] = React.useState(false);
   const [importando, setImportando] = React.useState(false);
+  const [confirmandoSite, setConfirmandoSite] = React.useState(false);
   const [resumo, setResumo] = React.useState<ResumoDaImportacao | null>(null);
   const arquivoRef = React.useRef<HTMLInputElement>(null);
 
@@ -95,6 +98,24 @@ export function ProdutosClient({
       [p.nome, p.codigo, p.marca ?? "", p.categoria ?? ""].join(" ").toLowerCase().includes(q),
     );
   }, [inicial, busca]);
+  const rascunhosDoSite = filtrados.filter(produtoDoSiteAguardandoConferencia);
+
+  async function confirmarSite() {
+    setConfirmandoSite(true);
+    try {
+      const resultado = await apiClient.post<{ data: { confirmados: number } }>("/api/v1/products/confirmar-site", {
+        product_ids: rascunhosDoSite.map((produto) => produto.id),
+      });
+      toast.success(t(resultado.data.confirmados > 0
+        ? "Produtos confirmados. O atendente já pode consultar os preços."
+        : "Nenhum produto novo para confirmar."));
+      router.refresh();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setConfirmandoSite(false);
+    }
+  }
 
   async function salvar() {
     const corpo = doRascunho(rascunho, t);
@@ -160,7 +181,7 @@ export function ProdutosClient({
         <p className="mt-1 text-sm text-muted-foreground">{textos.subtitulo}</p>
       </header>
 
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
@@ -195,6 +216,19 @@ export function ProdutosClient({
           </>
         ) : null}
       </div>
+
+      {rascunhosDoSite.length > 0 ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-border bg-warning-bg p-4 text-warning-fg" data-testid="conferencia-produtos-site">
+          <p className="min-w-0 flex-1 text-sm">
+            {t("Confira os preços encontrados no seu site. O atendente só usa os produtos depois da sua confirmação.")}
+          </p>
+          {podeEditar ? (
+            <Button disabled={confirmandoSite} onClick={() => void confirmarSite()} data-testid="confirmar-produtos-site">
+              {t(confirmandoSite ? "Confirmando…" : "Confirmar todos")}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       {podeEditar ? (
         // Rota de API que devolve o arquivo com `content-disposition:
@@ -341,17 +375,22 @@ export function ProdutosClient({
 
       {filtrados.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center" data-testid="produtos-vazio">
-          <p className="font-medium">{textos.vazio}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{textos.vazioDica}</p>
+          <p className="font-medium">{busca.trim() ? t("Nenhum produto corresponde à busca") : textos.vazio}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{busca.trim() ? t("Tente outro nome, código ou marca.") : textos.vazioDica}</p>
         </div>
       ) : (
         <ul className="divide-y rounded-lg border" data-testid="lista-produtos">
           {filtrados.map((p) => (
-            <li key={p.id} className="flex items-center gap-4 p-3" data-testid={`produto-${p.codigo}`}>
+            <li key={p.id} className="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap" data-testid={`produto-${p.codigo}`}>
               <div className="min-w-0 flex-1">
-                <p className={`truncate font-medium ${p.ativo ? "" : "text-muted-foreground line-through"}`}>
+                <p className={`break-words font-medium ${p.ativo || produtoDoSiteAguardandoConferencia(p) ? "" : "text-muted-foreground line-through"}`}>
                   {p.nome}
                 </p>
+                {produtoDoSiteAguardandoConferencia(p) ? (
+                  <Badge variant="warning" className="mt-1 max-w-full" data-testid="rascunho-produto-site">
+                    {t("do seu site — confira o preço")}
+                  </Badge>
+                ) : null}
                 <p className="text-xs text-muted-foreground">
                   {p.codigo}
                   {p.marca ? ` · ${p.marca}` : ""}
@@ -370,7 +409,7 @@ export function ProdutosClient({
                   onClick={() => void alternarAtivo(p)}
                   data-testid={`alternar-${p.codigo}`}
                 >
-                  {t(p.ativo ? "Desativar" : "Reativar")}
+                  {t(p.ativo ? "Desativar" : produtoDoSiteAguardandoConferencia(p) ? "Confirmar" : "Reativar")}
                 </Button>
               ) : null}
             </li>

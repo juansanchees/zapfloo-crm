@@ -40,6 +40,10 @@ import {
   vagasRestantes,
   type CapacidadeSelecionavel,
 } from "@/lib/mcp/tools/selecao-por-pacote";
+import {
+  aplicarPresetDeNegocio,
+  PACOTE_POR_TIPO_DE_NEGOCIO,
+} from "@/lib/ai/agents/preset-de-negocio";
 
 /** O que a rota `/api/v1/mcp/tools` serve (snake_case no wire). */
 export interface McpToolMeta extends CapacidadeSelecionavel {
@@ -137,6 +141,7 @@ function FichaCapacidade({
 export function ToolPicker({ value, onChange, disabled }: Props) {
   const t = useT();
   const [avancado, setAvancado] = React.useState(false);
+  const [previewClinica, setPreviewClinica] = React.useState(false);
   const [recusa, setRecusa] = React.useState<string | null>(null);
 
   const query = useQuery({
@@ -157,6 +162,9 @@ export function ToolPicker({ value, onChange, disabled }: Props) {
 
   const vagas = vagasRestantes(value);
   const cheio = vagas <= 0;
+  const pacoteClinica = PACOTE_POR_TIPO_DE_NEGOCIO.clinica;
+  const automaticasDaClinica = capacidadesAutomaticasDoPacote(catalogo, pacoteClinica);
+  const criticasDaClinica = capacidadesCriticasDoPacote(catalogo, pacoteClinica);
 
   /** Ids salvos que o servidor não oferece mais — some da tela seria mentir. */
   const orfas = value.filter((id) => !porNome.has(id));
@@ -233,11 +241,11 @@ export function ToolPicker({ value, onChange, disabled }: Props) {
     <div className="space-y-4" data-testid="tool-picker">
       {/* Consumo do teto — o número que impede a surpresa no salvar. */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/30 p-3">
-        <p className="text-sm">
-          <strong data-testid="consumo-teto">
-            {value.length} {t("de")} {TETO_TOOLS_POR_AGENTE}
-          </strong>{" "}
-          {t("capacidades ligadas")}
+        <p className="text-sm" data-testid="consumo-teto">
+          <strong>
+            {value.length} {t("ligadas")}
+          </strong>
+          {` · ${t("teto de")} ${TETO_TOOLS_POR_AGENTE} · ${catalogo.length} ${t("disponíveis")}`}
         </p>
         <p className="text-xs text-muted-foreground">
           {cheio
@@ -255,8 +263,57 @@ export function ToolPicker({ value, onChange, disabled }: Props) {
         </p>
       ) : null}
 
-      {/* Caminho padrão: pacotes por jornada. */}
-      <div className="grid gap-3">
+      <div data-testid="preset-clinica" className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h4 className="text-sm font-medium">{t("Configuração pronta para clínica")}</h4>
+            <p className="text-xs text-muted-foreground">
+              {t("Atende, registra o interesse, agenda horários e acompanha o cliente usando o pacote já validado pelo sistema.")}
+            </p>
+          </div>
+          <button type="button" aria-expanded={previewClinica}
+            onClick={() => setPreviewClinica((aberto) => !aberto)}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+            {previewClinica ? t("Ocultar prévia") : t("Ver o que será ligado")}
+          </button>
+        </div>
+        {previewClinica ? (
+          <div className="space-y-3 border-t border-border/60 pt-3" data-testid="preview-preset-clinica">
+            <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+              {automaticasDaClinica.map((name) => (
+                <li key={name}>✓ {t(porNome.get(name)?.rotulo ?? name)}</li>
+              ))}
+            </ul>
+            {criticasDaClinica.length > 0 ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs">
+                <p className="font-medium text-destructive">{t("Efeito que não dá para desfazer")}</p>
+                <p className="mt-1 text-muted-foreground">
+                  {t("Estas ações não serão ligadas pelo pacote. Você decide uma a uma no modo avançado:")}
+                </p>
+                <ul className="mt-1 text-muted-foreground">
+                  {criticasDaClinica.map((name) => <li key={name}>· {t(porNome.get(name)?.rotulo ?? name)}</li>)}
+                </ul>
+              </div>
+            ) : null}
+            <button type="button" disabled={disabled}
+              onClick={() => aplicar(
+                aplicarPresetDeNegocio(value, catalogo, "clinica"),
+                t("A configuração de clínica não cabe no limite atual. Desligue uma capacidade antes."),
+                vagasExigidasPeloPacote(value, catalogo, pacoteClinica),
+              )}
+              className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+              {t("Aplicar configuração de clínica")}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Os demais pacotes continuam disponíveis, sem ocupar a primeira decisão. */}
+      <details className="rounded-md border border-border/60">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+          {t("Ajustar por objetivo")}
+        </summary>
+        <div className="grid gap-3 border-t border-border/60 p-3">
         {PACOTES.map((pacote) => {
           const automaticas = capacidadesAutomaticasDoPacote(catalogo, pacote.id);
           const criticas = capacidadesCriticasDoPacote(catalogo, pacote.id);
@@ -333,7 +390,8 @@ export function ToolPicker({ value, onChange, disabled }: Props) {
             </div>
           );
         })}
-      </div>
+        </div>
+      </details>
 
       {/* Modo avançado: a lista inteira, capacidade por capacidade. */}
       <div className="space-y-2">

@@ -13,7 +13,15 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { aceitaTextoColado, canonizarTipoDeFonte } from "@/lib/ai/rag/tipos-de-fonte";
+import {
+  aceitaTextoColado,
+  canonizarTipoDeFonte,
+  ePerguntaEResposta,
+} from "@/lib/ai/rag/tipos-de-fonte";
+import { lerEstadoDoSite, revisaoDoSiteExpirou } from "@/lib/onboarding/site/estado";
+import { hashPerguntasDoSite } from "@/lib/onboarding/site/faq-confirmada";
+import { audit } from "@/lib/audit";
+import { traduzir } from "@/lib/i18n/dicionario";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +40,7 @@ const patchSourceSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   items: z.array(faqItemSchema).optional(),
   source_metadata: z.record(z.string(), z.unknown()).optional(),
+  confirmar_site: z.boolean().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -83,14 +92,23 @@ export async function GET(
     return fail("not_found", "Material não encontrado.", 404, { requestId });
   }
 
-  const { data: itens } = await supabase
+  const { data: itens, error: itensErr } = await supabase
     .from("ai_faq_items")
     .select("question, answer, tags, locale, position")
     .eq("organization_id", activeOrg.orgId)
     .eq("knowledge_source_id", sourceId)
     .order("position", { ascending: true });
 
-  return ok({ ...(fonte as unknown as Record<string, unknown>), items: itens ?? [] }, { requestId });
+  // Falha de leitura NÃO é FAQ vazia: o editor substituiria o conteúdo que
+  // deixou de receber. Sem a resposta inteira, salvar deve permanecer bloqueado.
+  if (itensErr) {
+    return fail("internal_error", "Erro ao ler o material.", 500, { requestId });
+  }
+
+  return ok(
+    { ...(fonte as unknown as Record<string, unknown>), items: itens ?? [] },
+    { requestId },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +124,8 @@ export async function PATCH(
 
   const ctx = await resolveContext(requestId);
   if (ctx.error) return ctx.error;
-  const { activeOrg } = ctx as Exclude<typeof ctx, { error: Response }>;
+  const { activeOrg, authUser } = ctx as Exclude<typeof ctx, { error: Response }>;
+  const t = (texto: string) => traduzir(texto, authUser.idioma);
 
   // Parse + validate body.
   let rawBody: unknown;
@@ -130,7 +149,7 @@ export async function PATCH(
   const supabase = await createClient();
   const { data: existing, error: fetchErr } = await supabase
     .from("ai_knowledge_sources")
-    .select("id, source_type, agent_id")
+    .select("id, source_type, agent_id, source_metadata, status, is_active")
     .eq("id", sourceId)
     .eq("organization_id", activeOrg.orgId)
     .maybeSingle();
@@ -143,17 +162,135 @@ export async function PATCH(
     return fail("not_found", "Fonte de conhecimento não encontrada.", 404, { requestId });
   }
 
-  const ksRow = existing as { id: string; source_type: string; agent_id: string | null };
+  const ksRow = existing as {
+    id: string;
+    source_type: string;
+    agent_id: string | null;
+    source_metadata: Record<string, unknown>;
+    status: string;
+    is_active: boolean;
+  };
   const tipo = canonizarTipoDeFonte(ksRow.source_type);
+  const estadoSite = tipo === "site" ? lerEstadoDoSite(ksRow.source_metadata) : null;
+
+  // Carimbos de leitura/revisão só têm escritor específico. O PATCH genérico
+  // não pode fabricar a aprovação que o worker usa como fronteira de publicação.
+  if (tipo === "site" && input.source_metadata !== undefined) {
+    return fail(
+      "unprocessable_entity",
+      t(
+        "O estado da leitura é atualizado pelo sistema. Revise as perguntas para confirmar o material.",
+      ),
+      422,
+      { requestId },
+    );
+  }
+  if (input.confirmar_site && (tipo !== "site" || !input.items?.length)) {
+    return fail("validation_failed", t("Revise as perguntas do site antes de confirmar."), 422, {
+      requestId,
+    });
+  }
+  if (
+    tipo === "site" &&
+    input.items !== undefined &&
+    (!estadoSite?.concluidaEm ||
+      (ksRow.status === "building" && !revisaoDoSiteExpirou(estadoSite)) ||
+      ksRow.status === "archived")
+  ) {
+    return fail("conflict", t("Aguarde a leitura terminar antes de revisar as perguntas."), 409, {
+      requestId,
+    });
+  }
+  if (input.items !== undefined && tipo !== null && !aceitaTextoColado(tipo)) {
+    return fail(
+      "unprocessable_entity",
+      "Este material não é preenchido por texto colado — envie o arquivo ou aguarde a rotina que o alimenta.",
+      422,
+      { requestId },
+    );
+  }
 
   // Build update payload (only provided fields).
   const updatePayload: Record<string, unknown> = {};
   if (input.name !== undefined) updatePayload.name = input.name;
   if (input.source_metadata !== undefined) updatePayload.source_metadata = input.source_metadata;
+  if (tipo === "site" && input.items !== undefined) {
+    // Uma falha ao substituir perguntas deixa rascunho, nunca material parcial
+    // utilizável pela IA. A aprovação só acontece depois da gravação inteira.
+    updatePayload.is_active = false;
+  }
 
   const admin = createAdminClient();
+  let metadataReservada: Record<string, unknown> | null = null;
+  let siteSemRevisao = estadoSite;
+  if (tipo === "site" && input.items !== undefined && estadoSite) {
+    const {
+      revisadoEm: _em,
+      revisadoPor: _por,
+      revisaoConteudoHash: _hash,
+      revisaoToken: _token,
+      revisaoInicio: _inicio,
+      ...semRevisao
+    } = estadoSite;
+    siteSemRevisao = semRevisao;
+    metadataReservada = {
+      ...ksRow.source_metadata,
+      site: {
+        ...semRevisao,
+        revisaoToken: randomUUID(),
+        revisaoInicio: new Date().toISOString(),
+      },
+    };
+    // CAS: duas abas que leram o mesmo rascunho não podem substituir seus
+    // itens simultaneamente. Cada término também precisa provar posse.
+    const { data: reserva, error: reservaErr } = await admin
+      .from("ai_knowledge_sources")
+      .update({
+        ...updatePayload,
+        status: "building",
+        is_active: false,
+        source_metadata: metadataReservada,
+      })
+      .eq("id", sourceId)
+      .eq("organization_id", activeOrg.orgId)
+      .eq("status", ksRow.status)
+      .eq("source_metadata", JSON.stringify(ksRow.source_metadata))
+      .select("id")
+      .maybeSingle();
+    if (reservaErr)
+      return fail(
+        "internal_error",
+        t("Não consegui reservar o material para revisão. Tente novamente."),
+        500,
+        { requestId },
+      );
+    if (!reserva)
+      return fail(
+        "conflict",
+        t("Este material mudou em outra aba. Abra a revisão novamente."),
+        409,
+        { requestId },
+      );
+  }
 
-  if (Object.keys(updatePayload).length > 0) {
+  async function cancelarReserva(): Promise<void> {
+    if (!metadataReservada || !siteSemRevisao) return;
+    await admin
+      .from("ai_knowledge_sources")
+      .update({
+        status: "ready",
+        is_active: false,
+        last_index_status: "failed",
+        last_index_error: "site_revisao_gravacao_incompleta",
+        source_metadata: { ...ksRow.source_metadata, site: siteSemRevisao },
+      })
+      .eq("id", sourceId)
+      .eq("organization_id", activeOrg.orgId)
+      .eq("status", "building")
+      .eq("source_metadata", JSON.stringify(metadataReservada));
+  }
+
+  if (!metadataReservada && Object.keys(updatePayload).length > 0) {
     const { error: updateErr } = await admin
       .from("ai_knowledge_sources")
       .update(updatePayload)
@@ -168,18 +305,7 @@ export async function PATCH(
 
   // Replace FAQ items if provided.
   let itemsCount: number | undefined;
-  // Itens mandados para um tipo que não os ingere eram DESCARTADOS em silêncio:
-  // a pessoa editava o conteúdo, recebia 200, e nada mudava.
-  if (input.items !== undefined && tipo !== null && !aceitaTextoColado(tipo)) {
-    return fail(
-      "unprocessable_entity",
-      "Este material não é preenchido por texto colado — envie o arquivo ou aguarde a rotina que o alimenta.",
-      422,
-      { requestId },
-    );
-  }
-
-  if (input.items !== undefined && tipo === "faq") {
+  if (input.items !== undefined && tipo !== null && ePerguntaEResposta(tipo)) {
     // Delete existing items.
     const { error: delErr } = await admin
       .from("ai_faq_items")
@@ -188,6 +314,7 @@ export async function PATCH(
       .eq("organization_id", activeOrg.orgId);
 
     if (delErr) {
+      await cancelarReserva();
       console.error("[ai-knowledge-sources] PATCH delete items failed:", delErr.message);
       return fail("internal_error", "Erro ao remover itens antigos.", 500, { requestId });
     }
@@ -206,6 +333,7 @@ export async function PATCH(
       const { error: insertErr } = await admin.from("ai_faq_items").insert(rows);
 
       if (insertErr) {
+        await cancelarReserva();
         console.error("[ai-knowledge-sources] PATCH insert items failed:", insertErr.message);
         return fail("internal_error", "Erro ao inserir novos itens FAQ.", 500, { requestId });
       }
@@ -215,22 +343,76 @@ export async function PATCH(
     }
   }
 
+  if (tipo === "site" && input.items !== undefined && siteSemRevisao && metadataReservada) {
+    const site = input.confirmar_site
+      ? {
+          ...siteSemRevisao,
+          perguntas: itemsCount ?? 0,
+          revisadoEm: new Date().toISOString(),
+          revisadoPor: authUser.id,
+          revisaoConteudoHash: hashPerguntasDoSite(input.items),
+        }
+      : { ...siteSemRevisao, perguntas: itemsCount ?? 0 };
+    const { data: revisao, error: revisaoErr } = await admin
+      .from("ai_knowledge_sources")
+      .update({
+        status: "ready",
+        source_metadata: { ...ksRow.source_metadata, site },
+        is_active: input.confirmar_site === true,
+      })
+      .eq("id", sourceId)
+      .eq("organization_id", activeOrg.orgId)
+      .eq("status", "building")
+      .eq("source_metadata", JSON.stringify(metadataReservada))
+      .select("id")
+      .maybeSingle();
+    if (revisaoErr) {
+      await cancelarReserva();
+      return fail(
+        "internal_error",
+        t("Não consegui confirmar as perguntas. O material continua sem uso pelo agente."),
+        500,
+        { requestId },
+      );
+    }
+    if (!revisao)
+      return fail(
+        "conflict",
+        t("Este material mudou em outra aba. Abra a revisão novamente."),
+        409,
+        { requestId },
+      );
+  }
+
   // Emit knowledge_source.updated (fire-and-forget).
-  const { error: emitErr } = await admin.rpc("emit_event" as never, {
-    p_event_type: "knowledge_source.updated",
-    p_entity_kind: "ai_knowledge_source",
-    p_entity_id: sourceId,
-    p_payload: {
-      knowledge_source_id: sourceId,
-      agent_id: ksRow.agent_id,
-      source_type: ksRow.source_type,
-    },
-    p_organization_id: activeOrg.orgId,
-  } as never);
+  const { error: emitErr } = await admin.rpc(
+    "emit_event" as never,
+    {
+      p_event_type: "knowledge_source.updated",
+      p_entity_kind: "ai_knowledge_source",
+      p_entity_id: sourceId,
+      p_payload: {
+        knowledge_source_id: sourceId,
+        agent_id: ksRow.agent_id,
+        source_type: ksRow.source_type,
+      },
+      p_organization_id: activeOrg.orgId,
+    } as never,
+  );
 
   if (emitErr) {
     console.warn("[ai-knowledge-sources] emit_event failed (non-blocking):", emitErr.message);
   }
+
+  await audit({
+    organizationId: activeOrg.orgId,
+    actorUserId: authUser.id,
+    action: "knowledge_source.updated",
+    resourceType: "ai_knowledge_sources",
+    resourceId: sourceId,
+    requestId,
+    metadata: { source_type: ksRow.source_type, site_confirmado: input.confirmar_site === true },
+  });
 
   return ok(
     { id: sourceId, ...(itemsCount !== undefined ? { items_count: itemsCount } : {}) },

@@ -1,0 +1,26 @@
+diff --git a/supabase/baseline.sql b/supabase/baseline.sql
+index dc9625622..a9e460a3a 100644
+--- a/supabase/baseline.sql
++++ b/supabase/baseline.sql
+@@ -20496,7 +20496,7 @@ begin
+   -- tomam o lock da organização. Perder SÓ essa corrida não desfaz a ativação.
+   begin
+     update public.ai_agents candidate
+-       set is_default = true
++       set is_default = false
+      where candidate.id = v_agent.id
+        and candidate.organization_id = p_org_id
+        and not candidate.is_default
+diff --git a/supabase/migrations/20260913190000_0232_onboarding_funcionario_principal.sql b/supabase/migrations/20260913190000_0232_onboarding_funcionario_principal.sql
+index ce08ef485..5e5b8d288 100644
+--- a/supabase/migrations/20260913190000_0232_onboarding_funcionario_principal.sql
++++ b/supabase/migrations/20260913190000_0232_onboarding_funcionario_principal.sql
+@@ -356,7 +356,7 @@ begin
+   -- tomam o lock da organização. Perder SÓ essa corrida não desfaz a ativação.
+   begin
+     update public.ai_agents candidate
+-       set is_default = true
++       set is_default = false
+      where candidate.id = v_agent.id
+        and candidate.organization_id = p_org_id
+        and not candidate.is_default

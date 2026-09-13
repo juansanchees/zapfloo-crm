@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { PACOTES } from "@/lib/onboarding/pacotes-de-funil";
+import { normalizarSiteDoNegocio } from "@/lib/onboarding/site/url";
 
 export const segmentoDoNegocioSchema = z.string().refine(value => PACOTES.some(p => p.id === value));
 
@@ -24,6 +25,15 @@ export const welcomeSchema = z.object({
    * o próprio negócio em uma linha. Quem pula recebe o quadro genérico.
    */
   o_que_faz: z.string().max(280).optional(),
+  /** URL opcional; tela e action usam o mesmo normalizador, sem chamada de rede. */
+  site_do_negocio: z.string().max(2_000).transform((valor, ctx) => {
+    const site = normalizarSiteDoNegocio(valor);
+    if (!site.ok) {
+      ctx.addIssue({ code: "custom", message: site.motivo });
+      return z.NEVER;
+    }
+    return site.url ?? undefined;
+  }).optional(),
   timezone: z.string().min(1).default("America/Sao_Paulo"),
   accepted_terms_at: z.string().datetime().optional(),
 });
@@ -71,6 +81,9 @@ export const onboardingStateSchema = z.object({
       segmento: segmentoDoNegocioSchema.optional(),
       /** O ramo, na palavra do dono. Alimenta o prompt e o quadro de clientes. */
       o_que_faz: z.string().optional(),
+      site_do_negocio: z.string().max(2_000).optional(),
+      /** Gravado junto da URL: o cron retoma se o processo morrer antes do after. */
+      site_leitura_pendente: z.boolean().optional(),
     })
     .optional(),
   whatsapp: z

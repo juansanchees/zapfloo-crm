@@ -16,6 +16,7 @@ import { coberturaDoFunil, type EtapaDoMapa } from "@/lib/leads/agent-mapping";
 import type { CoberturaPorFunil } from "./_components/FunisDoAgente";
 import { lerAmbiente } from "@/lib/instalacao/ambiente";
 import { escolherVersoesDaTela } from "@/lib/ai/agents/versoes-da-tela";
+import { FUSO_PADRAO, fusoValido } from "@/lib/tempo/fusos";
 
 export const dynamic = "force-dynamic";
 
@@ -88,7 +89,7 @@ export default async function AgentEditorPage({
   }
 
   // mcp_agent: busca versions + lookups.
-  const [versionsRes, credentialsRes, channelSessions, routerMemberRes, funisRes, acervoRes] =
+  const [versionsRes, credentialsRes, channelSessions, routerMemberRes, funisRes, acervoRes, orgRes] =
     await Promise.all([
     supabase
       .from("ai_agent_versions")
@@ -126,6 +127,11 @@ export default async function AgentEditorPage({
       .eq("organization_id", activeOrg.orgId)
       .eq("is_active", true)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("organizations")
+      .select("timezone")
+      .eq("id", activeOrg.orgId)
+      .maybeSingle(),
   ]);
 
   const versions = (versionsRes.data ?? []) as unknown as AgentVersionRow[];
@@ -155,6 +161,10 @@ export default async function AgentEditorPage({
   const routerMembership = routerMemberRow
     ? { routerId: routerMemberRow.router_id, routerName: routerMemberRow.ai_routers?.name ?? "roteador" }
     : null;
+  const organizationTimezone =
+    typeof orgRes.data?.timezone === "string" && fusoValido(orgRes.data.timezone)
+      ? orgRes.data.timezone
+      : FUSO_PADRAO;
 
   // A regra mora em `lib/ai/agents/versoes-da-tela.ts` (pura e testada): rascunho
   // VIGENTE > publicada > última versão que existiu. Antes, o rascunho vencia
@@ -178,6 +188,7 @@ export default async function AgentEditorPage({
         funis={funis}
         cobertura={cobertura}
         materiais={materiais}
+        organizationTimezone={organizationTimezone}
         routerMembership={routerMembership}
         readOnly={readOnly}
       />

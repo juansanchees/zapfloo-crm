@@ -91,6 +91,13 @@ function publicarNoProcesso(env: Record<string, string>): Record<string, string>
 const PORT = process.env.E2E_PORT ?? "3001";
 const BASE_URL = `http://localhost:${PORT}`;
 
+// Preloads são opt-ins somente do processo Next isolado. Compor os dois permite
+// provar a jornada inteira sem serviço de IA, DNS ou site de cliente real.
+const preloads = [
+  ...(process.env.E2E_ONBOARDING_SYNTHETIC_PROVIDER === "1" ? ["onboarding-provider-preload.mjs"] : []),
+  ...(process.env.E2E_ONBOARDING_SITE_FIXTURE === "1" ? ["site-provider-preload.mjs"] : []),
+].map((file) => `--import "${pathToFileURL(resolve(`tests/e2e/helpers/${file}`)).href}"`).join(" ");
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
@@ -135,8 +142,8 @@ export default defineConfig({
     // Produção (`next build` antes!): dev-server compila por rota (40-80s) e
     // Turbopack dev quebra cookies() fora do request scope — inviável p/ e2e.
     // Opt-in do harness: preload só neste Next isolado, nunca no runner/workers ou na produção.
-    command: process.env.E2E_ONBOARDING_SYNTHETIC_PROVIDER === "1"
-      ? `node --import "${pathToFileURL(resolve("tests/e2e/helpers/onboarding-provider-preload.mjs")).href}" node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port ${PORT}`
+    command: preloads
+      ? `node ${preloads} node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port ${PORT}`
       : `corepack pnpm exec next start --port ${PORT}`,
     // O ambiente do servidor sob teste vem do `.env.e2e`, INJETADO aqui — e não
     // do `.env.local`, que num checkout de trabalho aponta para PRODUÇÃO.

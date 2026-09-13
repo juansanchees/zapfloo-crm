@@ -191,7 +191,7 @@ export function SetupAiForm({ capacidades, conferencias, rascunhoInicial, ensaio
           </ul>
         </section>
         <section className="rounded-lg border bg-background p-4">
-          <h3 className="text-sm font-medium">{t("E nunca vai fazer")}</h3>
+          <h3 className="text-sm font-medium">{t("O que ele sempre confere antes de enviar")}</h3>
           <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
             {conferencias.map((c) => (
               <li key={c}>· {c}</li>

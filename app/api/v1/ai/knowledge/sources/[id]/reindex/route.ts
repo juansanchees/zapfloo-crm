@@ -19,6 +19,8 @@ import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { canonizarTipoDeFonte } from "@/lib/ai/rag/tipos-de-fonte";
+import { siteFoiRevisado } from "@/lib/onboarding/site/estado";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +66,7 @@ export async function POST(
   const supabase = await createClient();
   const { data: existing, error: fetchErr } = await supabase
     .from("ai_knowledge_sources")
-    .select("id, agent_id, source_type")
+    .select("id, agent_id, source_type, is_active, source_metadata")
     .eq("id", id)
     .eq("organization_id", activeOrg.orgId)
     .maybeSingle();
@@ -77,7 +79,24 @@ export async function POST(
     return fail("not_found", t("Fonte de conhecimento não encontrada."), 404, { requestId });
   }
 
-  const ksRow = existing as { id: string; agent_id: string; source_type: string };
+  const ksRow = existing as {
+    id: string;
+    agent_id: string;
+    source_type: string;
+    is_active: boolean;
+    source_metadata: unknown;
+  };
+  if (
+    canonizarTipoDeFonte(ksRow.source_type) === "site" &&
+    (!ksRow.is_active || !siteFoiRevisado(ksRow.source_metadata))
+  ) {
+    return fail(
+      "conflict",
+      t("Revise e confirme as perguntas do site antes de preparar o material."),
+      409,
+      { requestId },
+    );
+  }
 
   const admin = createAdminClient();
 
@@ -90,22 +109,28 @@ export async function POST(
     .eq("organization_id", activeOrg.orgId);
 
   if (clearErr) {
-    console.warn("[ai-knowledge-reindex] clear last_index_error failed (non-blocking):", clearErr.message);
+    console.warn(
+      "[ai-knowledge-reindex] clear last_index_error failed (non-blocking):",
+      clearErr.message,
+    );
   }
 
   // Emit knowledge_source.updated (fire-and-forget).
-  const { error: emitErr } = await admin.rpc("emit_event" as never, {
-    p_event_type: "knowledge_source.updated",
-    p_entity_kind: "ai_knowledge_source",
-    p_entity_id: id,
-    p_payload: {
-      knowledge_source_id: id,
-      agent_id: ksRow.agent_id,
-      source_type: ksRow.source_type,
-      triggered_by: "manual_reindex",
-    },
-    p_organization_id: activeOrg.orgId,
-  } as never);
+  const { error: emitErr } = await admin.rpc(
+    "emit_event" as never,
+    {
+      p_event_type: "knowledge_source.updated",
+      p_entity_kind: "ai_knowledge_source",
+      p_entity_id: id,
+      p_payload: {
+        knowledge_source_id: id,
+        agent_id: ksRow.agent_id,
+        source_type: ksRow.source_type,
+        triggered_by: "manual_reindex",
+      },
+      p_organization_id: activeOrg.orgId,
+    } as never,
+  );
 
   if (emitErr) {
     console.warn("[ai-knowledge-reindex] emit_event failed (non-blocking):", emitErr.message);

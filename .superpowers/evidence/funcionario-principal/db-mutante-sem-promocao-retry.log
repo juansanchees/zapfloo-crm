@@ -1,0 +1,111 @@
+==> subindo pgvector/pgvector:pg15 como deskcomm-test-db-35573 (worktree /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding, branch codex/funcionario-principal-no-onboarding)
+    ✓ publicado em 127.0.0.1:32852
+==> prelude: stubs mínimos do Supabase (roles, auth.uid(), extensions)
+==> conferindo que o banco efêmero é o do PRODUTO (antes do baseline)
+    ✓ definer nova nasce com grant direto a anon (armadilha do produto reproduzida)
+==> modo INSTALL: aplicando baseline.sql com ON_ERROR_STOP=1
+ set_config 
+------------
+ 
+(1 row)
+
+psql:<stdin>:5007: WARNING:  wal_level is insufficient to publish logical changes
+HINT:  Set wal_level to "logical" before creating subscriptions.
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ install ok
+==> modo UPDATE: re-aplicando baseline.sql COM ON_ERROR_STOP=1 (idempotência de verdade)
+ set_config 
+------------
+ 
+(1 row)
+
+     set_config     
+--------------------
+ public, extensions
+(1 row)
+
+    ✓ update ok (zero erro na re-aplicação)
+==> banco `postgres` a partir do molde (o setupFile o recria a cada arquivo)
+==> invariantes: vitest (tests/invariants) — banco novo por ARQUIVO, ordem sorteada
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (.superpowers/evidence/funcionario-principal/vitest-mutante.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+  - ESM syntax in a file loaded as CommonJS (vitest.db.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/funcionario-principal-no-onboarding
+      Running tests with seed "1789312207384"
+
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > ativa e promove o funcionário ensaiado quando a organização não tem principal
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > default arquivado conserva a marca e não impede concluir a ativação
+ × tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry de recibo válido promove principal ausente sem republicar nem duplicar audit 209ms
+   → expected { is_active: true, …(2) } to deeply equal { is_active: true, …(2) }
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > default criado em concorrência vence a marca sem abortar a ativação bloqueada no índice único
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > confirmar exige revisão corrente, mantém tudo inativo e é idempotente
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > publica exatamente a versão ensaiada só no canal escolhido e preserva default/outros canais
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal ausente falha sem bind/publicação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal desconectado falha sem bind/publicação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal arquivado falha sem bind/publicação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal público aberto falha sem bind/publicação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal lista vazia falha sem bind/publicação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal outra organização falha sem bind/publicação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com metadata vazio falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com ai_gate ausente falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com ai_gate nulo falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com modo ausente falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com modo nulo falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista ausente falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista nula falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista objeto falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista com null falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > canal com lista com número inválido falha fechado sem ativação nem audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > revoked depois da confirmação retira a autoridade sem mutação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > suspended depois da confirmação retira a autoridade sem mutação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > completed depois da confirmação retira a autoridade sem mutação parcial
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > run/revisão/versão antigos e edição posterior não autorizam ativação
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > chave ausente ou credencial revogada falha sem publicação
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > usa credencial válida da organização sem gravá-la na versão nem exigir chave da instalação
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > não substitui agente ativo já publicado no canal
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry não sobrescreve alteração posterior nem duplica audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry detecta adulteração posterior em version_snapshot e não sobrescreve evidência
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry detecta adulteração posterior em receipt_snapshot e não sobrescreve evidência
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry detecta adulteração posterior em audit_snapshot e não sobrescreve evidência
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > duas ativações concorrentes convergem para o mesmo recibo e um audit
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > RPCs são service-only e isolam duas organizações
+ ↓ tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > mutante real sem lista não vazia aceita indevidamente e rollback restaura recusa
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/invariants/onboarding-concluir.test.ts > revisão confirmada e ativação restrita do onboarding > retry de recibo válido promove principal ausente sem republicar nem duplicar audit
+AssertionError: expected { is_active: true, …(2) } to deeply equal { is_active: true, …(2) }
+
+- Expected
++ Received
+
+  {
+    "is_active": true,
+-   "is_default": true,
++   "is_default": false,
+    "published_version_id": "00ed32dc-3c10-4292-b469-f5b100c8a8b6",
+  }
+
+ ❯ tests/invariants/onboarding-concluir.test.ts:48:33
+     46|
+     47|     expect(await activate(f, selected)).toEqual(receipt);
+     48|     expect(await agentState(f)).toEqual({ is_active: true, is_default:…
+       |                                 ^
+     49|     expect(await versionState(f)).toEqual(versionBefore);
+     50|     expect(await auditCount(f, "onboarding.restricted_activation")).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 35 skipped (36)
+   Start at  12:10:07
+   Duration  1.79s (transform 125ms, setup 1.11s, import 89ms, tests 263ms, environment 0ms)
+
+==> teardown: removendo container deskcomm-test-db-35573

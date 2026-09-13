@@ -395,6 +395,7 @@ jobs:
         agenda-escopo-da-organizacao.spec.ts
         troca-de-organizacao-tem-volta.spec.ts
         onboarding-ativacao-restrita.spec.ts
+        onboarding-leitor-de-site.spec.ts
         agenda-caminho-ate-os-horarios.spec.ts
         agenda-google-volta-do-consentimento.spec.ts
         agenda-google-volta-nao-desloga.spec.ts
@@ -828,6 +829,10 @@ jobs:
           # (`✓ 12 [chromium] › tests/e2e/x.spec.ts:9:5 › título (3.4s)`), e a
           # soma por arquivo sai de um `gh run view <id> --log`. Custo medido:
           # ~240 linhas a mais de log, zero segundo de execução.
+          # Esta spec requer dois receivers locais e preloads EXCLUSIVOS do
+          # Next. Roda abaixo no mesmo job, sem skip, com ambiente separado;
+          # nunca instalar a chave sintética no servidor da rodada comum.
+          LISTA="${LISTA//onboarding-leitor-de-site.spec.ts/}"
           pnpm exec playwright test --workers=1 $LISTA --reporter=list
         env:
           # Só o que NÃO vem do `.env.e2e`: isto é ajuste de CI, não config do
@@ -848,6 +853,16 @@ jobs:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
           SENTRY_DSN: "off"
         run: pnpm exec playwright test tests/e2e/onboarding-ativacao-restrita.spec.ts --workers=1 --reporter=list
+
+      - name: Onboarding — leitor de site e jornada com receivers HTTP locais
+        if: matrix.parte == 2
+        env:
+          E2E_ONBOARDING_SITE_FIXTURE: "1"
+          E2E_ONBOARDING_SYNTHETIC_PROVIDER: "1"
+          OPENAI_API_KEY: "onboarding-local-provider-only"
+          AUTH_RATE_LIMIT_LOGIN_IP: "1000"
+          SENTRY_DSN: "off"
+        run: pnpm exec playwright test tests/e2e/onboarding-leitor-de-site.spec.ts --workers=1 --reporter=list
 
       - uses: actions/upload-artifact@v7
         if: failure()
