@@ -482,7 +482,7 @@ describe("agrupamento por papel", () => {
       emissor: "lib/onboarding/executar-ensaio.ts",
       registraEm: "llm_calls",
     });
-    expect(ensaio?.fixo?.razao).toContain("seleção do próprio ensaio");
+    expect(ensaio?.fixo?.razao).toContain("configuração automática do ensaio");
     expect(configuraveis.has("onboarding_rehearsal")).toBe(false);
   });
 });

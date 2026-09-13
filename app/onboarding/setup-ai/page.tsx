@@ -58,7 +58,7 @@ export default async function SetupAiPage() {
           {traduzir("Quem ele é, como fala e o que pode prometer. Dá para mudar tudo depois.", idioma)}
         </p>
       </header>
-      {/* O ensaio seleciona provider/credencial explicitamente; não diagnosticar
+      {/* O ensaio usa seu padrão e o acesso disponível automaticamente; não diagnosticar
           o default da organização nem disparar a prova automática do card legado. */}
       <form action={configurarChaveDoOnboarding}>
         <button className="text-sm underline underline-offset-4">{traduzir("Configurar chave de IA", idioma)}</button>
