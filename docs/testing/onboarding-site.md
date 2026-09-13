@@ -98,3 +98,23 @@ não apenas a afirmação de que foram executados.
 - DNS/TLS públicos, IA comercial, embeddings externos, pareamento/envio real
   de WhatsApp, instalação/atualização na VPS e funcionamento em produção.
 - CI ainda depende da execução do PR; verde local não o substitui.
+
+## Revalidação após o PR #15 — 13/09/2026
+
+O bloqueio das duas jornadas acima foi removido pela correção já mesclada na main.
+`git fetch origin && git merge origin/main` integrou a main `3ceea3024` nesta branch
+no commit `dc93da4ed`, sem conflitos. Spec e configuração do Playwright permanecem
+idênticas a `fd36bec83`; nenhuma asserção ou regra de produto foi alterada nesta etapa.
+
+No próprio worktree `codex/leitor-de-site-no-onboarding`, Node 22:
+
+- Baseline inteiro reaplicado ao Supabase local de QA com `ON_ERROR_STOP=1`: exit 0.
+- `corepack pnpm e2e:build`: exit 0, controle positivo do bundle em `127.0.0.1:56521`.
+- `corepack pnpm exec playwright test tests/e2e/onboarding-leitor-de-site.spec.ts --grep 'site lido: (revisar|depois) é uma saída real e confirmar libera só o produto conferido' --workers=1 --reporter=list,json --trace on`: **2 passed (27.9s), exit 0**, sem skip ou retentativa.
+
+Saída literal preservada em `.superpowers/evidence/onboarding-site/pos-pr15-e2e.log`;
+preparação em `pos-pr15-baseline.log` e `pos-pr15-build.log`. O banco já era a stack
+de QA instalada anteriormente: esta rodada não é prova de instalação fresca.
+Receivers de site e IA são locais e sintéticos. JSON/traces ficam locais por
+poderem conter cookies descartáveis. Não foram repetidas as outras três jornadas,
+as suítes unitária/banco completas, nem testes em produção ou WhatsApp real.
