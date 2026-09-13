@@ -62,5 +62,39 @@ redes sociais; extração de preço por adivinhação/IA; editor novo de preços
 (a tela existente permite conferir/confirmar ou deixar o rascunho inativo).
 Nenhuma operação de produção, deploy, release ou alteração de schema nesta leva.
 
-Status dos gates completos e navegação ainda deve ser preenchido após a rodada
-final. Os testes focados não equivalem à suíte completa nem à publicação.
+## Fechamento após merge da main — 13/09/2026
+
+Trabalho salvo em `6ecdfa260`; merge da main `f0fe5c865` em `f4f8ac35f`.
+Integração automática, sem escolher um lado: conferência AST encontrou 5.338
+chaves, nenhuma duplicada, mantendo conteúdo/ordem da main e os 71 acréscimos
+do leitor. O mapa de jornadas preservou os acréscimos das duas branches.
+
+| Concluído e testado | Pendente | Bloqueado |
+|---|---|---|
+| `corepack pnpm exec vitest run lib/onboarding/site/ lib/onboarding/passos.test.ts --reporter=verbose`: 5 arquivos, 63 casos, exit 0; inclui “o site opcional não cria um sétimo passo nem expõe loja desligada”. | Medição do PR pelo CI. | Não está pronto para merge: duas jornadas E2E falham no funil. |
+| `corepack pnpm test:unit`: 772 arquivos, 8.027 casos, exit 0. | Corrigir o contrato entre o agente preparado/ativado e a seleção do agente usado pelo funil, em leva própria. | `montarQuadro.ts` exige `is_default=true`; a preparação cria o agente com `false` e a ativação restrita publica sem mudar essa marca. |
+| `corepack pnpm test:db catalogo-site-so-cota-confirmado`: baseline install/update e 5 casos de PostgREST/MCP, exit 0. | Reexecutar os dois casos de site válido após esse conserto. | Ambos param antes de comprovar a sugestão baseada no site, done e revisão. |
+| Build e typecheck pós-merge: exit 0. Spec `onboarding-leitor-de-site.spec.ts`: 3 passed, 2 failed, exit 1, sem skip; os três cenários verdes mediram 1280×844 e 390×844 sem transbordo. | | |
+
+A única adaptação da spec ao merge foi exigir a ausência dos seletores técnicos
+retirados pela main. Nenhum assert foi removido para esconder a falha do funil;
+nenhuma regra de produto foi alterada nesta etapa de fechamento.
+
+Sabotagem DNS repetida após o merge: retirar `assertDestinoResolvidoSeguro`
+gerou **4 failed / 12 passed**, exit 1; restaurar devolveu **63 passed** no
+recorte completo do leitor/passos, exit 0. O arquivo voltou exatamente ao
+conteúdo commitado. As saídas literais ficam em `postmerge-dns-sabotado.log` e
+`postmerge-dns-restaurado.log`. A sabotagem do catálogo de 12/09 está preservada
+em `catalogo-db-sabotado.log` (1 failed / 4 passed, exit 1) e
+`catalogo-db-restaurado.log` (5 passed). O corpo do PR inclui esses vermelhos,
+não apenas a afirmação de que foram executados.
+
+### O que não foi medido neste fechamento
+
+- Conclusão/revisão pela tela nos dois cenários de site válido: bloqueados antes
+  desses passos. Testes de componentes não substituem essa prova.
+- Suíte completa de banco, lint e kit shell não foram repetidos após o merge;
+  o recorte de banco acima não é apresentado como suíte completa.
+- DNS/TLS públicos, IA comercial, embeddings externos, pareamento/envio real
+  de WhatsApp, instalação/atualização na VPS e funcionamento em produção.
+- CI ainda depende da execução do PR; verde local não o substitui.

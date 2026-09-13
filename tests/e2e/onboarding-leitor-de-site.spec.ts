@@ -152,7 +152,9 @@ async function irAteFunil(page: Page, canal: string) {
   await page.locator("#objetivo").fill("Ajudar com o agendamento de consultas");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Rascunho salvo" })).toBeVisible();
-  await page.locator("#ensaio-model").selectOption(`openai/${MODELO}`);
+  // A main escolhe o modelo e a chave automaticamente no onboarding. Continuar
+  // exigindo o seletor antigo testaria uma tela que o assinante não vê mais.
+  await expect(page.locator("#ensaio-model, #ensaio-credential")).toHaveCount(0);
   await page.getByRole("button", { name: "Preparar ensaio", exact: true }).click();
   await expect(page.getByRole("button", { name: "Preparar ensaio", exact: true })).toBeEnabled();
   await page.locator("#ensaio-message").fill("Olá, preciso agendar uma consulta fictícia.");
