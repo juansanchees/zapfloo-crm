@@ -5,6 +5,27 @@
 	email {$ACME_EMAIL}
 }
 
+# Página pública OPCIONAL. Os defaults são endereços locais com HTTP explícito:
+# um clone que não configurou a página não pede certificado dos domínios da
+# Zapfloo. Em produção, informe as duas URLs HTTPS no `.env`.
+{$SALES_WWW_DOMAIN:http://www.localhost} {
+	redir {$SALES_DOMAIN:http://localhost}{uri} permanent
+}
+
+{$SALES_DOMAIN:http://localhost} {
+	encode gzip
+	route {
+		@raiz path /
+		rewrite @raiz /vendas
+
+		# O domínio de vendas não vira um segundo endereço das APIs ou do CRM.
+		# Só a página, seus assets e os documentos legais são publicados aqui.
+		@publico path /vendas /_next/* /icon /manifest.webmanifest /legal/*
+		reverse_proxy @publico app:3000
+		respond 404
+	}
+}
+
 {$DOMAIN} {
 	encode gzip
 

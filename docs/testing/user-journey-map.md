@@ -2059,8 +2059,16 @@ arquivado continua sendo um caso fora de escopo do leitor, apenas contado.
 | Caso | Prioridade | Prova |
 |---|---|---|
 | Abrir Funis e aplicar um modelo de pós-venda | `[P1]` | `tests/e2e/pipelines-gestao.spec.ts` cria um novo funil pela galeria e abre suas quatro etapas, sem alterar os ids anteriores. |
-| Abrir a galeria em 390 px | `[P1]` | A mesma jornada mede `scrollWidth <= clientWidth` e registra `funis-05-galeria-modelos-390.png`. |
+| Abrir a galeria em 390 px | `[P1]` | A mesma jornada mede `scrollWidth <= clientWidth` e registra evidência visual local durante a execução. |
 | Impedir movimento automático no pós-venda | `[P1]` | Teste da rota e catálogo exigem `agent_stage_hint = null` em todas as etapas dos quatro modelos. |
+
+## Página pública de vendas — 14/set/2026
+
+| Caso | Prioridade | Prova |
+|---|---|---|
+| Abrir a página em celular | `[P0]` | `tests/e2e/pagina-de-vendas.spec.ts` mede 390×844, CTA e `scrollWidth <= clientWidth`. |
+| Abrir a página em desktop | `[P1]` | A mesma spec mede 1280×720 e os três preços vindos do catálogo. |
+| Instalação sem domínio comercial | `[P0]` | Teste do Caddy exige fallback HTTP local, sem certificado do domínio da Zapfloo. |
 
 Auditoria de leitores, instrumentação da concorrência, sabotagens e limites em
 `docs/testing/onboarding-funcionario-principal.md`; evidências em

@@ -6,6 +6,9 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,
+  // Página pública de vendas. O Caddy reescreve apenas a raiz do domínio
+  // opcional para cá; a rota não lê dado de tenant nem aceita mutação.
+  /^\/vendas$/,
   /^\/auth\/confirm$/,
   /^\/403$/,
   /^\/admin\/forbidden$/,
