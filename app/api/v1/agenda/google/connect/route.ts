@@ -39,6 +39,7 @@ import { assinarVinculo, NOME_DO_VINCULO, VALIDADE_DO_VINCULO_S } from "@/lib/ag
 import { cookieSecure } from "@/lib/supabase/cookie-secure";
 import { montarUrlDeConsentimento } from "@/lib/agenda/google/oauth";
 import { env } from "@/lib/env";
+import { autorizarRecurso } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const autorizado = await requireRole("agent", { requestId, resource: "calendar_connections" });
   if (!autorizado.ok) return autorizado.response;
   const { user, org } = autorizado;
+
+  const plano = await autorizarRecurso(org.orgId, "googleAgenda");
+  if (!plano.ok) return voltarComErro("disponivel_no_plano_essencial");
 
   const app = await configuracaoDoGoogle();
   if (!app) {

@@ -30,6 +30,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarRecurso, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   const authz = await requireRole("manager", { requestId, resource: "webhook_sources" });
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
+
+  const plano = await autorizarRecurso(authz.org.orgId, "webhooks");
+  if (!plano.ok) return fail("plan_feature_unavailable", t(mensagemDePlano(plano)), 403, { requestId });
 
   let raw: unknown = {};
   try {

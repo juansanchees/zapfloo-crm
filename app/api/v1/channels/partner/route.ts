@@ -32,6 +32,7 @@ import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -109,6 +110,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return fail("invalid_request", t("account_id e api_key são obrigatórios"), 422, { requestId });
   }
 
+  const admin = createAdminClient();
+  const existente = await findPartnerSession(admin, orgId);
+  if (!existente || existente.archivedAt) {
+    const { count, error: countError } = await admin
+      .from("channel_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .is("archived_at", null);
+    if (countError) return fail("internal_error", countError.message, 500, { requestId });
+    const plano = await autorizarQuantidade(orgId, "numerosWhatsapp", (count ?? 0) + 1);
+    if (!plano.ok) {
+      return fail("plan_limit_reached", t(mensagemDePlano(plano)), 403, { requestId });
+    }
+  }
+
   // A rota não sabe com quem fala: pergunta se a credencial presta e o canal responde.
   const v = await validatePartnerCredentials({
     accountId: parsed.data.account_id,
@@ -116,7 +132,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   });
   if (!v.ok) return fail("invalid_request", v.reason, 422, { requestId });
 
-  const admin = createAdminClient();
   const chaveCifrada = await encryptWebhookSecret(admin, parsed.data.api_key);
   // Segredo do webhook: é o que autentica o que ENTRA. Sem ele a rota de entrada
   // recusa tudo — que é o comportamento certo, mas o canal ficaria mudo.
@@ -134,7 +149,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const existente = await findPartnerSession(admin, orgId);
   // Reconectar por cima de um canal excluído RESSUSCITA a linha, e o token de
   // webhook é preservado para não invalidar o que já está colado do outro lado.
   const token = existente?.webhookPathToken ?? randomBytes(16).toString("hex");

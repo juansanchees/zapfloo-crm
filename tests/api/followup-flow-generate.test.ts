@@ -18,6 +18,10 @@ vi.mock("@/lib/followup/ai-draft", async (importOriginal) => {
   return { ...actual, generateFollowupDraft: vi.fn() };
 });
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/billing/assinatura", () => ({
+  autorizarRecurso: vi.fn(async () => ({ ok: true })),
+  mensagemDePlano: vi.fn(() => "Disponível no plano Essencial"),
+}));
 
 const GRAPH = {
   nodes: [

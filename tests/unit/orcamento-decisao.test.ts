@@ -78,6 +78,19 @@ describe('decidirOrcamento — controle negativo', () => {
   });
 });
 
+describe('assinatura comercial — antes de qualquer gasto', () => {
+  it('teste vencido e plano pausado recusam mesmo com orçamento desligado', () => {
+    expect(decidirOrcamento(com({ acessoIa: 'teste_vencido', modo: 'off' }))).toEqual({
+      acao: 'bloquear',
+      porque: 'teste_vencido',
+    });
+    expect(decidirOrcamento(com({ acessoIa: 'plano_pausado', modo: 'off' }))).toEqual({
+      acao: 'bloquear',
+      porque: 'plano_pausado',
+    });
+  });
+});
+
 describe('condição 1 — enforcement_mode', () => {
   it("modo 'off' segue sozinho, mesmo com o gasto 10× o teto", () => {
     expect(decidirOrcamento(umaVariavel({ modo: 'off' }))).toEqual({

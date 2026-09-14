@@ -245,6 +245,11 @@ beforeAll(() => {
  * cabeçalho do caso de `contact_field_proposals` abaixo.
  */
 export const TABLES = [
+  // migration 0234 — a assinatura comercial é legível pelo próprio tenant,
+  // mas escrita só pelo operador da plataforma. Aqui se prova que a leitura
+  // legítima não atravessa organizações; o deny de escrita vive em
+  // tests/invariants/planos-por-organizacao.test.ts.
+  "organization_subscriptions",
   "conversations",
   "messages",
   "contacts",

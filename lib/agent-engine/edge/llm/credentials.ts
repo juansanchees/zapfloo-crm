@@ -17,6 +17,7 @@
  */
 import type pg from 'pg';
 import { z } from 'zod';
+import { resolverAcessoDaAssinatura, type EstadoDoAcessoIa, type PlanoId, type SituacaoDaAssinatura } from '@/lib/billing/planos';
 
 import { byteaToBuffer, decryptKey } from '@/lib/crypto/aes_gcm';
 import {
@@ -130,6 +131,8 @@ export interface OrcamentoDaOrg {
   tetoCents: number;
   efetivoEm: Date | null;
   limiarPct: number;
+  acessoIa: EstadoDoAcessoIa;
+  gerenciadoPeloPlano: boolean;
 }
 
 export interface OrgLlmConfig {
@@ -189,12 +192,16 @@ const llmSettingsSchema = z
  */
 const SQL_CONFIG_COM_ORCAMENTO = `
   select o.settings->'llm'            as llm,
+         o.created_at                 as organizacao_criada_em,
+         s.plan_id                    as plano_id,
+         s.status                     as assinatura_status,
          b.monthly_limit_cents        as teto,
          b.enforcement_mode           as modo,
          b.enforcement_effective_at   as efetivo_em,
          b.alarm_threshold_pct        as limiar_pct
     from organizations o
     left join ai_budgets b on b.organization_id = o.id
+    left join organization_subscriptions s on s.organization_id = o.id
    where o.id = $1`;
 
 /** A query de antes da 0159 — a rede quando o schema do clone está atrasado. */
@@ -206,6 +213,9 @@ interface LinhaDeConfig {
   modo?: string | null;
   efetivo_em?: Date | null;
   limiar_pct?: number | string | null;
+  organizacao_criada_em?: Date | string | null;
+  plano_id?: PlanoId | null;
+  assinatura_status?: SituacaoDaAssinatura | null;
 }
 
 const ORCAMENTO_DESLIGADO: OrcamentoDaOrg = {
@@ -213,6 +223,8 @@ const ORCAMENTO_DESLIGADO: OrcamentoDaOrg = {
   tetoCents: 0,
   efetivoEm: null,
   limiarPct: LIMIAR_PADRAO_PCT,
+  acessoIa: 'liberado',
+  gerenciadoPeloPlano: false,
 };
 
 /**
@@ -283,14 +295,27 @@ export async function resolveOrgLlmConfig(
   // Organização sem linha em `ai_budgets` cai aqui com tudo nulo, e o
   // normalizador resolve `modo` para 'off'. NULO É SEMPRE A RESPOSTA MAIS
   // FROUXA — em toda coluna, em todo caminho deste arquivo.
+  const assinatura =
+    linha?.plano_id && linha.assinatura_status && linha.organizacao_criada_em
+      ? resolverAcessoDaAssinatura({
+          plano: linha.plano_id,
+          situacao: linha.assinatura_status,
+          organizacaoCriadaEm:
+            linha.organizacao_criada_em instanceof Date
+              ? linha.organizacao_criada_em.toISOString()
+              : String(linha.organizacao_criada_em),
+        })
+      : null;
   const orcamento: OrcamentoDaOrg =
     orcamentoIndisponivelPorque !== null
       ? ORCAMENTO_DESLIGADO
       : {
-          modo: normalizarModoDeOrcamento(linha?.modo),
-          tetoCents: Number(linha?.teto ?? 0),
-          efetivoEm: linha?.efetivo_em ?? null,
+          modo: assinatura ? 'bloquear' : normalizarModoDeOrcamento(linha?.modo),
+          tetoCents: assinatura?.tetoIaMensalUsdCents ?? Number(linha?.teto ?? 0),
+          efetivoEm: assinatura ? new Date(0) : (linha?.efetivo_em ?? null),
           limiarPct: Number(linha?.limiar_pct ?? LIMIAR_PADRAO_PCT),
+          acessoIa: assinatura?.acessoIa ?? 'liberado',
+          gerenciadoPeloPlano: assinatura !== null,
         };
 
   // Credencial: a ESCOLHIDA na versão publicada quando houver (ainda exigindo

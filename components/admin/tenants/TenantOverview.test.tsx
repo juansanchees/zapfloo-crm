@@ -15,7 +15,7 @@
  *    sem atualizar os mapas da tela reprova aqui, que é exatamente o modo de
  *    falha que produziu este bug (o TypeScript não enxerga o CHECK).
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, within } from "@testing-library/react";
 
 import { badgeVariants } from "@/components/ui/badge";
@@ -28,6 +28,13 @@ import {
   NUVEMSHOP_VARIANT,
   TenantOverview,
 } from "./TenantOverview";
+
+vi.mock("@/hooks/useUpdateTenantSubscription", () => ({
+  useUpdateTenantSubscription: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+}));
 
 /**
  * Vocabulário que o banco aceita, lido do baseline. A leitura (e o "falha alto

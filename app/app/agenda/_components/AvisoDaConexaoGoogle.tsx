@@ -74,6 +74,13 @@ const DESFECHOS: Record<string, Desfecho> = {
       "Não é nada que você tenha feito. Quem instalou o sistema precisa cadastrar as credenciais do Google — até lá, a agenda funciona normalmente, só não sincroniza.",
     acao: "falar_com_quem_instalou",
   },
+  disponivel_no_plano_essencial: {
+    formato: "aviso",
+    titulo: "A conexão com o Google está disponível no plano Essencial",
+    corpo:
+      "Sua agenda continua funcionando normalmente. Para sincronizar compromissos com o Google, escolha o plano Essencial ou Completo.",
+    acao: "falar_com_quem_instalou",
+  },
   cifra_indisponivel: {
     formato: "aviso",
     titulo: "Não consegui guardar a conexão com segurança",

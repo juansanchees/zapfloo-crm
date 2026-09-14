@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api/types";
 import { Archive, CaretDown, CaretUp, Check, PencilSimple, Plus } from "@/lib/ui/icons";
 import { useArquivarFunil, useCriarFunil, useEditarFunil } from "@/hooks/pipelines/usePipelines";
+import { usePlano } from "@/components/billing/PlanoProvider";
+import { PLANOS, planoMinimoParaLimite } from "@/lib/billing/planos";
 
 export interface FunilDaLista {
   id: string;
@@ -65,6 +67,7 @@ export function FunisClient({
   /** Espelha o `requireRole("agent")` de `POST /api/v1/leads/import`. */
   podeImportar: boolean;
 }) {
+  const { permiteQuantidade } = usePlano();
   const t = useT();
   /**
    * ⚠️ A LISTA VEM DO SERVIDOR E É ATUALIZADA PELO CORPO DA RESPOSTA.
@@ -193,6 +196,9 @@ export function FunisClient({
     );
   }
 
+  const podeCriarFunil = permiteQuantidade("funis", funis.length + 1);
+  const planoMinimo = planoMinimoParaLimite("funis", funis.length + 1);
+
   return (
     <div className="flex flex-col gap-4">
       {(podeGerenciar || podeImportar) && (
@@ -202,9 +208,13 @@ export function FunisClient({
               Uma rota nova exigiria um item de menu para uma coisa que se faz
               uma vez por mês — ruído permanente para um gesto ocasional. */}
           {podeImportar ? <ImportarLeads funis={funis} /> : null}
-          {podeGerenciar && novo === null ? (
+          {podeGerenciar && novo === null && podeCriarFunil ? (
             <Button onClick={() => setNovo("")} disabled={ocupado} data-testid="novo-funil" className="w-full sm:w-auto">
               <Plus size={16} className="mr-2" aria-hidden /> {t("Novo funil")}
+            </Button>
+          ) : podeGerenciar && novo === null ? (
+            <Button disabled className="w-full sm:w-auto">
+              {t(`Disponível no plano ${planoMinimo ? PLANOS[planoMinimo].nome : "superior"}`)}
             </Button>
           ) : null}
         </div>

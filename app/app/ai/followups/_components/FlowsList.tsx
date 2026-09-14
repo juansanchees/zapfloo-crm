@@ -13,6 +13,7 @@ import { useFollowupFlows, type FollowupFlowPointerRow } from "@/hooks/followup/
 import { DeleteFollowupFlowButton } from "./DeleteFollowupFlowButton";
 import { FlowStatusBadge } from "./FlowStatusBadge";
 import { NewFlowDialog } from "./NewFlowDialog";
+import { usePlano } from "@/components/billing/PlanoProvider";
 
 interface Props {
   initialData: FollowupFlowPointerRow[];
@@ -32,13 +33,16 @@ export function FlowsList({ initialData, canWrite }: Props) {
   const t = useT();
   const { data } = useFollowupFlows({ initialData });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { permiteRecurso } = usePlano();
 
   const flows = data ?? [];
 
-  const newFlowButton = (
+  const newFlowButton = permiteRecurso("followupsAutomaticos") ? (
     <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
       <Plus size={14} aria-hidden className="mr-2" /> Novo fluxo
     </Button>
+  ) : (
+    <Button disabled className="w-full sm:w-auto">{t("Disponível no plano Essencial")}</Button>
   );
 
   if (flows.length === 0) {
@@ -54,7 +58,7 @@ export function FlowsList({ initialData, canWrite }: Props) {
           </p>
           {canWrite && <div className="mt-1">{newFlowButton}</div>}
         </Card>
-        {canWrite && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
+        {canWrite && permiteRecurso("followupsAutomaticos") && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
       </>
     );
   }
@@ -100,7 +104,7 @@ export function FlowsList({ initialData, canWrite }: Props) {
         ))}
       </ul>
 
-      {canWrite && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
+      {canWrite && permiteRecurso("followupsAutomaticos") && <NewFlowDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
     </div>
   );
 }

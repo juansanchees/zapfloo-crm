@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Planos por organização",
+    "subtitle": "uma configuração central alimenta o painel, os limites de criação e o orçamento de IA",
+    "output": "planos-por-organizacao.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "plataforma", "label": "Administrador da plataforma" },
+    { "id": "regra", "label": "Regra central" },
+    { "id": "dados", "label": "Banco" },
+    { "id": "produto", "label": "Produto" },
+    { "id": "retorno", "label": "Laço de retorno" }
+  ],
+  "mainPath": ["admin", "api", "assinatura", "resolver", "limites", "uso"],
+  "nodes": [
+    { "id": "admin", "lane": "plataforma", "col": 1, "type": "frontend", "label": "/admin/tenants/[id]", "sublabel": "plano e situação editáveis" },
+    { "id": "api", "lane": "plataforma", "col": 2, "type": "api", "label": "PATCH /admin/tenants/[id]", "sublabel": "admin de plataforma + auditoria" },
+    { "id": "config", "lane": "regra", "col": 1, "type": "service", "label": "lib/billing/planos.ts", "sublabel": "preços, recursos, limites e tetos" },
+    { "id": "resolver", "lane": "regra", "col": 3, "type": "service", "label": "assinaturaDaOrganizacao", "sublabel": "teste, ativo ou pausado" },
+    { "id": "assinatura", "lane": "dados", "col": 2, "type": "database", "label": "organization_subscriptions", "sublabel": "RLS; cliente lê e só a plataforma escreve" },
+    { "id": "audit", "lane": "dados", "col": 3, "type": "database", "label": "api_audit_log", "sublabel": "tenant.subscription_changed" },
+    { "id": "limites", "lane": "produto", "col": 4, "type": "api", "label": "APIs de criação", "sublabel": "recusam além do plano sem apagar o existente" },
+    { "id": "orcamento", "lane": "produto", "col": 4, "type": "service", "label": "decidirOrcamento", "sublabel": "teste vencido ou pausado não chama modelo" },
+    { "id": "telas", "lane": "produto", "col": 5, "type": "frontend", "label": "Ações do CRM", "sublabel": "mostram o plano mínimo no lugar do botão" },
+    { "id": "uso", "lane": "retorno", "col": 5, "type": "database", "label": "llm_calls", "sublabel": "gasto do mês realimenta a próxima decisão" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "admin", "to": "api", "label": "edita" },
+    { "id": "e2", "from": "api", "to": "assinatura", "label": "grava" },
+    { "id": "e3", "from": "api", "to": "audit", "label": "registra antes e depois" },
+    { "id": "e4", "from": "config", "to": "resolver", "label": "define o significado" },
+    { "id": "e5", "from": "assinatura", "to": "resolver", "label": "estado por organização" },
+    { "id": "e6", "from": "resolver", "to": "limites", "label": "autoriza quantidade e recurso" },
+    { "id": "e7", "from": "resolver", "to": "orcamento", "label": "teto e acesso de IA" },
+    { "id": "e8", "from": "limites", "to": "telas", "label": "recusa explícita" },
+    { "id": "e9", "from": "orcamento", "to": "uso", "label": "chamada autorizada registra custo" },
+    { "id": "e10", "from": "uso", "to": "orcamento", "label": "gasto do mês volta à decisão" }
+  ]
+}

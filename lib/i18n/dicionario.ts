@@ -6050,6 +6050,8 @@ export const DICIONARIO: Traducoes = {
   "Por que está cancelando?": { es: "¿Por qué estás cancelando?" },
   "O paciente pediu para remarcar por telefone": { es: "El paciente pidió reprogramar por teléfono" },
   "Sincronizar com o Google ainda não está disponível": { es: "Sincronizar con Google todavía no está disponible" },
+  "A conexão com o Google está disponível no plano Essencial": { es: "La conexión con Google está disponible en el plan Esencial" },
+  "Sua agenda continua funcionando normalmente. Para sincronizar compromissos com o Google, escolha o plano Essencial ou Completo.": { es: "Tu agenda sigue funcionando normalmente. Para sincronizar citas con Google, elige el plan Esencial o Completo." },
   "Esta instalação não tem as credenciais do Google cadastradas — não é nada que você tenha feito. Quem instalou o sistema precisa configurar": { es: "Esta instalación no tiene las credenciales de Google registradas — no es nada que hayas hecho. Quien instaló el sistema necesita configurar" },
   "E, no console do Google, registrar este endereço de retorno —": { es: "Y, en la consola de Google, registrar esta dirección de retorno —" },
   "exatamente assim": { es: "exactamente así" },
@@ -8295,6 +8297,16 @@ export const DICIONARIO: Traducoes = {
   "Não consegui salvar a leitura completa. O conteúdo continua sem aprovação; tente novamente.": { es: "No pude guardar la lectura completa. El contenido sigue sin aprobar; inténtalo de nuevo." },
   "Não consegui recuperar o estado desta leitura. Você pode adicionar outro material manualmente.": { es: "No pude recuperar el estado de esta lectura. Puedes añadir otro material manualmente." },
   "Não consegui ler este site. Você pode continuar e adicionar o conteúdo manualmente.": { es: "No pude leer este sitio. Puedes continuar y añadir el contenido manualmente." },
+  "Disponível no plano Essencial": { es: "Disponible en el plan Esencial" },
+  "Disponível no plano Completo": { es: "Disponible en el plan Completo" },
+  "Situação da assinatura": { es: "Estado de la suscripción" },
+  "Plano atualizado.": { es: "Plan actualizado." },
+  "Não foi possível atualizar o plano.": { es: "No se pudo actualizar el plan." },
+  "Salvar plano": { es: "Guardar plan" },
+  "O limite mensal de IA é definido pelo plano da organização.": { es: "El límite mensual de IA está definido por el plan de la organización." },
+  "Básico": { es: "Básico" },
+  "Essencial": { es: "Esencial" },
+  "Completo": { es: "Completo" },
 };
 
 /**

@@ -37,6 +37,10 @@ import {
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assinaturaDaOrganizacao } from "@/lib/billing/assinatura";
+import {
+  type EstadoDoAcessoIa,
+} from "@/lib/billing/planos";
 
 export interface BudgetStatus {
   organization_id: string;
@@ -93,6 +97,9 @@ export interface BudgetStatus {
   current_period_start: string;
   last_alarm_sent_at: string | null;
   updated_at: string;
+  ai_access_state?: EstadoDoAcessoIa;
+  /** O teto vem do plano e não pode ser redefinido pelo tenant. */
+  managed_by_plan?: boolean;
 }
 
 const COLUMNS =
@@ -145,7 +152,7 @@ export async function getBudgetStatus(orgId: string): Promise<BudgetStatus> {
   const admin = createAdminClient();
   const enforcementEnv = normalizarChaveDeOrcamento(env.AI_BUDGET_ENFORCEMENT);
 
-  const [linhaRes, gasto, bloqueioRes, semPrecoRes] = await Promise.all([
+  const [linhaRes, gasto, bloqueioRes, semPrecoRes, assinatura] = await Promise.all([
     admin.from("ai_budgets").select(COLUMNS).eq("organization_id", orgId).maybeSingle(),
     gastoDoMes(admin, orgId),
     admin
@@ -163,10 +170,18 @@ export async function getBudgetStatus(orgId: string): Promise<BudgetStatus> {
       .eq("organization_id", orgId)
       .is("cost_cents", null)
       .gte("created_at", inicioDoMesUtc()),
+    assinaturaDaOrganizacao(orgId).catch((error: unknown) => {
+      logger.warn("ai-budget: assinatura indisponível — preservando compatibilidade ativa", {
+        organization_id: orgId,
+        causa: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }),
   ]);
 
   const data = linhaRes.data;
-  const blockedNow = (bloqueioRes.count ?? 0) > 0;
+  const blockedNow =
+    (assinatura?.acesso.acessoIa ?? "liberado") !== "liberado" || (bloqueioRes.count ?? 0) > 0;
   // Degrada para "medição completa" quando a consulta falha: afirmar um furo que
   // não se mediu assusta quem está protegido de verdade. O erro é logado abaixo.
   const gastoIncompleto = (semPrecoRes.count ?? 0) > 0;
@@ -208,22 +223,24 @@ export async function getBudgetStatus(orgId: string): Promise<BudgetStatus> {
     const consumido = gasto.cents ?? DEFAULTS.current_month_consumed_cents;
     return {
       organization_id: orgId,
-      monthly_limit_cents: DEFAULTS.monthly_limit_cents,
+      monthly_limit_cents: assinatura?.acesso.tetoIaMensalUsdCents ?? DEFAULTS.monthly_limit_cents,
       current_month_consumed_cents: consumido,
       pct: 0,
       alarm_threshold_pct: DEFAULTS.alarm_threshold_pct,
-      enforcement_mode: "off",
-      enforcement_effective_at: null,
+      enforcement_mode: assinatura ? "bloquear" : "off",
+      enforcement_effective_at: assinatura ? new Date(0).toISOString() : null,
       enforcement_env: enforcementEnv,
       blocked_now: blockedNow,
       gasto_incompleto: gastoIncompleto,
       current_period_start: periodStart,
       last_alarm_sent_at: null,
       updated_at: new Date().toISOString(),
+      ai_access_state: assinatura?.acesso.acessoIa ?? "liberado",
+      managed_by_plan: assinatura !== null,
     };
   }
 
-  const monthlyLimit = Number(data.monthly_limit_cents ?? 0);
+  const monthlyLimit = assinatura?.acesso.tetoIaMensalUsdCents ?? Number(data.monthly_limit_cents ?? 0);
   const consumed = gasto.cents ?? Number(data.current_month_consumed_cents ?? 0);
 
   return {
@@ -232,13 +249,19 @@ export async function getBudgetStatus(orgId: string): Promise<BudgetStatus> {
     current_month_consumed_cents: consumed,
     pct: pctOf(consumed, monthlyLimit),
     alarm_threshold_pct: Number(data.alarm_threshold_pct ?? DEFAULTS.alarm_threshold_pct),
-    enforcement_mode: normalizarModoDeOrcamento(data.enforcement_mode as string | null),
-    enforcement_effective_at: (data.enforcement_effective_at as string | null) ?? null,
+    enforcement_mode: assinatura
+      ? "bloquear"
+      : normalizarModoDeOrcamento(data.enforcement_mode),
+    enforcement_effective_at: assinatura
+      ? new Date(0).toISOString()
+      : ((data.enforcement_effective_at as string | null) ?? null),
     enforcement_env: enforcementEnv,
     blocked_now: blockedNow,
     gasto_incompleto: gastoIncompleto,
     current_period_start: String(data.current_period_start),
     last_alarm_sent_at: (data.last_alarm_sent_at as string | null) ?? null,
     updated_at: String(data.updated_at),
+    ai_access_state: assinatura?.acesso.acessoIa ?? "liberado",
+    managed_by_plan: assinatura !== null,
   };
 }

@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeamMembersClient } from "./_components/TeamMembersClient";
 import { AttendantsClient } from "./_components/AttendantsClient";
+import { assinaturaDaOrganizacao } from "@/lib/billing/assinatura";
+import { limiteDoPlano, planoMinimoParaLimite, PLANOS } from "@/lib/billing/planos";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +44,22 @@ export default async function TeamPage({
   const activeOrg = await resolveActiveOrg(user);
   const isAdmin = !!activeOrg && ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin;
   const isManager = !!activeOrg && ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
+  let podeConvidar = true;
+  let planoParaConvidar = "Completo";
+  if (isAdmin && activeOrg) {
+    const [{ acesso }, membros] = await Promise.all([
+      assinaturaDaOrganizacao(activeOrg.orgId),
+      (await createClient())
+        .from("user_organizations")
+        .select("user_id", { count: "exact", head: true })
+        .eq("organization_id", activeOrg.orgId)
+        .is("revoked_at", null),
+    ]);
+    const teto = limiteDoPlano(acesso, "usuarios");
+    podeConvidar = membros.error ? true : teto === null || (membros.count ?? 0) + 1 <= teto;
+    const minimo = planoMinimoParaLimite("usuarios", (membros.count ?? 0) + 1);
+    if (minimo) planoParaConvidar = PLANOS[minimo].nome;
+  }
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -51,9 +70,13 @@ export default async function TeamPage({
             {t("Gestão de membros, roles e atendimento do tenant.")}
           </p>
         </div>
-        {isAdmin ? (
+        {isAdmin && podeConvidar ? (
           <Button asChild className="shrink-0">
             <Link href="/app/team/invite">{t("Convidar membros")}</Link>
+          </Button>
+        ) : isAdmin ? (
+          <Button className="shrink-0" disabled>
+            {t(`Disponível no plano ${planoParaConvidar}`)}
           </Button>
         ) : null}
       </header>

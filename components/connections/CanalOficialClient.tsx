@@ -14,6 +14,8 @@ import {
 import { copyToClipboard } from "@/lib/clipboard";
 import { useT } from "@/hooks/i18n/useT";
 import { ChannelAiAccess } from "./ChannelAiAccess";
+import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
+import { usePlano } from "@/components/billing/PlanoProvider";
 
 /** Campo somente-leitura com botão de copiar — o que o operador cola na Meta. */
 function ParaColar({ rotulo, valor }: { rotulo: string; valor: string | null }) {
@@ -56,9 +58,13 @@ export function CanalOficialClient() {
   const t = useT();
   const { data, isPending } = useOfficialChannel();
   const conectar = useConnectOfficialChannel();
+  const { data: sessoes } = useChannelSessions();
+  const { permiteQuantidade } = usePlano();
   const [form, setForm] = useState({ phone_number_id: "", waba_id: "", token: "" });
 
   const estado = data?.data;
+  const podeAdicionarNumero =
+    Boolean(estado?.connected) || permiteQuantidade("numerosWhatsapp", (sessoes?.length ?? 0) + 1);
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -192,8 +198,12 @@ export function CanalOficialClient() {
               {t("Guardado cifrado. Não é exibido de volta em nenhum momento.")}
             </span>
           </div>
-          <Button type="submit" disabled={conectar.isPending} data-testid="btn-conectar">
-            {conectar.isPending ? t("Validando com a Meta…") : t("Validar e conectar")}
+          <Button type="submit" disabled={conectar.isPending || !podeAdicionarNumero} data-testid="btn-conectar">
+            {!podeAdicionarNumero
+              ? t("Disponível no plano Completo")
+              : conectar.isPending
+                ? t("Validando com a Meta…")
+                : t("Validar e conectar")}
           </Button>
         </form>
       </Card>

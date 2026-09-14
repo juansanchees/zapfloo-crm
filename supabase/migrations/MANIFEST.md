@@ -272,6 +272,7 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260910141734` | `0229_limite_exato_prompt_onboarding` | Alinha salvar e preparar ao teto total de 20.000 unidades UTF-16 sem truncar rascunhos antigos. |
 | `20260913190000` | `0232_onboarding_funcionario_principal` | Ativação/retry promovem o funcionário revisado somente quando não há principal; corrida no índice único não desfaz ativação nem rebaixa o vencedor. Guardas e restrição de canal preservadas; 0231 reservada ao hardening em revisão. |
 | `20260913190100` | `0233_onboarding_reparar_funcionario_principal` | Reparo genérico e idempotente apenas com recibo/audit íntegros e a mesma versão ainda publicada/ativa. NOTICE conta promoções, principal preexistente, falta de evidência e principais arquivados (só reportados). Não altera canal, allowlist ou ativação. |
+| `20260914120000` | `0234_planos_por_organizacao` | Assinatura isolada de settings, com CHECK/RLS e escrita somente pelo backend de plataforma. Backfill idempotente preserva organizações existentes em Completo ativo; novas organizações nascem em teste por gatilho. |
 
 ## Tables created (33 total, all RLS enabled)
 

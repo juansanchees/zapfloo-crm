@@ -35,6 +35,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { metadataInicialDoCanal } from "@/lib/ai/elegibilidade/pre-go-live";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -116,6 +117,42 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const orgId = authz.org.orgId;
   const userId = authz.user.id;
+  const admin = createAdminClient();
+  const contarCanais = () =>
+    admin
+      .from("channel_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId);
+  const consultarOficialAtivo = () =>
+    admin
+      .from("channel_sessions")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("provider", CHANNEL_PROVIDER_META);
+  const [contagem, oficial] = await Promise.all([
+    queryTolerantToMissingArchived(
+      () => contarCanais().is(ARCHIVED_AT, null),
+      () => contarCanais(),
+    ),
+    queryTolerantToMissingArchived(
+      () => consultarOficialAtivo().is(ARCHIVED_AT, null).maybeSingle(),
+      () => consultarOficialAtivo().maybeSingle(),
+    ),
+  ]);
+  if (contagem.error) return fail("internal_error", contagem.error.message ?? "channel_count_failed", 500, { requestId });
+  const canaisAtivos =
+    typeof (contagem as { count?: unknown }).count === "number"
+      ? (contagem as { count: number }).count
+      : Array.isArray(contagem.data)
+        ? contagem.data.length
+        : 0;
+  const oficialAtivo = oficial.data;
+  const plano = await autorizarQuantidade(
+    orgId,
+    "numerosWhatsapp",
+    canaisAtivos + (oficialAtivo ? 0 : 1),
+  );
+  if (!plano.ok) return fail("plan_limit_reached", t(mensagemDePlano(plano)), 403, { requestId });
 
   const parsed = conectarSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -132,7 +169,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return fail("invalid_request", validacao.motivo, 422, { requestId });
   }
 
-  const admin = createAdminClient();
   const cifrado = await encryptWebhookSecret(admin, token);
   if (!cifrado) {
     // Sem a GUC de cifra configurada, gravar o token em claro seria pior que

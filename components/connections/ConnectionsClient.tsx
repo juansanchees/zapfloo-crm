@@ -39,6 +39,7 @@ import {
 import { lerEstadoDoCanal } from "@/lib/channels/estado";
 import { rotuloDoTipoDeConexao } from "@/lib/channels/apresentacao";
 import { useT } from "@/hooks/i18n/useT";
+import { usePlano } from "@/components/billing/PlanoProvider";
 
 type Variant = "success" | "warning" | "error" | "neutral";
 
@@ -104,6 +105,7 @@ function enumerar(partes: (string | null)[], t: (texto: string) => string): stri
 export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean }) {
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
+  const { permiteQuantidade } = usePlano();
   const qc = useQueryClient();
   const {
     data: sessions,
@@ -207,6 +209,7 @@ export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean 
   }, [invalidate, t]);
 
   const list = sessions ?? [];
+  const podeAdicionarNumero = permiteQuantidade("numerosWhatsapp", list.length + 1);
 
   return (
     <div className="flex flex-col gap-4">
@@ -234,13 +237,17 @@ export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean 
               {t("Atualizar saúde")}
             </Button>
           )}
-          <Button size="sm" disabled={creating || !wahaConfigured} onClick={handleConnectNew}>
+          <Button
+            size="sm"
+            disabled={creating || !wahaConfigured || !podeAdicionarNumero}
+            onClick={handleConnectNew}
+          >
             {creating ? (
               <CircleNotch size={14} className="animate-spin" aria-hidden />
             ) : (
               <Plus size={14} aria-hidden />
             )}
-            {t("Conectar por QR")}
+            {podeAdicionarNumero ? t("Conectar por QR") : t("Disponível no plano Completo")}
           </Button>
         </div>
       </div>

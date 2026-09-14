@@ -4,10 +4,15 @@ import { NextRequest } from "next/server";
 import { audit } from "@/lib/audit";
 import { fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import { autorizarQuantidade } from "@/lib/billing/assinatura";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
+vi.mock("@/lib/billing/assinatura", () => ({
+  autorizarQuantidade: vi.fn(),
+  mensagemDePlano: vi.fn(() => "Disponível no plano Essencial."),
+}));
 
 import { ORG_ID, OUTRA_ORG, PIPE, authOk, funilRow, makeDb } from "@/tests/helpers/stages-db-double";
 
@@ -23,6 +28,18 @@ const umFunil = () => [funilRow({ id: PIPE, name: "Pedidos", slug: "pedidos", is
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(autorizarQuantidade).mockResolvedValue({
+    ok: true,
+    acesso: {
+      planoContratado: "completo",
+      planoDeRecursos: "completo",
+      situacao: "ativo",
+      fimDoTeste: null,
+      testeValido: false,
+      acessoIa: "liberado",
+      tetoIaMensalUsdCents: 1_600,
+    },
+  });
 });
 
 describe("POST /api/v1/pipelines", () => {
@@ -57,6 +74,45 @@ describe("POST /api/v1/pipelines", () => {
     const body = (await res.json()) as { error: { message: string } };
     expect(body.error.message).toBe("Já existe um funil chamado «Pedidos». Escolha outro nome.");
     expect(db.escritas).toEqual([]);
+  });
+
+  it("Básico com um funil recusa o segundo; Completo libera pela mesma API", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    vi.mocked(autorizarQuantidade).mockResolvedValueOnce({
+      ok: false,
+      acesso: {
+        planoContratado: "basico",
+        planoDeRecursos: "basico",
+        situacao: "ativo",
+        fimDoTeste: null,
+        testeValido: false,
+        acessoIa: "liberado",
+        tetoIaMensalUsdCents: 400,
+      },
+      planoMinimo: "essencial",
+      motivo: "limite",
+    });
+    const { POST } = await import("./route");
+
+    const recusado = await POST(reqPost({ name: "Clínica" }));
+    expect(recusado.status).toBe(403);
+    expect(autorizarQuantidade).toHaveBeenCalledWith(ORG_ID, "funis", 2);
+    expect(db.escritas).toEqual([]);
+
+    vi.mocked(autorizarQuantidade).mockResolvedValueOnce({
+      ok: true,
+      acesso: {
+        planoContratado: "completo",
+        planoDeRecursos: "completo",
+        situacao: "ativo",
+        fimDoTeste: null,
+        testeValido: false,
+        acessoIa: "liberado",
+        tetoIaMensalUsdCents: 1_600,
+      },
+    });
+    expect((await POST(reqPost({ name: "Clínica" }))).status).toBe(201);
   });
 
   it("cria o funil COM as quatro etapas, na mesma requisição", async () => {

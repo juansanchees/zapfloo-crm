@@ -423,7 +423,22 @@ async function vetoPorTetoDeGasto(alvo: {
     chave: status.enforcement_env,
     limiarPct: status.alarm_threshold_pct,
     avisadoNesteMes: (count ?? 0) > 0,
+    acessoIa: status.ai_access_state ?? "liberado",
   });
+
+  if (
+    veredito.acao === "bloquear" &&
+    (veredito.porque === "teste_vencido" || veredito.porque === "plano_pausado")
+  ) {
+    return {
+      kind: "skip",
+      reason: "plan_inactive",
+      detail:
+        veredito.porque === "teste_vencido"
+          ? "O período de teste terminou. Ative um plano para a IA voltar a responder."
+          : "O plano da organização está pausado. Reative-o para a IA voltar a responder.",
+    };
+  }
 
   // LAÇO DE RETORNO: gasto abaixo do limiar (virou o mês, ou o admin subiu o
   // teto) retrata os dois itens. É o espelho da CTE `retrata` de SQL_ORCAMENTO.

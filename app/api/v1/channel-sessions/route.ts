@@ -19,6 +19,8 @@ import { metadataInicialDoCanal } from "@/lib/ai/elegibilidade/pre-go-live";
 import { createClient } from "@/lib/supabase/server";
 import { getWahaClient, wahaFriendlyError } from "@/lib/waha/client";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +70,16 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user, org: activeOrg } = authz;
+
+  const admin = createAdminClient();
+  const { count: canaisAtuais, error: countErr } = await admin
+    .from("channel_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", activeOrg.orgId)
+    .is("archived_at", null);
+  if (countErr) return fail("internal_error", countErr.message, 500, { requestId });
+  const plano = await autorizarQuantidade(activeOrg.orgId, "numerosWhatsapp", (canaisAtuais ?? 0) + 1);
+  if (!plano.ok) return fail("plan_limit_reached", t(mensagemDePlano(plano)), 403, { requestId });
 
   const waha = getWahaClient();
   if (!waha) {

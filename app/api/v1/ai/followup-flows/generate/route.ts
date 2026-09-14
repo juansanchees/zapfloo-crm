@@ -20,6 +20,7 @@ import { generateFollowupFlowSchema } from "@/lib/followup/api-schemas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
+import { autorizarRecurso, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,6 +31,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   const authz = await requireRole("manager", { requestId, resource: "followup_flows" });
   if (!authz.ok) return authz.response;
   const t = (text: string) => traduzir(text, authz.user.idioma);
+  const plano = await autorizarRecurso(authz.org.orgId, "followupsAutomaticos");
+  if (!plano.ok) {
+    return fail("plan_feature_unavailable", t(mensagemDePlano(plano)), 403, { requestId });
+  }
 
   let raw: unknown;
   try {

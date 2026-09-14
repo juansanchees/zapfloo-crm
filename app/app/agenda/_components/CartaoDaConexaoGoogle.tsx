@@ -7,6 +7,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { GoogleLogo } from "@/lib/ui/icons";
+import { usePlano } from "@/components/billing/PlanoProvider";
 
 /**
  * O cartão da agenda conectada — e o caso que importa é o de quem NÃO tem.
@@ -45,6 +46,7 @@ export function CartaoDaConexaoGoogle({
   /** O endereço EXATO que o Google exige registrado. Ver o bloco no JSX. */
   enderecoDeRetorno?: string;
 }) {
+  const { permiteRecurso } = usePlano();
   const t = useT();
   const router = useRouter();
   const [desconectando, setDesconectando] = React.useState(false);
@@ -158,12 +160,18 @@ export function CartaoDaConexaoGoogle({
       <p className="min-w-0 flex-1 text-sm text-text-muted">
         {t("Conecte sua agenda do Google para ver aqui o que já está marcado lá — e enviar para lá o que for marcado aqui.")}
       </p>
-      <Button variant="outline" size="sm" data-testid="conectar-google" asChild>
-        <a href="/api/v1/agenda/google/connect">
-          <GoogleLogo size={16} weight="bold" aria-hidden />
-          <span>{t("Conectar Google")}</span>
-        </a>
-      </Button>
+      {permiteRecurso("googleAgenda") ? (
+        <Button variant="outline" size="sm" data-testid="conectar-google" asChild>
+          <a href="/api/v1/agenda/google/connect">
+            <GoogleLogo size={16} weight="bold" aria-hidden />
+            <span>{t("Conectar Google")}</span>
+          </a>
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" disabled>
+          {t("Disponível no plano Essencial")}
+        </Button>
+      )}
     </div>
   );
 }

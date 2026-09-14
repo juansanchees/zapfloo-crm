@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/server";
 import { conflitoDoBanco, corpo, lerFunis } from "./_funis";
 import { listPipelinesHandler } from "./_handler";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,13 @@ export async function POST(req: NextRequest): Promise<Response> {
   } catch (err) {
     return fail("internal_error", (err as Error).message, 500, { requestId });
   }
+
+  const plano = await autorizarQuantidade(
+    orgId,
+    "funis",
+    funis.filter((funil) => !funil.is_archived).length + 1,
+  );
+  if (!plano.ok) return fail("plan_limit_reached", t(mensagemDePlano(plano)), 403, { requestId });
 
   // ⚠️ VALIDAR ANTES DE TOCAR O BANCO. O índice único é a rede de segurança, não
   // a primeira linha: um 23505 cru não diz QUAL funil já tem esse nome.

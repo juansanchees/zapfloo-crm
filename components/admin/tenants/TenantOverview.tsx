@@ -7,11 +7,17 @@ import type {
   TenantOrganization,
   TenantCounts,
   TenantIntegrations,
+  TenantSubscription,
 } from "@/hooks/useTenantDetail";
 import { useT } from "@/hooks/i18n/useT";
 import { PeriodoDeTeste } from "@/components/billing/PeriodoDeTeste";
 import { fimDoPeriodoDeTeste } from "@/lib/billing/periodo-de-teste";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PLANOS, type PlanoId, type SituacaoDaAssinatura } from "@/lib/billing/planos";
+import { useUpdateTenantSubscription } from "@/hooks/useUpdateTenantSubscription";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -90,17 +96,20 @@ interface TenantOverviewProps {
   organization: TenantOrganization;
   counts: TenantCounts;
   integrations: TenantIntegrations;
+  subscription?: TenantSubscription | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function TenantOverview({ organization, counts, integrations }: TenantOverviewProps) {
+export function TenantOverview({ organization, subscription, counts, integrations }: TenantOverviewProps) {
   const [agora] = useState(() => Date.now());
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
-  const plan = (organization.settings as { plan?: string } | null)?.plan ?? "—";
+  const [plano, setPlano] = useState<PlanoId>(subscription?.plan_id ?? "completo");
+  const [situacao, setSituacao] = useState<SituacaoDaAssinatura>(subscription?.status ?? "ativo");
+  const updateSubscription = useUpdateTenantSubscription(organization.id);
 
   const nuvemshopStatus = integrations.nuvemshop_status;
   // Valor fora do vocabulário conhecido continua aparecendo cru de propósito:
@@ -114,14 +123,47 @@ export function TenantOverview({ organization, counts, integrations }: TenantOve
 
   return (
     <div className="space-y-6">
-      <PeriodoDeTeste key={organization.id} fim={fimDoPeriodoDeTeste(organization.created_at)} agora={agora} />
+      {situacao === "teste" && (
+        <PeriodoDeTeste key={organization.id} fim={fimDoPeriodoDeTeste(organization.created_at)} agora={agora} />
+      )}
       {/* Info card */}
       <div className="rounded-lg border bg-card p-5">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           {t("Informações")}
         </h2>
         <div>
-          <InfoRow label={t("Plano")} value={<Badge variant="neutral" className="capitalize">{plan}</Badge>} />
+          <div className="grid gap-3 border-b py-3 sm:grid-cols-[1fr_1fr_auto]">
+            <Select value={plano} onValueChange={(valor) => setPlano(valor as PlanoId)}>
+              <SelectTrigger aria-label={t("Plano")}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.entries(PLANOS) as Array<[PlanoId, (typeof PLANOS)[PlanoId]]>).map(([id, item]) => (
+                  <SelectItem key={id} value={id}>{item.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={situacao} onValueChange={(valor) => setSituacao(valor as SituacaoDaAssinatura)}>
+              <SelectTrigger aria-label={t("Situação da assinatura")}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="teste">{t("Teste")}</SelectItem>
+                <SelectItem value="ativo">{t("Ativo")}</SelectItem>
+                <SelectItem value="pausado">{t("Pausado")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              disabled={updateSubscription.isPending}
+              onClick={async () => {
+                try {
+                  await updateSubscription.mutateAsync({ plan_id: plano, status: situacao });
+                  toast.success(t("Plano atualizado."));
+                } catch {
+                  toast.error(t("Não foi possível atualizar o plano."));
+                }
+              }}
+            >
+              {updateSubscription.isPending ? t("Salvando...") : t("Salvar plano")}
+            </Button>
+          </div>
           <InfoRow label={t("Razão social")} value={organization.legal_name} />
           <InfoRow label="CNPJ" value={organization.cnpj} />
           <InfoRow label={t("Onboarding concluído")} value={formatDate(organization.onboarded_at, tagDoIdioma)} />

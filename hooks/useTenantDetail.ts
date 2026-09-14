@@ -37,9 +37,19 @@ export interface TenantIntegrations {
   nuvemshop_connected_at: string | null;
 }
 
+export interface TenantSubscription {
+  organization_id: string;
+  plan_id: "basico" | "essencial" | "completo";
+  status: "teste" | "ativo" | "pausado";
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
 export interface TenantDetailResponse {
   data: {
     organization: TenantOrganization;
+    subscription: TenantSubscription | null;
     counts: TenantCounts;
     integrations: TenantIntegrations;
   };
