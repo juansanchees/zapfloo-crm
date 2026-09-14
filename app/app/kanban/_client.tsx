@@ -15,6 +15,7 @@ import { Archive, CaretDown, CaretUp, Check, PencilSimple, Plus } from "@/lib/ui
 import { useArquivarFunil, useCriarFunil, useEditarFunil } from "@/hooks/pipelines/usePipelines";
 import { usePlano } from "@/components/billing/PlanoProvider";
 import { PLANOS, planoMinimoParaLimite } from "@/lib/billing/planos";
+import { MODELOS_DE_FUNIL } from "@/lib/pipelines/modelos-de-funil";
 
 export interface FunilDaLista {
   id: string;
@@ -113,6 +114,17 @@ export function FunisClient({
     });
   }
 
+  function aplicarModelo(templateId: string) {
+    setErro(null);
+    criar.mutate(
+      { template_id: templateId },
+      {
+        onSuccess: (r) => setFunis(r.data.pipelines),
+        onError: (e) => setErro({ id: null, texto: textoDoErro(e, t) }),
+      },
+    );
+  }
+
   function aplicar(id: string, patch: Parameters<typeof editar.mutate>[0]["patch"]) {
     setErro(null);
     editar.mutate(
@@ -169,9 +181,58 @@ export function FunisClient({
     </Card>
   );
 
+  const podeCriarFunil = permiteQuantidade("funis", funis.length + 1);
+  const planoMinimo = planoMinimoParaLimite("funis", funis.length + 1);
+  const galeria = podeGerenciar ? (
+    <section className="space-y-3" aria-labelledby="titulo-modelos-de-funil">
+      <div>
+        <h2 id="titulo-modelos-de-funil" className="text-base font-semibold">
+          {t("Modelos prontos")}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {t("Escolha um modelo para criar um novo funil. Seus funis atuais não serão alterados.")}
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-testid="galeria-modelos-de-funil">
+        {MODELOS_DE_FUNIL.map((modelo) => (
+          <Card key={modelo.id} className="flex flex-col gap-3 p-4" data-testid={`modelo-${modelo.id}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-medium">{t(modelo.titulo)}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t(modelo.descricao)}</p>
+              </div>
+              <Badge variant="secondary">
+                {t(modelo.categoria === "vendas" ? "Vendas" : "Pós-venda")}
+              </Badge>
+            </div>
+            <div className="mt-auto flex flex-wrap gap-1" aria-label={t("Etapas do modelo")}>
+              {modelo.proposta.etapas.map((etapa) => (
+                <span key={etapa.nome} className="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">
+                  {t(etapa.nome)}
+                </span>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => aplicarModelo(modelo.id)}
+              disabled={ocupado || !podeCriarFunil}
+              data-testid={`usar-modelo-${modelo.id}`}
+            >
+              <Plus size={16} className="mr-2" aria-hidden />
+              {podeCriarFunil
+                ? t("Usar modelo")
+                : t(`Disponível no plano ${planoMinimo ? PLANOS[planoMinimo].nome : "superior"}`)}
+            </Button>
+          </Card>
+        ))}
+      </div>
+    </section>
+  ) : null;
+
   if (funis.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4">
+      <div className="flex flex-1 flex-col gap-6">
+        {galeria}
         {formularioDeCriacao}
         {novo === null && (
           // ⚠️ O BOTÃO CRIA AQUI MESMO. O texto anterior mandava "Ir para
@@ -179,13 +240,15 @@ export function FunisClient({
           // pingue-pongue fechado, com o usuário procurando um botão que não
           // existia em lugar nenhum. Este é o estado de toda instalação em que o
           // gatilho de seed não rodou.
-          <EmptyPipeline
-            primary={
-              podeGerenciar
-                ? { label: t("Criar meu primeiro funil"), onClick: () => setNovo("") }
-                : undefined
-            }
-          />
+          <div className="flex flex-1 items-center justify-center">
+            <EmptyPipeline
+              primary={
+                podeGerenciar
+                  ? { label: t("Criar meu primeiro funil"), onClick: () => setNovo("") }
+                  : undefined
+              }
+            />
+          </div>
         )}
         {erro && (
           <p className="text-sm text-destructive" data-testid="erro-geral">
@@ -196,11 +259,9 @@ export function FunisClient({
     );
   }
 
-  const podeCriarFunil = permiteQuantidade("funis", funis.length + 1);
-  const planoMinimo = planoMinimoParaLimite("funis", funis.length + 1);
-
   return (
     <div className="flex flex-col gap-4">
+      {galeria}
       {(podeGerenciar || podeImportar) && (
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           {/* A porta da importação fica AQUI, e não numa tela própria: é desta

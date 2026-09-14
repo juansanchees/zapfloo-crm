@@ -140,6 +140,53 @@ describe("POST /api/v1/pipelines", () => {
     expect(etapas.every((e) => e.organization_id === ORG_ID)).toBe(true);
   });
 
+  it("aplica um modelo de pós-venda com hints nulos, sem mover cards", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    const { POST } = await import("./route");
+    const res = await POST(reqPost({ template_id: "suporte-pos-venda" }));
+
+    expect(res.status).toBe(201);
+    const pipeline = db.escritas.find((e) => e.table === "crm_pipelines");
+    expect(pipeline?.patch).toMatchObject({ name: "Suporte pós-venda" });
+    const etapas = db.escritas.find((e) => e.table === "crm_stages")?.patch as Record<string, unknown>[];
+    expect(etapas.map((etapa) => etapa.name)).toEqual([
+      "Nova solicitação",
+      "Em atendimento",
+      "Aguardando cliente",
+      "Resolvido",
+    ]);
+    expect(etapas.every((etapa) => etapa.agent_stage_hint === null)).toBe(true);
+  });
+
+  it("aplicar o mesmo modelo duas vezes cria dois funis e não duplica etapas dentro deles", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    const { POST } = await import("./route");
+
+    expect((await POST(reqPost({ template_id: "confirmacao" }))).status).toBe(201);
+    expect((await POST(reqPost({ template_id: "confirmacao" }))).status).toBe(201);
+
+    const funisCriados = db.escritas
+      .filter((escrita) => escrita.table === "crm_pipelines" && escrita.tipo === "insert")
+      .map((escrita) => (escrita.patch as Record<string, unknown>).name);
+    expect(funisCriados).toEqual(["Confirmação", "Confirmação 2"]);
+    const lotesDeEtapas = db.escritas
+      .filter((escrita) => escrita.table === "crm_stages")
+      .map((escrita) => escrita.patch as Record<string, unknown>[]);
+    expect(lotesDeEtapas).toHaveLength(2);
+    expect(lotesDeEtapas.every((etapas) => etapas.length === 4 && new Set(etapas.map((e) => e.name)).size === 4)).toBe(true);
+  });
+
+  it("modelo inexistente é recusado antes de qualquer escrita", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    const { POST } = await import("./route");
+    const res = await POST(reqPost({ template_id: "inventado" }));
+    expect(res.status).toBe(422);
+    expect(db.escritas).toEqual([]);
+  });
+
   it("as etapas entram DEPOIS do funil — antes não haveria pipeline_id para elas", async () => {
     authOk();
     const db = makeDb({ pipelines: umFunil() });

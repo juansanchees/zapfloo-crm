@@ -2054,6 +2054,14 @@ passar restaurando-a. Nenhum ajuste nas specs ou no leitor do quadro. A branch d
 sintéticos; sem envio comercial, celular ou prova completa de inbound. Principal
 arquivado continua sendo um caso fora de escopo do leitor, apenas contado.
 
+## Galeria de modelos de funil — 14/set/2026
+
+| Caso | Prioridade | Prova |
+|---|---|---|
+| Abrir Funis e aplicar um modelo de pós-venda | `[P1]` | `tests/e2e/pipelines-gestao.spec.ts` cria um novo funil pela galeria e abre suas quatro etapas, sem alterar os ids anteriores. |
+| Abrir a galeria em 390 px | `[P1]` | A mesma jornada mede `scrollWidth <= clientWidth` e registra `funis-05-galeria-modelos-390.png`. |
+| Impedir movimento automático no pós-venda | `[P1]` | Teste da rota e catálogo exigem `agent_stage_hint = null` em todas as etapas dos quatro modelos. |
+
 Auditoria de leitores, instrumentação da concorrência, sabotagens e limites em
 `docs/testing/onboarding-funcionario-principal.md`; evidências em
 `.superpowers/evidence/funcionario-principal/`.

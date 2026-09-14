@@ -57,7 +57,8 @@ function useReler() {
 export function useCriarFunil() {
   const reler = useReler();
   return useMutation({
-    mutationFn: (name: string) => apiClient.post<Resposta>(ROTA, { name }),
+    mutationFn: (entrada: string | { template_id: string }) =>
+      apiClient.post<Resposta>(ROTA, typeof entrada === "string" ? { name: entrada } : entrada),
     onSettled: reler,
   });
 }

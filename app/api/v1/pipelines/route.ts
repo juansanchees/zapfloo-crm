@@ -20,6 +20,9 @@ import {
   type FunilEditavel,
 } from "@/lib/pipelines/pipeline-editing";
 import { createClient } from "@/lib/supabase/server";
+import { etapasParaGravar } from "@/lib/onboarding/proposta-de-funil";
+import { slugDeNome } from "@/lib/leads/stage-editing";
+import { encontrarModeloDeFunil } from "@/lib/pipelines/modelos-de-funil";
 import { conflitoDoBanco, corpo, lerFunis } from "./_funis";
 import { listPipelinesHandler } from "./_handler";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -50,10 +53,14 @@ export async function GET(): Promise<Response> {
 // parágrafo. O banco não limita, mas a tela quebra muito antes disso.
 const bodySchema = z
   .object({
-    name: z.string().min(1).max(80),
+    name: z.string().max(80).optional(),
+    template_id: z.string().min(1).max(80).optional(),
     description: z.string().max(280).nullable().optional(),
   })
-  .strict();
+  .strict()
+  .refine((body) => Boolean(body.name?.trim() || body.template_id), {
+    message: "Informe o nome ou o modelo do funil.",
+  });
 
 /** As etapas com que o funil nasce, já com a régua de posição do board. */
 function etapasIniciais(orgId: string, pipelineId: string) {
@@ -66,6 +73,15 @@ function etapasIniciais(orgId: string, pipelineId: string) {
     is_won: etapa.is_won,
     is_lost: etapa.is_lost,
   }));
+}
+
+function nomeLivreParaModelo(nomeBase: string, funis: FunilEditavel[]): string {
+  if (validarNomeDeFunil(nomeBase, funis, null).ok) return nomeBase;
+  for (let numero = 2; numero < 1_000; numero += 1) {
+    const candidato = `${nomeBase} ${numero}`;
+    if (validarNomeDeFunil(candidato, funis, null).ok) return candidato;
+  }
+  return `${nomeBase} ${randomUUID().slice(0, 8)}`;
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -89,8 +105,14 @@ export async function POST(req: NextRequest): Promise<Response> {
       details: parsed.error.flatten(),
     });
   }
-  const name = parsed.data.name.trim();
-  const description = parsed.data.description?.trim() || null;
+  const modelo = parsed.data.template_id
+    ? encontrarModeloDeFunil(parsed.data.template_id)
+    : null;
+  if (parsed.data.template_id && !modelo) {
+    return fail("unprocessable_entity", t("Este modelo de funil não está disponível."), 422, {
+      requestId,
+    });
+  }
 
   const supabase = await createClient();
 
@@ -100,6 +122,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   } catch (err) {
     return fail("internal_error", (err as Error).message, 500, { requestId });
   }
+
+  const name = modelo
+    ? nomeLivreParaModelo(modelo.proposta.nome, funis)
+    : parsed.data.name!.trim();
+  const description = modelo?.descricao ?? (parsed.data.description?.trim() || null);
 
   const plano = await autorizarQuantidade(
     orgId,
@@ -144,7 +171,20 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const { error: etapasErr } = await supabase
     .from("crm_stages")
-    .insert(etapasIniciais(orgId, pipelineId));
+    .insert(
+      modelo
+        ? etapasParaGravar(modelo.proposta, slugDeNome).map((etapa) => ({
+            organization_id: orgId,
+            pipeline_id: pipelineId,
+            name: etapa.nome,
+            slug: etapa.slug,
+            position: etapa.position,
+            is_won: etapa.is_won,
+            is_lost: etapa.is_lost,
+            agent_stage_hint: etapa.agent_stage_hint,
+          }))
+        : etapasIniciais(orgId, pipelineId),
+    );
 
   // ⚠️ COMPENSAÇÃO, PORQUE SÃO DUAS ESCRITAS SEM TRANSAÇÃO. Um funil sem etapa é
   // quadro morto: o board abre sem coluna nenhuma, não recebe negócio, e quem
@@ -174,7 +214,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     resourceType: "crm_pipeline",
     resourceId: pipelineId,
     requestId,
-    metadata: { name, slug: row.slug, is_default: row.is_default },
+    metadata: { name, slug: row.slug, is_default: row.is_default, template_id: modelo?.id ?? null },
   });
 
   // Relê em vez de espelhar o que foi pedido: a tela mostra o que o banco tem.
