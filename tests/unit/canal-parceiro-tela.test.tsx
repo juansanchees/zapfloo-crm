@@ -27,6 +27,12 @@ const toastOk = vi.fn();
 const toastErro = vi.fn();
 vi.mock("sonner", () => ({ toast: { success: (m: string) => toastOk(m), error: (m: string) => toastErro(m) } }));
 vi.mock("@/lib/clipboard", () => ({ copyToClipboard: vi.fn(async () => true) }));
+vi.mock("@/components/billing/PlanoProvider", () => ({
+  usePlano: () => ({ permiteQuantidade: () => true }),
+}));
+vi.mock("@/hooks/channels/useChannelSessions", () => ({
+  useChannelSessions: () => ({ data: [] }),
+}));
 
 import { CanalParceiroClient } from "@/components/connections/CanalParceiroClient";
 

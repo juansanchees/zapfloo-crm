@@ -263,6 +263,47 @@ test.describe("gestão de funis", () => {
     // padrão", com o texto lido do `arquivar-erro-*` e a captura de evidência.
   });
 
+  test("aplica um modelo pronto sem alterar os funis existentes", async ({ page }) => {
+    const antes = (await (await page.request.get("/api/v1/pipelines")).json()) as {
+      data: Array<{ id: string; name: string }>;
+    };
+    const idsAntes = new Set(antes.data.map((funil) => funil.id));
+    let criado: { id: string; name: string } | undefined;
+
+    try {
+      await expect(page.getByTestId("galeria-modelos-de-funil")).toBeVisible();
+      await page.getByTestId("usar-modelo-suporte-pos-venda").click();
+
+      await expect.poll(async () => {
+        const resposta = await page.request.get("/api/v1/pipelines");
+        const corpo = (await resposta.json()) as { data: Array<{ id: string; name: string }> };
+        criado = corpo.data.find((funil) => !idsAntes.has(funil.id));
+        return criado?.name ?? null;
+      }).toMatch(/^Suporte pós-venda(?: \d+)?$/);
+
+      await expect(linhaDoFunil(page, criado!.name)).toBeVisible();
+      await linhaDoFunil(page, criado!.name).getByRole("link").click();
+      for (const etapa of ["Nova solicitação", "Em atendimento", "Aguardando cliente", "Resolvido"]) {
+        await expect(page.getByText(etapa, { exact: true }).first()).toBeVisible();
+      }
+
+      await page.goto("/app/kanban");
+      await page.setViewportSize({ width: 390, height: 720 });
+      await expect(page.getByTestId("galeria-modelos-de-funil")).toBeVisible();
+      const largura = await page.evaluate(() => ({
+        conteudo: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+      }));
+      expect(largura.conteudo).toBeLessThanOrEqual(largura.viewport);
+      await page.screenshot({
+        path: path.join(EVIDENCIA, "funis-05-galeria-modelos-390.png"),
+        fullPage: true,
+      });
+    } finally {
+      if (criado) await page.request.delete(`/api/v1/pipelines/${criado.id}`);
+    }
+  });
+
 });
 
 /**

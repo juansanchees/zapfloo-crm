@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/admin/tenants/[id]
@@ -60,6 +61,7 @@ export async function GET(
     aiRes,
     wahaRes,
     integrationRes,
+    subscriptionRes,
   ] = await Promise.all([
     admin
       .from("user_organizations")
@@ -118,6 +120,11 @@ export async function GET(
       .eq("organization_id", id)
       .eq("provider", "nuvemshop")
       .limit(1),
+    admin
+      .from("organization_subscriptions")
+      .select("organization_id,plan_id,status,created_at,updated_at,updated_by")
+      .eq("organization_id", id)
+      .maybeSingle(),
   ]);
 
   const counts = {
@@ -156,5 +163,82 @@ export async function GET(
     metadata: { tenant_slug: org.slug },
   });
 
-  return ok({ organization: org, counts, integrations }, { requestId });
+  return ok(
+    { organization: org, subscription: subscriptionRes.data ?? null, counts, integrations },
+    { requestId },
+  );
+}
+
+const subscriptionSchema = z
+  .object({
+    plan_id: z.enum(["basico", "essencial", "completo"]),
+    status: z.enum(["teste", "ativo", "pausado"]),
+  })
+  .strict();
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const requestId = randomUUID();
+  const { id } = await params;
+  let adminCtx: Awaited<ReturnType<typeof requirePlatformAdmin>>;
+  try {
+    adminCtx = await requirePlatformAdmin();
+  } catch {
+    return fail("forbidden", "Platform admin required", 403, { requestId });
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return fail("validation_error", "Invalid JSON body", 400, { requestId });
+  }
+  const parsed = subscriptionSchema.safeParse(body);
+  if (!parsed.success) {
+    return fail("validation_error", "Invalid subscription", 400, {
+      requestId,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const admin = createAdminClient();
+  const { data: antes, error: readError } = await admin
+    .from("organization_subscriptions")
+    .select("plan_id,status")
+    .eq("organization_id", id)
+    .maybeSingle();
+  if (readError || !antes) {
+    return fail("not_found", "Subscription not found", 404, {
+      requestId,
+      details: readError?.message,
+    });
+  }
+
+  const { data: depois, error: updateError } = await admin
+    .from("organization_subscriptions")
+    .update({ ...parsed.data, updated_by: adminCtx.user.id })
+    .eq("organization_id", id)
+    .select("organization_id,plan_id,status,created_at,updated_at,updated_by")
+    .single();
+  if (updateError || !depois) {
+    return fail("internal_error", "Failed to update subscription", 500, {
+      requestId,
+      details: updateError?.message,
+    });
+  }
+
+  await audit({
+    action: "tenant.subscription_changed",
+    actorUserId: adminCtx.user.id,
+    actingAsPlatformAdmin: true,
+    bypassedRls: true,
+    organizationId: id,
+    resourceType: "organization_subscription",
+    resourceId: id,
+    requestId,
+    metadata: { before: antes, after: parsed.data },
+  });
+  return ok(depois, { requestId });
 }

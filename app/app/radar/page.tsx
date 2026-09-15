@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { RiskRadarList } from "./_components/RiskRadarList";
+import { assinaturaDaOrganizacao } from "@/lib/billing/assinatura";
+import { recursoDoPlano } from "@/lib/billing/planos";
+import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +18,8 @@ export default async function RadarPage() {
   // padrão vive em `lib/auth/server.ts`), sem reler o `locale` cru.
   const idioma = user.idioma;
   const t = (texto: string) => traduzir(texto, idioma);
+  const { acesso } = await assinaturaDaOrganizacao(activeOrg.orgId);
+  const podeUsarRadar = recursoDoPlano(acesso, "radar");
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -26,7 +31,13 @@ export default async function RadarPage() {
           )}
         </p>
       </header>
-      <RiskRadarList />
+      {podeUsarRadar ? (
+        <RiskRadarList />
+      ) : (
+        <Card className="p-6 text-sm text-muted-foreground">
+          {t("Disponível no plano Completo")}
+        </Card>
+      )}
     </div>
   );
 }

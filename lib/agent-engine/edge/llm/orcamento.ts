@@ -147,6 +147,8 @@ export type RazaoDeSeguir =
   | 'abaixo_do_limiar';
 
 export interface EntradaDeOrcamento {
+  /** Assinatura comercial; ausente preserva compatibilidade com instalações antigas. */
+  acessoIa?: 'liberado' | 'teste_vencido' | 'plano_pausado';
   /** `ai_budgets.enforcement_mode`. Linha ausente ⇒ o chamador resolve `'off'`. */
   modo: ModoDeOrcamento;
   /** `ai_budgets.monthly_limit_cents` — centavo de DÓLAR (ver `pricing.ts`). */
@@ -177,7 +179,7 @@ export interface EntradaDeOrcamento {
 export type Veredito =
   | { acao: 'seguir'; porque: RazaoDeSeguir }
   | { acao: 'avisar_e_seguir'; porque: 'primeiro_cruzamento' | 'limiar' }
-  | { acao: 'bloquear'; porque: 'teto_atingido' };
+  | { acao: 'bloquear'; porque: 'teto_atingido' | 'teste_vencido' | 'plano_pausado' };
 
 function ehPurposeIsento(purpose: string): boolean {
   return (PURPOSES_ISENTOS as readonly string[]).includes(purpose);
@@ -209,6 +211,12 @@ function ehPurposeIsento(purpose: string): boolean {
  * orçamento de propósito levando o corte mais duro — morre aqui por construção.
  */
 export function decidirOrcamento(entrada: EntradaDeOrcamento): Veredito {
+  if (entrada.acessoIa === 'teste_vencido') {
+    return { acao: 'bloquear', porque: 'teste_vencido' };
+  }
+  if (entrada.acessoIa === 'plano_pausado') {
+    return { acao: 'bloquear', porque: 'plano_pausado' };
+  }
   // (1) Retorno mais cedo de todos. Para 100% das organizações no dia 1 o modo é
   // 'off', e o chamador nem chega a consultar o gasto: menos trabalho que hoje.
   if (entrada.modo === 'off') {
@@ -331,16 +339,19 @@ export function normalizarModoDeOrcamento(v: string | null | undefined): ModoDeO
  * executar ESTE texto contra um Postgres real. Reimplementá-lo no teste mediria
  * a cópia, e a cópia continuaria certa com o original sabotado.
  *
- * Parâmetros: `$1` organization_id, `$2` título do aviso, `$3` corpo do aviso.
+ * Parâmetros: `$1` organization_id, `$2` título do aviso, `$3` corpo do aviso,
+ * `$4` teto efetivo, `$5` modo efetivo e `$6` início efetivo. Os três últimos
+ * vêm do resolvedor de assinatura: assim o statement continua atômico para
+ * gasto/avisos sem tentar duplicar a tabela comercial dentro do SQL.
  *
  * Sem linha em `ai_budgets` a CTE `orc` é vazia, `modo` volta `null`, e o
  * chamador resolve para `'off'`. Nulo é sempre a resposta mais frouxa.
  */
 export const SQL_ORCAMENTO = `
 with orc as (
-  select b.monthly_limit_cents            as teto,
-         b.enforcement_mode               as modo,
-         b.enforcement_effective_at       as efetivo_em,
+  select $4::integer                      as teto,
+         $5::text                         as modo,
+         $6::timestamptz                  as efetivo_em,
          b.alarm_threshold_pct            as limiar_pct
     from ai_budgets b
    where b.organization_id = $1

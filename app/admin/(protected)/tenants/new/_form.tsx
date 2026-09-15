@@ -19,6 +19,7 @@ import {
 import { useCreateTenant } from "@/hooks/useCreateTenant";
 import { ApiError } from "@/lib/api/types";
 import { useT } from "@/hooks/i18n/useT";
+import { PLANOS, type PlanoId } from "@/lib/billing/planos";
 
 // ---------------------------------------------------------------------------
 // Schema (mirrors server Zod; client keeps it in sync)
@@ -33,7 +34,7 @@ const formSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Apenas letras minúsculas, números e hífens"),
   legal_name: z.string().min(2).max(255).optional().or(z.literal("")),
   cnpj: z.string().optional().or(z.literal("")),
-  plan: z.enum(["standard", "pro", "enterprise"]),
+  plan: z.enum(["basico", "essencial", "completo"]),
   owner_email: z.string().email("E-mail inválido"),
 });
 
@@ -85,7 +86,7 @@ export function NewTenantForm() {
       slug: "",
       legal_name: "",
       cnpj: "",
-      plan: "standard",
+      plan: "basico",
       owner_email: "",
     },
   });
@@ -235,16 +236,18 @@ export function NewTenantForm() {
               <Select
                 value={planValue}
                 onValueChange={(v) =>
-                  setValue("plan", v as "standard" | "pro" | "enterprise")
+                  setValue("plan", v as PlanoId)
                 }
               >
                 <SelectTrigger id="plan" aria-label={t("Plano")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                  {(Object.entries(PLANOS) as Array<[PlanoId, (typeof PLANOS)[PlanoId]]>).map(
+                    ([id, plano]) => (
+                      <SelectItem key={id} value={id}>{plano.nome}</SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
               {errors.plan && (

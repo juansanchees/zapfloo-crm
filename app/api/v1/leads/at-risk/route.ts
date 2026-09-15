@@ -20,6 +20,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { carregaRadarDeRisco, RADAR_MIN_HOURS_PADRAO } from "@/lib/leads/radar-de-risco";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarRecurso, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,11 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { org } = authz;
+
+  const plano = await autorizarRecurso(org.orgId, "radar");
+  if (!plano.ok) {
+    return fail("plan_feature_unavailable", t(mensagemDePlano(plano)), 403, { requestId });
+  }
 
   const parsed = querySchema.safeParse(
     Object.fromEntries(new URL(req.url).searchParams.entries()),

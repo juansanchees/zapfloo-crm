@@ -11,6 +11,7 @@ import type { AgentRow } from "@/hooks/ai/useAgent";
 import { AgentCard } from "./AgentCard";
 import { AgentsListFilters, type StatusFilter } from "./AgentsListFilters";
 import { deriveAgentStatus } from "./AgentStatusBadge";
+import { usePlano } from "@/components/billing/PlanoProvider";
 
 interface Props {
   initialData: AgentRow[];
@@ -23,8 +24,22 @@ export function AgentsList({ initialData, canWrite }: Props) {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const { permiteQuantidade } = usePlano();
 
   const agents = data ?? [];
+  const podeCriar = permiteQuantidade(
+    "funcionariosIa",
+    agents.filter((agent) => !agent.archived_at).length + 1,
+  );
+  const botaoNovo = podeCriar ? (
+    <Link href="/app/ai/agents/new">
+      <Button>
+        <Plus size={14} aria-hidden className="mr-2" /> {t("Novo agente")}
+      </Button>
+    </Link>
+  ) : (
+    <Button disabled>{t("Disponível no plano Completo")}</Button>
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -47,13 +62,7 @@ export function AgentsList({ initialData, canWrite }: Props) {
             "Crie um agent para responder a conversas no WhatsApp com IA. Você configura prompt, tools, gatilhos e janela de contexto.",
           )}
         </p>
-        {canWrite && (
-          <Link href="/app/ai/agents/new">
-            <Button className="mt-1">
-              <Plus size={14} aria-hidden className="mr-2" /> {t("Novo agente")}
-            </Button>
-          </Link>
-        )}
+        {canWrite && <div className="mt-1">{botaoNovo}</div>}
       </Card>
     );
   }
@@ -69,13 +78,7 @@ export function AgentsList({ initialData, canWrite }: Props) {
           showArchived={showArchived}
           onShowArchivedChange={setShowArchived}
         />
-        {canWrite && (
-          <Link href="/app/ai/agents/new">
-            <Button>
-              <Plus size={14} aria-hidden className="mr-2" /> {t("Novo agente")}
-            </Button>
-          </Link>
-        )}
+        {canWrite && botaoNovo}
       </div>
 
       {filtered.length === 0 ? (

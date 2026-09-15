@@ -11,6 +11,8 @@ import { apiClient } from "@/lib/api/client";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useT } from "@/hooks/i18n/useT";
 import { ChannelAiAccess } from "./ChannelAiAccess";
+import { useChannelSessions } from "@/hooks/channels/useChannelSessions";
+import { usePlano } from "@/components/billing/PlanoProvider";
 
 /**
  * Conectar um número por um PROVEDOR PARCEIRO.
@@ -85,6 +87,8 @@ export function CanalParceiroClient() {
   const [apiKey, setApiKey] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [recemConectado, setRecemConectado] = useState<Conectado | null>(null);
+  const { data: sessoes } = useChannelSessions();
+  const { permiteQuantidade } = usePlano();
 
   const carregar = async () => {
     try {
@@ -123,6 +127,8 @@ export function CanalParceiroClient() {
 
   const rotulo = estado?.label ?? t("provedor parceiro");
   const conectado = estado?.connected ?? false;
+  const podeAdicionarNumero =
+    conectado || permiteQuantidade("numerosWhatsapp", (sessoes?.length ?? 0) + 1);
 
   return (
     <div className="flex flex-col gap-4">
@@ -190,8 +196,14 @@ export function CanalParceiroClient() {
           </div>
 
           <div>
-            <Button onClick={conectar} disabled={salvando || !accountId || !apiKey}>
-              {salvando ? t("Verificando…") : conectado ? t("Reconectar") : t("Conectar")}
+            <Button onClick={conectar} disabled={salvando || !accountId || !apiKey || !podeAdicionarNumero}>
+              {!podeAdicionarNumero
+                ? t("Disponível no plano Completo")
+                : salvando
+                  ? t("Verificando…")
+                  : conectado
+                    ? t("Reconectar")
+                    : t("Conectar")}
             </Button>
             <p className="mt-1.5 text-xs text-muted-foreground">
               {t("A credencial é testada contra o provedor antes de ser gravada.")}

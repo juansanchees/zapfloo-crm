@@ -232,6 +232,10 @@ services:
     environment:
       DOMAIN: ${DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
+      # URLs completas. Vazias caem nos hosts HTTP locais do Caddyfile e nunca
+      # solicitam certificado de domínio alheio numa instalação genérica.
+      SALES_DOMAIN: ${SALES_DOMAIN:-http://localhost}
+      SALES_WWW_DOMAIN: ${SALES_WWW_DOMAIN:-http://www.localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data           # certificados Let's Encrypt (persistir!)

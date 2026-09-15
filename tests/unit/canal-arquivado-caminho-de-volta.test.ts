@@ -53,6 +53,10 @@ vi.mock("@/lib/waha/client", () => ({
   getWahaClient: vi.fn(),
   wahaFriendlyError: (m: string) => m,
 }));
+vi.mock("@/lib/billing/assinatura", () => ({
+  autorizarQuantidade: vi.fn(async () => ({ ok: true })),
+  mensagemDePlano: vi.fn(() => "Disponível no plano Completo"),
+}));
 
 const ORG = "22222222-2222-4222-8222-222222222222";
 const USER = "11111111-1111-4111-8111-111111111111";

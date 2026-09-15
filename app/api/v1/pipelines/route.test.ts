@@ -4,10 +4,15 @@ import { NextRequest } from "next/server";
 import { audit } from "@/lib/audit";
 import { fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import { autorizarQuantidade } from "@/lib/billing/assinatura";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
+vi.mock("@/lib/billing/assinatura", () => ({
+  autorizarQuantidade: vi.fn(),
+  mensagemDePlano: vi.fn(() => "Disponível no plano Essencial."),
+}));
 
 import { ORG_ID, OUTRA_ORG, PIPE, authOk, funilRow, makeDb } from "@/tests/helpers/stages-db-double";
 
@@ -23,6 +28,18 @@ const umFunil = () => [funilRow({ id: PIPE, name: "Pedidos", slug: "pedidos", is
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(autorizarQuantidade).mockResolvedValue({
+    ok: true,
+    acesso: {
+      planoContratado: "completo",
+      planoDeRecursos: "completo",
+      situacao: "ativo",
+      fimDoTeste: null,
+      testeValido: false,
+      acessoIa: "liberado",
+      tetoIaMensalUsdCents: 1_600,
+    },
+  });
 });
 
 describe("POST /api/v1/pipelines", () => {
@@ -59,6 +76,45 @@ describe("POST /api/v1/pipelines", () => {
     expect(db.escritas).toEqual([]);
   });
 
+  it("Básico com um funil recusa o segundo; Completo libera pela mesma API", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    vi.mocked(autorizarQuantidade).mockResolvedValueOnce({
+      ok: false,
+      acesso: {
+        planoContratado: "basico",
+        planoDeRecursos: "basico",
+        situacao: "ativo",
+        fimDoTeste: null,
+        testeValido: false,
+        acessoIa: "liberado",
+        tetoIaMensalUsdCents: 400,
+      },
+      planoMinimo: "essencial",
+      motivo: "limite",
+    });
+    const { POST } = await import("./route");
+
+    const recusado = await POST(reqPost({ name: "Clínica" }));
+    expect(recusado.status).toBe(403);
+    expect(autorizarQuantidade).toHaveBeenCalledWith(ORG_ID, "funis", 2);
+    expect(db.escritas).toEqual([]);
+
+    vi.mocked(autorizarQuantidade).mockResolvedValueOnce({
+      ok: true,
+      acesso: {
+        planoContratado: "completo",
+        planoDeRecursos: "completo",
+        situacao: "ativo",
+        fimDoTeste: null,
+        testeValido: false,
+        acessoIa: "liberado",
+        tetoIaMensalUsdCents: 1_600,
+      },
+    });
+    expect((await POST(reqPost({ name: "Clínica" }))).status).toBe(201);
+  });
+
   it("cria o funil COM as quatro etapas, na mesma requisição", async () => {
     // ⚠️ Funil sem etapa é quadro morto: o board abre sem coluna nenhuma e não
     // recebe negócio. As etapas não são cortesia — são parte da criação.
@@ -82,6 +138,53 @@ describe("POST /api/v1/pipelines", () => {
     expect(etapas.map((e) => e.name)).toEqual(["Novo", "Em andamento", "Ganho", "Perdido"]);
     expect(etapas.filter((e) => e.is_won)).toHaveLength(1);
     expect(etapas.every((e) => e.organization_id === ORG_ID)).toBe(true);
+  });
+
+  it("aplica um modelo de pós-venda com hints nulos, sem mover cards", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    const { POST } = await import("./route");
+    const res = await POST(reqPost({ template_id: "suporte-pos-venda" }));
+
+    expect(res.status).toBe(201);
+    const pipeline = db.escritas.find((e) => e.table === "crm_pipelines");
+    expect(pipeline?.patch).toMatchObject({ name: "Suporte pós-venda" });
+    const etapas = db.escritas.find((e) => e.table === "crm_stages")?.patch as Record<string, unknown>[];
+    expect(etapas.map((etapa) => etapa.name)).toEqual([
+      "Nova solicitação",
+      "Em atendimento",
+      "Aguardando cliente",
+      "Resolvido",
+    ]);
+    expect(etapas.every((etapa) => etapa.agent_stage_hint === null)).toBe(true);
+  });
+
+  it("aplicar o mesmo modelo duas vezes cria dois funis e não duplica etapas dentro deles", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    const { POST } = await import("./route");
+
+    expect((await POST(reqPost({ template_id: "confirmacao" }))).status).toBe(201);
+    expect((await POST(reqPost({ template_id: "confirmacao" }))).status).toBe(201);
+
+    const funisCriados = db.escritas
+      .filter((escrita) => escrita.table === "crm_pipelines" && escrita.tipo === "insert")
+      .map((escrita) => (escrita.patch as Record<string, unknown>).name);
+    expect(funisCriados).toEqual(["Confirmação", "Confirmação 2"]);
+    const lotesDeEtapas = db.escritas
+      .filter((escrita) => escrita.table === "crm_stages")
+      .map((escrita) => escrita.patch as Record<string, unknown>[]);
+    expect(lotesDeEtapas).toHaveLength(2);
+    expect(lotesDeEtapas.every((etapas) => etapas.length === 4 && new Set(etapas.map((e) => e.name)).size === 4)).toBe(true);
+  });
+
+  it("modelo inexistente é recusado antes de qualquer escrita", async () => {
+    authOk();
+    const db = makeDb({ pipelines: umFunil() });
+    const { POST } = await import("./route");
+    const res = await POST(reqPost({ template_id: "inventado" }));
+    expect(res.status).toBe(422);
+    expect(db.escritas).toEqual([]);
   });
 
   it("as etapas entram DEPOIS do funil — antes não haveria pipeline_id para elas", async () => {

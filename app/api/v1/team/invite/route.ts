@@ -23,6 +23,7 @@ import { signInviteToken, INVITE_TTL_SECONDS } from "@/lib/auth/invite-token";
 import { buildInviteEmail } from "@/lib/email/templates/invite";
 import { sendEmail } from "@/lib/email/resend";
 import { marcaDaSaida } from "@/lib/branding/saida";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,18 @@ export async function POST(req: NextRequest): Promise<Response> {
       if (memberEmail) memberEmails.add(memberEmail);
     }
   }
+
+  const novosEmails = new Set(
+    input.invitations
+      .map((convite) => convite.email.trim().toLowerCase())
+      .filter((email) => !memberEmails.has(email)),
+  );
+  const plano = await autorizarQuantidade(
+    activeOrg.orgId,
+    "usuarios",
+    memberEmails.size + novosEmails.size,
+  );
+  if (!plano.ok) return fail("plan_limit_reached", mensagemDePlano(plano), 403, { requestId });
 
   for (const inv of input.invitations) {
     const email = inv.email.trim().toLowerCase();

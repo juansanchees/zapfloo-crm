@@ -9,7 +9,7 @@ export function fimDoPeriodoDeTeste(cadastro: string | null | undefined): string
   return new Date(fim).toISOString();
 }
 
-/** Apresentação apenas: vencer o prazo não suspende conta nem inicia cobrança. */
+/** Estado temporal compartilhado pela apresentação e pelo gate de assinatura. */
 export function tempoRestanteDoTeste(fim: string, agora: number) {
   const restante = Math.max(0, Date.parse(fim) - agora);
   if (!Number.isFinite(restante)) return null;

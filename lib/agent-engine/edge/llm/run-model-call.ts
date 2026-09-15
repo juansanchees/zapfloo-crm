@@ -66,6 +66,18 @@ export class LlmBudgetExceededError extends Error {
   }
 }
 
+export class LlmPlanInactiveError extends Error {
+  override readonly name = 'llm_plan_inactive';
+  readonly terminal = true;
+  constructor(reason: 'teste_vencido' | 'plano_pausado') {
+    super(
+      reason === 'teste_vencido'
+        ? 'O período de teste terminou. Ative um plano para a IA voltar a responder.'
+        : 'O plano da organização está pausado. Reative-o para a IA voltar a responder.',
+    );
+  }
+}
+
 /** Provider da config sem entrada no registry — erro de config, nunca fallback. */
 export class LlmProviderUnknownError extends Error {
   override readonly name = 'llm_provider_unknown';
@@ -215,6 +227,24 @@ async function aplicarOrcamento(d: {
     });
     return;
   }
+  const acesso = decidirOrcamento({
+    modo: d.orcamentoDaConfig.modo,
+    tetoCents: d.orcamentoDaConfig.tetoCents,
+    gastoCents: 0,
+    efetivoEm: d.orcamentoDaConfig.efetivoEm,
+    agora: new Date(),
+    purpose: d.purpose,
+    chave: d.chave,
+    limiarPct: d.orcamentoDaConfig.limiarPct,
+    avisadoNesteMes: false,
+    acessoIa: d.orcamentoDaConfig.acessoIa,
+  });
+  if (
+    acesso.acao === 'bloquear' &&
+    (acesso.porque === 'teste_vencido' || acesso.porque === 'plano_pausado')
+  ) {
+    throw new LlmPlanInactiveError(acesso.porque);
+  }
   if (d.orcamentoDaConfig.modo === 'off' || d.chave === 'off') {
     return;
   }
@@ -226,6 +256,9 @@ async function aplicarOrcamento(d: {
       d.organizationId,
       AVISO_TITULO,
       AVISO_CORPO,
+      d.orcamentoDaConfig.tetoCents,
+      d.orcamentoDaConfig.modo,
+      d.orcamentoDaConfig.efetivoEm,
     ]);
     linha = rows[0];
   } catch (err) {
@@ -254,6 +287,7 @@ async function aplicarOrcamento(d: {
     chave: d.chave,
     limiarPct: Number(linha.limiar_pct ?? LIMIAR_PADRAO_PCT),
     avisadoNesteMes: linha.avisado_antes === true,
+    acessoIa: d.orcamentoDaConfig.acessoIa,
   });
 
   if (veredito.acao === 'seguir') {

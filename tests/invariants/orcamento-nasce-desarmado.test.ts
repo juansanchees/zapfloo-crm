@@ -137,7 +137,7 @@ function campo(org: string, coluna: string): string {
 }
 
 /**
- * `SQL_ORCAMENTO` com os três placeholders trocados por literais — o psql não
+ * `SQL_ORCAMENTO` com os seis placeholders trocados por literais — o psql não
  * tem bind. O TEXTO do statement continua vindo do módulo: o que muda são só os
  * `$n`, e trocá-los não pode transformar uma CTE em outra.
  */
@@ -149,9 +149,19 @@ function rodarGate(org: string): {
   gasto: string;
   avisadoAntes: string;
 } {
+  const [tetoEfetivo = "0", modoEfetivo = "off", inicioEfetivo = "-infinity"] = sql(
+    `select monthly_limit_cents::text,
+            enforcement_mode,
+            coalesce(enforcement_effective_at::text, '-infinity')
+       from public.ai_budgets
+      where organization_id = '${org}';`,
+  ).split("|");
   const texto = SQL_ORCAMENTO.replace(/\$1/g, `'${org}'::uuid`)
     .replace(/\$2/g, `'Titulo do aviso'`)
-    .replace(/\$3/g, `'Corpo do aviso'`);
+    .replace(/\$3/g, `'Corpo do aviso'`)
+    .replace(/\$4/g, tetoEfetivo)
+    .replace(/\$5/g, `'${modoEfetivo}'`)
+    .replace(/\$6/g, `'${inicioEfetivo}'`);
   const [teto = "", modo = "", efetivoEm = "", limiarPct = "", gasto = "", avisadoAntes = ""] = sql(
     texto,
   ).split("|");

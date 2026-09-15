@@ -274,6 +274,7 @@ jobs:
     env:
       SPECS_PARTE_1: >-
         tema-padrao.spec.ts
+        pagina-de-vendas.spec.ts
         periodo-de-testes.spec.ts
         fluxo-controles-contraste.spec.ts
         editor-e-agenda-altura.spec.ts

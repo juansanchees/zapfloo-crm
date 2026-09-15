@@ -94,7 +94,7 @@ export function TenantsTableSkeleton() {
       <Table>
         <TableHeader>
           <TableRow>
-            {["Slug", t("Nome"), "CNPJ", t("Status"), t("Users"), t("Conversas"), t("Criado em"), ""].map(
+            {["Slug", t("Nome"), "CNPJ", t("Plano"), t("Status"), t("Users"), t("Conversas"), t("Criado em"), ""].map(
               (h) => (
                 <TableHead key={h}>{h}</TableHead>
               ),
@@ -104,7 +104,7 @@ export function TenantsTableSkeleton() {
         <TableBody>
           {Array.from({ length: 5 }).map((_, i) => (
             <TableRow key={i}>
-              {Array.from({ length: 8 }).map((__, j) => (
+              {Array.from({ length: 9 }).map((__, j) => (
                 <TableCell key={j}>
                   <Skeleton className="h-4 w-full max-w-[120px]" />
                 </TableCell>
@@ -157,6 +157,7 @@ export function TenantsTable({
               <TableHead className="w-[140px]">Slug</TableHead>
               <TableHead>{t("Nome")}</TableHead>
               <TableHead className="w-[130px]">CNPJ</TableHead>
+              <TableHead className="w-[110px]">{t("Plano")}</TableHead>
               <TableHead className="w-[110px]">{t("Status")}</TableHead>
               <TableHead className="w-[70px] text-right">{t("Users")}</TableHead>
               <TableHead className="w-[90px] text-right">{t("Conversas")}</TableHead>
@@ -171,6 +172,15 @@ export function TenantsTable({
                 <TableCell className="font-medium">{row.display_name}</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">
                   {shortCnpj(row.cnpj)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="neutral">
+                    {row.subscription?.plan_id === "basico"
+                      ? t("Básico")
+                      : row.subscription?.plan_id === "essencial"
+                        ? t("Essencial")
+                        : t("Completo")}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={row.status} onboardedAt={row.onboarded_at} />

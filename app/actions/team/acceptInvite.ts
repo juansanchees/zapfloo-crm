@@ -16,6 +16,7 @@ import { audit } from "@/lib/audit";
 import { verifyInviteToken } from "@/lib/auth/invite-token";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export type AcceptInviteResult =
   | { ok: true }
@@ -54,6 +55,19 @@ export async function acceptInviteAction(token: string): Promise<AcceptInviteRes
   }
 
   const nowIso = new Date().toISOString();
+
+  if (!existing?.id || existing.revoked_at) {
+    const { count, error: countErr } = await db
+      .from("user_organizations")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", payload.organization_id)
+      .is("revoked_at", null);
+    if (countErr) return { ok: false, error: "internal_error", message: countErr.message };
+    const plano = await autorizarQuantidade(payload.organization_id, "usuarios", (count ?? 0) + 1);
+    if (!plano.ok) {
+      return { ok: false, error: "internal_error", message: mensagemDePlano(plano) };
+    }
+  }
 
   if (existing?.id) {
     const { error: updErr } = await db

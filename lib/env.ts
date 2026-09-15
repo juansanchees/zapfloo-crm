@@ -321,6 +321,14 @@ const schema = z.object({
     .url()
     .default("http://localhost:3000"),
 
+  // Página pública opcional. URLs completas porque o Caddy precisa distinguir
+  // `http://localhost` (default sem certificado) de um domínio HTTPS real.
+  SALES_DOMAIN: z.string().url().optional().or(z.literal("")).default(""),
+  SALES_WWW_DOMAIN: z.string().url().optional().or(z.literal("")).default(""),
+  // Número apenas com DDI/DDD/número. A página também remove pontuação; vazio
+  // esconde o botão e nunca inventa um contato comercial.
+  SALES_WHATSAPP_NUMBER: z.string().optional().default(""),
+
   // Marca da instalação (white-label) — ver lib/branding.ts.
   // Sem prefixo NEXT_PUBLIC_ de propósito: essas seriam queimadas no bundle
   // durante o build da imagem, e o self-hoster roda uma imagem pré-buildada.

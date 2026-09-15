@@ -13,6 +13,7 @@ import { getWahaClient } from "@/lib/waha/client";
 import { createClient } from "@/lib/supabase/server";
 import { metadataInicialDoCanal } from "@/lib/ai/elegibilidade/pre-go-live";
 import { requireRole } from "@/lib/auth/require-role";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 
 /**
  * Onboarding WhatsApp session orchestration.
@@ -137,9 +138,31 @@ export async function POST(req: Request) {
   const authz = await requireRole("admin", { requestId, resource: "onboarding" });
   if (!authz.ok) return authz.response;
   const { user, org: activeOrg } = authz;
+  const supabase = await createClient();
+  const sessionName = defaultSessionName(activeOrg.orgId);
+  const [{ count: canaisAtivos, error: countErr }, { data: sessaoAtiva }] = await Promise.all([
+    supabase
+      .from("channel_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", activeOrg.orgId)
+      .is("archived_at", null),
+    supabase
+      .from("channel_sessions")
+      .select("id")
+      .eq("organization_id", activeOrg.orgId)
+      .eq("waha_session_name", sessionName)
+      .is("archived_at", null)
+      .maybeSingle(),
+  ]);
+  if (countErr) return fail("internal_error", countErr.message, 500, { requestId });
+  const plano = await autorizarQuantidade(
+    activeOrg.orgId,
+    "numerosWhatsapp",
+    (canaisAtivos ?? 0) + (sessaoAtiva ? 0 : 1),
+  );
+  if (!plano.ok) return fail("plan_limit_reached", mensagemDePlano(plano), 403, { requestId });
   const waha = getWahaClient();
   if (!waha) return fail("waha_not_configured", "Suba o Docker (docker compose up -d waha) e tente novamente.", 503);
-  const sessionName = defaultSessionName(activeOrg.orgId);
 
   // 1) Make sure we have a row in channel_sessions.
   const channelSessionId = await ensureChannelSession(activeOrg.orgId, sessionName, {

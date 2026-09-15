@@ -28,6 +28,9 @@ import { requireRole } from "@/lib/auth/require-role";
 import { PeriodoDeTeste } from "@/components/billing/PeriodoDeTeste";
 import { fimDoPeriodoDeTeste } from "@/lib/billing/periodo-de-teste";
 import { instanteDoServidor } from "@/lib/billing/relogio-servidor";
+import { assinaturaDaOrganizacao } from "@/lib/billing/assinatura";
+import type { AcessoResolvido } from "@/lib/billing/planos";
+import { PlanoProvider } from "@/components/billing/PlanoProvider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
@@ -37,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const store = await cookies();
   let onboardingPendente = false;
   let fimDoTeste: string | null = null;
+  let acessoDoPlano: AcessoResolvido | null = null;
 
   /**
    * A cor desta organização, serializada, ou `null` quando ela não tem uma.
@@ -59,6 +63,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .maybeSingle();
     if (orgRow?.status === "suspended") redirect("/account-suspended");
     fimDoTeste = fimDoPeriodoDeTeste(orgRow?.created_at);
+    acessoDoPlano = (await assinaturaDaOrganizacao(activeOrg.orgId)).acesso;
     // A configuração é administrativa: membros convidados não podem concluí-la
     // e não devem ficar presos entre o CRM e o wizard.
     onboardingPendente = Boolean(orgRow && !orgRow.onboarded_at && activeOrg.role === "admin");
@@ -204,6 +209,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         veria a tela de cadastro de MFA — a PRIMEIRA tela dele — com a cor da
         instalação, e depois o resto do produto com a dele.
       */}
+      <PlanoProvider acesso={acessoDoPlano}>
       <div data-marca-org="" className="contents">
         <EstiloDaMarcaDaOrganizacao css={cssDaOrganizacao} />
         <ImpersonateBanner impersonating={impersonating} />
@@ -217,6 +223,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           shell
         )}
       </div>
+      </PlanoProvider>
     </AuthProvider>
     </IdiomaProvider>
   );

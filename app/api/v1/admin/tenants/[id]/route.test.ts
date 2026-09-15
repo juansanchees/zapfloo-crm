@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 import { requirePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { audit } from "@/lib/audit";
 
 /**
  * GET /api/v1/admin/tenants/[id] — cabeçalho do tenant no painel de plataforma.
@@ -88,6 +89,7 @@ function contadorVazio() {
   builder.then = (resolve: (v: unknown) => unknown) =>
     Promise.resolve({ count: 0, data: [], error: null }).then(resolve);
   builder.single = async () => ({ data: ORG, error: null });
+  builder.maybeSingle = async () => ({ data: null, error: null });
   return builder;
 }
 
@@ -120,5 +122,63 @@ describe("GET /api/v1/admin/tenants/[id]", () => {
       data: { counts: { lgpd_requests_pending: number } };
     };
     expect(body.data.counts.lgpd_requests_pending).toBe(2);
+  });
+});
+
+describe("PATCH /api/v1/admin/tenants/[id] — plano é porta de plataforma", () => {
+  it("admin do tenant não atravessa o guard de plataforma", async () => {
+    vi.mocked(requirePlatformAdmin).mockRejectedValueOnce(new Error("not platform admin"));
+    const { PATCH } = await import("./route");
+    const res = await PATCH(
+      new NextRequest(`http://localhost/api/v1/admin/tenants/${ORG_ID}`, {
+        method: "PATCH",
+        body: JSON.stringify({ plan_id: "completo", status: "ativo" }),
+      }),
+      { params: Promise.resolve({ id: ORG_ID }) },
+    );
+    expect(res.status).toBe(403);
+    expect(createAdminClient).not.toHaveBeenCalled();
+  });
+
+  it("admin de plataforma altera e deixa auditoria com antes e depois", async () => {
+    let patch: Record<string, unknown> | null = null;
+    const linha = {
+      organization_id: ORG_ID,
+      plan_id: "basico",
+      status: "teste",
+      created_at: "2026-09-14T00:00:00Z",
+      updated_at: "2026-09-14T00:00:00Z",
+      updated_by: null,
+    };
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      maybeSingle: async () => ({ data: { plan_id: linha.plan_id, status: linha.status }, error: null }),
+      update: (valor: Record<string, unknown>) => {
+        patch = valor;
+        return builder;
+      },
+      single: async () => ({ data: { ...linha, ...patch }, error: null }),
+    };
+    vi.mocked(createAdminClient).mockReturnValue({ from: () => builder } as never);
+    const { PATCH } = await import("./route");
+    const res = await PATCH(
+      new NextRequest(`http://localhost/api/v1/admin/tenants/${ORG_ID}`, {
+        method: "PATCH",
+        body: JSON.stringify({ plan_id: "completo", status: "ativo" }),
+      }),
+      { params: Promise.resolve({ id: ORG_ID }) },
+    );
+    expect(res.status).toBe(200);
+    expect(patch).toMatchObject({ plan_id: "completo", status: "ativo", updated_by: ADMIN_ID });
+    expect(audit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "tenant.subscription_changed",
+        metadata: {
+          before: { plan_id: "basico", status: "teste" },
+          after: { plan_id: "completo", status: "ativo" },
+        },
+      }),
+    );
   });
 });

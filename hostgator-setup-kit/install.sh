@@ -1534,6 +1534,9 @@ esac
   envq SUPABASE_DB_URL "$SUPABASE_DB_URL"
   envq NEXT_PUBLIC_APP_URL "$NEXT_PUBLIC_APP_URL"
   envq NEXT_PUBLIC_ADMIN_URL "$NEXT_PUBLIC_ADMIN_URL"
+  envq SALES_DOMAIN "${SALES_DOMAIN:-}"
+  envq SALES_WWW_DOMAIN "${SALES_WWW_DOMAIN:-}"
+  envq SALES_WHATSAPP_NUMBER "${SALES_WHATSAPP_NUMBER:-}"
   printf '# Marca da instalação (white-label). Preencha APP_LOGO_URL com a URL de uma\n'
   printf '# imagem pública para trocar o texto por logo na sidebar. Ver lib/branding.ts.\n'
   printf '# APP_ACCENT_HEX é a SEMENTE da cor: o banco (platform_branding) manda depois\n'

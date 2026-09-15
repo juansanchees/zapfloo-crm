@@ -16,6 +16,7 @@ import { useWebhookSources, type WebhookSourceRow } from "@/hooks/webhooks/useWe
 import { CreateSourceDialog } from "./CreateSourceDialog";
 import { SourceDetail } from "./SourceDetail";
 import { useT } from "@/hooks/i18n/useT";
+import { usePlano } from "@/components/billing/PlanoProvider";
 
 function lastReceivedLabel(iso: string | null, t: (texto: string) => string, locale: Locale): string {
   if (!iso) return t("nunca recebeu");
@@ -25,6 +26,8 @@ function lastReceivedLabel(iso: string | null, t: (texto: string) => string, loc
 export function SourcesTab() {
   const localeDaData = useLocaleDeData();
   const t = useT();
+  const { permiteRecurso } = usePlano();
+  const podeCriar = permiteRecurso("webhooks");
   const { data, isLoading } = useWebhookSources();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<WebhookSourceRow | null>(null);
@@ -54,8 +57,9 @@ export function SourcesTab() {
               <li>{t("2. Copie o endereço ou o formulário pronto.")}</li>
               <li>{t("3. Cole no seu site — cada envio vira um lead aqui dentro.")}</li>
             </ol>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus /> {t("Criar primeira fonte")}
+            <Button onClick={() => setCreateOpen(true)} disabled={!podeCriar}>
+              {podeCriar ? <Plus /> : null}{" "}
+              {t(podeCriar ? "Criar primeira fonte" : "Disponível no plano Completo")}
             </Button>
           </CardContent>
         </Card>
@@ -74,8 +78,9 @@ export function SourcesTab() {
   return (
     <div className="space-y-4 pt-4">
       <div className="flex sm:justify-end">
-        <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
-          <Plus /> {t("Nova fonte")}
+        <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto" disabled={!podeCriar}>
+          {podeCriar ? <Plus /> : null}{" "}
+          {t(podeCriar ? "Nova fonte" : "Disponível no plano Completo")}
         </Button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

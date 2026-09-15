@@ -23,6 +23,7 @@ import { mensagemDoEscopo, validarEscopoDaVersao } from "@/lib/ai/agents/escopo"
 import { agentCreateSchema } from "@/lib/ai/guardrails-schema";
 import { agentMcpCreateSchema } from "@/lib/ai/agents/validation";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +103,15 @@ export async function POST(req: NextRequest): Promise<Response> {
     ("version" in rawBody || (rawBody as { kind?: unknown }).kind === "mcp_agent");
 
   const admin = createAdminClient();
+
+  const { count: agentesAtuais, error: countErr } = await admin
+    .from("ai_agents")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", activeOrg.orgId)
+    .is("archived_at", null);
+  if (countErr) return fail("internal_error", countErr.message, 500, { requestId });
+  const plano = await autorizarQuantidade(activeOrg.orgId, "funcionariosIa", (agentesAtuais ?? 0) + 1);
+  if (!plano.ok) return fail("plan_limit_reached", t(mensagemDePlano(plano)), 403, { requestId });
 
   if (wantsMcp) {
     const parsed = agentMcpCreateSchema.safeParse(rawBody);

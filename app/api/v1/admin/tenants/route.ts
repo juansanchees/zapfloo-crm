@@ -6,6 +6,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { randomUUID } from "node:crypto";
 import { configuracaoInicialDeLlm } from "@/lib/ai/installation-default";
+import { PLANOS, type PlanoId } from "@/lib/billing/planos";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -27,7 +28,7 @@ const createSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
   legal_name: z.string().min(2).max(255).optional(),
   cnpj: z.string().optional(),
-  plan: z.enum(["standard", "pro", "enterprise"]).default("standard"),
+  plan: z.enum(["basico", "essencial", "completo"]).default("basico"),
   owner_email: z.string().email(),
 });
 
@@ -131,7 +132,27 @@ export async function GET(req: NextRequest) {
 
   const rows = data ?? [];
   const has_more = rows.length > limit;
-  const page = has_more ? rows.slice(0, limit) : rows;
+  const pageBase = has_more ? rows.slice(0, limit) : rows;
+  const ids = pageBase.map((row) => row.id);
+  const { data: assinaturas, error: assinaturasError } = ids.length
+    ? await admin
+        .from("organization_subscriptions")
+        .select("organization_id,plan_id,status")
+        .in("organization_id", ids)
+    : { data: [], error: null };
+  if (assinaturasError) {
+    return fail("internal_error", "Failed to load subscriptions", 500, {
+      requestId,
+      details: assinaturasError.message,
+    });
+  }
+  const assinaturaPorOrg = new Map(
+    (assinaturas ?? []).map((item) => [item.organization_id, item]),
+  );
+  const page = pageBase.map((row) => ({
+    ...row,
+    subscription: assinaturaPorOrg.get(row.id) ?? null,
+  }));
 
   const lastRow = page.at(-1);
   const nextCursor =
@@ -218,6 +239,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const { error: assinaturaError } = await admin
+    .from("organization_subscriptions")
+    .update({ plan_id: plan, status: "ativo", updated_by: adminCtx.user.id })
+    .eq("organization_id", org.id);
+  if (assinaturaError) {
+    await admin.from("organizations").delete().eq("id", org.id);
+    return fail("internal_error", "Failed to create tenant subscription", 500, {
+      requestId,
+      details: assinaturaError.message,
+    });
+  }
+
   void audit({
     action: "tenant.created_by_platform_admin",
     actorUserId: adminCtx.user.id,
@@ -240,7 +273,7 @@ export async function POST(req: NextRequest) {
   });
 
   return ok(
-    { id: org.id, slug: org.slug, display_name: org.display_name },
+    { id: org.id, slug: org.slug, display_name: org.display_name, plan: plan as PlanoId, plan_name: PLANOS[plan].nome },
     { status: 201, requestId },
   );
 }

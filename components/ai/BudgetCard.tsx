@@ -195,9 +195,15 @@ export function BudgetCard({ initialData, isAdmin }: Props) {
           {!status.blocked_now && overLimit && limit > 0 && (
             <Badge variant="secondary">{t("Passou do limite")}</Badge>
           )}
-          {isAdmin && <EditBudgetDialog status={status} />}
+          {isAdmin && !status.managed_by_plan && <EditBudgetDialog status={status} />}
         </div>
       </div>
+
+      {status.managed_by_plan && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          {t("O limite mensal de IA é definido pelo plano da organização.")}
+        </p>
+      )}
 
       {chave && (
         <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-200">

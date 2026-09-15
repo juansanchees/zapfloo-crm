@@ -18,6 +18,11 @@ export interface AdminTenantRow {
   created_at: string;
   user_count: Array<{ count: number }> | null;
   conversations_count: Array<{ count: number }> | null;
+  subscription: {
+    organization_id: string;
+    plan_id: "basico" | "essencial" | "completo";
+    status: "teste" | "ativo" | "pausado";
+  } | null;
 }
 
 export interface AdminTenantsFilters {

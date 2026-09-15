@@ -12,6 +12,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { createFollowupFlowSchema } from "@/lib/followup/api-schemas";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { autorizarRecurso, mensagemDePlano } from "@/lib/billing/assinatura";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user, org: activeOrg } = authz;
+
+  const plano = await autorizarRecurso(activeOrg.orgId, "followupsAutomaticos");
+  if (!plano.ok) return fail("plan_feature_unavailable", t(mensagemDePlano(plano)), 403, { requestId });
 
   let raw: unknown;
   try {
