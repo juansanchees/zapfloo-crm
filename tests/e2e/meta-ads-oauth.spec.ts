@@ -187,10 +187,22 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
   });
   type Medida = { caminho: string; status: number; tipo: string; tokenExposto: boolean; erroLeitura: boolean; concluida: boolean; lida: boolean; falhaRede: string | null };
   const respostas = new Map<string, Medida>();
+  // Registra a ordem do protocolo, inclusive término anterior à resposta. Não
+  // infere aborto da navegação nem inclui URL/query, headers ou corpo no recibo.
+  const ciclos: Array<{ evento: string; requestId: string; loaderId?: string; caminho?: string; instante?: number }> = [];
+  const requisicoesLocais = new Set<string>();
+  cdp.on("Network.requestWillBeSent", ({ requestId, loaderId, request, timestamp }) => {
+    const url = new URL(request.url);
+    if (url.origin !== origem) return;
+    requisicoesLocais.add(requestId);
+    ciclos.push({ evento: "inicio", requestId, loaderId, instante: timestamp,
+      caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]") });
+  });
   let capturando = true;
-  cdp.on("Network.responseReceived", ({ requestId, response }) => {
+  cdp.on("Network.responseReceived", ({ requestId, loaderId, response, timestamp }) => {
     if (!capturando) return;
     const url = new URL(response.url);
+    if (url.origin === origem) ciclos.push({ evento: "resposta", requestId, loaderId, instante: timestamp });
     // A ponte QA substitui apenas o seguimento do 303. O corpo ORIGINAL dessas
     // duas respostas é lido por registrarInicioReal antes de route.fulfill;
     // Chromium não guarda corpo de rede para o documento sintético da ponte.
@@ -204,7 +216,8 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
       erroLeitura: false, concluida: false, lida: false, falhaRede: null,
     });
   });
-  cdp.on("Network.loadingFinished", ({ requestId }) => {
+  cdp.on("Network.loadingFinished", ({ requestId, timestamp }) => {
+    if (requisicoesLocais.has(requestId)) ciclos.push({ evento: "concluida", requestId, instante: timestamp });
     const medida = respostas.get(requestId);
     if (!medida) return;
     medida.concluida = true;
@@ -214,7 +227,8 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
       medida.lida = true;
     }).catch(() => { medida.erroLeitura = true; });
   });
-  cdp.on("Network.loadingFailed", ({ requestId, errorText }) => {
+  cdp.on("Network.loadingFailed", ({ requestId, errorText, timestamp }) => {
+    if (requisicoesLocais.has(requestId)) ciclos.push({ evento: "falhou", requestId, instante: timestamp });
     const medida = respostas.get(requestId);
     if (medida) medida.falhaRede = errorText;
   });
@@ -244,6 +258,7 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
         message: "toda resposta observada termina com corpo lido ou falha/aborto explícito" }).toEqual([]);
     } finally {
       await test.info().attach("respostas-sem-token", { body: JSON.stringify(medidas), contentType: "application/json" });
+      await test.info().attach("ciclo-requisicoes-sem-segredos", { body: JSON.stringify(ciclos), contentType: "application/json" });
     }
     // Prefetches RSC abortados pela navegação ficam registrados, mas não contam
     // como corpo entregue/provado. Nenhuma resposta CONCLUÍDA pode perder corpo.
@@ -406,9 +421,11 @@ if (!CONFIGURADO) {
       test(`${papel}: conecta pela tela, escolhe conta e mostra validade sem expor token`, async ({ page }) => {
         const respostas = await vigiarRespostas(page, "https://localhost:3443",
           [SETTINGS, "/api/v1/ads/meta/oauth/connect", CALLBACK, "/api/v1/ads/meta/accounts", "/api/v1/ads/meta/account", "/app/ads/meta"]);
+        // Instalar o transporte antes da primeira navegação, como na agência:
+        // não habilitar interceptação com os prefetches do login já em voo.
+        await consentimentoSintetico(page, respostas.registrarInicioReal);
         const fixture = await contaLocal(page, papel);
         try {
-          await consentimentoSintetico(page, respostas.registrarInicioReal);
           await page.goto(SETTINGS);
           await expect(page.locator("#access_token")).not.toBeVisible();
           await medir(page, `conectar-${papel}`);
