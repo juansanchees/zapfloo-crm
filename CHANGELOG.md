@@ -8,6 +8,41 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.0.0] — 2026-09-15
+
+### ⚠️ Requer atenção
+
+- **Página pública apresenta o produto e os três planos** Para ativar a página na VPS da Zapfloo, acrescente exatamente estas linhas ao `.env`:
+
+  ```dotenv
+  SALES_DOMAIN=https://zapfloo.tech
+  SALES_WWW_DOMAIN=https://www.zapfloo.tech
+  SALES_WHATSAPP_NUMBER=
+  ```
+
+  Preencha `SALES_WHATSAPP_NUMBER` apenas quando houver um número comercial
+  aprovado, usando DDI + DDD + número. Vazio mantém o botão escondido.
+
+### Adicionado
+
+- **Galeria cria funis prontos sem alterar os atuais** A área de Funis agora oferece os seis modelos usados na configuração inicial e
+  quatro modelos de pós-venda: confirmação, entrega de acesso, suporte e
+  reativação. Aplicar um modelo sempre cria um funil novo, respeita o limite do
+  plano e nunca sobrescreve os quadros que já existem.
+
+- **Página pública apresenta o produto e os três planos** A instalação pode servir uma página pública, clara e adaptada ao celular, com
+  os recursos e preços lidos da mesma configuração que aplica os limites. O botão
+  principal leva ao cadastro de sete dias; o contato por WhatsApp só aparece
+  quando existe um número configurado.
+
+- **Planos passam a controlar limites e recursos por organização** O painel de plataforma agora define o plano e a situação de cada organização.
+  Cadastros novos recebem sete dias de teste com os recursos do Completo e teto
+  mensal de IA do Básico. Ao vencer o teste ou pausar a assinatura, o CRM continua
+  aberto e a IA para de responder. Limites de números, usuários, agentes, funis e
+  integrações são conferidos no servidor; reduzir o plano não apaga o que já existe.
+
+  Não é necessário editar variáveis da instalação.
+
 ## [1.19.1] — 2026-09-13
 
 ### Alterado
@@ -3346,7 +3381,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.1...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.1...v2.0.0
 [1.19.1]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.0...v1.19.1
 [1.19.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.17.0...v1.18.0
