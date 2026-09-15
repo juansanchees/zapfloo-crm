@@ -202,7 +202,7 @@ export function FunisClient({
                 <p className="mt-1 text-sm text-muted-foreground">{t(modelo.descricao)}</p>
               </div>
               <Badge variant="secondary">
-                {t(modelo.categoria === "vendas" ? "Vendas" : "Pós-venda")}
+                {t(modelo.categoria === "vendas" ? "Vendas" : "Depois da venda")}
               </Badge>
             </div>
             <div className="mt-auto flex flex-wrap gap-1" aria-label={t("Etapas do modelo")}>

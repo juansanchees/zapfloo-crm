@@ -8308,7 +8308,7 @@ export const DICIONARIO: Traducoes = {
   "Modelos prontos": { es: "Modelos listos" },
   "Escolha um modelo para criar um novo funil. Seus funis atuais não serão alterados.": { es: "Elige un modelo para crear un nuevo embudo. Tus embudos actuales no cambiarán." },
   "Vendas": { es: "Ventas" },
-  "Pós-venda": { es: "Posventa" },
+  "Depois da venda": { es: "Después de la venta" },
   "Etapas do modelo": { es: "Etapas del modelo" },
   "Usar modelo": { es: "Usar modelo" },
   "Este modelo de funil não está disponível.": { es: "Este modelo de embudo no está disponible." },
