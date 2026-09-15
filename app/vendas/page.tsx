@@ -5,8 +5,8 @@ import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-const TITULO = "Zapfloo — IA para atendimento e vendas no WhatsApp";
-const DESCRICAO = "Atenda, qualifique, agende e organize clientes pelo WhatsApp com um funcionário de IA treinado para o seu negócio.";
+const TITULO = "Zapfloo — Atendente de IA para o WhatsApp do seu negócio";
+const DESCRICAO = "A IA responde, marca horário e chama de volta quem sumiu no WhatsApp do seu pet shop, clínica ou salão. Teste grátis por 7 dias.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const base = env.SALES_DOMAIN || env.NEXT_PUBLIC_APP_URL;

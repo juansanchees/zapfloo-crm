@@ -30,25 +30,42 @@ export type PlanosDaPagina = Record<PlanoId, PlanoPublico>;
 
 const CTA = "https://crm.zapfloo.tech/signup";
 
-function plural(quantidade: number, singular: string, pluralDaPalavra: string): string {
-  return `${quantidade} ${quantidade === 1 ? singular : pluralDaPalavra}`;
+function preencherLimites(texto: string, plano: PlanoPublico): string {
+  return texto.replace(/\{(numerosWhatsapp|funcionariosIa|usuarios|funis)\}/g, (_, campo: keyof PlanoPublico["limites"]) =>
+    String(plano.limites[campo]),
+  );
 }
 
-function itensDoPlano(plano: PlanoPublico): string[] {
-  const itens = [
-    plural(plano.limites.numerosWhatsapp, "número de WhatsApp", "números de WhatsApp"),
-    plural(plano.limites.funcionariosIa, "funcionário de IA", "funcionários de IA"),
-    plural(plano.limites.usuarios, "usuário", "usuários"),
-    plano.limites.funis === null ? "Funis sem limite" : plural(plano.limites.funis, "funil", "funis"),
-    "Agenda, catálogo e base de conhecimento",
-    "Leitor do seu site",
-  ];
-
-  if (plano.recursos.followupsAutomaticos) itens.push("Follow-ups automáticos");
-  if (plano.recursos.googleAgenda) itens.push("Google Agenda");
-  if (plano.recursos.webhooks) itens.push("Webhooks e integrações");
-  if (plano.recursos.radar) itens.push("Radar de clientes em risco");
-  return itens;
+function itensDoPlano(id: PlanoId, plano: PlanoPublico, t: (texto: string) => string): string[] {
+  const quadros = plano.limites.funis === null
+    ? t("Quadros sem limite: vendas, confirmação, entrega e pós-venda")
+    : id === "basico" ? t("{funis} quadro de vendas") : t("{funis} quadros de vendas");
+  const itens: Record<PlanoId, string[]> = {
+    basico: [
+      t("{numerosWhatsapp} WhatsApp"),
+      t("{funcionariosIa} atendente de IA"),
+      t("{usuarios} pessoa da equipe com acesso"),
+      quadros,
+      t("Agenda, catálogo com preços e respostas sobre o seu negócio"),
+      t("Configuração a partir do seu site"),
+    ],
+    essencial: [
+      t("Tudo do Básico, e mais:"),
+      t("{usuarios} pessoas da equipe com acesso"),
+      quadros,
+      t("Mensagem automática pra quem parou de responder"),
+      t("Horários sincronizados com o Google Agenda"),
+    ],
+    completo: [
+      t("Tudo do Essencial, e mais:"),
+      t("Até {numerosWhatsapp} WhatsApps e {funcionariosIa} atendentes de IA"),
+      t("{usuarios} pessoas da equipe com acesso"),
+      quadros,
+      t("Aviso de clientes que estão esfriando"),
+      t("Integração com outros sistemas"),
+    ],
+  };
+  return itens[id].map((texto) => preencherLimites(texto, plano));
 }
 
 function Check() {
@@ -72,6 +89,11 @@ export function SalesPage({
   const t = useT();
   const numeroWhatsapp = whatsappNumber.replace(/\D/g, "");
   const planosOrdenados = Object.entries(planos) as Array<[PlanoId, PlanoPublico]>;
+  const frasesDosPlanos: Record<PlanoId, string> = {
+    basico: t("Pra quem atende sozinho e quer parar de perder mensagem."),
+    essencial: t("Pra quem tem equipe pequena e quer recuperar cliente que sumiu."),
+    completo: t("Pra quem quer automatizar do primeiro contato ao pós-venda."),
+  };
 
   return (
     <div data-theme="light" className="min-h-screen overflow-x-clip bg-background text-foreground">
@@ -84,23 +106,23 @@ export function SalesPage({
             href={CTA}
             className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground shadow-sm transition hover:opacity-90"
           >
-            {t("Testar grátis")}
+            {t("Testar grátis por 7 dias")}
           </Link>
         </div>
       </header>
 
       <main>
         <section className="border-b border-border/60 bg-gradient-to-b from-accent/10 via-background to-background">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
             <div>
               <p className="mb-5 inline-flex rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
-                {t("Atendimento e vendas no WhatsApp")}
+                {t("Atendente de IA para WhatsApp")}
               </p>
               <h1 className="max-w-3xl text-4xl font-black leading-[1.08] tracking-tight sm:text-6xl">
-                {t("A IA atende, qualifica e vende pelo WhatsApp do seu negócio.")}
+                {t("Seu WhatsApp responde, agenda e vende, mesmo quando você está ocupado.")}
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-                {t("Para pet shops, clínicas, consultórios e salões organizarem o atendimento sem deixar clientes esperando.")}
+                {t("O Zapfloo coloca uma atendente de IA no WhatsApp do seu pet shop, clínica ou salão. Ela tira dúvidas com os seus preços, marca horário e chama de volta quem sumiu. Você só entra na conversa quando precisar.")}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
@@ -120,41 +142,35 @@ export function SalesPage({
                   </a>
                 ) : null}
               </div>
-            </div>
-
-            <div className="rounded-3xl border border-border bg-card p-5 shadow-xl shadow-foreground/5 sm:p-7">
-              <div className="mb-5 flex items-center gap-2 border-b border-border pb-4">
-                <span className="size-3 rounded-full bg-destructive/70" />
-                <span className="size-3 rounded-full bg-warning/70" />
-                <span className="size-3 rounded-full bg-success/70" />
-                <span className="ml-2 text-sm font-medium text-muted-foreground">{t("Atendimento em andamento")}</span>
-              </div>
-              <div className="space-y-4 text-sm">
-                <div className="mr-8 rounded-2xl rounded-tl-sm bg-muted p-4">
-                  {t("Oi! Quais horários vocês têm amanhã?")}
-                </div>
-                <div className="ml-8 rounded-2xl rounded-tr-sm bg-accent/12 p-4">
-                  {t("Temos horários às 10h e 15h. Qual fica melhor para você?")}
-                </div>
-                <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-accent">{t("Organizado automaticamente")}</p>
-                  <p className="mt-1 font-medium">{t("Cliente qualificado · aguardando escolha do horário")}</p>
-                </div>
-              </div>
+              <p className="mt-4 text-sm text-muted-foreground">{t("Todos os recursos liberados no teste. Sem cartão de crédito.")}</p>
             </div>
           </div>
         </section>
 
+        <section className="border-b border-border bg-muted/45" aria-labelledby="mensagens-sem-resposta">
+          <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
+            <h2 id="mensagens-sem-resposta" className="max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">
+              {t("Cada mensagem sem resposta é um cliente indo pro concorrente")}
+            </h2>
+            <ul className="mt-8 grid gap-5 md:grid-cols-3">
+              {[
+                t('O cliente pergunta o preço, você está no meio de um atendimento, e quando responde ele já marcou em outro lugar.'),
+                t('Muita conversa começa com um "oi" e morre ali, porque ninguém chama de volta.'),
+                t("A agenda vive espalhada entre o WhatsApp, o caderno e a memória."),
+              ].map((texto) => <li key={texto} className="leading-7 text-muted-foreground">{texto}</li>)}
+            </ul>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24" aria-labelledby="como-funciona">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent">{t("Simples desde o primeiro dia")}</p>
           <h2 id="como-funciona" className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-            {t("Como funciona")}
+            {t("Pronto pra atender em poucos passos")}
           </h2>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {[
-              ["1", t("Conecte seu número"), t("Escolha a conexão disponível para o seu negócio e veja o estado dela na tela.")],
-              ["2", t("Ensine o seu atendimento"), t("Informe serviços, horários e regras. O Zapfloo organiza tudo com você.")],
-              ["3", t("Comece a atender"), t("Acompanhe conversas, agenda e funil enquanto a IA cuida das respostas permitidas.")],
+              ["1", t("Conecte o seu WhatsApp"), t("Leia um QR Code com o celular do negócio, igual ao WhatsApp Web.")],
+              ["2", t("Conte como o seu negócio funciona"), t("Serviços, preços, horários e regras. Se você tiver site, a gente lê e adianta essa parte pra você.")],
+              ["3", t("Deixe a IA atender"), t("Ela responde, agenda e organiza cada cliente. Você acompanha tudo numa tela só e assume qualquer conversa quando quiser.")],
             ].map(([numero, titulo, texto]) => (
               <article key={numero} className="rounded-2xl border border-border bg-card p-6">
                 <span className="grid size-10 place-items-center rounded-xl bg-accent text-sm font-black text-accent-foreground">
@@ -169,22 +185,25 @@ export function SalesPage({
 
         <section className="border-y border-border bg-muted/45">
           <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent">{t("Um atendimento que continua")}</p>
             <h2 className="mt-3 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">
-              {t("Da primeira dúvida ao próximo passo do cliente")}
+              {t("Uma atendente que não esquece ninguém")}
             </h2>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                t("Responde na hora"),
-                t("Tira dúvidas com o seu catálogo"),
-                t("Marca horário"),
-                t("Retoma quem sumiu"),
-                t("Organiza o funil"),
-              ].map((item) => (
-                <div key={item} className="flex gap-3 rounded-2xl border border-border bg-background p-5 font-semibold">
+                [t("Responde na hora"), t("Nada de cliente esperando enquanto você atende outra pessoa.")],
+                [t("Tira dúvidas com os seus preços"), t("Usa o seu catálogo e as informações que você cadastrou.")],
+                [t("Marca horário"), t("Consulta os horários livres e agenda direto na conversa.")],
+                [t("Chama de volta quem sumiu"), t("Manda mensagem na hora certa pra quem parou de responder.")],
+                [t("Organiza tudo sozinha"), t("Cada cliente vai pra etapa certa: novo, interessado, agendado, fechado.")],
+                [t("Passa pra você quando precisa"), t("Casos delicados vão pra uma pessoa da equipe, com a conversa inteira.")],
+              ].map(([titulo, texto]) => (
+                <article key={titulo} className="flex gap-3 rounded-2xl border border-border bg-background p-5">
                   <Check />
-                  <span>{item}</span>
-                </div>
+                  <div>
+                    <h3 className="font-bold">{titulo}</h3>
+                    <p className="mt-2 leading-7 text-muted-foreground">{texto}</p>
+                  </div>
+                </article>
               ))}
             </div>
           </div>
@@ -192,10 +211,10 @@ export function SalesPage({
 
         <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24" aria-labelledby="planos">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent">{t("Planos mensais")}</p>
             <h2 id="planos" className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-              {t("Escolha o espaço que o seu atendimento precisa")}
+              {t("Escolha o plano do tamanho do seu negócio")}
             </h2>
+            <p className="mt-4 leading-7 text-muted-foreground">{t("Comece com 7 dias grátis em qualquer um. Troque de plano quando quiser.")}</p>
           </div>
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {planosOrdenados.map(([id, plano]) => (
@@ -204,13 +223,17 @@ export function SalesPage({
                 data-testid={`plano-${id}`}
                 className={`flex flex-col rounded-3xl border bg-card p-6 ${id === "essencial" ? "border-accent shadow-lg shadow-accent/10" : "border-border"}`}
               >
-                <h3 className="text-xl font-bold">{plano.nome}</h3>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-xl font-bold">{t(plano.nome)}</h3>
+                  {id === "essencial" ? <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent">{t("Recomendado")}</span> : null}
+                </div>
+                <p className="mt-3 leading-7 text-muted-foreground">{frasesDosPlanos[id]}</p>
                 <p className="mt-4 flex items-end gap-2">
                   <span className="text-4xl font-black tracking-tight">{formatarPrecoMensal(plano.precoMensalCents)}</span>
-                  <span className="pb-1 text-sm text-muted-foreground">{t("por mês")}</span>
+                  <span className="pb-1 text-sm text-muted-foreground">{t("/mês")}</span>
                 </p>
-                <ul className="mt-6 flex flex-col gap-3">
-                  {itensDoPlano(plano).map((item) => (
+                <ul className="mb-8 mt-6 flex flex-col gap-3">
+                  {itensDoPlano(id, plano, t).map((item) => (
                     <li key={item} className="flex gap-3 text-sm leading-6">
                       <Check />
                       <span>{item}</span>
@@ -219,7 +242,7 @@ export function SalesPage({
                 </ul>
                 <Link
                   href={CTA}
-                  className="mt-8 rounded-xl bg-accent px-5 py-3 text-center font-bold text-accent-foreground transition hover:opacity-90"
+                  className="mt-auto rounded-xl bg-accent px-5 py-3 text-center font-bold text-accent-foreground transition hover:opacity-90"
                 >
                   {t("Testar grátis por 7 dias")}
                 </Link>
@@ -233,10 +256,12 @@ export function SalesPage({
             <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{t("Perguntas frequentes")}</h2>
             <div className="mt-8 divide-y divide-border rounded-2xl border border-border bg-background px-5 sm:px-7">
               {[
-                [t("O teste libera quais recursos?"), t("Durante os 7 dias de teste, você usa os recursos do plano Completo.")],
-                [t("O que acontece quando o teste termina?"), t("O CRM e seus dados continuam disponíveis. A IA fica pausada até a ativação de um plano.")],
-                [t("Como o WhatsApp é conectado?"), t("A plataforma diferencia a API Oficial da Meta e a conexão por QR. Você escolhe a opção disponível para a sua operação.")],
-                [t("Preciso montar o funil do zero?"), t("Não. Há modelos prontos por tipo de negócio e para etapas de pós-venda; você pode ajustá-los depois.")],
+                [t("Preciso entender de tecnologia?"), t("Não. A configuração é feita com perguntas simples, e se você tiver site, a gente aproveita as informações dele.")],
+                [t("A IA pode falar besteira pro meu cliente?"), t("Ela só responde com base no que você cadastrou e confere cada mensagem antes de enviar. Preço e informação que vêm do seu site só passam a valer depois que você aprova. E você pode assumir qualquer conversa a qualquer momento.")],
+                [t("O que o teste grátis inclui?"), t("7 dias com todos os recursos do plano Completo. Não pedimos cartão.")],
+                [t("E quando o teste acaba?"), t("Seus dados continuam lá. A atendente de IA pausa até você escolher um plano.")],
+                [t("Funciona com o número que eu já uso?"), t("Sim. Você conecta o WhatsApp que já usa no negócio.")],
+                [t("Posso trocar de plano depois?"), t("Pode, pra cima ou pra baixo, e nada do que você já tem é apagado.")],
               ].map(([pergunta, resposta]) => (
                 <details key={pergunta} className="group py-5">
                   <summary className="cursor-pointer list-none pr-8 font-bold marker:content-none">{pergunta}</summary>
@@ -248,16 +273,14 @@ export function SalesPage({
         </section>
 
         <section className="mx-auto max-w-4xl px-5 py-16 text-center sm:px-8 sm:py-24">
-          <h2 className="text-3xl font-black tracking-tight sm:text-5xl">{t("Seu atendimento pode começar hoje.")}</h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-            {t("Configure o negócio, conecte o WhatsApp e veja o funcionário responder antes de colocá-lo no ar.")}
-          </p>
+          <h2 className="text-3xl font-black tracking-tight sm:text-5xl">{t("Teste por 7 dias e veja a IA atendendo o seu cliente de verdade.")}</h2>
           <Link
             href={CTA}
             className="mt-8 inline-flex rounded-xl bg-accent px-7 py-3 font-bold text-accent-foreground shadow-lg shadow-accent/20"
           >
             {t("Testar grátis por 7 dias")}
           </Link>
+          <p className="mt-4 text-sm text-muted-foreground">{t("Sem cartão de crédito.")}</p>
         </section>
       </main>
 
