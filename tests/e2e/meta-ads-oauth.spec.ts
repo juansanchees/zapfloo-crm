@@ -16,6 +16,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type APIResponse, type Page } from "@playwright/test";
 
 import { assinarLink } from "@/lib/plataformas-de-anuncio/meta/oauth/estado";
+import { LIMITES_OAUTH } from "@/lib/plataformas-de-anuncio/meta/oauth/limites";
 
 const CONFIGURADO = process.env.E2E_META_ADS_FIXTURE === "1";
 const CONFIG_FIXTURE = {
@@ -541,6 +542,66 @@ if (!CONFIGURADO) {
           }
           expect(chamadas).toEqual([]);
         } finally { await fixture.limpar(); }
+      });
+    }
+
+    for (const superficie of ["pagina", "agency", "callback"] as const) {
+      test(`abuso público: ${superficie} responde HTTP429 real antes do Graph`, async ({ request, baseURL }) => {
+        expect(LIMITES_OAUTH).toEqual({ ip: 60, id: 20, windowSec: 60 });
+        const janelaMs = LIMITES_OAUTH.windowSec * 1000;
+        // O contador é por janela fixa. Começar na primeira metade evita
+        // atravessar sua virada durante a rajada, sem alterar relógio/contador.
+        await expect.poll(() => Date.now() % janelaMs, {
+          timeout: janelaMs, intervals: [100, 250, 500],
+          message: "a rajada começa com pelo menos meia janela real disponível",
+        }).toBeLessThan(janelaMs / 2);
+        const inicio = Date.now();
+        const identificador = `capacidade-sintetica-invalida-${randomUUID()}`;
+        const origem = new URL(baseURL!).origin;
+        const ip = { pagina: "203.0.113.201", agency: "203.0.113.202", callback: "203.0.113.203" }[superficie];
+        const medidas: Array<{ tentativa: number; metodo: string; status: number; retryAfter?: string; bytes: number }> = [];
+        try {
+          // Na página GET e HEAD compartilham a capacidade, mesmo com query
+          // diferente. A última HEAD prova que o bloqueio não entrega corpo.
+          const tentativas = LIMITES_OAUTH.id + (superficie === "pagina" ? 2 : 1);
+          for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
+            const metodo = superficie === "agency" ? "POST"
+              : superficie === "pagina" && tentativa % 2 === 0 ? "HEAD" : "GET";
+            const caminho = superficie === "pagina" ? `/ads/connect/${identificador}?tentativa=${tentativa}`
+              : superficie === "agency" ? "/api/v1/ads/meta/oauth/agency"
+              : `${CALLBACK}?state=${identificador}&code=codigo-invalido-local`;
+            const resposta = await request.fetch(caminho, {
+              method: metodo, maxRedirects: 0,
+              headers: { "x-forwarded-for": ip, Origin: origem },
+              ...(superficie === "agency" ? { form: { link: identificador } } : {}),
+            });
+            const corpo = await resposta.text();
+            const headers = resposta.headers();
+            medidas.push({ tentativa, metodo, status: resposta.status(), retryAfter: headers["retry-after"], bytes: Buffer.byteLength(corpo) });
+            if (tentativa <= LIMITES_OAUTH.id) {
+              expect(resposta.status(), `tentativa ${tentativa} ainda está dentro do teto`).toBe(superficie === "agency" ? 303 : 200);
+              expect(headers["retry-after"]).toBeUndefined();
+            } else {
+              expect(resposta.status(), `tentativa ${tentativa} é recusada pelo servidor`).toBe(429);
+              expect(headers["retry-after"]).toBe(String(LIMITES_OAUTH.windowSec));
+              expect(headers["cache-control"]).toContain("no-store");
+              expect(headers["x-request-id"]).toBeTruthy();
+              expect(headers.location).toBeUndefined();
+              expect(corpo).not.toContain(identificador);
+              if (metodo === "HEAD") expect(corpo).toBe("");
+              else expect(corpo).toContain("Muitas tentativas");
+            }
+            expect(chamadas, "abuso inválido não chega ao transporte Graph").toEqual([]);
+            await resposta.dispose();
+          }
+          expect(Math.floor(Date.now() / janelaMs), "a prova não atravessou uma virada de janela").toBe(Math.floor(inicio / janelaMs));
+        } finally {
+          await test.info().attach(`http429-${superficie}-sem-segredos`, {
+            body: JSON.stringify({ superficie, limites: LIMITES_OAUTH, ipReservado: ip,
+              duracaoMs: Date.now() - inicio, medidas, chamadasGraph: chamadas.length }),
+            contentType: "application/json",
+          });
+        }
       });
     }
   });

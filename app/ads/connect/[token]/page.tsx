@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { traduzir } from "@/lib/i18n/dicionario";
 import { configuracaoOAuth } from "@/lib/plataformas-de-anuncio/meta/oauth/config";
-import { lerPaginaDoLink, limitarOAuth } from "@/lib/plataformas-de-anuncio/meta/oauth/servico";
+import { lerPaginaDoLink } from "@/lib/plataformas-de-anuncio/meta/oauth/servico";
 
 import { idiomaDaRequisicao } from "../_idioma";
 
@@ -27,9 +27,9 @@ export default async function ConectarAnunciosPorLink({
 }) {
   const [{ token }, idioma] = await Promise.all([params, idiomaDaRequisicao()]);
   const t = (texto: string) => traduzir(texto, idioma);
-  const bloqueado = await limitarOAuth("link", token);
+  // O proxy limita antes do RSC e responde 429; não contar outra vez ao renderizar.
   const configurado = configuracaoOAuth();
-  const pagina = bloqueado || !configurado ? { ok: false as const } : await lerPaginaDoLink(token);
+  const pagina = !configurado ? { ok: false as const } : await lerPaginaDoLink(token);
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-5 py-10 text-foreground">
@@ -49,7 +49,7 @@ export default async function ConectarAnunciosPorLink({
           </>
         ) : (
           <p role="status" className="text-base leading-7 text-muted-foreground">
-            {bloqueado || !configurado
+            {!configurado
               ? t("A conexão está temporariamente indisponível. Tente novamente mais tarde.")
               : t("Este link de conexão está indisponível. Peça um novo link à pessoa responsável.")}
           </p>

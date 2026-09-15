@@ -121,6 +121,23 @@ cliente e não podem ir a logs, erros, Sentry, screenshots ou relatórios. O
 endereço de retorno e os endpoints não são escolhidos pelo visitante. Esta
 exceção não autoriza bearer em query de nenhuma API interna do CRM.
 
+### Limites das entradas públicas
+
+Página do link, início da agência e callback usam `authRateLimited`, sobre o
+mesmo contador `checkRateLimit` das rotas públicas existentes. Os limites ficam
+em `oauth/limites.ts`: 60 tentativas por IP e 20 por identificador, em 60 segundos,
+com identificadores e IPs hasheados. Sem Redis, vale o fallback existente em
+memória **por processo**, não uma cota compartilhada entre réplicas.
+
+Excesso retorna **HTTP 429**, `Retry-After: 60` e `Cache-Control: no-store`, antes
+de consultar/consumir o recibo ou chamar o Facebook. Na página, isso acontece
+no proxy antes do RSC: GET e HEAD compartilham o contador, query strings não
+reiniciam a janela e segmentos inválidos também são contados. Não se cobra
+novamente ao renderizar a página. O callback limita também pelo `state`, sem
+expô-lo, e a agência limita por IP antes de ler o corpo e pelo link antes de
+consultar sua autorização. Validade, assinatura, origem e uso único permanecem
+verificações separadas; limite de requisições não substitui nenhuma delas.
+
 ## Prazo real e recuperação
 
 Os prazos vêm da resposta e inspeção do provedor: `token_expires_at`,
@@ -156,13 +173,68 @@ manual exigida de quem opera a VPS.
 | Quem recebe? | `ad_insights_connections` alimenta `ads/meta/accounts`, `ads/meta/campaigns` e a tabela em `/app/ads/meta`. |
 | Que atividade emite e onde aparece? | `audit()` grava o ciclo de autorização em `api_audit_log`; `/app/audit` exibe as ações. A retenção existente registra `ads_oauth_apagados`. A tela de configuração e o resultado público exibem o desfecho sem credencial. |
 | Qual a porta? | Entrada existente `meta-ads` em `lib/navigation/registry.ts`; o botão de gerar link entrega a URL pública, que não é uma tela do menu do destinatário. |
-| Qual o anti-morte? | Falha/cancelamento público pede novo link; configuração indisponível mantém o caminho manual para admin; falha na lista permite tentar novamente; validade conhecida vencida ou próxima do vencimento aponta para reconectar. |
+| Qual o anti-morte? | Falha/cancelamento público pede novo link; configuração indisponível mantém o caminho manual para admin; excesso de tentativas retorna 429 com prazo para tentar novamente, sem consumir a autorização; falha na lista permite tentar novamente; validade conhecida vencida ou próxima do vencimento aponta para reconectar. |
 | Onde configura? | Configuração do aplicativo no ambiente da instalação, disponibilidade resolvida por `oauth/config.ts`; autorização, conta padrão, modo manual e desconexão em `/app/settings/meta-ads`. |
 | Continuidade IA↔humano? | Não há turno de IA ou decisão sobre leads nesta autorização. Uma pessoa autoriza a leitura, e os dados passam a apoiar a decisão humana em Análise. |
 | Qual o retorno? | Erro ou revogação invalida a tentativa atual e exige autorização nova; a escolha de conta muda as leituras seguintes. Os prazos reais alteram o aviso de reconexão. Nenhuma promessa de renovação automática. |
 | Mapa vivo? | `docs/architecture/meta-ads-oauth.architecture.json`, com entradas/saídas do link, consentimento, recibo, conexão e tela de análise. |
 
 ## Evidência e limites
+
+### Diferença encontrada entre o CI e a primeira prova local
+
+No [job e2e-parte (3), run 34999563137](https://github.com/juansanchees/zapfloo-crm/actions/runs/34999563137/job/104484293844),
+os três caminhos completos chegaram à gravação e falharam com a mesma linha
+do servidor: `[webhooks.secrets] encrypt falhou` e
+`NUVEMSHOP_OAUTH_ENCRYPTION_KEY ausente`. O retorno de erro não era uma falha
+intermitente de HTTPS ou cookie: `guardarConexaoOAuth` recusou guardar token
+sem cifra. Essa recusa do produto foi mantida.
+
+O CI aplicava `baseline.sql`, que contém schema, mas não a chave de instalação
+em `private.app_secrets`. Na VPS, `ensure_encryption_key` do kit prepara esse
+dado depois do baseline. O banco da primeira prova local já tinha a chave;
+portanto aquele verde não reproduzia esta precondição ausente do runner.
+
+Antes da jornada configurada, o CI agora executa
+`tests/e2e/helpers/meta-ads-cifra.sql` exclusivamente no Postgres local fixo.
+É fixture de dados, não migration: gera uma chave aleatória apenas se não
+existe, nunca rotaciona a existente, e exige um round-trip com as funções
+reais `fn_encrypt_oauth`/`fn_decrypt_oauth` sob `service_role`. Nem chave nem
+token são impressos. `ON_ERROR_STOP=1` interrompe o preparo se a cifra falhar.
+O guarda de cobertura exige esse passo antes do OAuth; removê-lo produziu
+`1 failed` / exit 1, com `falta preparar a cifra real no banco local`.
+
+A reprodução usou outro banco local, porta 60522, com baseline e bootstrap:
+zero chaves em `private.app_secrets` e nenhum GUC de cifra. Na compilação final,
+os mesmos três cenários deram `3 failed`, exit 1, com três ocorrências literais
+de `NUVEMSHOP_OAUTH_ENCRYPTION_KEY ausente` (`e2e-pr23-sem-cifra.log`). Executar
+a fixture duas vezes resultou em contagens **0 → 1 → 1**, chave preservada e
+dois round-trips aprovados sob `service_role` (`e2e-pr23-seed-recibo.json`).
+Nenhum valor de chave, cifra ou token foi exposto na evidência do preparo.
+
+O contador canônico, rotas e proxy passaram em **91 testes / cinco arquivos**,
+incluindo `lib/auth/rate-limit.test.ts`. Sete retiradas físicas de guardas
+produziram vermelho e foram restauradas: proxy (8 falhas), callback (1),
+agência por IP (1), agência por capacidade (1), matcher de assets (1),
+identificador do callback (1) e contagem limitada a formato válido (6).
+Logs `rate-sabotagem-*.log`; restauração em `rate-restaurado.log`, exit 0.
+
+Depois do preparo, **na mesma compilação**, os nove cenários configurados
+passaram (`e2e-pr23-com-cifra.log`, exit 0, 1,3 min): os três fluxos antes
+vermelhos, expiração, papéis negativos e três controles HTTP. Página, agência
+e callback retornaram 429 na tentativa 21, sem chegar ao Graph; a página
+compartilhou o contador entre GET e HEAD. Os dois cenários sem OAuth também
+passaram (`e2e-pr23-sem-oauth.log`, exit 0, 19,7 s). Nenhum retry, skip novo,
+relaxamento de asserção ou rebuild entre vermelho e verde.
+
+Verificação geral desta correção: `corepack pnpm gov:verify --maxWorkers=3`
+com Node 22, exit 0; **790 arquivos e 8.356 testes** aprovados. Typecheck,
+lint (308 avisos existentes, zero erros), canais e papéis aprovados; log
+`pr23-gov-verify-final.log`. Build aprovado. A suíte completa `test:db` não
+foi reexecutada nesta correção, que não altera schema ou política de banco;
+a fixture de cifra foi exercitada duas vezes no Postgres local real.
+
+### Registro inicial do PR, anterior à correção do ambiente do CI
 
 Os testes de módulo, as provas de banco, o e2e com provedor controlado e as
 sabotagens são registros distintos; nenhum deles, sozinho, equivale a

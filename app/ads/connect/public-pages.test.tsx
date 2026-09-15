@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   headers: vi.fn(),
   configuracaoOAuth: vi.fn(),
-  limitarOAuth: vi.fn(),
   lerPaginaDoLink: vi.fn(),
 }));
 vi.mock("next/headers", () => ({ headers: mocks.headers }));
@@ -13,7 +12,6 @@ vi.mock("@sentry/nextjs/config", () => ({
 }));
 vi.mock("@/lib/plataformas-de-anuncio/meta/oauth/config", () => ({ configuracaoOAuth: mocks.configuracaoOAuth }));
 vi.mock("@/lib/plataformas-de-anuncio/meta/oauth/servico", () => ({
-  limitarOAuth: mocks.limitarOAuth,
   lerPaginaDoLink: mocks.lerPaginaDoLink,
 }));
 
@@ -25,7 +23,6 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.headers.mockResolvedValue(new Headers({ "accept-language": "pt-BR" }));
   mocks.configuracaoOAuth.mockReturnValue({ appId: "configurado" });
-  mocks.limitarOAuth.mockResolvedValue(false);
   mocks.lerPaginaDoLink.mockResolvedValue({ ok: true, nome: "Negócio de teste" });
 });
 
@@ -33,7 +30,6 @@ describe("páginas públicas do consentimento de anúncios", () => {
   it("só entrega o nome autorizado e o botão; abrir o link não envia o formulário", async () => {
     const { container } = render(await PaginaDoLink({ params: Promise.resolve({ token: "link-assinado-de-teste" }) }));
 
-    expect(mocks.limitarOAuth).toHaveBeenCalledWith("link", "link-assinado-de-teste");
     expect(mocks.lerPaginaDoLink).toHaveBeenCalledExactlyOnceWith("link-assinado-de-teste");
     expect(screen.getByRole("heading", { name: "Negócio de teste" })).toBeInTheDocument();
     expect(screen.getAllByRole("button")).toHaveLength(1);
@@ -56,9 +52,8 @@ describe("páginas públicas do consentimento de anúncios", () => {
     expect(container.textContent).not.toContain("Negócio de teste");
   });
 
-  it.each(["limite", "configuracao"])("%s indisponível impede até a leitura do nome", async (causa) => {
-    if (causa === "limite") mocks.limitarOAuth.mockResolvedValue(true);
-    else mocks.configuracaoOAuth.mockReturnValue(null);
+  it("configuração indisponível impede até a leitura do nome", async () => {
+    mocks.configuracaoOAuth.mockReturnValue(null);
 
     render(await PaginaDoLink({ params: Promise.resolve({ token: "link-assinado-de-teste" }) }));
 

@@ -243,9 +243,14 @@ describe("OAuth de anúncios — entrada autenticada e agência", () => {
     expect((await conectar(post("connect"))).status).toBe(429);
     expect((await links(post("links"))).status).toBe(429);
     expect((await agencia(post("agency", "link=teste"))).status).toBe(429);
+    const retornoLimitado = retorno();
+    expect((await callback(retornoLimitado)).status).toBe(429);
+    expect(mock.limitar).toHaveBeenCalledWith("callback", retornoLimitado.nextUrl.searchParams.get("state"), retornoLimitado.headers);
     expect(mock.iniciar).not.toHaveBeenCalled();
     expect(mock.criarLink).not.toHaveBeenCalled();
     expect(mock.lerLink).not.toHaveBeenCalled();
+    expect(mock.rpc).not.toHaveBeenCalled();
+    expect(mock.trocar).not.toHaveBeenCalled();
   });
 
   it("só callback/agency e páginas de capacidade são públicos; nenhum prefixo abre APIs futuras", () => {

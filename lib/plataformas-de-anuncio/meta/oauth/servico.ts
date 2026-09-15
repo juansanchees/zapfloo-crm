@@ -3,7 +3,6 @@ import "server-only";
 import { z } from "zod";
 
 import { audit } from "@/lib/audit";
-import { authRateLimited } from "@/lib/auth/rate-limit";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
@@ -19,19 +18,8 @@ import {
   verificarLink,
 } from "./estado";
 
-/** Limite de abuso, nunca a autoridade de uso único (que vive no Postgres). */
-export async function limitarOAuth(superficie: string, identificador: string | null): Promise<boolean> {
-  try {
-    return await authRateLimited(`ads_oauth_${superficie}`, identificador, {
-      ip: 60,
-      id: 20,
-      windowSec: 60,
-    });
-  } catch {
-    // Sem contador, não começamos uma operação pública que grava credenciais.
-    return true;
-  }
-}
+// O proxy importa o módulo leve; os consumidores do serviço mantêm o contrato existente.
+export { limitarOAuth } from "./limite";
 
 const reciboSchema = z.object({
   status: z.literal("ok"),

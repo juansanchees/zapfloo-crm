@@ -6,7 +6,7 @@ import { configuracaoOAuth } from "@/lib/plataformas-de-anuncio/meta/oauth/confi
 import { trocarEValidarCodigo } from "@/lib/plataformas-de-anuncio/meta/oauth/cliente";
 import { verificarEstado, hashVinculoNavegador } from "@/lib/plataformas-de-anuncio/meta/oauth/estado";
 import { guardarConexaoOAuth, limitarOAuth } from "@/lib/plataformas-de-anuncio/meta/oauth/servico";
-import { nomeCookie, terminarOAuth } from "../_respostas";
+import { erroLimite, nomeCookie, terminarOAuth } from "../_respostas";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,8 +16,10 @@ const consumoSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  if (await limitarOAuth("callback", null)) return terminarOAuth(req, "erro", true);
   const parametros = req.nextUrl.searchParams;
+  // O state é hasheado pelo limitador: sem IP, a mesma tentativa continua limitada.
+  // State ausente não cria balde global e é recusado logo abaixo, antes do banco.
+  if (await limitarOAuth("callback", parametros.get("state"), req.headers)) return erroLimite(req);
   const estado = verificarEstado(parametros.get("state"));
   if (!estado) return terminarOAuth(req, "erro", true);
   const cookies = req.cookies.getAll(nomeCookie(estado.requestId));

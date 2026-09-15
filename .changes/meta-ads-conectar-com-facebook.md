@@ -13,3 +13,6 @@ O sistema mostra a validade informada pelo provedor e avisa quando é preciso
 conectar novamente. O cadastro manual existente continua disponível para quem
 administra a organização, inclusive nas instalações sem a configuração
 opcional de login com Facebook.
+
+As entradas públicas de conexão limitam tentativas excessivas e informam
+quando tentar novamente, sem consumir a autorização ao bloquear.

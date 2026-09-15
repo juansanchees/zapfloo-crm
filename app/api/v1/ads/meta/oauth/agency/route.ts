@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   if (!origemConfere(req)) return erroOrigem(req);
-  if (await limitarOAuth("agency", null)) return erroLimite(req);
+  if (await limitarOAuth("agency", null, req.headers)) return erroLimite(req);
   let token: string;
   try {
     const body = await lerCorpoLimitado(req, 8192);
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return falhaInicio(true);
   }
-  if (await limitarOAuth("agency_link", token)) return erroLimite(req);
+  if (await limitarOAuth("agency_link", token, req.headers)) return erroLimite(req);
   const link = await lerLinkAutorizado(token);
   if (!link) return falhaInicio(true);
   // Org e ator vêm do recibo assinado/lido do banco, nunca do form público.
