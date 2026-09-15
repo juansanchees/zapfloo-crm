@@ -69,6 +69,7 @@ function listaDoWorkflow(yml: string, chave: string): string[] {
 
 const SPEC_LEITOR_SITE = "onboarding-leitor-de-site.spec.ts";
 const SPEC_META_ADS = "meta-ads-oauth.spec.ts";
+const PREPARAR_CIFRA_META = 'psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q -f tests/e2e/helpers/meta-ads-cifra.sql';
 
 /**
  * Esta spec sai de LISTA porque precisa de dois receivers e preloads próprios.
@@ -90,6 +91,10 @@ function executaLeitorSite(passo: string): boolean {
 function executaMetaAds(passo: string): boolean {
   return /^ {8}run: (.+)$/m.exec(passo)?.[1]
     === `pnpm exec playwright test tests/e2e/${SPEC_META_ADS} --workers=1 --reporter=list`;
+}
+
+function preparaCifraMeta(passo: string): boolean {
+  return /^ {8}run: (.+)$/m.exec(passo)?.[1] === PREPARAR_CIFRA_META;
 }
 
 function pulaTeste(fonte: string): boolean {
@@ -131,6 +136,13 @@ function errosDaExecucaoDedicadaMeta(workflow: string, spec: string): string[] {
   if (!listaDoWorkflow(workflow, "SPECS_PARTE_3").includes(SPEC_META_ADS)) erros.push("Meta Ads fora da parte 3");
   if (listaDoWorkflow(workflow, "FORA_DO_CI").includes(SPEC_META_ADS)) erros.push("Meta Ads declarada fora do CI");
   const passos = passosDoWorkflow(workflow).filter(executaMetaAds);
+  const preparos = passosDoWorkflow(workflow).filter(preparaCifraMeta);
+  if (preparos.length !== 1) erros.push("falta preparar a cifra real no banco local");
+  for (const preparo of preparos) {
+    if (/^ {8}if: (.+)$/m.exec(preparo)?.[1] !== "matrix.parte == 3") erros.push("preparo da cifra pode ser pulado");
+    if (/^ {8}continue-on-error:\s*(?:true|["']true["'])\s*$/m.test(preparo)) erros.push("falha de cifra é ignorada");
+    if (passos[0] && workflow.indexOf(preparo) > workflow.indexOf(passos[0])) erros.push("cifra preparada depois do OAuth");
+  }
   if (passos.length !== 1) erros.push("falta uma execução dedicada real de Meta Ads");
   for (const passo of passos) {
     if (/^ {8}if: (.+)$/m.exec(passo)?.[1] !== "matrix.parte == 3") erros.push("execução Meta Ads pode ser pulada");
@@ -254,6 +266,33 @@ describe("cobertura do e2e no CI", () => {
 
   it("Meta Ads roda sem configuração e também com OAuth HTTPS sintético, sem skip", () => {
     expect(errosDaExecucaoDedicadaMeta(yml, specMetaAds)).toEqual([]);
+  });
+
+  it("Meta Ads prepara a cifra real antes da jornada, sem chave fixa ou rotação", () => {
+    const sql = readFileSync(path.join(DIR_SPECS, "helpers", "meta-ads-cifra.sql"), "utf8");
+    const executavel = sql.replace(/--[^\n]*/g, "");
+    expect(executavel).toMatch(/insert into private\.app_secrets/);
+    expect(executavel).toMatch(/gen_random_bytes\(32\)/);
+    expect(executavel).toMatch(/on conflict \(name\) do nothing/);
+    expect(executavel).toMatch(/set local role service_role/);
+    expect(executavel).toMatch(/public\.fn_encrypt_oauth\(controle\)/);
+    expect(executavel).toMatch(/public\.fn_decrypt_oauth\(cifrado\) is distinct from controle/);
+    expect(executavel).toMatch(/raise exception/);
+  });
+
+  it("SABOTAGEM Meta Ads: perder ou atrasar o preparo da cifra reprova", () => {
+    const preparo = passosDoWorkflow(yml).find(preparaCifraMeta);
+    expect(preparo, "controle positivo: passo de cifra local").toBeDefined();
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(preparo!, ""), specMetaAds))
+      .toContain("falta preparar a cifra real no banco local");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(preparo!, preparo!.replace("if: matrix.parte == 3", "if: false")), specMetaAds))
+      .toContain("preparo da cifra pode ser pulado");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(preparo!, `${preparo}\n        continue-on-error: true`), specMetaAds))
+      .toContain("falha de cifra é ignorada");
+    expect(errosDaExecucaoDedicadaMeta(`${yml.replace(preparo!, "")}\n${preparo}`, specMetaAds))
+      .toContain("cifra preparada depois do OAuth");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(PREPARAR_CIFRA_META, PREPARAR_CIFRA_META.replace("-v ON_ERROR_STOP=1 ", "")), specMetaAds))
+      .toContain("falta preparar a cifra real no banco local");
   });
 
   it("SABOTAGEM Meta Ads: apagar a execução OAuth reprova mesmo mantendo a spec na lista", () => {

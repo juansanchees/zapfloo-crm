@@ -866,6 +866,13 @@ jobs:
           SENTRY_DSN: "off"
         run: pnpm exec playwright test tests/e2e/onboarding-leitor-de-site.spec.ts --workers=1 --reporter=list
 
+      # O baseline não semeia dados de instalação. O kit faria isto com
+      # ensure_encryption_key; o CI precisa da mesma precondição para cifrar
+      # tokens de verdade. Alvo fixo local, chave aleatória, nunca de produção.
+      - name: Meta Ads — preparar cifra no banco local
+        if: matrix.parte == 3
+        run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q -f tests/e2e/helpers/meta-ads-cifra.sql
+
       # A rodada comum acima prova a instalação SEM configuração opcional.
       # Esta segunda invocação mede OAuth completo com Graph HTTP local. Só o
       # processo Next de teste recebe o preload; nenhum token real é utilizado.
