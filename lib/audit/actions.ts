@@ -320,6 +320,12 @@ export const AUDIT_ACTIONS = [
   // a tela de Meta Ads para de funcionar para todo mundo da organização, e a
   // trilha precisa dizer quem fez isso e quando.
   "ad_insights_connection.deleted",
+  // Recibos de autorização, sem bearer, code, state ou URL de capacidade.
+  "ad_insights_oauth.link_created",
+  "ad_insights_oauth.link_used",
+  "ad_insights_oauth.started",
+  "ad_insights_oauth.cancelled",
+  "ad_insights_oauth.failed",
   // A marca da ORGANIZAÇÃO (nome + cor) trocada em `organizations.settings.branding`
   // — mutação de TENANT, e por isso COM `organization_id` e com `resource_id` =
   // o uuid da org. É outra ação, e não `org.updated`, porque a pergunta que a

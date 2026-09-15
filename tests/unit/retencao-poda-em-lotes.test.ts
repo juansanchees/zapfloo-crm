@@ -190,6 +190,23 @@ describe("podarHistorico — o laço de lotes", () => {
     };
     await expect(podarHistorico(db, {})).rejects.toThrow(/permission denied/);
   });
+
+  it("expurga recibos de anúncios pelo relógio existente, em lote e com piso de um dia", async () => {
+    const chamadas: unknown[] = [];
+    let lote = 0;
+    const db: PodaDb = { async rpc(nome, args) {
+      if (nome !== "fn_ad_insights_oauth_expurgar") return { data: 0, error: null };
+      chamadas.push(args);
+      return { data: lote++ === 0 ? TAMANHO_DO_LOTE : 3, error: null };
+    } };
+    const resultado = await podarHistorico(db, {});
+    expect(resultado.ads_oauth_apagados).toBe(TAMANHO_DO_LOTE + 3);
+    expect(chamadas).toEqual([
+      { p_retencao_dias: 1, p_limite: TAMANHO_DO_LOTE },
+      { p_retencao_dias: 1, p_limite: TAMANHO_DO_LOTE },
+    ]);
+    expect(houveEfeito(resultado)).toBe(true);
+  });
 });
 
 describe("houveEfeito — as duas direções", () => {
@@ -203,6 +220,7 @@ describe("houveEfeito — as duas direções", () => {
     espelho_apagado: 0,
     // Quarta poda (migration 0190): os nonces de OAuth do Google já queimados.
     nonces_apagados: 0,
+    ads_oauth_apagados: 0,
     lotes_espelho: 0,
     espelho_tem_resto: false,
     retencao_fila_dias: RETENCAO_FILA_DIAS_PADRAO,
@@ -221,6 +239,10 @@ describe("houveEfeito — as duas direções", () => {
     // quarta poda (eu) a ligou ao laço e ao retorno e esqueceu do predicado —
     // um parágrafo abaixo do comentário que descreve exatamente esse defeito.
     expect(houveEfeito({ ...base, nonces_apagados: 1 })).toBe(true);
+  });
+
+  it("apagou somente recibo de anúncios → audita", () => {
+    expect(houveEfeito({ ...base, ads_oauth_apagados: 1 })).toBe(true);
   });
 
   it("apagou job → audita; apagou auditoria → audita", () => {

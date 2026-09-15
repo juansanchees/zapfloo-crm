@@ -130,33 +130,22 @@ export async function updateAdInsightsConnection(
     };
   }
 
-  const valores: Record<string, unknown> = {
-    organization_id: activeOrg.orgId,
-    platform: parsed.data.platform,
-    updated_by: authUser.id,
-  };
-
-  // `undefined` = não mexer; `null` = limpar a escolha de conta padrão. Os dois
-  // são pedidos diferentes e o schema os distingue (`.nullable().optional()`).
-  if (parsed.data.default_account_id !== undefined) {
-    valores.default_account_id = parsed.data.default_account_id;
-  }
-
+  let tokenCifrado: string | null = null;
   if (parsed.data.access_token) {
-    const cifrado = await encryptWebhookSecret(admin, parsed.data.access_token);
-    if (!cifrado) return { ok: false, error: "cifra_indisponivel" };
-    valores.access_token_encrypted = cifrado;
+    tokenCifrado = await encryptWebhookSecret(admin, parsed.data.access_token);
+    if (!tokenCifrado) return { ok: false, error: "cifra_indisponivel" };
   }
 
-  // `upsert` e não `update`: a linha não existe em quem nunca conectou, e um
-  // `update` casaria zero linhas devolvendo SUCESSO — a tela diria "salvo" e
-  // nada seria gravado. Mesmo modo de falha que a #144 mediu em `organizations`.
-  // O `onConflict` é o índice único `(organization_id, platform)` da 0214.
-  const { error } = await admin
-    .from("ad_insights_connections")
-    .upsert(valores, { onConflict: "organization_id,platform" });
-
-  if (error) return { ok: false, error: "erro_ao_gravar", details: error.message };
+  // A RPC faz o upsert e invalida consentimentos pendentes na mesma transação.
+  // Ela e o callback travam a organização primeiro: trocar token manualmente
+  // não pode ser desfeito pela volta atrasada de uma autorização anterior.
+  const { data: gravado, error } = await admin.rpc("fn_ad_insights_mutar_conexao", {
+    p_organization_id: activeOrg.orgId, p_user_id: authUser.id, p_operation: "save",
+    p_access_token_encrypted: tokenCifrado,
+    p_default_account_id: parsed.data.default_account_id ?? null,
+    p_alterar_conta: parsed.data.default_account_id !== undefined,
+  });
+  if (error || gravado?.status !== "ok") return { ok: false, error: "erro_ao_gravar" };
 
   const hdrs = await headers();
   await audit({
@@ -203,13 +192,10 @@ export async function disconnectAdInsights(): Promise<UpdateAdInsightsConnection
   if (await mfaEmDivida()) return { ok: false, error: "mfa_required" };
 
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("ad_insights_connections")
-    .delete()
-    .eq("organization_id", activeOrg.orgId)
-    .eq("platform", "meta_ads");
-
-  if (error) return { ok: false, error: "erro_ao_gravar", details: error.message };
+  const { data: removido, error } = await admin.rpc("fn_ad_insights_mutar_conexao", {
+    p_organization_id: activeOrg.orgId, p_user_id: authUser.id, p_operation: "disconnect",
+  });
+  if (error || removido?.status !== "ok") return { ok: false, error: "erro_ao_gravar" };
 
   const hdrs = await headers();
   await audit({

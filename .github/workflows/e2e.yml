@@ -410,6 +410,7 @@ jobs:
       # casos como proxy — e deixa os três processos com aproximadamente 17
       # minutos de suíte mais 8 minutos de setup. O teto continua em 30.
       SPECS_PARTE_3: >-
+        meta-ads-oauth.spec.ts
         agente-novo-e-uso.spec.ts capacidades-do-agente.spec.ts
         followup-builder.spec.ts i18n-espanhol-na-tela.spec.ts
         marca-logo.spec.ts navegacao.spec.ts prova-painel-provedores.spec.ts redesign-operacional.spec.ts
@@ -864,6 +865,21 @@ jobs:
           AUTH_RATE_LIMIT_LOGIN_IP: "1000"
           SENTRY_DSN: "off"
         run: pnpm exec playwright test tests/e2e/onboarding-leitor-de-site.spec.ts --workers=1 --reporter=list
+
+      # A rodada comum acima prova a instalação SEM configuração opcional.
+      # Esta segunda invocação mede OAuth completo com Graph HTTP local. Só o
+      # processo Next de teste recebe o preload; nenhum token real é utilizado.
+      - name: Meta Ads — consentimento com Graph HTTP local
+        if: matrix.parte == 3
+        env:
+          E2E_META_ADS_FIXTURE: "1"
+          E2E_LOCAL_HTTPS: "1"
+          META_APP_ID: "123456789012345"
+          META_APP_SECRET: "meta-ads-oauth-local-fixture-only"
+          META_LOGIN_CONFIG_ID: "987654321098765"
+          AUTH_RATE_LIMIT_LOGIN_IP: "1000"
+          SENTRY_DSN: "off"
+        run: pnpm exec playwright test tests/e2e/meta-ads-oauth.spec.ts --workers=1 --reporter=list
 
       - uses: actions/upload-artifact@v7
         if: failure()
