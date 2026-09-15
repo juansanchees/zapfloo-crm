@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Conexão de anúncios com Facebook e autorização por link",
+    "subtitle": "Estado durável, consentimento ligado ao navegador e leitura sem expor credencial",
+    "output": "meta-ads-oauth.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "ui", "label": "Pessoa" },
+    { "id": "server", "label": "Servidor" },
+    { "id": "db", "label": "Banco" },
+    { "id": "provider", "label": "Facebook" }
+  ],
+  "mainPath": ["configuracao", "link", "pagina", "consentimento", "callback", "conexao", "analise"],
+  "nodes": [
+    { "id": "configuracao", "lane": "ui", "col": 0, "type": "frontend", "label": "/app/settings/meta-ads / conectar, gerar link, escolher conta e desconectar" },
+    { "id": "link", "lane": "server", "col": 1, "type": "service", "label": "oauth/servico.ts / organização autenticada; link HMAC sem org/user no payload" },
+    { "id": "pagina", "lane": "ui", "col": 2, "type": "frontend", "label": "/ads/connect/[token] / proxy limita GET/HEAD antes do RSC; nome após validação" },
+    { "id": "recibos", "lane": "db", "col": 2, "type": "database", "label": "ad_insights_oauth_requests / uso único, expiração, vínculo, revogação; RPCs 0235" },
+    { "id": "consentimento", "lane": "provider", "col": 3, "type": "service", "label": "Facebook Login for Business / config_id; autorização ads_read" },
+    { "id": "callback", "lane": "server", "col": 4, "type": "service", "label": "/api/v1/ads/meta/oauth/callback / limite 429; state + cookie; consumo antes da troca" },
+    { "id": "conexao", "lane": "db", "col": 5, "type": "database", "label": "ad_insights_connections / token cifrado, conta padrão e validade real" },
+    { "id": "analise", "lane": "ui", "col": 6, "type": "frontend", "label": "/app/ads/meta / contas e campanhas; aviso de validade e reconexão" },
+    { "id": "resultado", "lane": "ui", "col": 5, "type": "frontend", "label": "/ads/connect/result / desfecho genérico sem dados do cliente" },
+    { "id": "auditoria", "lane": "db", "col": 6, "type": "database", "label": "api_audit_log → /app/audit / ciclo de autorização sem tokens" },
+    { "id": "retencao", "lane": "server", "col": 3, "type": "service", "label": "cron/data-retention / recibos vencidos há pelo menos 1 dia; lotes de 1000" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "configuracao", "to": "link", "label": "papel manager/admin; origem autenticada" },
+    { "id": "e2", "from": "link", "to": "recibos", "label": "emite capacidade com prazo no banco" },
+    { "id": "e3", "from": "link", "to": "pagina", "label": "endereço opaco compartilhado pelo operador" },
+    { "id": "e4", "from": "recibos", "to": "pagina", "label": "assinatura, prazo e permissão atual antes do nome" },
+    { "id": "e5", "from": "pagina", "to": "consentimento", "label": "POST agency: limite 429 antes do consumo; cookie Lax + sessão separada" },
+    { "id": "e6", "from": "configuracao", "to": "consentimento", "label": "POST connect para consentimento direto" },
+    { "id": "e7", "from": "consentimento", "to": "callback", "label": "code ou cancelamento + state assinado" },
+    { "id": "e8", "from": "recibos", "to": "callback", "label": "consumo atômico, vínculo e autorização vigente" },
+    { "id": "e9", "from": "callback", "to": "conexao", "label": "inspeção do token e gravação cifrada via RPC" },
+    { "id": "e10", "from": "conexao", "to": "analise", "label": "accounts/campaigns; prazo informado, nunca presumido" },
+    { "id": "e11", "from": "analise", "to": "configuracao", "label": "falha ou prazo vencido pede reconexão" },
+    { "id": "e12", "from": "callback", "to": "resultado", "label": "conectado/cancelado/erro; sem org ou usuário na URL" },
+    { "id": "e13", "from": "resultado", "to": "link", "label": "cancelamento/erro exige emissão de novo link pelo operador" },
+    { "id": "e14", "from": "configuracao", "to": "recibos", "label": "desconectar revoga sessões pendentes" },
+    { "id": "e15", "from": "link", "to": "auditoria", "label": "emissão e uso do link" },
+    { "id": "e16", "from": "callback", "to": "auditoria", "label": "resultado da autorização" },
+    { "id": "e17", "from": "retencao", "to": "recibos", "label": "fn_ad_insights_oauth_expurgar; folhas antes dos pais" },
+    { "id": "e18", "from": "retencao", "to": "auditoria", "label": "ads_oauth_apagados mede remoções reais" }
+  ],
+  "non_connections": [
+    "O link público não é sessão do CRM e não abre painel administrativo.",
+    "O token de leitura de anúncios não substitui o token de conversões ou a conexão de WhatsApp.",
+    "Sem escrita em campanhas, sem permissão business_management automática e sem prazo fixo de 60 dias."
+  ]
+}

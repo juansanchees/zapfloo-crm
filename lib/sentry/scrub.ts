@@ -25,7 +25,7 @@ type EventLike = {
   // `unknown` de propósito nos campos que o Sentry tipa mais largo que string
   // (`query_string` é `string | Record<string,string> | Array<[string,string]>`).
   // A checagem de `typeof === "string"` acontece em runtime, logo abaixo.
-  request?: { url?: unknown; query_string?: unknown; headers?: unknown };
+  request?: { url?: unknown; query_string?: unknown; headers?: unknown; data?: unknown };
   transaction?: string;
   contexts?: { trace?: { data?: Record<string, unknown> } };
   message?: string;
@@ -69,13 +69,16 @@ export function scrubMessage(input: string): string {
  *     transporte assina — então na instalação padrão o token do path é a credencial
  *     INTEIRA daquela rota. Publicá-lo na telemetria a anula.
  *   /team/accept-invite/<token>       — link de convite, aberto no browser.
+ *   /ads/connect/<token>             — autorização delegada de anúncios.
+ *     A página /result é genérica e não contém capacidade; preservá-la ajuda
+ *     a identificar o desfecho sem publicar o link que autoriza a conexão.
  *
  * O segmento do canal é `[^/]+` de propósito, não uma lista: canal novo ganha a
  * proteção sozinho, e este arquivo não precisa nomear provider (invariante 1 de
  * `docs/doctrine/restricao-de-canal.md`).
  */
 const CREDENTIAL_PATH =
-  /(\/api\/v1\/webhooks\/[^/?#\s]+\/|\/team\/accept-invite\/)[^/?#\s]+/g;
+  /(\/api\/v1\/webhooks\/[^/?#\s]+\/|\/team\/accept-invite\/|\/ads\/connect\/(?!result(?:[/?#\s]|$)))[^/?#\s]+/g;
 
 /**
  * Redige credencial de path e valor de query string, preservando as CHAVES da query.
@@ -129,6 +132,11 @@ function scrubHeaders(headers: unknown): void {
  */
 function scrubEventUrls<T extends EventLike>(event: T): T {
   if (event.request) {
+    // O formulário público leva a capacidade no body. Não basta redigir a
+    // URL: integrações que incluam request.data também devem omitir o link.
+    if (typeof event.request.url === "string" && /\/api\/v1\/ads\/[^/?#\s]+\/oauth\/agency(?:[?#]|$)/.test(event.request.url)) {
+      delete event.request.data;
+    }
     scrubHeaders(event.request.headers);
     if (typeof event.request.url === "string") {
       event.request.url = scrubUrl(event.request.url);
@@ -153,11 +161,11 @@ export const sentryScrubHooks = {
   beforeSend<T extends EventLike>(event: T): T {
     scrubEventUrls(event);
     if (typeof event.message === "string") {
-      event.message = scrubMessage(event.message);
+      event.message = scrubUrl(event.message);
     }
     if (event.exception?.values) {
       for (const ex of event.exception.values) {
-        if (ex.value) ex.value = scrubMessage(ex.value);
+        if (ex.value) ex.value = scrubUrl(ex.value);
       }
     }
     return event;
@@ -179,9 +187,13 @@ export const sentryScrubHooks = {
     if (typeof breadcrumb.message === "string") {
       breadcrumb.message = scrubUrl(breadcrumb.message);
     }
-    const url = breadcrumb.data?.url;
-    if (typeof url === "string" && breadcrumb.data) {
-      breadcrumb.data.url = scrubUrl(url);
+    // HTTP usa `url`; a integração de navegação do SDK usa `from` e `to`.
+    // Uma capacidade no path não pode sobreviver só por mudar de formato.
+    for (const key of ["url", "from", "to"]) {
+      const url = breadcrumb.data?.[key];
+      if (typeof url === "string" && breadcrumb.data) {
+        breadcrumb.data[key] = scrubUrl(url);
+      }
     }
     return breadcrumb;
   },
