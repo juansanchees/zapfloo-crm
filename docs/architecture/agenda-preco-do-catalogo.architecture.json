@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Preço do tipo de agendamento vem do catálogo",
+    "subtitle": "Vínculo opcional e tenant-safe; tipo sem produto continua válido",
+    "output": "agenda-preco-do-catalogo.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "ui", "label": "Configuração" },
+    { "id": "server", "label": "Contrato compartilhado" },
+    { "id": "db", "label": "Fonte da verdade" },
+    { "id": "runtime", "label": "Uso pelo agente" }
+  ],
+  "mainPath": ["tela", "rota", "tipo", "produto", "coletor", "ferramenta"],
+  "nodes": [
+    { "id": "tela", "lane": "ui", "col": 1, "type": "service", "label": "Tipos de agendamento / escolhe produto ou cria nome + preço" },
+    { "id": "rota", "lane": "server", "col": 2, "type": "service", "label": "API de tipos / valida UUID e escopo da organização" },
+    { "id": "tipo", "lane": "db", "col": 3, "type": "database", "label": "calendar_event_types.catalog_product_id / opcional" },
+    { "id": "produto", "lane": "db", "col": 4, "type": "database", "label": "catalog_products / única fonte de preço e moeda" },
+    { "id": "coletor", "lane": "server", "col": 5, "type": "service", "label": "listaTiposDeAtendimento / um recorte para tela e IA" },
+    { "id": "ferramenta", "lane": "runtime", "col": 6, "type": "service", "label": "agenda_list_event_types / preço definido ou ausência explícita" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "tela", "to": "rota", "label": "cria ou altera sem duplicar preço" },
+    { "id": "e2", "from": "rota", "to": "tipo", "label": "persiste vínculo opcional" },
+    { "id": "e3", "from": "tipo", "to": "produto", "label": "FK composta por organização impede vínculo cross-tenant" },
+    { "id": "e4", "from": "produto", "to": "coletor", "label": "nome, preço e moeda por join nomeado" },
+    { "id": "e5", "from": "tipo", "to": "coletor", "label": "tipo sem vínculo retorna preço ausente, sem falhar" },
+    { "id": "e6", "from": "coletor", "to": "ferramenta", "label": "IA recebe a mesma verdade da tela" },
+    { "id": "e7", "from": "ferramenta", "to": "tela", "label": "laço de retorno: ausência visível leva o operador ao vínculo" }
+  ],
+  "non_connections": [
+    "O tipo de agendamento não copia preço nem moeda: alterar o produto muda a única fonte da verdade.",
+    "Vínculo nulo não desativa o tipo nem impede o agendamento; ele declara sem preço definido.",
+    "O browser não escolhe organization_id e a FK composta recusa produto de outro tenant."
+  ]
+}

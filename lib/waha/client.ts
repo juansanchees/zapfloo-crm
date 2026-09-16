@@ -461,6 +461,20 @@ export class WahaClient {
     return res.json();
   }
 
+  /** Mostra ou encerra o indicador de digitação numa conversa. */
+  async setPresence(
+    session: string,
+    chatId: string,
+    presence: "typing" | "paused",
+  ): Promise<void> {
+    const res = await this.fetchComTeto(`${this.baseUrl}/api/${encodeURIComponent(session)}/presence`, {
+      method: "POST",
+      headers: { "X-Api-Key": this.apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId, presence }),
+    });
+    if (!res.ok) throw new Error(`waha_presence_${res.status}`);
+  }
+
   /**
    * Confere se o número existe no WhatsApp e devolve o chatId canônico.
    * Obrigatório antes de vcard em BR — o nono dígito do CRM nem sempre bate com o wa_id.

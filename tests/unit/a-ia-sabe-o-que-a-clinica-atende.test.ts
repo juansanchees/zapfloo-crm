@@ -74,6 +74,10 @@ function tipo(over: Partial<TipoDeAtendimento> = {}): TipoDeAtendimento {
     precisaConfirmacao: false,
     ativo: true,
     donoPadraoId: "22222222-2222-4222-8222-222222222222",
+    produtoId: null,
+    produtoNome: null,
+    precoCents: null,
+    moeda: null,
     bufferAntesMin: 0,
     bufferDepoisMin: 0,
     antecedenciaMinimaMin: 120,
@@ -143,6 +147,23 @@ describe("crm_list_event_types — a capacidade que faltava", () => {
     };
 
     expect(r.tipos[0]?.precisa_confirmacao).toBe(true);
+  });
+
+  it("devolve o preço da fonte vinculada e explicita quando ele não existe", async () => {
+    tiposRespondem({
+      ok: true,
+      tipos: [
+        tipo({ produtoId: "produto-1", produtoNome: "Consulta", precoCents: 18_000, moeda: "BRL" }),
+        tipo({ slug: "retorno", nome: "Retorno" }),
+      ],
+    });
+
+    const r = (await crmListEventTypes.handler({}, ctx)) as {
+      tipos: Array<{ preco_cents: number | null; moeda: string | null; preco_definido: boolean }>;
+    };
+
+    expect(r.tipos[0]).toMatchObject({ preco_cents: 18_000, moeda: "BRL", preco_definido: true });
+    expect(r.tipos[1]).toMatchObject({ preco_cents: null, moeda: null, preco_definido: false });
   });
 
   it("erro de leitura vira recusa NOMEADA, nunca lista vazia", async () => {

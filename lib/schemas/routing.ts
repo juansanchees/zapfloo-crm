@@ -25,6 +25,11 @@ export const routingConfigSchema = z.object({
   mode: z.enum(ROUTING_MODES).default("manual"),
   max_retries: z.number().int().min(0).max(20).default(5),
   backoff_seconds: z.number().int().min(1).max(3600).default(60),
+  owner_phone: z.string().trim().transform((valor) => valor.replace(/\D/g, ""))
+    .refine((valor) => valor === "" || (valor.length >= 8 && valor.length <= 15), {
+      message: "Informe um número de WhatsApp válido, com DDD e país.",
+    }).transform((valor) => (valor === "" ? null : valor)).nullable().default(null),
+  handoff_reminder_minutes: z.number().int().min(1).max(1440).default(10),
 });
 export type RoutingConfig = z.infer<typeof routingConfigSchema>;
 

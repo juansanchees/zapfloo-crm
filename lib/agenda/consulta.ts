@@ -603,6 +603,10 @@ export interface TipoDeAtendimento {
   ativo: boolean;
   /** Sem dono não há jornada, e sem jornada não há horário (`sem_responsavel`). */
   donoPadraoId: string | null;
+  produtoId: string | null;
+  produtoNome: string | null;
+  precoCents: number | null;
+  moeda: string | null;
   /**
    * Os quatro números da grade. Eles NÃO vão ao modelo — `horariosLivresDaOrg`
    * já os aplicou antes de devolver os horários, e repassá-los convidaria a IA a
@@ -643,7 +647,7 @@ export async function listaTiposDeAtendimento(
   let q = supabase
     .from("calendar_event_types")
     .select(
-      "id, name, slug, description, category, duration_minutes, location_kind, location_details, requires_confirmation, is_active, default_owner_user_id, buffer_before_minutes, buffer_after_minutes, minimum_notice_minutes, booking_window_days",
+      "id, name, slug, description, category, duration_minutes, location_kind, location_details, requires_confirmation, is_active, default_owner_user_id, catalog_product_id, buffer_before_minutes, buffer_after_minutes, minimum_notice_minutes, booking_window_days, catalog_products!calendar_event_types_catalog_product_org_fkey(nome, preco_cents, moeda)",
     )
     // Service role bypassa a RLS: este filtro é a única proteção no caminho da
     // ferramenta MCP (ver o cabeçalho do arquivo).
@@ -663,22 +667,30 @@ export async function listaTiposDeAtendimento(
 
   return {
     ok: true,
-    tipos: (data ?? []).map((t) => ({
-      id: String(t.id),
-      nome: String(t.name),
-      slug: String(t.slug),
-      descricao: t.description === null ? null : String(t.description),
-      categoria: String(t.category),
-      duracaoMin: Number(t.duration_minutes),
-      localKind: String(t.location_kind),
-      localDetalhes: t.location_details === null ? null : String(t.location_details),
-      precisaConfirmacao: Boolean(t.requires_confirmation),
-      ativo: Boolean(t.is_active),
-      donoPadraoId: t.default_owner_user_id === null ? null : String(t.default_owner_user_id),
-      bufferAntesMin: Number(t.buffer_before_minutes),
-      bufferDepoisMin: Number(t.buffer_after_minutes),
-      antecedenciaMinimaMin: Number(t.minimum_notice_minutes),
-      janelaDeAgendamentoDias: Number(t.booking_window_days),
-    })),
+    tipos: (data ?? []).map((t) => {
+      const produtoRaw = t.catalog_products;
+      const produto = Array.isArray(produtoRaw) ? produtoRaw[0] : produtoRaw;
+      return {
+        id: String(t.id),
+        nome: String(t.name),
+        slug: String(t.slug),
+        descricao: t.description === null ? null : String(t.description),
+        categoria: String(t.category),
+        duracaoMin: Number(t.duration_minutes),
+        localKind: String(t.location_kind),
+        localDetalhes: t.location_details === null ? null : String(t.location_details),
+        precisaConfirmacao: Boolean(t.requires_confirmation),
+        ativo: Boolean(t.is_active),
+        donoPadraoId: t.default_owner_user_id === null ? null : String(t.default_owner_user_id),
+        produtoId: t.catalog_product_id === null ? null : String(t.catalog_product_id),
+        produtoNome: produto?.nome == null ? null : String(produto.nome),
+        precoCents: produto?.preco_cents == null ? null : Number(produto.preco_cents),
+        moeda: produto?.moeda == null ? null : String(produto.moeda),
+        bufferAntesMin: Number(t.buffer_before_minutes),
+        bufferDepoisMin: Number(t.buffer_after_minutes),
+        antecedenciaMinimaMin: Number(t.minimum_notice_minutes),
+        janelaDeAgendamentoDias: Number(t.booking_window_days),
+      };
+    }),
   };
 }

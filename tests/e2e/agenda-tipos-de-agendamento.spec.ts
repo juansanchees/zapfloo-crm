@@ -114,6 +114,15 @@ test("crio um tipo COM responsável, e ele passa a ser marcável na Agenda", asy
   await page.getByTestId("novo-tipo-categoria").selectOption("retorno");
   await page.getByTestId("novo-tipo-duracao").fill("15");
 
+  // O preço continua pertencendo ao catálogo. A tela apenas cria/seleciona o
+  // produto e guarda o vínculo opcional no tipo de agendamento.
+  const produto = `Retorno catálogo E2E ${Date.now().toString().slice(-6)}`;
+  await page.getByRole("button", { name: "Criar um produto com nome e preço" }).click();
+  await page.getByLabel("Nome do novo produto").fill(produto);
+  await page.getByLabel("Preço do novo produto").fill("180,00");
+  await page.getByRole("button", { name: "Criar produto", exact: true }).click();
+  await expect(page.getByTestId("novo-tipo-produto")).toHaveValue(/.+/);
+
   // ⚠️ O RESPONSÁVEL É O PONTO DESTA SPEC. Sem ele o tipo nasce igual aos três
   // semeados: existe na lista e não produz horário nenhum.
   const dono = page.getByTestId("novo-tipo-dono");
@@ -126,6 +135,8 @@ test("crio um tipo COM responsável, e ele passa a ser marcável na Agenda", asy
   const linha = page.getByTestId("lista-de-tipos").getByRole("listitem").filter({ hasText: nome });
   await expect(linha, "criei o tipo e ele não apareceu na lista").toBeVisible({ timeout: 20_000 });
   await expect(linha).toContainText("15 min");
+  await expect(linha).toContainText(produto);
+  await expect(linha).toContainText("R$ 180,00");
   await expect(
     linha.getByText("sem responsável"),
     "criei COM responsável e a lista diz que está sem",
@@ -195,6 +206,7 @@ test("o tipo NASCE com responsável — e quem escolhe 'Definir depois' recebe a
   const rotulos = await seletor.locator("option").allInnerTexts();
   const dePessoa = rotulos.filter((r) => r !== "Sem responsável");
   expect(dePessoa.length, "o seletor não oferece pessoa nenhuma").toBeGreaterThan(0);
+  expect(dePessoa, "a própria conta logada não foi identificada como Você").toContain("Você");
   expect(
     dePessoa.every((r) => /^[0-9a-f]{8} · \w+$/.test(r.trim())),
     `o seletor ainda rotula por fragmento de UUID: ${JSON.stringify(dePessoa)}`,

@@ -77,8 +77,13 @@ export async function deriveMessageMedia(row: EventRow): Promise<HandlerResult> 
     if (!flag) return { consumer_key, status: "skipped", detail: "video_frames_disabled" };
   }
 
-  const markFailed = async () => {
-    await admin.from("messages").update({ media_derived_status: "failed" })
+  const markFailed = async (detail: string) => {
+    const code = codigoSeguroDaFalhaDeDerivacao(detail);
+    await admin.from("messages").update({
+      media_derived_status: "failed",
+      error_code: code,
+      error_message: `Não foi possível transcrever a mídia (${code})`,
+    })
       .eq("id", msg.id).eq("organization_id", msg.organization_id);
   };
 
@@ -163,10 +168,28 @@ export async function deriveMessageMedia(row: EventRow): Promise<HandlerResult> 
     const detail = err instanceof Error ? err.message : String(err);
     if (row.attempts >= DRAIN_MAX_ATTEMPTS - 1) {
       logger.error("[media-derive] failed permanently", { message_id: msg.id, detail });
-      await markFailed();
+      await markFailed(detail);
     }
     return { consumer_key, status: "error", detail };
   }
+}
+
+/** Reduz o erro a um código operacional sem guardar corpo, token ou mídia. */
+export function codigoSeguroDaFalhaDeDerivacao(detail: string): string {
+  const normalizado = detail.toLowerCase();
+  if (/\b401\b|unauthori[sz]ed|invalid[_ -]?api[_ -]?key/.test(normalizado)) {
+    return "media_transcription_unauthorized";
+  }
+  if (/\b429\b|quota|credit[_ -]?balance/.test(normalizado)) {
+    return "media_transcription_quota";
+  }
+  if (/timeout|timed out|aborterror/.test(normalizado)) {
+    return "media_transcription_timeout";
+  }
+  if (/storage_download_failed/.test(normalizado)) {
+    return "media_download_failed";
+  }
+  return "media_transcription_failed";
 }
 
 /**

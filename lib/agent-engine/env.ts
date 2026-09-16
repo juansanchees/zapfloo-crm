@@ -106,7 +106,10 @@ const envSchema = z.object({
   // Drain do event_log (mesmo banco pós-fusão) — lote, ritmo e backoff ocioso.
   CRM_DRAIN_BATCH_SIZE: z.coerce.number().int().positive().default(20),
   CRM_DRAIN_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
-  CRM_DRAIN_IDLE_INTERVAL_MS: z.coerce.number().int().positive().default(15_000),
+  // Mensagem nova pode chegar enquanto o drain está ocioso. Com 15s aqui + 8s
+  // de agrupamento, o turno nascia até 23s depois mesmo com o worker saudável.
+  // Dois segundos preservam polling leve e deixam o debounce governar a espera.
+  CRM_DRAIN_IDLE_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
   // Evento 'processing' órfão (crash do worker) volta a 'pending' após isto.
   CRM_EVENT_REAP_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
   // Drain dos HANDLERS do event_log (mídia, branding, follow-up…), à parte do

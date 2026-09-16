@@ -133,6 +133,9 @@ export const crmListEventTypes: McpToolDefinition<typeof tiposShape> = {
         // Traduzido: `in_person` é vocabulário de banco e o modelo repassa o que
         // recebe. `rotuloDoLocal` é o MESMO tradutor que a tela usa.
         onde: rotuloDoLocal(t.localKind, t.localDetalhes) ?? null,
+        preco_cents: t.precoCents,
+        moeda: t.moeda,
+        preco_definido: t.precoCents !== null,
         precisa_confirmacao: t.precisaConfirmacao,
       })),
     };

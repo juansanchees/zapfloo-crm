@@ -42,6 +42,8 @@ import { isServiceRoleConfigured } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export { rotuloDoAtendente } from "./rotulo-do-atendente";
+
 /**
  * Custo, medido em 127.0.0.1 contra o GoTrue local: é **uma requisição HTTP por
  * id único** (o dedupe reduz N, não o transforma em 1). ~60ms para 1, ~350ms para
