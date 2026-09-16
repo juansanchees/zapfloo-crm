@@ -32,11 +32,11 @@ describe("estado e revisão da fonte site", () => {
     expect(siteFoiRevisado({ site: revisado })).toBe(true);
     expect(siteFoiRevisado({ site: { ...revisado, revisadoPor: undefined } })).toBe(false);
   });
-  it("site é FAQ revisável, sem cadastro genérico que finja uma leitura", () => {
+  it("site entra por endereço e continua sendo FAQ revisável", () => {
     expect(canonizarTipoDeFonte(" SITE ")).toBe("site");
-    expect(aceitaTextoColado("site")).toBe(true);
+    expect(aceitaTextoColado("site")).toBe(false);
     expect(ePerguntaEResposta("site")).toBe(true);
-    expect(permiteCadastroManual("site")).toBe(false);
+    expect(permiteCadastroManual("site")).toBe(true);
     expect(permiteCadastroManual("faq")).toBe(true);
   });
 });

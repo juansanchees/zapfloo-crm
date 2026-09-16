@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { after, type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth/require-role";
-import { fail, ok } from "@/lib/api/wrappers";
-import { traduzir } from "@/lib/i18n/dicionario";
+
 import { audit } from "@/lib/audit";
-import { reenfileirarSite, processarFonteDoSite } from "@/lib/onboarding/site/servico";
+import { fail, ok } from "@/lib/api/wrappers";
+import { requireRole } from "@/lib/auth/require-role";
+import { traduzir } from "@/lib/i18n/dicionario";
+import { processarFonteDoSite, reenfileirarSite } from "@/lib/onboarding/site/servico";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

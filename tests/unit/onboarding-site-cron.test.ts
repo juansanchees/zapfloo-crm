@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const doubles = vi.hoisted(() => ({
   secrets: { INTERNAL_SECRET: "segredo-local-do-teste", INTERNAL_CRON_SECRET: "" },
-  recuperar: vi.fn(), reenfileirar: vi.fn(), processar: vi.fn(), requireRole: vi.fn(), after: vi.fn(),
+  recuperar: vi.fn(), reenfileirar: vi.fn(), enfileirarAcervo: vi.fn(), processar: vi.fn(), requireRole: vi.fn(), after: vi.fn(),
 }));
 vi.mock("@/lib/env", () => ({ env: doubles.secrets }));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn() } }));
@@ -15,11 +15,14 @@ vi.mock("next/server", async (original) => ({ ...await original<typeof import("n
 vi.mock("@/lib/onboarding/site/servico", () => ({
   recuperarLeiturasDoSite: doubles.recuperar,
   reenfileirarSite: doubles.reenfileirar,
-  processarSiteDaOrganizacao: doubles.processar,
+  enfileirarSiteDoAcervo: doubles.enfileirarAcervo,
+  processarFonteDoSite: doubles.processar,
 }));
 
 import { GET as cron } from "@/app/api/v1/cron/onboarding-sites/route";
 import { POST as retry } from "@/app/api/v1/onboarding/site/retry/route";
+import { POST as adicionarSite } from "@/app/api/v1/ai/knowledge/sources/site/route";
+import { POST as relerSite } from "@/app/api/v1/ai/knowledge/sources/site/retry/route";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -28,6 +31,27 @@ beforeEach(() => {
   doubles.recuperar.mockResolvedValue({ enfileiradas: 1, processadas: 1 });
   doubles.requireRole.mockResolvedValue({ ok: true, org: { orgId: "org-confiavel" }, user: { idioma: "pt-BR" } });
   doubles.reenfileirar.mockResolvedValue(true);
+  doubles.enfileirarAcervo.mockResolvedValue(sourceId);
+});
+
+describe("site no acervo", () => {
+  it("usa a organização do guard, enfileira sem esperar rede e processa em after", async () => {
+    const response = await adicionarSite(new NextRequest("http://localhost/api/v1/ai/knowledge/sources/site", {
+      method: "POST", body: JSON.stringify({ url: "https://clinica.example/" }),
+    }));
+    expect(response.status).toBe(201);
+    expect(doubles.enfileirarAcervo).toHaveBeenCalledWith("org-confiavel", "https://clinica.example/");
+    expect(doubles.processar).not.toHaveBeenCalled();
+    await doubles.after.mock.calls[0]![0]();
+    expect(doubles.processar).toHaveBeenCalledWith("org-confiavel", sourceId);
+  });
+
+  it("releitura da biblioteca usa a fonte pedida, sem aceitar tenant no body", async () => {
+    expect((await relerSite(request({ source_id: sourceId, organization_id: "outra" }))).status).toBe(422);
+    const response = await relerSite(request({ source_id: sourceId }));
+    expect(response.status).toBe(200);
+    expect(doubles.reenfileirar).toHaveBeenCalledWith("org-confiavel", sourceId);
+  });
 });
 
 describe("fila de leitura do site", () => {
@@ -82,7 +106,7 @@ describe("tentar ler de novo", () => {
     expect(doubles.processar).not.toHaveBeenCalled();
     expect(doubles.after).toHaveBeenCalledTimes(1);
     await doubles.after.mock.calls[0]![0]();
-    expect(doubles.processar).toHaveBeenCalledWith("org-confiavel");
+    expect(doubles.processar).toHaveBeenCalledWith("org-confiavel", sourceId);
   });
   it("não reinicia leitura em andamento, revisada ou esgotada", async () => {
     doubles.reenfileirar.mockResolvedValue(false);

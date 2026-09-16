@@ -130,7 +130,7 @@ export function KnowledgeSourceCard({
   async function relerSite(): Promise<void> {
     setRelendo(true);
     try {
-      await apiClient.post("/api/v1/onboarding/site/retry", { source_id: source.id });
+      await apiClient.post("/api/v1/ai/knowledge/sources/site/retry", { source_id: source.id });
       onMudou();
     } catch (err) {
       showApiError(err);
@@ -224,8 +224,8 @@ export function KnowledgeSourceCard({
           </p>
         ) : null}
         <div className="flex items-baseline justify-between">
-          <span className="text-text-muted">{t("Preparado")}</span>
-          <span>{formatRelative(source.last_indexed_at, tagDoIdioma, t)}</span>
+          <span className="text-text-muted">{t(tipo === "site" ? "Última leitura" : "Preparado")}</span>
+          <span>{formatRelative(site?.concluidaEm ?? source.ingested_at ?? source.last_indexed_at, tagDoIdioma, t)}</span>
         </div>
         <div className="flex items-baseline justify-between">
           <span className="text-text-muted">{t("Trechos que o agente encontra")}</span>
@@ -271,7 +271,7 @@ export function KnowledgeSourceCard({
             {isReindexing ? t("Preparando…") : t("Preparar de novo")}
           </Button>
         ) : null}
-        {falhouLeitura && site && site.tentativas < 3 ? (
+        {tipo === "site" && site && !arquivado && !lendoSite && !revisandoSite ? (
           <Button
             variant="secondary"
             size="sm"
@@ -279,15 +279,8 @@ export function KnowledgeSourceCard({
             onClick={relerSite}
             data-testid={`material-reler-site-${source.id}`}
           >
-            {relendo ? t("Solicitando nova leitura…") : t("Tentar ler o site de novo")}
+            {relendo ? t("Solicitando nova leitura…") : t("Ler de novo")}
           </Button>
-        ) : null}
-        {falhouLeitura && site && site.tentativas >= 3 ? (
-          <p className="text-xs text-text-muted">
-            {t(
-              "Não consegui ler este site após três tentativas. Você pode adicionar o conteúdo manualmente em outro material.",
-            )}
-          </p>
         ) : null}
         {tipo === "site" ? (
           <Button variant="ghost" size="sm" asChild>
@@ -319,7 +312,7 @@ export function KnowledgeSourceCard({
           </>
         ) : null}
 
-        {aceitaTextoColado(tipo) &&
+        {(aceitaTextoColado(tipo) || tipo === "site") &&
         !arquivado &&
         !lendoSite &&
         !revisandoSite &&

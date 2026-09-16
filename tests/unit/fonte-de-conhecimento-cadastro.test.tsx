@@ -80,6 +80,7 @@ function material(over: Partial<SourceRow> = {}): SourceRow {
     is_active: true,
     source_metadata: {},
     active_kb_version_id: "kbv-1",
+    ingested_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...over,
@@ -136,6 +137,20 @@ describe("NovoMaterialDialog — o tipo escolhido é o tipo enviado", () => {
 
     await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
     expect(corpoEnviado(spy)).toMatchObject({ source_type: "documento" });
+  });
+
+  it('tipo "site" pede endereço e usa o leitor seguro do acervo', async () => {
+    const spy = dublarFetch();
+    render(<NovoMaterialDialog aberto onFechar={() => {}} onCriado={() => {}} podeIndexar />);
+    fireEvent.click(screen.getByTestId("material-tipo-site"));
+    fireEvent.change(screen.getByTestId("material-endereco"), {
+      target: { value: "https://clinica.example/" },
+    });
+    fireEvent.click(screen.getByTestId("material-criar"));
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/v1/ai/knowledge/sources/site");
+    expect(corpoEnviado(spy)).toEqual({ url: "https://clinica.example/" });
+    expect(screen.queryByTestId("material-nome")).toBeNull();
   });
 
   for (const tipo of ["conversas", "catalogo"] as const) {

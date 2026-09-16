@@ -181,7 +181,7 @@
       "col": 0,
       "type": "frontend",
       "label": "Skills",
-      "sublabel": "tela + import .zip (app/app/ai/skills)"
+      "sublabel": "tela + import .zip + gatilhos + contagem de quase ativações (sem conteúdo)"
     },
     {
       "id": "skillcatalog",
@@ -190,6 +190,14 @@
       "type": "backend",
       "label": "Skill catalog",
       "sublabel": "skill_versions + pointers"
+    },
+    {
+      "id": "skilltelemetry",
+      "lane": "skills",
+      "col": 3,
+      "type": "database",
+      "label": "skill_activations",
+      "sublabel": "hard = entrou; probe = quase entrou, sem texto da conversa"
     },
     {
       "id": "routerscreen",
@@ -389,6 +397,18 @@
       "toSide": "right",
       "route": "outside-right",
       "labelDy": 40
+    },
+    {
+      "id": "turn-skilltelemetry",
+      "from": "turn",
+      "to": "skilltelemetry",
+      "label": "grava hard/probe por skill"
+    },
+    {
+      "id": "skilltelemetry-skillsscreen",
+      "from": "skilltelemetry",
+      "to": "skillsscreen",
+      "label": "mostra apenas a contagem de probe"
     },
     {
       "id": "routerscreen-routerconfig",

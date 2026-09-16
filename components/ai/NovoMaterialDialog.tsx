@@ -41,6 +41,7 @@ import {
   TIPOS_DE_FONTE,
   TIPO_DE_FONTE_POR_ID,
   aceitaArquivo,
+  aceitaEndereco,
   ePerguntaEResposta,
   ePreenchidoPorRotina,
   permiteCadastroManual,
@@ -78,6 +79,7 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
   const [nome, setNome] = useState("");
   const [conteudo, setConteudo] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [endereco, setEndereco] = useState("");
   const [enviando, setEnviando] = useState(false);
   const inputArquivo = useRef<HTMLInputElement>(null);
 
@@ -88,10 +90,30 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
     setNome("");
     setConteudo("");
     setArquivo(null);
+    setEndereco("");
     if (inputArquivo.current) inputArquivo.current.value = "";
   }
 
   async function criar(): Promise<void> {
+    if (aceitaEndereco(tipo)) {
+      if (!endereco.trim()) {
+        toast.error(t("Informe o endereço do site."));
+        return;
+      }
+      setEnviando(true);
+      try {
+        await apiClient.post("/api/v1/ai/knowledge/sources/site", { url: endereco });
+        toast.success(t("Site adicionado. A leitura segura começou e você poderá conferir tudo antes de usar."));
+        limpar();
+        onCriado();
+        onFechar();
+      } catch (err) {
+        showApiError(err);
+      } finally {
+        setEnviando(false);
+      }
+      return;
+    }
     const nomeLimpo = nome.trim();
     if (nomeLimpo.length < 2) {
       toast.error(t("Dê um nome ao material — é assim que você o encontra depois."));
@@ -188,7 +210,27 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
             ) : null}
           </div>
 
-          <div className="space-y-2">
+          {aceitaEndereco(tipo) ? (
+            <div className="space-y-2">
+              <Label htmlFor="material-endereco">{t("Endereço do site")}</Label>
+              <Input
+                id="material-endereco"
+                data-testid="material-endereco"
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="https://seunegocio.com.br"
+                value={endereco}
+                onChange={(e) => setEndereco(e.target.value)}
+                disabled={enviando}
+              />
+              <p className="text-xs text-text-muted">
+                {t("Lemos as páginas públicas com a mesma proteção usada na configuração inicial. Nada entra no atendimento sem a sua conferência.")}
+              </p>
+            </div>
+          ) : null}
+
+          {!aceitaEndereco(tipo) ? <div className="space-y-2">
             <Label htmlFor="material-nome">{t("Nome do material")}</Label>
             <Input
               id="material-nome"
@@ -198,7 +240,7 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
               onChange={(e) => setNome(e.target.value)}
               disabled={enviando || porRotina}
             />
-          </div>
+          </div> : null}
 
           {aceitaArquivo(tipo) ? (
             <div className="space-y-2">
@@ -220,7 +262,7 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
             </div>
           ) : null}
 
-          {!porRotina && !arquivo ? (
+          {!porRotina && !arquivo && !aceitaEndereco(tipo) ? (
             <div className="space-y-2">
               <Label htmlFor="material-conteudo">
                 {aceitaArquivo(tipo) ? t("…ou cole o texto aqui") : t("Conteúdo")}

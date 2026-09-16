@@ -31,6 +31,7 @@ export interface SourceRow {
   is_active: boolean;
   source_metadata: Record<string, unknown>;
   active_kb_version_id: string | null;
+  ingested_at: string | null;
   created_at: string;
   updated_at: string;
 }

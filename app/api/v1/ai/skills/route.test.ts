@@ -16,6 +16,9 @@ import type { AuthUser } from "@/lib/auth/types";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/ai/skills/quase-ativacoes", () => ({
+  contarQuaseAtivacoes: vi.fn(async () => ({ "frete-gratis": 3 })),
+}));
 
 const ORG_ID = "22222222-2222-4222-8222-222222222222";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -25,7 +28,7 @@ interface Stubs {
   orgPointersError?: unknown;
   platformPointers?: Array<{ name: string; version_id: string }>;
   platformPointersError?: unknown;
-  versions?: Array<{ id: string; description: string; forked_from_version_id: string | null }>;
+  versions?: Array<{ id: string; description: string; forked_from_version_id: string | null; matcher?: unknown }>;
   versionsError?: unknown;
 }
 
@@ -117,9 +120,9 @@ describe("GET /api/v1/ai/skills", () => {
           { name: "reativacao-d30", version_id: "ver-plat-2" },
         ],
         versions: [
-          { id: "ver-org-1", description: "Explica frete (fork).", forked_from_version_id: "ver-plat-1" },
-          { id: "ver-plat-1", description: "Explica frete (plataforma).", forked_from_version_id: null },
-          { id: "ver-plat-2", description: "Reativação D+30.", forked_from_version_id: null },
+          { id: "ver-org-1", description: "Explica frete (fork).", forked_from_version_id: "ver-plat-1", matcher: { any_keywords: ["caro", "desconto", "valor"] } },
+          { id: "ver-plat-1", description: "Explica frete (plataforma).", forked_from_version_id: null, matcher: { any_keywords: ["frete"] } },
+          { id: "ver-plat-2", description: "Reativação D+30.", forked_from_version_id: null, matcher: { any_keywords: ["sumiu"] } },
         ],
       }) as never,
     );
@@ -139,6 +142,8 @@ describe("GET /api/v1/ai/skills", () => {
         version_id: "ver-org-1",
         source: "catalog",
         updated_at: "2026-07-20T00:00:00Z",
+        triggers: ["caro", "desconto", "valor"],
+        near_misses: 3,
       },
     ]);
     // frete-gratis já instalada pela org → sai do catálogo; só reativacao-d30 sobra.

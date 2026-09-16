@@ -201,7 +201,9 @@ export async function PATCH(
       requestId,
     });
   }
-  if (input.items !== undefined && tipo !== null && !aceitaTextoColado(tipo)) {
+  // O site entra por endereço, mas as perguntas encontradas continuam
+  // editáveis na revisão antes de virarem conhecimento ativo.
+  if (input.items !== undefined && tipo !== null && tipo !== "site" && !aceitaTextoColado(tipo)) {
     return fail(
       "unprocessable_entity",
       "Este material não é preenchido por texto colado — envie o arquivo ou aguarde a rotina que o alimenta.",
