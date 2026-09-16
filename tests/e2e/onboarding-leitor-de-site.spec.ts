@@ -164,6 +164,7 @@ async function irAteFunil(page: Page, canal: string) {
   await page.getByRole("button", { name: "Continuar para conexão", exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding\/connect-whatsapp/);
   await page.locator("#canal-teste").selectOption(canal);
+  await page.getByRole("button", { name: /Atender só os meus números de teste/ }).click();
   await page.getByRole("button", { name: "Ativar para estes números de teste", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Ativação restrita confirmada", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Continuar", exact: true }).click();

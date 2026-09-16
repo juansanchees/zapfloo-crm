@@ -25,6 +25,8 @@ import {
 import { escolherPacotePorTexto, sugerirFunil, type Sugestao } from "@/lib/onboarding/sugerir-funil";
 import { requireOnboardingCtx, patchOnboardingState, loadOnboardingState, OnboardingError } from "./_shared";
 import { lerContextoDoSite } from "@/lib/onboarding/site/servico";
+import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
+import { posicaoEntre } from "@/lib/pipelines/pipeline-editing";
 
 /** O funil que o gatilho semeou — o que a pessoa tem antes deste passo. */
 export interface QuadroAtual {
@@ -182,6 +184,7 @@ export type ResultadoDoQuadro =
        * erros, e a pessoa precisa entender o que fazer.
        */
       erro: string;
+      motivo?: "funil_com_negocios";
     };
 
 /**
@@ -253,7 +256,11 @@ export async function aplicarQuadro(formData: FormData): Promise<ResultadoDoQuad
 
   const r = (resposta ?? {}) as { ok?: boolean; motivo?: string; quantos?: number };
   if (!r.ok) {
-    return { ok: false, erro: explicarRecusa(r.motivo, r.quantos) };
+    return {
+      ok: false,
+      erro: explicarRecusa(r.motivo, r.quantos),
+      ...(r.motivo === "funil_com_negocios" ? { motivo: "funil_com_negocios" as const } : {}),
+    };
   }
 
   const origem = String(formData.get("origem") ?? "pacote") === "ia" ? "ia" : "pacote";
@@ -275,6 +282,101 @@ export async function aplicarQuadro(formData: FormData): Promise<ResultadoDoQuad
     metadata: { origem, etapas: proposta.etapas.length, nome: proposta.nome },
   });
 
+  redirect("/onboarding");
+}
+
+/**
+ * Cria OUTRO funil com a proposta aprovada quando o atual já contém clientes.
+ * O funil atual não recebe UPDATE nem DELETE: esta é precisamente a saída segura
+ * para a recusa de `fn_aplicar_quadro_do_onboarding`.
+ */
+export async function criarNovoQuadro(formData: FormData): Promise<ResultadoDoQuadro> {
+  let ctx;
+  try {
+    ctx = await requireOnboardingCtx();
+  } catch (err) {
+    if (err instanceof OnboardingError) return { ok: false, erro: "Sua sessão expirou. Entre de novo." };
+    throw err;
+  }
+
+  let bruta: unknown;
+  try {
+    bruta = JSON.parse(String(formData.get("quadro") ?? "null"));
+  } catch {
+    return { ok: false, erro: "Não consegui ler o quadro. Recarregue a página e tente de novo." };
+  }
+  const proposta = normalizarProposta((bruta ?? {}) as { nome?: unknown; etapas?: unknown });
+  const veredito = validarProposta(proposta);
+  if (!veredito.ok) return { ok: false, erro: veredito.erros.join(" ") };
+
+  const admin = createAdminClient();
+  const { data: funis, error: erroFunis } = await admin
+    .from("crm_pipelines")
+    .select("id, name, slug, position, is_archived")
+    .eq("organization_id", ctx.orgId)
+    .order("position");
+  if (erroFunis) return { ok: false, erro: "Não consegui conferir os funis existentes." };
+
+  const ativos = (funis ?? []).filter((funil) => !funil.is_archived);
+  const plano = await autorizarQuantidade(ctx.orgId, "funis", ativos.length + 1);
+  if (!plano.ok) return { ok: false, erro: mensagemDePlano(plano) };
+
+  const nomes = new Set(ativos.map((funil) => String(funil.name).trim().toLocaleLowerCase("pt-BR")));
+  let nome = proposta.nome;
+  for (let numero = 2; nomes.has(nome.trim().toLocaleLowerCase("pt-BR")); numero += 1) {
+    nome = `${proposta.nome} ${numero}`;
+  }
+  const pipelineId = crypto.randomUUID();
+  const slug = slugDeNome(nome, (funis ?? []).map((funil) => String(funil.slug)), "funil");
+  const position = posicaoEntre(Number(funis?.at(-1)?.position ?? 0), null);
+  const { error: erroFunil } = await admin.from("crm_pipelines").insert({
+    id: pipelineId,
+    organization_id: ctx.orgId,
+    name: nome,
+    slug,
+    position,
+    is_default: ativos.length === 0,
+  });
+  if (erroFunil) return { ok: false, erro: "Não consegui criar o novo funil. Tente de novo." };
+
+  const { error: erroEtapas } = await admin.from("crm_stages").insert(
+    etapasParaGravar({ ...proposta, nome }, slugDeNome).map((etapa) => ({
+      organization_id: ctx.orgId,
+      pipeline_id: pipelineId,
+      name: etapa.nome,
+      slug: etapa.slug,
+      position: etapa.position,
+      is_won: etapa.is_won,
+      is_lost: etapa.is_lost,
+      agent_stage_hint: etapa.agent_stage_hint,
+    })),
+  );
+  if (erroEtapas) {
+    await admin.from("crm_pipelines").delete().eq("id", pipelineId).eq("organization_id", ctx.orgId);
+    return { ok: false, erro: "Não consegui criar as colunas. Nada foi salvo — tente de novo." };
+  }
+
+  const origem = String(formData.get("origem") ?? "pacote") === "ia" ? "ia" : "pacote";
+  try {
+    await patchOnboardingState(ctx.orgId, {
+      funil: { pipeline_id: pipelineId, origem, etapas: proposta.etapas.length },
+    });
+  } catch {
+    // A etapa ainda não chegou a nenhum consumidor e não tem leads. Compensar
+    // mantém a promessa da tela: ou o funil novo existe inteiro e o wizard
+    // avança, ou nada fica abandonado para uma segunda tentativa duplicar.
+    await admin.from("crm_stages").delete().eq("pipeline_id", pipelineId).eq("organization_id", ctx.orgId);
+    await admin.from("crm_pipelines").delete().eq("id", pipelineId).eq("organization_id", ctx.orgId);
+    return { ok: false, erro: "Não consegui concluir a criação. Nada foi salvo — tente de novo." };
+  }
+  await audit({
+    action: "onboarding.quadro_montado",
+    actorUserId: ctx.userId,
+    organizationId: ctx.orgId,
+    resourceType: "crm_pipeline",
+    resourceId: pipelineId,
+    metadata: { origem, etapas: proposta.etapas.length, nome, modo: "novo_sem_tocar_no_atual" },
+  });
   redirect("/onboarding");
 }
 

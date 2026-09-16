@@ -4,7 +4,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
-import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { nomesDosAtendentes, rotuloDoAtendente } from "@/lib/users/nome-do-atendente";
 
 import { TiposDeAgendamentoClient, type TipoRow } from "./_client";
 
@@ -42,11 +42,11 @@ export default async function TiposDeAgendamentoPage() {
   const podeEditar = user.is_platform_admin || ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
 
   const supabase = await createClient();
-  const [{ data: tipos }, { data: pessoas }] = await Promise.all([
+  const [{ data: tipos }, { data: pessoas }, { data: produtos }] = await Promise.all([
     supabase
       .from("calendar_event_types")
       .select(
-        "id, name, slug, description, category, duration_minutes, location_kind, location_details, default_owner_user_id, requires_confirmation, is_active",
+        "id, name, slug, description, category, duration_minutes, location_kind, location_details, default_owner_user_id, catalog_product_id, requires_confirmation, is_active, catalog_products!calendar_event_types_catalog_product_org_fkey(nome, preco_cents, moeda)",
       )
       .eq("organization_id", activeOrg.orgId)
       .order("is_active", { ascending: false })
@@ -56,6 +56,12 @@ export default async function TiposDeAgendamentoPage() {
       .select("user_id, role")
       .eq("organization_id", activeOrg.orgId)
       .is("revoked_at", null),
+    supabase
+      .from("catalog_products")
+      .select("id, nome, preco_cents, moeda, ativo")
+      .eq("organization_id", activeOrg.orgId)
+      .eq("ativo", true)
+      .order("nome"),
   ]);
 
   // O NOME DE GENTE, e não o fragmento de UUID.
@@ -70,8 +76,38 @@ export default async function TiposDeAgendamentoPage() {
   // configuração que não precisa dela.
   //
   // Numa VPS sem `SUPABASE_SERVICE_ROLE_KEY` ele devolve Map vazio por decisão
-  // declarada, e o fallback abaixo volta ao rótulo de hoje. Degrada, não some.
+  // declarada. O fallback continua legível ("Sem nome — papel"), nunca volta a
+  // expor um pedaço de UUID. Para a própria conta, `requireAuth()` já traz o
+  // nome validado da sessão e é a fonte do aviso de Perfil.
   const nomes = await nomesDosAtendentes((pessoas ?? []).map((p) => String(p.user_id)));
+  const tiposParaTela: TipoRow[] = (tipos ?? []).map((tipo) => {
+    const produto = Array.isArray(tipo.catalog_products)
+      ? (tipo.catalog_products[0] ?? null)
+      : tipo.catalog_products;
+    return {
+      id: String(tipo.id),
+      name: String(tipo.name),
+      slug: String(tipo.slug),
+      description: tipo.description === null ? null : String(tipo.description),
+      category: String(tipo.category),
+      duration_minutes: Number(tipo.duration_minutes),
+      location_kind: String(tipo.location_kind),
+      location_details: tipo.location_details === null ? null : String(tipo.location_details),
+      default_owner_user_id:
+        tipo.default_owner_user_id === null ? null : String(tipo.default_owner_user_id),
+      catalog_product_id:
+        tipo.catalog_product_id === null ? null : String(tipo.catalog_product_id),
+      catalog_products: produto
+        ? {
+            nome: String(produto.nome),
+            preco_cents: Number(produto.preco_cents),
+            moeda: String(produto.moeda),
+          }
+        : null,
+      requires_confirmation: Boolean(tipo.requires_confirmation),
+      is_active: Boolean(tipo.is_active),
+    };
+  });
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -82,14 +118,26 @@ export default async function TiposDeAgendamentoPage() {
         </p>
       </header>
       <TiposDeAgendamentoClient
-        tiposIniciais={(tipos ?? []) as TipoRow[]}
+        tiposIniciais={tiposParaTela}
         pessoas={(pessoas ?? []).map((p) => ({
           id: String(p.user_id),
           papel: String(p.role),
-          nome:
-            nomes.get(String(p.user_id)) ?? `${String(p.user_id).slice(0, 8)} · ${String(p.role)}`,
+          nome: rotuloDoAtendente({
+            userId: String(p.user_id),
+            usuarioAtualId: user.id,
+            fullName: nomes.get(String(p.user_id)),
+            role: String(p.role),
+            t,
+          }),
         }))}
         usuarioAtualId={user.id}
+        perfilAtualSemNome={!user.full_name?.trim()}
+        produtosIniciais={(produtos ?? []).map((produto) => ({
+          id: String(produto.id),
+          nome: String(produto.nome),
+          preco_cents: Number(produto.preco_cents),
+          moeda: String(produto.moeda),
+        }))}
         podeEditar={podeEditar}
       />
     </div>

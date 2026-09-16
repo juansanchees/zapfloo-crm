@@ -20,11 +20,13 @@
     { "id": "client", "lane": "humano", "col": 2, "type": "frontend", "label": "FunisClient", "sublabel": "criar · renomear · ↑↓ · padrão · arquivar" },
     { "id": "hooks", "lane": "humano", "col": 3, "type": "frontend", "label": "usePipelines", "sublabel": "só mutations — a leitura é do servidor" },
     { "id": "board", "lane": "humano", "col": 4, "type": "frontend", "label": "/app/pipelines/[id]", "sublabel": "o quadro do funil escolhido" },
+    { "id": "onboarding_funil", "lane": "humano", "col": 1, "type": "frontend", "label": "Onboarding / recusa do funil ocupado", "sublabel": "oferece criar outro sem tocar nos clientes atuais" },
 
     { "id": "post", "lane": "borda", "col": 2, "type": "api", "label": "POST /api/v1/pipelines", "sublabel": "funil + 4 etapas · compensa se as etapas falharem" },
     { "id": "patch", "lane": "borda", "col": 3, "type": "api", "label": "PATCH /api/v1/pipelines/[id]", "sublabel": "nome · descrição · ordem · padrão" },
     { "id": "delete", "lane": "borda", "col": 4, "type": "api", "label": "DELETE /api/v1/pipelines/[id]", "sublabel": "arquiva; ?definitivo=1 só no caso limpo" },
     { "id": "funis", "lane": "borda", "col": 1, "type": "service", "label": "_funis.ts", "sublabel": "lerFunis · lerDependencias · corpo · conflitoDoBanco" },
+    { "id": "onboarding_novo", "lane": "borda", "col": 1, "type": "service", "label": "criarNovoQuadro", "sublabel": "limite do plano · nome único · compensação das etapas" },
 
     { "id": "regras", "lane": "regra", "col": 2, "type": "service", "label": "pipeline-editing.ts", "sublabel": "as recusas, em português, citando o nome" },
     { "id": "slug", "lane": "regra", "col": 1, "type": "service", "label": "stage-editing (reuso)", "sublabel": "chaveDeNome dobra acento · slugDeNome" },
@@ -69,7 +71,12 @@
     { "id": "e27", "from": "delete", "to": "pipelines", "label": "is_archived=true (ou delete no caso limpo)" },
     { "id": "e28", "from": "trigger", "to": "pipelines", "label": "toda org nova nasce com 'Pedidos' — a razão de a clínica precisar desta tela" },
     { "id": "e29", "from": "trigger", "to": "stages", "label": "8 etapas de e-commerce" },
-    { "id": "e30", "from": "board", "to": "stages", "label": "as colunas do quadro" }
+    { "id": "e30", "from": "board", "to": "stages", "label": "as colunas do quadro" },
+    { "id": "e31", "from": "onboarding_funil", "to": "onboarding_novo", "label": "ação explícita depois da recusa funil_com_negocios" },
+    { "id": "e32", "from": "onboarding_novo", "to": "pipelines", "label": "insere outro funil na mesma organização; não atualiza o atual" },
+    { "id": "e33", "from": "onboarding_novo", "to": "stages", "label": "insere o modelo e compensa o funil se alguma etapa falhar" },
+    { "id": "e34", "from": "onboarding_novo", "to": "audit", "label": "onboarding.quadro_montado / modo novo_sem_tocar_no_atual" },
+    { "id": "e35", "from": "pipelines", "to": "onboarding_funil", "label": "laço de retorno: o funil novo permite avançar sem apagar o ocupado" }
   ],
   "cards": [
     {

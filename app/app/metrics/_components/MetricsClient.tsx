@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { rotuloDoAtendente } from "@/lib/users/rotulo-do-atendente";
 
 const ALL = "__all__";
 
@@ -34,8 +35,18 @@ function formatDuration(seconds: number | null): string {
   return rest === 0 ? `${m}min` : `${m}min ${rest}s`;
 }
 
-function attendantLabel(a: AttendantMetric, t: (texto: string) => string): string {
-  return a.name ?? a.email ?? `${t("Atendente")} ${a.user_id.slice(0, 8)}`;
+function attendantLabel(
+  a: AttendantMetric,
+  currentUserId: string,
+  t: (texto: string) => string,
+): string {
+  return rotuloDoAtendente({
+    userId: a.user_id,
+    usuarioAtualId: currentUserId,
+    fullName: a.name,
+    role: "agent",
+    t,
+  });
 }
 
 interface Props {
@@ -74,8 +85,13 @@ export function MetricsClient({ canCompare, currentUserId }: Props) {
                 .filter((m) => m.role !== "viewer")
                 .map((m) => (
                   <SelectItem key={m.user_id} value={m.user_id}>
-                    {m.full_name ?? m.email ?? m.user_id.slice(0, 8)}
-                    {m.user_id === currentUserId ? ` ${t("(você)")}` : ""}
+                    {rotuloDoAtendente({
+                      userId: m.user_id,
+                      usuarioAtualId: currentUserId,
+                      fullName: m.full_name,
+                      role: m.role,
+                      t,
+                    })}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -142,10 +158,7 @@ export function MetricsClient({ canCompare, currentUserId }: Props) {
                 {metrics.attendants.map((a) => (
                   <TableRow key={a.user_id}>
                     <TableCell className="font-medium">
-                      {attendantLabel(a, t)}
-                      {a.user_id === currentUserId ? (
-                        <span className="text-muted-foreground"> {t("(você)")}</span>
-                      ) : null}
+                      {attendantLabel(a, currentUserId, t)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{a.won}</TableCell>
                     <TableCell className="text-right tabular-nums">{a.lost}</TableCell>

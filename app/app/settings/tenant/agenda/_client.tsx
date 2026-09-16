@@ -4,12 +4,14 @@ import { useT } from "@/hooks/i18n/useT";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { Button } from "@/components/ui/button";
 import { LOCAIS_DE_ATENDIMENTO } from "@/lib/agenda/locais";
 import { apiClient } from "@/lib/api/client";
+import { randomId } from "@/lib/random-id";
 
 export interface TipoRow {
   id: string;
@@ -21,6 +23,8 @@ export interface TipoRow {
   location_kind: string;
   location_details: string | null;
   default_owner_user_id: string | null;
+  catalog_product_id: string | null;
+  catalog_products: { nome: string; preco_cents: number; moeda: string } | null;
   requires_confirmation: boolean;
   is_active: boolean;
 }
@@ -60,6 +64,14 @@ interface Rascunho {
   duration_minutes: number;
   location_kind: string;
   default_owner_user_id: string;
+  catalog_product_id: string;
+}
+
+interface ProdutoRow {
+  id: string;
+  nome: string;
+  preco_cents: number;
+  moeda: string;
 }
 
 const VAZIO: Rascunho = {
@@ -68,16 +80,27 @@ const VAZIO: Rascunho = {
   duration_minutes: 30,
   location_kind: "in_person",
   default_owner_user_id: "",
+  catalog_product_id: "",
 };
+
+function dinheiro(precoCents: number, moeda: string): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: moeda }).format(
+    precoCents / 100,
+  );
+}
 
 export function TiposDeAgendamentoClient({
   tiposIniciais,
   pessoas,
+  produtosIniciais,
+  perfilAtualSemNome,
   podeEditar,
   usuarioAtualId,
 }: {
   tiposIniciais: TipoRow[];
   pessoas: Array<{ id: string; papel: string; nome: string }>;
+  produtosIniciais: ProdutoRow[];
+  perfilAtualSemNome: boolean;
   podeEditar: boolean;
   usuarioAtualId: string;
 }) {
@@ -108,6 +131,38 @@ export function TiposDeAgendamentoClient({
   }));
   const [salvando, setSalvando] = React.useState(false);
   const [editandoId, setEditandoId] = React.useState<string | null>(null);
+  const [produtos, setProdutos] = React.useState(produtosIniciais);
+  const [criandoProduto, setCriandoProduto] = React.useState(false);
+  const [novoProduto, setNovoProduto] = React.useState({ nome: "", preco: "" });
+
+  async function criarProduto(): Promise<void> {
+    const preco = Number(novoProduto.preco.replace(",", "."));
+    if (!novoProduto.nome.trim() || !Number.isFinite(preco) || preco < 0) {
+      toast.error(t("Informe o nome e um preço válido."));
+      return;
+    }
+    setSalvando(true);
+    try {
+      const codigo = `AGENDA-${randomId().slice(0, 8).toUpperCase()}`;
+      const resposta = await apiClient.post<{ data: ProdutoRow }>("/api/v1/products", {
+        codigo,
+        nome: novoProduto.nome.trim(),
+        preco_cents: Math.round(preco * 100),
+        controla_estoque: false,
+        quantidade: 0,
+        ativo: true,
+      });
+      setProdutos((atuais) => [...atuais, resposta.data].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setRascunho((r) => ({ ...r, catalog_product_id: resposta.data.id }));
+      setNovoProduto({ nome: "", preco: "" });
+      setCriandoProduto(false);
+      toast.success(t("Produto criado e selecionado."));
+    } catch (err) {
+      showApiError(err);
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   async function comErro(acao: () => Promise<unknown>, mensagem: string) {
     setSalvando(true);
@@ -127,6 +182,14 @@ export function TiposDeAgendamentoClient({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4" data-testid="tipos-de-agendamento-config">
+      {perfilAtualSemNome ? (
+        <p className="text-sm text-text-muted">
+          {t("Seu perfil ainda está sem nome.")} {" "}
+          <Link href="/app/settings/profile" className="underline underline-offset-2">
+            {t("Abrir Configurações › Perfil")}
+          </Link>
+        </p>
+      ) : null}
       {podeEditar ? (
         <div>
           {criando ? (
@@ -145,6 +208,7 @@ export function TiposDeAgendamentoClient({
                       ...(rascunho.default_owner_user_id
                         ? { default_owner_user_id: rascunho.default_owner_user_id }
                         : {}),
+                      catalog_product_id: rascunho.catalog_product_id || null,
                     }),
                   t("Tipo de agendamento criado."),
                 );
@@ -166,6 +230,50 @@ export function TiposDeAgendamentoClient({
                   className="rounded-md border border-border bg-surface-elevated p-2 text-sm text-text outline-hidden focus:border-border-strong"
                 />
               </label>
+              <label className="flex flex-col gap-1 text-xs font-medium text-text-muted sm:col-span-2">
+                {t("Produto e preço")}
+                <select
+                  data-testid="novo-tipo-produto"
+                  value={rascunho.catalog_product_id}
+                  onChange={(e) => setRascunho((r) => ({ ...r, catalog_product_id: e.target.value }))}
+                  className="rounded-md border border-border bg-surface-elevated p-2 text-sm text-text outline-hidden focus:border-border-strong"
+                >
+                  <option value="">{t("Sem preço definido")}</option>
+                  {produtos.map((produto) => (
+                    <option key={produto.id} value={produto.id}>
+                      {produto.nome} · {dinheiro(produto.preco_cents, produto.moeda)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="sm:col-span-2">
+                {criandoProduto ? (
+                  <div className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-[1fr_10rem_auto]">
+                    <input
+                      aria-label={t("Nome do novo produto")}
+                      value={novoProduto.nome}
+                      onChange={(e) => setNovoProduto((p) => ({ ...p, nome: e.target.value }))}
+                      placeholder={t("Nome do produto")}
+                      className="rounded-md border border-border bg-surface-elevated p-2 text-sm text-text"
+                    />
+                    <input
+                      aria-label={t("Preço do novo produto")}
+                      inputMode="decimal"
+                      value={novoProduto.preco}
+                      onChange={(e) => setNovoProduto((p) => ({ ...p, preco: e.target.value }))}
+                      placeholder="0,00"
+                      className="rounded-md border border-border bg-surface-elevated p-2 text-sm text-text"
+                    />
+                    <Button type="button" size="sm" disabled={salvando} onClick={() => void criarProduto()}>
+                      {t("Criar produto")}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCriandoProduto(true)}>
+                    {t("Criar um produto com nome e preço")}
+                  </Button>
+                )}
+              </div>
               <label className="flex flex-col gap-1 text-xs font-medium text-text-muted">
                 {t("Categoria")}
                 <select
@@ -271,6 +379,11 @@ export function TiposDeAgendamentoClient({
               </span>
               <span className="text-xs tabular-nums text-text-muted">{tipo.duration_minutes} min</span>
               <span className="text-xs text-text-muted">{t(rotuloDe(LOCAIS, tipo.location_kind))}</span>
+              <span className="text-xs font-medium text-text-muted" data-testid={`preco-${tipo.id}`}>
+                {tipo.catalog_products
+                  ? `${tipo.catalog_products.nome} · ${dinheiro(tipo.catalog_products.preco_cents, tipo.catalog_products.moeda)}`
+                  : t("Sem preço definido")}
+              </span>
               {!tipo.default_owner_user_id ? (
                 // O aviso existe porque o sintoma é MUDO: sem dono, a tela de
                 // marcar simplesmente não mostra horário, sem dizer por quê.
@@ -374,6 +487,7 @@ export function TiposDeAgendamentoClient({
                         // voltar — que é o laço de retorno correto.
                         default_owner_user_id:
                           String(dados.get("default_owner_user_id") ?? "") || null,
+                        catalog_product_id: String(dados.get("catalog_product_id") ?? "") || null,
                       }),
                     "Tipo alterado.",
                   );
@@ -413,6 +527,22 @@ export function TiposDeAgendamentoClient({
                     {pessoas.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-muted">
+                  {t("Produto e preço")}
+                  <select
+                    name="catalog_product_id"
+                    defaultValue={tipo.catalog_product_id ?? ""}
+                    data-testid={`editar-produto-${tipo.id}`}
+                    className="rounded-md border border-border bg-surface-elevated p-2 text-sm text-text"
+                  >
+                    <option value="">{t("Sem preço definido")}</option>
+                    {produtos.map((produto) => (
+                      <option key={produto.id} value={produto.id}>
+                        {produto.nome} · {dinheiro(produto.preco_cents, produto.moeda)}
                       </option>
                     ))}
                   </select>

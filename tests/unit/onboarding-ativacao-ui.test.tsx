@@ -1,11 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-const f = vi.hoisted(() => ({ activate: vi.fn(), refresh: vi.fn(), push: vi.fn(), get: vi.fn() }));
+const f = vi.hoisted(() => ({ activate: vi.fn(), refresh: vi.fn(), push: vi.fn(), get: vi.fn(), patch: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: f.refresh, push: f.push }) }));
 vi.mock("@/app/actions/onboarding/concluir", () => ({ ativarAgenteParaTeste: f.activate }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
-vi.mock("@/lib/api/client", () => ({ apiClient: { get: f.get } }));
+vi.mock("@/lib/api/client", () => ({ apiClient: { get: f.get, patch: f.patch } }));
 import { AutorizacaoRestrita } from "@/app/onboarding/connect-whatsapp/_autorizacao";
 const id = "11111111-1111-4111-8111-111111111111";
 const reference = { expected_context: "a".repeat(64), expected_revision: 1, expected_version_id: id, run_id: id };
@@ -16,7 +16,10 @@ it("conexão e seleção não ativam; último botão confirma mesma referência 
   render(<QueryClientProvider client={new QueryClient()}><AutorizacaoRestrita reference={reference} channels={[{ id, name: "Canal QA", status: "WORKING", mode: "pre_go_live", count: 1 }]} /></QueryClientProvider>);
   const ativar = screen.getByRole("button", { name: "Ativar para estes números de teste" });
   expect(ativar).toBeDisabled();
-  fireEvent.change(screen.getByLabelText("Canal para o teste restrito"), { target: { value: id } });
+  fireEvent.change(screen.getByLabelText("Canal que a IA vai atender"), { target: { value: id } });
+  expect(screen.getByRole("button", { name: /Atender só os meus números de teste/ })).toHaveAttribute("aria-pressed", "false");
+  expect(screen.getByRole("button", { name: /Atender todos os clientes/ })).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(screen.getByRole("button", { name: /Atender só os meus números de teste/ }));
   expect(ativar).toBeEnabled();
   expect(f.activate).not.toHaveBeenCalled();
   fireEvent.click(ativar);
@@ -25,9 +28,24 @@ it("conexão e seleção não ativam; último botão confirma mesma referência 
   expect(f.push).not.toHaveBeenCalled();
   expect(ativar).toBeDisabled();
 });
+it("oferece as duas escolhas com o mesmo peso e libera todos pela mesma API canônica", async () => {
+  f.get.mockResolvedValue({ data: { mode: "pre_go_live", test_phone_numbers: ["+5511999998888"] } });
+  f.activate.mockResolvedValue({ ok: true, agent_id: id, version_id: id, channel_session_id: id, activated_at: "2026-09-16T12:00:00Z" });
+  f.patch.mockResolvedValue({ data: { mode: "open", test_phone_numbers: [] } });
+  render(<QueryClientProvider client={new QueryClient()}><AutorizacaoRestrita reference={reference} channels={[{ id, name: "Canal QA", status: "WORKING", mode: "pre_go_live", count: 1 }]} /></QueryClientProvider>);
+  fireEvent.change(screen.getByLabelText("Canal que a IA vai atender"), { target: { value: id } });
+  const teste = screen.getByRole("button", { name: /Atender só os meus números de teste/ });
+  const todos = screen.getByRole("button", { name: /Atender todos os clientes/ });
+  expect(teste.className).toBe(todos.className);
+  fireEvent.click(todos);
+  fireEvent.click(screen.getByRole("button", { name: "Ativar e atender todos" }));
+  await waitFor(() => expect(f.patch).toHaveBeenCalledWith(`/api/v1/channel-sessions/${id}/ai-access`, { mode: "open", test_phone_numbers: [] }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Agente ativado para todos os clientes");
+});
 it("canal público não oferece reconfiguração ou ativação no wizard", () => {
   render(<AutorizacaoRestrita reference={reference} channels={[{ id, name: "Canal público", status: "WORKING", mode: "open", count: 1 }]} />);
-  fireEvent.change(screen.getByLabelText("Canal para o teste restrito"), { target: { value: id } });
-  expect(screen.getByRole("button", { name: "Ativar para estes números de teste" })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Canal que a IA vai atender"), { target: { value: id } });
+  fireEvent.click(screen.getByRole("button", { name: /Atender todos os clientes/ }));
+  expect(screen.getByRole("button", { name: "Ativar e atender todos" })).toBeDisabled();
   expect(screen.queryByRole("button", { name: "Configurar acesso da IA" })).toBeNull();
 });
