@@ -151,8 +151,9 @@ test("ensaio sem escolhas técnicas retoma preparação e só revisa resposta co
       expect(requests).toHaveLength(1);
       await other.close();
     } else {
-      await expect(page.getByRole("alert").filter({ hasText: "Não foi possível acessar a IA agora. Tente novamente mais tarde; se persistir, entre em contato com o suporte." })).toBeVisible();
+      await expect(page.getByRole("alert").filter({ hasText: "A IA da plataforma está indisponível no momento; já avisamos o suporte." })).toBeVisible();
       await expect(page.getByRole("button", { name: "Revisar resposta", exact: true })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Continuar para conexão com a IA desligada", exact: true })).toBeEnabled();
       await expect(page.getByLabel("Mensagem de exemplo")).toHaveValue(/Olá, como funciona/);
     }
     const { data: agents, error: agentError } = await svc.from("ai_agents").select("is_active,is_default,published_version_id").eq("organization_id", org);
