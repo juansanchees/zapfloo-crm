@@ -69,6 +69,10 @@ export interface EstadoDeElegibilidade {
   preGoLiveAtivo: boolean;
   /** O telefone da conversa está na lista durável de testadores do canal. */
   numeroDeTesteAutorizado: boolean;
+  /** Marco da última liberação/configuração explícita da IA no canal. */
+  aiStartedAt?: Date | null;
+  /** Instante da mensagem que poderia disparar o turno. Ausente preserva legado. */
+  messageReceivedAt?: Date | null;
   /** Agora, injetável para teste. */
   agora: Date;
   /** Janela de validade da autorização (`AI_ALLOWLIST_TTL_DAYS` em ms). */
@@ -80,6 +84,7 @@ export type MotivoDeElegibilidade =
   | "force_human"
   | "conversa_silenciada"
   | "conversa_de_humano"
+  | "mensagem_anterior_a_liberacao"
   | "fora_da_lista_de_teste"
   | "numero_de_teste"
   | "sem_autorizacao"
@@ -118,6 +123,10 @@ export function decidirElegibilidade(e: EstadoDeElegibilidade): DecisaoDeElegibi
   }
   if (e.assigneeKind === "user") {
     return { permite: false, motivo: "conversa_de_humano", bloqueioPorAllowlist: false };
+  }
+  if (e.aiStartedAt != null && e.messageReceivedAt != null
+    && e.messageReceivedAt.getTime() < e.aiStartedAt.getTime()) {
+    return { permite: false, motivo: "mensagem_anterior_a_liberacao", bloqueioPorAllowlist: false };
   }
 
   if (e.modo === "open") {
@@ -160,12 +169,13 @@ export function ttlDaAutorizacaoMs(env: Record<string, string | undefined>): num
  * entende: `Date`, `Infinity` (o `'infinity'` do Postgres, que o `pg` devolve
  * como string e o supabase-js também) ou `null`. String de data inválida → `null`.
  */
-export function normalizarInstante(v: Date | string | number | null | undefined): Date | number | null {
+export function normalizarInstante(v: unknown): Date | number | null {
   if (v === null || v === undefined) return null;
   if (v instanceof Date) return v;
   if (typeof v === "number") return v;
   if (v === "infinity") return Number.POSITIVE_INFINITY;
   if (v === "-infinity") return Number.NEGATIVE_INFINITY;
+  if (typeof v !== "string") return null;
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -186,10 +196,14 @@ export function montarEstadoDeElegibilidade(raw: {
   assigneeKind: string | null;
   botSilencedUntil: Date | string | number | null | undefined;
   aiAuthorizedAt: Date | string | null | undefined;
+  aiStartedAt?: unknown;
+  messageReceivedAt?: unknown;
   agora: Date;
   ttlMs: number;
 }): EstadoDeElegibilidade {
   const autorizadoEm = normalizarInstante(raw.aiAuthorizedAt);
+  const inicioDaIa = normalizarInstante(raw.aiStartedAt);
+  const mensagemEm = normalizarInstante(raw.messageReceivedAt);
   const modo = lerModoDoGate(raw.aiGate);
   const preGoLive = modo === "allowlist" && raw.aiGateMode === AI_GATE_PRE_GO_LIVE;
   const numerosDeTeste = lerNumerosDeTeste({ ai_test_phone_numbers: raw.aiTestPhoneNumbers });
@@ -202,6 +216,8 @@ export function montarEstadoDeElegibilidade(raw: {
     preGoLiveAtivo: preGoLive,
     numeroDeTesteAutorizado:
       preGoLive && numeroPodeTestar(raw.contactPhoneNumber, numerosDeTeste),
+    aiStartedAt: inicioDaIa instanceof Date ? inicioDaIa : null,
+    messageReceivedAt: mensagemEm instanceof Date ? mensagemEm : null,
     agora: raw.agora,
     ttlMs: raw.ttlMs,
   };

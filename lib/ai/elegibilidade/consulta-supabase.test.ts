@@ -21,6 +21,22 @@ function adminStub(resposta: { data: unknown; error: { message: string } | null 
   return { from: vi.fn(() => chain) } as never;
 }
 
+function adminStubComMensagem(conversa: unknown, criadaEm: string | null) {
+  return {
+    from: vi.fn((table: string) => {
+      const resposta = table === "messages"
+        ? { data: criadaEm == null ? null : { created_at: criadaEm }, error: null }
+        : { data: conversa, error: null };
+      const chain = {
+        select: () => chain,
+        eq: () => chain,
+        maybeSingle: () => Promise.resolve(resposta),
+      };
+      return chain;
+    }),
+  } as never;
+}
+
 function linha(over: Record<string, unknown> = {}) {
   return {
     bot_silenced_until: null,
@@ -40,6 +56,27 @@ describe("decidirElegibilidadeDaConversaViaSupabase", () => {
       ttlMs: TTL,
     });
     expect(d).toEqual({ permite: true, motivo: "gate_aberto", bloqueioPorAllowlist: false });
+  });
+
+  it("mensagem recebida antes da liberação continua sem resposta", async () => {
+    const d = await decidirElegibilidadeDaConversaViaSupabase(
+      adminStubComMensagem(
+        linha({ channel_sessions: { metadata: { ai_gate: "open", ai_gate_started_at: AGORA.toISOString() } } }),
+        new Date(AGORA.getTime() - 1_000).toISOString(),
+      ),
+      { organizationId: ORG, conversationId: CONV, messageId: "33333333-3333-4333-8333-333333333333", agora: AGORA, ttlMs: TTL },
+    );
+    expect(d).toMatchObject({ permite: false, motivo: "mensagem_anterior_a_liberacao" });
+  });
+
+  it("falha fechada quando o evento aponta para uma mensagem que não existe", async () => {
+    await expect(decidirElegibilidadeDaConversaViaSupabase(
+      adminStubComMensagem(
+        linha({ channel_sessions: { metadata: { ai_gate: "open", ai_gate_started_at: AGORA.toISOString() } } }),
+        null,
+      ),
+      { organizationId: ORG, conversationId: CONV, messageId: "33333333-3333-4333-8333-333333333333", agora: AGORA, ttlMs: TTL },
+    )).rejects.toThrow("mensagem não encontrada");
   });
 
   it("canal 'allowlist' + contato NÃO autorizado: NÃO permite (bloqueioPorAllowlist)", async () => {

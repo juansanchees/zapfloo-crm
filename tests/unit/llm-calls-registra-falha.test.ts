@@ -18,12 +18,18 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/crypto/aes_gcm", () => ({
+  byteaToBuffer: () => Buffer.from(""),
+  decryptKey: () => "chave-byok-da-org",
+}));
+
 import { runModelCall } from "@/lib/agent-engine/edge/llm/run-model-call";
 
 const ORG = "22222222-2222-4222-8222-222222222222";
 
-function poolQueGrava() {
+function poolQueGrava(opcoes: { byok?: boolean } = {}) {
   const inserts: Array<{ sql: string; params: unknown[] }> = [];
+  const incidents: Array<{ sql: string; params: unknown[] }> = [];
   const query = vi.fn(async (sql: string, params: unknown[] = []) => {
     if (sql.includes("settings->'llm'")) {
       return {
@@ -41,14 +47,22 @@ function poolQueGrava() {
       };
     }
     if (sql.includes("from ai_purpose_bindings")) return { rows: [] };
-    if (sql.includes("from ai_provider_credentials")) return { rows: [] };
+    if (sql.includes("from ai_provider_credentials")) return {
+      rows: opcoes.byok
+        ? [{ api_key_encrypted: "x", api_key_iv: "y", api_key_tag: "z" }]
+        : [],
+    };
     if (sql.includes("insert into llm_calls")) {
       inserts.push({ sql, params });
       return { rows: [{ id: "call-1" }] };
     }
+    if (sql.includes("insert into incidents")) {
+      incidents.push({ sql, params });
+      return { rows: [] };
+    }
     return { rows: [] };
   });
-  return { pool: { query } as never, inserts };
+  return { pool: { query } as never, inserts, incidents };
 }
 
 /** Registry cuja fábrica devolve um modelo que SEMPRE falha do jeito pedido. */
@@ -139,6 +153,43 @@ describe("a classificação separa os problemas que exigem conversas diferentes"
     expect(await codigoDe(Object.assign(new Error("nope"), { statusCode: 403 }))).toBe(
       "credencial_recusada",
     );
+  });
+
+  it("preserva type/code do provedor e abre um único incidente global quando o saldo da OpenAI acaba", async () => {
+    const erro = Object.assign(new Error("request failed"), {
+      statusCode: 429,
+      responseBody: JSON.stringify({ error: { type: "insufficient_quota", code: "credit_balance_exhausted" } }),
+    });
+    const { pool, inserts, incidents } = poolQueGrava();
+    await runModelCall(
+      pool,
+      { openaiApiKey: CHAVE_SENTINELA },
+      { tenantId: ORG, purpose: "onboarding_rehearsal", model: "gpt-5.6-luna", llmOverride: { provider: "openai", credentialId: null }, selectionMode: "explicit", messages: [{ role: "user", content: "oi" }] },
+      { registry: registryQueFalha(erro) },
+    ).catch(() => {});
+    const linha = inserts[0]!;
+    expect(linha.params).toContain("insufficient_quota");
+    expect(linha.params).toContain("credit_balance_exhausted");
+    expect(incidents).toHaveLength(1);
+    expect(incidents[0]!.sql).toMatch(/not exists/i);
+    expect(String(incidents[0]!.params[0])).toContain("A IA parou porque o saldo da conta da OpenAI acabou.");
+    expect(JSON.stringify({ inserts, incidents })).not.toContain(CHAVE_SENTINELA);
+  });
+
+  it("saldo esgotado numa BYOK da organização não vira pane global da plataforma", async () => {
+    const erro = Object.assign(new Error("request failed"), {
+      statusCode: 429,
+      responseBody: JSON.stringify({ error: { type: "insufficient_quota", code: "credit_balance_exhausted" } }),
+    });
+    const { pool, inserts, incidents } = poolQueGrava({ byok: true });
+    await runModelCall(
+      pool,
+      { openaiApiKey: CHAVE_SENTINELA },
+      { tenantId: ORG, purpose: "agent_turn", model: "gpt-5.6-luna", llmOverride: { provider: "openai", credentialId: null }, selectionMode: "explicit", messages: [{ role: "user", content: "oi" }] },
+      { registry: registryQueFalha(erro) },
+    ).catch(() => {});
+    expect(inserts[0]!.params).toContain("credit_balance_exhausted");
+    expect(incidents).toHaveLength(0);
   });
 
   it("modelo que não existe", async () => {

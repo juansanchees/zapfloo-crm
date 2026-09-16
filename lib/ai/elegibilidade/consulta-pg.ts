@@ -29,7 +29,7 @@ interface LinhaDeElegibilidade {
  */
 export async function decidirElegibilidadeDaConversa(
   pool: pg.Pool,
-  input: { organizationId: string; conversationId: string; agora: Date; ttlMs: number },
+  input: { organizationId: string; conversationId: string; agora: Date; ttlMs: number; messageId?: string },
 ): Promise<DecisaoDeElegibilidade | null> {
   const { rows } = await pool.query<LinhaDeElegibilidade>(
     `select
@@ -50,18 +50,33 @@ export async function decidirElegibilidadeDaConversa(
   const r = rows[0];
   if (r === undefined) return null;
 
-  return decidirElegibilidade(
-    montarEstadoDeElegibilidade({
-      aiGate: r.channel_metadata?.ai_gate,
-      aiGateMode: r.channel_metadata?.ai_gate_mode,
-      aiTestPhoneNumbers: r.channel_metadata?.ai_test_phone_numbers,
-      contactPhoneNumber: r.phone_number,
-      forceHuman: r.force_human,
-      assigneeKind: r.assignee_kind,
-      botSilencedUntil: r.bot_silenced_until,
-      aiAuthorizedAt: r.ai_authorized_at,
-      agora: input.agora,
-      ttlMs: input.ttlMs,
-    }),
+  const estadoBase = {
+    aiGate: r.channel_metadata?.ai_gate,
+    aiGateMode: r.channel_metadata?.ai_gate_mode,
+    aiTestPhoneNumbers: r.channel_metadata?.ai_test_phone_numbers,
+    contactPhoneNumber: r.phone_number,
+    forceHuman: r.force_human,
+    assigneeKind: r.assignee_kind,
+    botSilencedUntil: r.bot_silenced_until,
+    aiAuthorizedAt: r.ai_authorized_at,
+    aiStartedAt: r.channel_metadata?.ai_gate_started_at,
+    agora: input.agora,
+    ttlMs: input.ttlMs,
+  };
+  const estadoNormalizado = montarEstadoDeElegibilidade(estadoBase);
+  const decisaoBase = decidirElegibilidade(estadoNormalizado);
+  if (!decisaoBase.permite || !input.messageId || estadoNormalizado.aiStartedAt == null) return decisaoBase;
+
+  const mensagem = await pool.query<{ created_at: Date | string }>(
+    `select created_at from messages
+      where organization_id = $1 and conversation_id = $2 and id = $3`,
+    [input.organizationId, input.conversationId, input.messageId],
   );
+  if (mensagem.rows[0]?.created_at == null) {
+    throw new Error("elegibilidade: mensagem não encontrada");
+  }
+  return decidirElegibilidade(montarEstadoDeElegibilidade({
+    ...estadoBase,
+    messageReceivedAt: mensagem.rows[0].created_at,
+  }));
 }

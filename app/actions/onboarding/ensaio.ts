@@ -33,7 +33,18 @@ export async function iniciarEnsaio(input: unknown): Promise<ResultadoEnsaio> {
     if (start.error) return { ok: false, error: erro(start.error.message) };
     const captured = inicioEnsaioSchema.safeParse(start.data);
     if (!captured.success || captured.data.snapshot.organization_id !== ctx.orgId || captured.data.snapshot.id !== p.expected_version_id) return { ok: false, error: "db_error" };
-    const response = await executarEnsaio(captured.data.snapshot, p.sample_message);
+    let response = await executarEnsaio(captured.data.snapshot, p.sample_message);
+    if (response.ok && response.model_used !== captured.data.snapshot.model) {
+      const adopted = await admin.rpc("fn_adotar_modelo_reserva_ensaio", {
+        ...trusted,
+        p_run_id: captured.data.run_id,
+        p_model_used: response.model_used,
+      });
+      // O ensaio não pode aprovar um modelo diferente sem também gravá-lo no
+      // rascunho que será publicado. Se a adoção perder a corrida, a pessoa
+      // continua com aviso em vez de receber um falso verde.
+      if (adopted.error) response = { ok: false, error: "provider_model", call_id: response.call_id };
+    }
     const end = await admin.rpc("fn_finalizar_ensaio_onboarding", { ...trusted, p_run_id: captured.data.run_id,
       p_response: response.ok ? response.response : null, p_call_id: response.call_id, p_error: response.ok ? null : response.error });
     return end.error ? { ok: false, error: erro(end.error.message) } : resultado(end.data);

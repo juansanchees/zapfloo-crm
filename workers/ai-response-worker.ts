@@ -640,6 +640,7 @@ async function buildContext(input: BuildContextInput): Promise<GuardDecision> {
     const elegib = await decidirElegibilidadeDaConversaViaSupabase(admin, {
       organizationId: input.organizationId,
       conversationId: input.conversationId,
+      messageId: input.messageId,
       agora: new Date(),
       ttlMs: ttlDaAutorizacaoMs(process.env),
     });

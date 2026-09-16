@@ -18,14 +18,28 @@ async function fixture() {
 }
 type F = Awaited<ReturnType<typeof fixture>>;
 async function start(f: F) { return (await db.query("select fn_iniciar_ensaio_onboarding($1,$2,1,$3,$4) r", [f.org, f.user, f.version, "Olá, como funciona?"])).rows[0].r; }
-async function finish(f: F, run: string, text = "Olá! Como posso ajudar?") {
+async function finish(f: F, run: string, text = "Olá! Como posso ajudar?", model = "qa-ensaio") {
   const call = randomUUID();
-  await db.query("insert into llm_calls(id,organization_id,agent_id,purpose,provider,model,status,input_tokens,output_tokens,latency_ms) values($1,$2,$3,'onboarding_rehearsal','openai','qa-ensaio','ok',10,10,1)", [call, f.org, f.agent]);
+  await db.query("insert into llm_calls(id,organization_id,agent_id,purpose,provider,model,status,input_tokens,output_tokens,latency_ms) values($1,$2,$3,'onboarding_rehearsal','openai',$4,'ok',10,10,1)", [call, f.org, f.agent, model]);
   return (await db.query("select fn_finalizar_ensaio_onboarding($1,$2,1,$3,$4,$5,$6,null) r", [f.org, f.user, f.version, run, text, call])).rows[0].r;
 }
 async function review(f: F, run: string) { return (await db.query("select fn_revisar_ensaio_onboarding($1,$2,1,$3,$4) r", [f.org, f.user, f.version, run])).rows[0].r; }
 
 describe("ensaio de texto conserva snapshot e não ativa atendimento", () => {
+  it("deduplica atomicamente o incidente global de saldo e permite um novo após resolução", async () => {
+    const provider = `qa-${randomUUID()}`;
+    const inserir = () => db.query(
+      "insert into incidents(organization_id,type,severity,payload) values(null,'ai_provider_balance_exhausted','critical',jsonb_build_object('provider',$1::text)) returning id",
+      [provider],
+    );
+    const first = await inserir();
+    await expect(inserir()).rejects.toMatchObject({ code: "23505" });
+    await db.query("update incidents set status='resolved',resolved_at=now() where id=$1", [first.rows[0].id]);
+    const second = await inserir();
+    expect(second.rows[0].id).not.toBe(first.rows[0].id);
+    await db.query("delete from incidents where payload->>'provider'=$1", [provider]);
+  });
+
   it("objetivo opcional persiste e alteração retira revisão; tipo arbitrário é recusado", async () => {
     const f = await fixture(); const run = await start(f); await finish(f, run.run_id); await review(f, run.run_id);
     const configuration = { name: "Atendente QA", prompt_template: "support_minimal", regras_da_casa: "Sem descontos", objetivo: "Qualificar orçamentos" };
@@ -54,6 +68,35 @@ describe("ensaio de texto conserva snapshot e não ativa atendimento", () => {
     expect((await db.query("select count(*)::int n from api_audit_log where organization_id=$1 and action='onboarding.rehearsal_reviewed'", [f.org])).rows[0].n).toBe(1);
     expect((await db.query("select is_active,is_default,published_version_id from ai_agents where id=$1", [f.agent])).rows[0]).toEqual({ is_active: false, is_default: false, published_version_id: null });
     for (const table of ["channel_sessions", "event_log", "ai_agent_runs"]) expect((await db.query(`select count(*)::int n from ${table} where organization_id=$1`, [f.org])).rows[0].n).toBe(0);
+  });
+  it("modelo reserva provado substitui o modelo que será publicado sem quebrar o snapshot", async () => {
+    const f = await fixture();
+    await db.query("insert into ai_models(provider,model_id,display_name,supports_tools) values('openai','qa-reserva','QA reserva',true) on conflict(provider,model_id) do nothing");
+    const run = await start(f);
+    const adopted = (await db.query(
+      "select fn_adotar_modelo_reserva_ensaio($1,$2,1,$3,$4,'qa-reserva') r",
+      [f.org, f.user, f.version, run.run_id],
+    )).rows[0].r;
+    expect(adopted.model).toBe("qa-reserva");
+    expect((await db.query("select model from ai_agents where id=$1", [f.agent])).rows[0].model).toBe("qa-reserva");
+    expect((await db.query("select model from ai_agent_versions where id=$1", [f.version])).rows[0].model).toBe("qa-reserva");
+    await finish(f, run.run_id, "Resposta da reserva", "qa-reserva");
+    expect(await review(f, run.run_id)).toMatchObject({ status: "completed", reviewed: true });
+    expect((await db.query(
+      "select count(*)::int n from api_audit_log where organization_id=$1 and action='onboarding.rehearsal_fallback_adopted'",
+      [f.org],
+    )).rows[0].n).toBe(1);
+  });
+  it("causas explícitas do provedor podem encerrar o ensaio sem serem apagadas", async () => {
+    const f = await fixture();
+    for (const error of ["provider_credential", "provider_quota", "provider_model", "provider_timeout"]) {
+      const run = await start(f);
+      const proof = (await db.query(
+        "select fn_finalizar_ensaio_onboarding($1,$2,1,$3,$4,null,null,$5) r",
+        [f.org, f.user, f.version, run.run_id, error],
+      )).rows[0].r;
+      expect(proof).toMatchObject({ status: "failed", error });
+    }
   });
   it.each(["business", "configuration", "version", "agent"])("alterar %s durante a rede recusa conclusão e revisão", async field => {
     const f = await fixture(); const run = await start(f);

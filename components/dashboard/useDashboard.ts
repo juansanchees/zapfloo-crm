@@ -17,6 +17,7 @@ export function useDashboard() {
   const enabled = !!activeOrg;
   const canAct = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "agent"));
   const canManage = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "manager"));
+  const canConfigureAiAccess = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "admin"));
   // O cache também pertence à identidade e à organização, inclusive após troca de papel.
   const scope = [
     "dashboard",
@@ -80,5 +81,5 @@ export function useDashboard() {
       ]);
     },
   });
-  return { counts, conversations, metrics, agents, tasks, complete, canAct, canManage, activeOrg };
+  return { counts, conversations, metrics, agents, tasks, complete, canAct, canManage, canConfigureAiAccess, activeOrg };
 }

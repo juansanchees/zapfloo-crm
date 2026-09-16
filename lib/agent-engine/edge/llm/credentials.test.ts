@@ -41,6 +41,7 @@ describe("resolveOrgLlmConfig — chave de plataforma por provider", () => {
     );
     expect(out.provider).toBe("openai");
     expect(out.apiKey).toBe("sk-proj-plataforma");
+    expect(out.credentialSource).toBe("platform");
   });
 
   it("mantém a chave Anthropic do ambiente (comportamento que já existia)", async () => {
@@ -61,6 +62,7 @@ describe("resolveOrgLlmConfig — chave de plataforma por provider", () => {
       "org-1",
     );
     expect(out.apiKey).toBe("chave-byok-da-org");
+    expect(out.credentialSource).toBe("organization");
   });
 
   it("sem BYOK e sem chave de plataforma, falha em vez de inventar", async () => {

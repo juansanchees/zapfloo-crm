@@ -2,21 +2,24 @@ import { describe, expect, it, vi } from "vitest";
 import { runModelCall } from "@/lib/agent-engine/edge/llm/run-model-call";
 import { resolveOrgLlmConfig } from "@/lib/agent-engine/edge/llm/credentials";
 import { executarEnsaio } from "@/lib/onboarding/executar-ensaio";
+import { mensagemDaFalhaDoEnsaio } from "@/lib/onboarding/ensaio";
 
 const org = "11111111-1111-4111-8111-111111111111";
-function boundary(text = "Resposta sintética do provider.", reason = "stop") {
+function boundary(text = "Resposta sintética do provider.", reason = "stop", config: { erroNoModelo?: string; erro?: unknown; reservas?: string[] } = {}) {
   const calls: Record<string, unknown>[] = []; const writes: unknown[][] = [];
   const query = vi.fn(async (sql: string, params: unknown[]) => {
     if (sql.includes("settings->'llm'")) return { rows: [{ llm: { provider: "anthropic", default_model: "global", params: { maxOutputTokens: 9000 }, enabled_models: [] } }] };
     if (sql.includes("from ai_provider_credentials")) return { rows: [] };
     if (sql.includes("from ai_purpose_bindings")) return { rows: [{ purpose: "onboarding_rehearsal", provider: "anthropic", model_id: "binding", credential_id: null, base_url: null, is_enabled: true }] };
+    if (sql.includes("from ai_models")) return { rows: (config.reservas ?? []).map(model_id => ({ model_id })) };
     if (sql.includes("insert into llm_calls")) { writes.push(params); return { rows: [{ id: "22222222-2222-4222-8222-222222222222" }] }; }
     throw new Error(`Query inesperada: ${sql}`);
   });
   const factory = (provider: string) => (_key: string, modelId: string) => ({
     specificationVersion: "v3", provider, modelId,
-    doGenerate: async (options: Record<string, unknown>) => {
-      calls.push({ provider, modelId, ...options });
+    doGenerate: async (sdkOptions: Record<string, unknown>) => {
+      calls.push({ provider, modelId, ...sdkOptions });
+      if (modelId === config.erroNoModelo) throw config.erro;
       return { content: [{ type: "text", text }], finishReason: { unified: reason, raw: undefined }, usage: { inputTokens: { total: 3, noCache: 3, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 4, text: 4, reasoning: 0 } }, warnings: [] };
     },
   }) as never;
@@ -59,5 +62,28 @@ describe("adapter do ensaio só produz prévia de texto", () => {
     const b = boundary();
     expect(await executarEnsaio(snapshot, "Olá", { pool: b.pool, cfg: {}, registry: b.registry })).toEqual({ ok: false, error: "not_configured", call_id: null });
     expect(b.calls).toHaveLength(0);
+  });
+  it("modelo recusado cai no próximo modelo ativo do mesmo provedor e registra o usado", async () => {
+    const erro = Object.assign(new Error("model not found"), { statusCode: 404, responseBody: JSON.stringify({ error: { type: "invalid_request_error", code: "model_not_found" } }) });
+    const b = boundary("Resposta da reserva.", "stop", { erroNoModelo: "modelo-escolhido", erro, reservas: ["modelo-reserva"] });
+    const result = await executarEnsaio(snapshot, "Olá", { pool: b.pool, cfg: { openaiApiKey: "sintetica" }, registry: b.registry });
+    expect(result).toMatchObject({ ok: true, response: "Resposta da reserva.", model_used: "modelo-reserva" });
+    expect(b.calls.map(call => call.modelId)).toEqual(["modelo-escolhido", "modelo-reserva"]);
+    expect(b.writes.at(-1)).toContain("modelo-reserva");
+  });
+  it.each([
+    [401, "authentication_error", "invalid_api_key", "provider_credential", "A IA da plataforma está indisponível no momento; já avisamos o suporte."],
+    [429, "insufficient_quota", "credit_balance_exhausted", "provider_quota", "A IA está indisponível no momento; já avisamos o suporte."],
+  ] as const)("HTTP %i preserva a causa e mostra a orientação certa", async (status, type, code, expected, message) => {
+    const erro = Object.assign(new Error("provider rejected"), { statusCode: status, responseBody: JSON.stringify({ error: { type, code } }) });
+    const b = boundary("", "stop", { erroNoModelo: "modelo-escolhido", erro });
+    const result = await executarEnsaio(snapshot, "Olá", { pool: b.pool, cfg: { openaiApiKey: "sintetica" }, registry: b.registry });
+    expect(result).toMatchObject({ ok: false, error: expected, call_id: expect.any(String) });
+    if (!result.ok) expect(mensagemDaFalhaDoEnsaio(result.error)).toBe(message);
+  });
+  it("sem modelo reserva, o 404 fica visível em vez de virar erro desconhecido", async () => {
+    const erro = Object.assign(new Error("model not found"), { statusCode: 404, responseBody: JSON.stringify({ error: { type: "invalid_request_error", code: "model_not_found" } }) });
+    const b = boundary("", "stop", { erroNoModelo: "modelo-escolhido", erro, reservas: [] });
+    expect(await executarEnsaio(snapshot, "Olá", { pool: b.pool, cfg: { openaiApiKey: "sintetica" }, registry: b.registry })).toMatchObject({ ok: false, error: "provider_model", call_id: expect.any(String) });
   });
 });

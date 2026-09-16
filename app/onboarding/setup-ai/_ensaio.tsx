@@ -11,7 +11,7 @@ import { prepararRascunho } from "@/app/actions/onboarding/prepararRascunho";
 import { recuperarPreparacao } from "@/app/actions/onboarding/recuperarPreparacao";
 import { iniciarEnsaio, revisarEnsaio, lerEnsaio } from "@/app/actions/onboarding/ensaio";
 import { ExplorarCrm } from "@/app/onboarding/_components/ExplorarCrm";
-import { selecionarModeloEnsaio, type LeituraEnsaio, type ProvaEnsaio } from "@/lib/onboarding/ensaio";
+import { mensagemDaFalhaDoEnsaio, podeContinuarAposFalhaDoEnsaio, selecionarModeloEnsaio, type LeituraEnsaio, type ProvaEnsaio } from "@/lib/onboarding/ensaio";
 
 export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
   initial: LeituraEnsaio; context: string; revision: number; dirty: boolean; epoch: number; onBusy: (busy: boolean) => void;
@@ -34,6 +34,7 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
     && selection.model === chosen?.model_id && selection.credential_id === credential;
   const current = !dirty && proofEpoch === epoch && proof?.version_id === selection?.version_id && proof?.revision === revision ? proof : null;
   const reviewable = ready && current?.status === "completed" && !current.reviewed;
+  const podeContinuarComAviso = ready && podeContinuarAposFalhaDoEnsaio(current);
   const blocked = busy || dirty || revision < 1 || !panel || Boolean(panel.recovery_available);
   const failure = (code: string) => code === "rehearsal_busy" || code === "rehearsal_rate_limited"
     ? "Há um ensaio em andamento ou muitas tentativas recentes. Aguarde um minuto antes de testar novamente."
@@ -98,10 +99,10 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
       setProof(r.proof); setProofEpoch(epoch);
     })}>{busy ? t("Aguarde…") : t("Testar mensagem")}</Button>
     {current?.status === "running" && <p role="status" className="text-sm">{t("O último ensaio não terminou. Aguarde um momento e teste novamente se ele foi interrompido.")}</p>}
-    {current?.status === "failed" && <p role="alert" className="text-sm text-destructive">{t(current.error === "not_configured"
-      ? "Não foi possível acessar a IA agora. Tente novamente mais tarde; se persistir, entre em contato com o suporte."
-      : current.error === "budget_exceeded" ? "O ensaio está indisponível no momento. Você pode continuar depois; se persistir, entre em contato com o suporte."
-        : "A IA não concluiu uma resposta válida. O teste não foi aprovado; confira a configuração e tente novamente.")}</p>}
+    {current?.status === "failed" && <div role="alert" className="space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+      <p>{t(mensagemDaFalhaDoEnsaio(current.error))}</p>
+      {podeContinuarComAviso && <p className="text-muted-foreground">{t("O agente continuará desligado até um ensaio funcionar e você concluir a ativação.")}</p>}
+    </div>}
     {current?.status === "completed" && <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
       <p className="text-xs font-medium text-muted-foreground">{t("Mensagem testada")}</p>
       <p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{current.sample_message}</p>
@@ -114,12 +115,15 @@ export function Ensaio({ initial, context, revision, dirty, epoch, onBusy }: {
       if (r.ok) setProof(r.proof); else { setProof(null); setError(failure(r.error)); }
     })}>{t("Revisar resposta")}</Button>
     {current?.reviewed && <p role="status" className="text-sm">{t("Resposta revisada. Nenhum atendimento foi ativado.")}</p>}
-    <Button type="button" disabled={blocked || !ready || !current?.reviewed || Boolean(error)} onClick={() => void perform(async () => {
+    <Button type="button" disabled={blocked || !ready || (!current?.reviewed && !podeContinuarComAviso) || Boolean(error)} onClick={() => void perform(async () => {
+      if (podeContinuarComAviso) {
+        router.push("/onboarding/connect-whatsapp"); router.refresh(); return;
+      }
       if (!selection || !current?.reviewed) return;
       const result = await confirmarAgenteRevisado({ expected_context: context, expected_revision: revision, expected_version_id: selection.version_id, run_id: current.run_id });
       if (!result.ok) { setProof(null); setError(failure(result.error)); return; }
       router.push("/onboarding/connect-whatsapp"); router.refresh();
-    })}>{t("Continuar para conexão")}</Button>
+    })}>{t(podeContinuarComAviso ? "Continuar para conexão com a IA desligada" : "Continuar para conexão")}</Button>
     {error && <p role="alert" className="text-sm text-destructive">{t(error)}</p>}
     <div className="border-t pt-4"><p className="mb-2 text-sm">{t("Continuar depois")}</p><ExplorarCrm /></div>
   </section>;

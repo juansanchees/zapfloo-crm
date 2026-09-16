@@ -19,6 +19,8 @@ const base: EstadoDeElegibilidade = {
   aiAuthorizedAt: null,
   preGoLiveAtivo: false,
   numeroDeTesteAutorizado: false,
+  aiStartedAt: null,
+  messageReceivedAt: null,
   agora: AGORA,
   ttlMs: 21 * DIA,
 };
@@ -46,6 +48,24 @@ describe("decidirElegibilidade — gate 'open' (comportamento de hoje)", () => {
     expect(d.permite).toBe(false);
     expect(d.motivo).toBe("force_human");
     expect(d.bloqueioPorAllowlist).toBe(false);
+  });
+
+  it("não deixa uma mensagem anterior à liberação iniciar atendimento", () => {
+    const d = decidirElegibilidade({
+      ...base,
+      aiStartedAt: AGORA,
+      messageReceivedAt: new Date(AGORA.getTime() - 1),
+    });
+    expect(d).toEqual({
+      permite: false,
+      motivo: "mensagem_anterior_a_liberacao",
+      bloqueioPorAllowlist: false,
+    });
+    expect(decidirElegibilidade({
+      ...base,
+      aiStartedAt: AGORA,
+      messageReceivedAt: new Date(AGORA.getTime() + 1),
+    }).permite).toBe(true);
   });
 
   it("conversa com dono humano bloqueia mesmo com gate aberto", () => {
