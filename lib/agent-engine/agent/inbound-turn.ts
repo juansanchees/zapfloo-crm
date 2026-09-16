@@ -1091,6 +1091,8 @@ export interface AgentTurnInput {
   channelSessionId: string;
   /** conversa do CRM — destino do send_message. */
   conversationId: string;
+  /** Mensagem que originou o turno; permite revalidar o marco anti-histórico. */
+  sourceInboundMessageId?: string;
   /** monta a abertura APÓS o ritual de leitura (inbound vs. bloco temporal do follow-up). */
   buildOpening: (ritual: {
     previous: LeadCheckpointRow | null;
@@ -1327,6 +1329,7 @@ async function executarTurnoDoAgente(
     const elegib = await decidirElegibilidadeDaConversa(pool, {
       organizationId: tenantId,
       conversationId: input.conversationId,
+      ...(input.sourceInboundMessageId ? { messageId: input.sourceInboundMessageId } : {}),
       agora: clock(),
       ttlMs: deps.knobs.allowlistTtlMs ?? ALLOWLIST_TTL_MS_PADRAO,
     });
@@ -3368,6 +3371,7 @@ export function createInboundTurnHandler(deps: InboundTurnDeps) {
     await runAgentTurn(deps, job, pool, ctx, {
       channelSessionId: payload.channel_session_id,
       conversationId: payload.conversation_id,
+      sourceInboundMessageId: payload.inbound_message_id,
       buildOpening: ({
         previous,
         leadState,

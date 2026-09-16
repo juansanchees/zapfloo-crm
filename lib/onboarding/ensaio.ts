@@ -12,7 +12,10 @@ export const snapshotEnsaioSchema = z.object({
   system_prompt: z.string().min(10).max(20000), status: z.literal("draft"), channel_session_id: z.null(),
 }).readonly();
 export const inicioEnsaioSchema = z.object({ run_id: z.string().uuid(), snapshot: snapshotEnsaioSchema });
-export const falhaExecucaoSchema = z.enum(["not_configured", "budget_exceeded", "provider_error", "empty_response", "incomplete_response"]);
+export const falhaExecucaoSchema = z.enum([
+  "not_configured", "budget_exceeded", "provider_credential", "provider_quota",
+  "provider_model", "provider_timeout", "provider_error", "empty_response", "incomplete_response",
+]);
 export const provaEnsaioSchema = z.object({
   run_id: z.string().uuid(), revision: z.number().int().positive(), version_id: z.string().uuid(),
   sample_message: z.string(), status: z.enum(["running", "completed", "failed"]), response: z.string().nullable(),
@@ -34,6 +37,37 @@ export const painelEnsaioSchema = z.object({
 });
 export type ProvaEnsaio = z.infer<typeof provaEnsaioSchema>;
 export type PainelEnsaio = z.infer<typeof painelEnsaioSchema>;
+
+const FALHAS_QUE_NAO_PRENDEM = new Set<z.infer<typeof falhaExecucaoSchema>>([
+  "not_configured", "provider_credential", "provider_quota", "provider_model",
+  "provider_timeout", "provider_error", "empty_response", "incomplete_response",
+]);
+
+export function podeContinuarAposFalhaDoEnsaio(proof: ProvaEnsaio | null | undefined): boolean {
+  return proof?.status === "failed" && proof.error !== null && FALHAS_QUE_NAO_PRENDEM.has(proof.error);
+}
+
+export function mensagemDaFalhaDoEnsaio(error: z.infer<typeof falhaExecucaoSchema> | null): string {
+  switch (error) {
+    case "provider_quota":
+      return "A IA está indisponível no momento; já avisamos o suporte.";
+    case "provider_model":
+      return "O modelo de IA não está disponível agora. Tentamos uma alternativa; você pode continuar e testar novamente depois.";
+    case "provider_timeout":
+      return "A IA demorou mais que o esperado. Você pode continuar e testar novamente depois.";
+    case "incomplete_response":
+      return "A resposta da IA foi interrompida antes de terminar. Você pode continuar e testar novamente depois.";
+    case "empty_response":
+      return "A IA não devolveu uma resposta desta vez. Você pode continuar e testar novamente depois.";
+    case "provider_credential":
+    case "not_configured":
+      return "A IA da plataforma está indisponível no momento; já avisamos o suporte.";
+    case "budget_exceeded":
+      return "O ensaio está indisponível porque o limite de uso de IA foi atingido.";
+    default:
+      return "A IA está indisponível no momento; já avisamos o suporte.";
+  }
+}
 
 // ID confirmado no catálogo curado (migration 0104 + baseline). Só o onboarding
 // escolhe automaticamente; os seletores avançados do agente continuam intactos.

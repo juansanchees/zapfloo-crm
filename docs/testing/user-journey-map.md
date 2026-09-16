@@ -2035,6 +2035,16 @@ o administrador pendente entrou em `/app/inbox`, recarregou sem voltar ao wizard
 manteve “Retomar configuração” visível em 1280 px e 390 px. O wizard serial também
 confirmou as duas listas com o título corrigido em português.
 
+## Falha do provedor sem aprisionar o onboarding `[P0]` — 15/set/2026
+
+O ensaio diferencia credencial recusada, saldo esgotado, modelo indisponível,
+demora e resposta cortada. `model_not_found` tenta o próximo modelo ativo do
+mesmo provedor. Se o serviço continuar indisponível, “Continuar para conexão”
+permanece disponível com a IA explicitamente desligada; sem prova aprovada, a
+ativação restrita continua proibida. Dashboard e Agentes mostram se a IA atende
+todos, está em teste (incluindo zero autorizados) ou está desligada. Detalhes,
+sabotagens e limites: `docs/testing/onboarding-falha-do-provedor.md`.
+
 ## Funcionário principal após ativação restrita `[P0]` — 13/set/2026
 
 Defeito confirmado: a preparação criava corretamente um agente não principal, mas

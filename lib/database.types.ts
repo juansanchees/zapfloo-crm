@@ -5127,6 +5127,7 @@ export type Database = {
           created_at: string
           error_code: string | null
           error_message: string | null
+          finish_reason: string | null
           http_status: number | null
           id: string
           input_tokens: number
@@ -5137,6 +5138,8 @@ export type Database = {
           organization_id: string
           origem_da_escolha: string | null
           output_tokens: number
+          provider_error_code: string | null
+          provider_error_type: string | null
           provider: string
           purpose: string
           status: string
@@ -5151,6 +5154,7 @@ export type Database = {
           created_at?: string
           error_code?: string | null
           error_message?: string | null
+          finish_reason?: string | null
           http_status?: number | null
           id?: string
           input_tokens?: number
@@ -5161,6 +5165,8 @@ export type Database = {
           organization_id: string
           origem_da_escolha?: string | null
           output_tokens?: number
+          provider_error_code?: string | null
+          provider_error_type?: string | null
           provider: string
           purpose?: string
           status?: string
@@ -5175,6 +5181,7 @@ export type Database = {
           created_at?: string
           error_code?: string | null
           error_message?: string | null
+          finish_reason?: string | null
           http_status?: number | null
           id?: string
           input_tokens?: number
@@ -5185,6 +5192,8 @@ export type Database = {
           organization_id?: string
           origem_da_escolha?: string | null
           output_tokens?: number
+          provider_error_code?: string | null
+          provider_error_type?: string | null
           provider?: string
           purpose?: string
           status?: string
@@ -7574,6 +7583,17 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_adotar_modelo_reserva_ensaio: {
+        Args: {
+          p_actor_id: string
+          p_expected_revision: number
+          p_expected_version_id: string
+          p_model_used: string
+          p_org_id: string
+          p_run_id: string
+        }
+        Returns: Json
+      }
       fn_gasto_de_ia_do_mes: { Args: { p_org: string }; Returns: number }
       fn_iniciar_ensaio_onboarding: {
         Args: {
@@ -8424,4 +8444,3 @@ export const Constants = {
     },
   },
 } as const
-

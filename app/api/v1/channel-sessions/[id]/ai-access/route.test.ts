@@ -14,12 +14,14 @@ const canal = "22222222-2222-4222-8222-222222222222";
 const telefone = "+5511999998888";
 const filters: Record<string, unknown> = {};
 const rpc = vi.fn();
+const tabelas = new Set<string>();
 const row = { id: canal, organization_id: org, archived_at: null, metadata: { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: [telefone], segredo_do_transporte: "nao-expor" } };
 const context = (id = canal) => ({ params: Promise.resolve({ id }) });
 const req = (body: unknown = {}) => new NextRequest("http://localhost/api/v1/channel-sessions/" + canal + "/ai-access", { method: "PATCH", body: JSON.stringify(body) });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  tabelas.clear();
   for (const k of Object.keys(filters)) delete filters[k];
   vi.mocked(requireRole).mockResolvedValue({ ok: true, user: { id: org }, org: { orgId: org, role: "admin" } } as Awaited<ReturnType<typeof requireRole>>);
   const query = {
@@ -29,7 +31,7 @@ beforeEach(() => {
     maybeSingle: async () => ({ data: Object.entries(filters).every(([k,v]) => row[k as keyof typeof row] === v) ? row : null, error: null }),
   };
   rpc.mockResolvedValue({ data: 1, error: null });
-  vi.mocked(createAdminClient).mockReturnValue({ from: () => query, rpc } as unknown as ReturnType<typeof createAdminClient>);
+  vi.mocked(createAdminClient).mockReturnValue({ from: (table: string) => { tabelas.add(table); return query; }, rpc } as unknown as ReturnType<typeof createAdminClient>);
 });
 
 describe("configuração de acesso da IA", () => {
@@ -69,5 +71,12 @@ describe("configuração de acesso da IA", () => {
     rpc.mockResolvedValueOnce({ data: null, error: { message: "rpc ausente" } });
     expect((await PATCH(req({ mode: "open", test_phone_numbers: [] }), context())).status).toBe(500);
     expect(audit).not.toHaveBeenCalled();
+  });
+  it("liberar a IA só muda a política do canal; não busca nem reprocessa mensagens antigas", async () => {
+    const response = await PATCH(req({ mode: "open", test_phone_numbers: [] }), context());
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(tabelas).not.toContain("messages");
+    expect(tabelas).not.toContain("event_log");
   });
 });

@@ -102,4 +102,14 @@ describe("ensaio integrado na tela", () => {
     expect(screen.getByRole("button", { name: "Explorar o CRM" })).toBeEnabled();
     expect(f.prepare).not.toHaveBeenCalled();
   });
+  it("saldo da plataforma mostra a mensagem certa e não prende o cliente no ensaio", async () => {
+    const falha = { ...proof, status: "failed" as const, response: null, reviewed: false, error: "provider_quota" as const };
+    render(<SetupAiForm capacidades={[]} conferencias={[]} rascunhoInicial={draft} ensaioInicial={{ ok: true, panel: { selection, proof: falha, models, credentials: [] } }} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("A IA está indisponível no momento; já avisamos o suporte.");
+    const continuar = screen.getByRole("button", { name: "Continuar para conexão com a IA desligada" });
+    expect(continuar).toBeEnabled();
+    fireEvent.click(continuar);
+    await waitFor(() => expect(f.push).toHaveBeenCalledWith("/onboarding/connect-whatsapp"));
+    expect(f.confirm).not.toHaveBeenCalled();
+  });
 });

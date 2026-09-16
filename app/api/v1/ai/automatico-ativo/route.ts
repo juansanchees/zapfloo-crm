@@ -32,7 +32,8 @@ import type { NextRequest } from "next/server";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { agenteAtende } from "@/lib/ai/agents/no-ar";
-import { createClient } from "@/lib/supabase/server";
+import { lerModoDeAcessoDaIa, lerNumerosDeTeste } from "@/lib/ai/elegibilidade/pre-go-live";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -41,17 +42,48 @@ export async function GET(_req: NextRequest): Promise<Response> {
   const authz = await requireRole("agent", { requestId, resource: "ai_agents" });
   if (!authz.ok) return authz.response;
 
-  const supabase = await createClient();
+  // A resposta é uma projeção sem prompt, telefone ou segredo. O admin client
+  // garante que um papel `agent` também veja o último erro operacional; TODAS
+  // as consultas continuam estreitas pelo orgId vindo da sessão revalidada.
+  const supabase = createAdminClient();
   // `head: true` + `count` não serve mais: a régua olha quatro colunas por
   // linha, e uma contagem no banco não sabe respondê-la sem duplicar a regra em
   // SQL — que é como ela se desencontrou da primeira vez.
-  const { data, error } = await supabase
-    .from("ai_agents")
-    .select("kind, is_active, published_version_id, archived_at")
-    .eq("organization_id", authz.org.orgId)
-    .is("archived_at", null);
+  const [agents, channels, balanceIncident] = await Promise.all([
+    supabase.from("ai_agents").select("kind, is_active, published_version_id, archived_at")
+      .eq("organization_id", authz.org.orgId).is("archived_at", null),
+    supabase.from("channel_sessions").select("id,status,metadata,archived_at")
+      .eq("organization_id", authz.org.orgId).is("archived_at", null),
+    // Saldo de plataforma é compartilhado por todos os tenants. Se outra
+    // organização foi a primeira a descobrir que ele acabou, esta também
+    // precisa parar de prometer atendimento — sem revelar provider, código ou
+    // qualquer detalhe técnico ao cliente.
+    supabase.from("incidents").select("id")
+      .eq("type", "ai_provider_balance_exhausted")
+      .neq("status", "resolved").limit(1).maybeSingle(),
+  ]);
+  if (agents.error || channels.error || balanceIncident.error) {
+    return fail("internal_error", agents.error?.message ?? channels.error?.message ?? balanceIncident.error?.message ?? "status_unavailable", 500, { requestId });
+  }
 
-  if (error) return fail("internal_error", error.message, 500, { requestId });
+  const ativo = (agents.data ?? []).some(agenteAtende);
+  if (!ativo) return ok({ ativo: false, estado: "desligada", motivo: "nenhum_agente_publicado", numeros_autorizados: 0, canal_id: null }, { requestId });
+  const working = (channels.data ?? []).filter((channel) => channel.status === "WORKING");
+  if (working.length === 0) return ok({ ativo: false, estado: "desligada", motivo: "whatsapp_desconectado", numeros_autorizados: 0, canal_id: null }, { requestId });
 
-  return ok({ ativo: (data ?? []).some(agenteAtende) }, { requestId });
+  if (balanceIncident.data) return ok({
+    ativo: false, estado: "desligada", motivo: "saldo_da_plataforma", numeros_autorizados: 0,
+    canal_id: working[0]?.id ?? null,
+  }, { requestId });
+
+  const restritos = working.filter((channel) => lerModoDeAcessoDaIa(channel.metadata) !== "open");
+  if (restritos.length === 0) return ok({
+    ativo: true, estado: "atendendo_todos", motivo: null, numeros_autorizados: 0,
+    canal_id: working[0]?.id ?? null,
+  }, { requestId });
+  const numeros = new Set(restritos.flatMap((channel) => lerNumerosDeTeste(channel.metadata)));
+  return ok({
+    ativo: true, estado: "em_teste", motivo: null, numeros_autorizados: numeros.size,
+    canal_id: restritos[0]?.id ?? null,
+  }, { requestId });
 }
