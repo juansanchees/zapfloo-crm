@@ -35,6 +35,8 @@ export type ComoSePreenche =
    * pessoa que cola a política de troca não quer saber a diferença.
    */
   | "arquivo_ou_texto"
+  /** A pessoa informa um endereço; o leitor seguro busca e prepara o conteúdo. */
+  | "endereco"
   /** Uma rotina do sistema alimenta sozinha; não há o que colar. */
   | "automatico";
 
@@ -65,10 +67,9 @@ export const TIPOS_DE_FONTE = [
   },
   {
     id: "site",
-    rotulo: "Perguntas do seu site",
-    oQueE: "Perguntas encontradas no site do negócio, que só entram no atendimento depois da sua conferência.",
-    comoSePreenche: "texto_colado",
-    somenteGerado: true,
+    rotulo: "Site",
+    oQueE: "Informações encontradas no endereço do seu negócio, que só entram no atendimento depois da sua conferência.",
+    comoSePreenche: "endereco",
   },
   {
     id: "documento",
@@ -155,12 +156,19 @@ export function aceitaTextoColado(id: string): boolean {
 
 /** O conteúdo colado é uma lista de pergunta/resposta (e não texto corrido)? */
 export function ePerguntaEResposta(id: string): boolean {
-  return TIPO_DE_FONTE_POR_ID.get(id)?.comoSePreenche === "texto_colado";
+  // O site é preenchido por endereço, mas o leitor o transforma em pares que
+  // a pessoa revisa e edita pelo mesmo fluxo das perguntas manuais.
+  return id === "site" || TIPO_DE_FONTE_POR_ID.get(id)?.comoSePreenche === "texto_colado";
 }
 
 /** O tipo aceita arquivo enviado pela pessoa? */
 export function aceitaArquivo(id: string): boolean {
   return TIPO_DE_FONTE_POR_ID.get(id)?.comoSePreenche === "arquivo_ou_texto";
+}
+
+/** O tipo é alimentado por um endereço que o leitor seguro visita? */
+export function aceitaEndereco(id: string): boolean {
+  return TIPO_DE_FONTE_POR_ID.get(id)?.comoSePreenche === "endereco";
 }
 
 /** A pessoa alimenta este material, ou uma rotina alimenta sozinha? */

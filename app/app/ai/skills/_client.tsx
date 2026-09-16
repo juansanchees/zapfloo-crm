@@ -144,6 +144,17 @@ export function SkillsClient({ initialState }: Props) {
                     </span>
                   </div>
                   {skill.description && <p className="text-text-muted">{skill.description}</p>}
+                  <p className="text-text-muted" data-testid={`skill-gatilhos-${skill.name}`}>
+                    {skill.triggers.length > 0
+                      ? `${t("Entra quando o cliente falar:")} ${skill.triggers.join(", ")}`
+                      : t("Esta skill não informa palavras de entrada.")}
+                  </p>
+                  {skill.near_misses > 0 ? (
+                    <p className="text-xs text-warning-fg" data-testid={`skill-quase-${skill.name}`}>
+                      {t("Quase entrou")} {skill.near_misses} {skill.near_misses === 1 ? t("vez") : t("vezes")}.
+                      {" "}{t("Isso mostra onde os gatilhos podem ser melhorados, sem revelar a conversa.")}
+                    </p>
+                  ) : null}
                   {canManage && (
                     <div className="flex sm:justify-end">
                       <Button

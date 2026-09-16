@@ -20,6 +20,7 @@ function material(over: Partial<SourceRow> = {}): SourceRow {
     last_indexed_at: null,
     chunks_count: 0,
     active_kb_version_id: null,
+    ingested_at: "2026-09-12T10:00:00.000Z",
     source_metadata: {
       site: {
         url: "https://loja.example/",
@@ -58,9 +59,9 @@ afterEach(() => {
 });
 
 describe("revisão de site é uma ação visível, não publicação implícita", () => {
-  it("não oferece site no cadastro manual e mostra rascunho com linha recusada", () => {
+  it("oferece site por endereço e mostra rascunho com linha recusada", () => {
     render(<NovoMaterialDialog aberto onFechar={vi.fn()} onCriado={vi.fn()} podeIndexar />);
-    expect(screen.queryByTestId("material-tipo-site")).not.toBeInTheDocument();
+    expect(screen.getByTestId("material-tipo-site")).toBeEnabled();
     cleanup();
     card();
     expect(screen.getByText("Aguardando sua conferência")).toBeInTheDocument();
@@ -144,9 +145,9 @@ describe("revisão de site é uma ação visível, não publicação implícita"
         "O site demorou para responder. Você pode continuar e tentar de novo depois.",
       ),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Tentar ler o site de novo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ler de novo" }));
     await waitFor(() => expect(mudou).toHaveBeenCalledTimes(1));
-    expect(fetch.mock.calls[0]?.[0]).toBe("/api/v1/onboarding/site/retry");
+    expect(fetch.mock.calls[0]?.[0]).toBe("/api/v1/ai/knowledge/sources/site/retry");
   });
   it("sem perguntas não abre editor vazio; JSON antigo ruim não quebra a biblioteca", () => {
     const source = material();

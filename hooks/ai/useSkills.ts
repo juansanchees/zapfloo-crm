@@ -10,6 +10,8 @@ export interface InstalledSkill {
   version_id: string;
   source: "manual" | "catalog";
   updated_at: string;
+  triggers: string[];
+  near_misses: number;
 }
 export interface CatalogSkill {
   name: string;

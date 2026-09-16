@@ -20,6 +20,8 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { matcherVisivel } from "@/lib/ai/skills/apresentacao";
+import { contarQuaseAtivacoes } from "@/lib/ai/skills/quase-ativacoes";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ interface VersionRow {
   id: string;
   description: string;
   forked_from_version_id: string | null;
+  matcher: unknown;
 }
 
 export async function GET(_req: NextRequest): Promise<Response> {
@@ -69,7 +72,7 @@ export async function GET(_req: NextRequest): Promise<Response> {
   if (versionIds.length > 0) {
     const { data: versionRows, error: verErr } = await admin
       .from("skill_versions")
-      .select("id, description, forked_from_version_id")
+      .select("id, description, forked_from_version_id, matcher")
       .in("id", versionIds);
     if (verErr) {
       return fail("internal_error", t("Erro ao carregar descrição das skills."), 500, { requestId });
@@ -78,6 +81,7 @@ export async function GET(_req: NextRequest): Promise<Response> {
   }
   const versionById = new Map(versions.map((v) => [v.id, v]));
 
+  const nearMisses = await contarQuaseAtivacoes(org.orgId, orgRows.map((p) => p.name));
   const installed = orgRows.map((p) => {
     const v = versionById.get(p.version_id);
     return {
@@ -86,6 +90,8 @@ export async function GET(_req: NextRequest): Promise<Response> {
       version_id: p.version_id,
       source: (v?.forked_from_version_id ? "catalog" : "manual") as "catalog" | "manual",
       updated_at: p.updated_at,
+      triggers: matcherVisivel(v?.matcher).any_keywords,
+      near_misses: nearMisses[p.name] ?? 0,
     };
   });
 

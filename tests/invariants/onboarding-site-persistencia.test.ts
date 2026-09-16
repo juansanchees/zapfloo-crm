@@ -8,9 +8,11 @@ import { lerEstadoDoSite } from "@/lib/onboarding/site/estado";
 import type { LeituraDoSite } from "@/lib/onboarding/site/leitura";
 import {
   enfileirarSiteDoNegocio,
+  enfileirarSiteDoAcervo,
   lerContextoDoSite,
   lerPendenciasDoSite,
   processarSiteDaOrganizacao,
+  processarFonteDoSite,
   recuperarLeiturasDoSite,
   reenfileirarSite,
 } from "@/lib/onboarding/site/servico";
@@ -112,6 +114,16 @@ describe("a leitura do site persiste sem publicar nem prender o onboarding", () 
     expect(lerSite).not.toHaveBeenCalled();
     expect(await fonteDaOrg()).toMatchObject({ id: primeira, status: "building", is_active: false, last_index_status: null });
     expect(await contagens()).toEqual({ produtos: 0, perguntas: 0, fontes: 1 });
+  });
+
+  it("o acervo enfileira qualquer endereço seguro e o mesmo cron o processa", async () => {
+    const url = `${SITE_A}servicos`;
+    const fonteId = await enfileirarSiteDoAcervo(ORG_A, url);
+    expect(fonteId).toBeTruthy();
+    expect(lerSite).not.toHaveBeenCalled();
+    await processarFonteDoSite(ORG_A, fonteId!);
+    expect(lerSite).toHaveBeenCalledExactlyOnceWith(url);
+    expect(await fonteDaOrg()).toMatchObject({ id: fonteId, status: "ready", is_active: false });
   });
 
   it("grava produto e FAQ como conferência pendente, preserva o estado e não escreve no vizinho", async () => {
@@ -253,7 +265,7 @@ describe("a leitura do site persiste sem publicar nem prender o onboarding", () 
     expect(await contagens()).toEqual({ produtos: 1, perguntas: 1, fontes: 1 });
   });
 
-  it("falha fica visível, retry é do tenant certo e para no orçamento de tentativas", async () => {
+  it("falha fica visível, retry é do tenant certo e a pessoa pode tentar de novo", async () => {
     lerSite.mockResolvedValue(leituraFalhou());
     await processarSiteDaOrganizacao(ORG_A);
     const fonte = await fonteDaOrg();
@@ -271,7 +283,7 @@ describe("a leitura do site persiste sem publicar nem prender o onboarding", () 
     await recuperarLeiturasDoSite();
     expect(await reenfileirarSite(ORG_A, fonte.id)).toBe(true);
     await recuperarLeiturasDoSite();
-    expect(await reenfileirarSite(ORG_A, fonte.id)).toBe(false);
+    expect(await reenfileirarSite(ORG_A, fonte.id)).toBe(true);
     expect(lerSite).toHaveBeenCalledTimes(3);
     expect(await contagens()).toEqual({ produtos: 0, perguntas: 0, fontes: 1 });
   });

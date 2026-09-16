@@ -15,6 +15,7 @@ import { normalizarSiteDoNegocio } from "./url";
 const LEASE_MS = 90_000;
 const MAX_TENTATIVAS = 3;
 const LOTE_DE_LEITURA = 2;
+const ORIGEM_ACERVO = "acervo";
 
 type JsonObject = Record<string, unknown>;
 interface Fonte {
@@ -94,10 +95,31 @@ export async function enfileirarSiteDoNegocio(orgId: string, bruto: string): Pro
   return id;
 }
 
+/** Mesmo leitor do onboarding, disponível depois dele pela biblioteca de conhecimento. */
+export async function enfileirarSiteDoAcervo(orgId: string, bruto: string): Promise<string | null> {
+  const normalizado = normalizarSiteDoNegocio(bruto);
+  if (!normalizado.ok || !normalizado.url) return null;
+  if (!await negocio(orgId)) return null;
+  const url = normalizado.url;
+  const id = idDaFonteDoSite(orgId, url);
+  const site: EstadoDoSite = {
+    url, resumo: "", paginasLidas: 0, limiteAtingido: false, recusas: [],
+    tentativas: 0, inicio: null, concluidaEm: null,
+  };
+  const { error } = await createAdminClient().from("ai_knowledge_sources").upsert({
+    id, organization_id: orgId, agent_id: null, source_type: "site",
+    name: `Site · ${new URL(url).hostname}${new URL(url).pathname}`.slice(0, 120),
+    is_active: false, status: "building", last_index_status: null,
+    source_metadata: { site_origem: ORIGEM_ACERVO, site },
+  }, { onConflict: "id", ignoreDuplicates: true });
+  if (error) throw new Error("site_fila_indisponivel");
+  return id;
+}
+
 async function mudarFonte(fonte: Fonte, patch: JsonObject): Promise<boolean> {
   const { data, error } = await createAdminClient().from("ai_knowledge_sources")
     .update(patch).eq("organization_id", fonte.organization_id).eq("id", fonte.id)
-    .eq("source_type", "site").eq("status", fonte.status).eq("is_active", false)
+    .eq("source_type", "site").eq("status", fonte.status).eq("is_active", fonte.is_active)
     .eq("source_metadata", JSON.stringify(fonte.source_metadata)).select("id").maybeSingle();
   if (error) throw new Error("site_gravacao_indisponivel");
   return Boolean(data);
@@ -120,7 +142,8 @@ async function processarFonte(orgId: string, sourceId: string): Promise<boolean>
     return false;
   }
   const empresa = await negocio(orgId);
-  if (!empresa || empresa.url !== estado.url) {
+  const veioDoAcervo = fonte.source_metadata.site_origem === ORIGEM_ACERVO;
+  if (!empresa || (!veioDoAcervo && empresa.url !== estado.url)) {
     await mudarFonte(fonte, { status: "failed", last_index_status: "failed", last_index_error: "site_endereco_alterado" });
     return false;
   }
@@ -136,23 +159,32 @@ async function processarFonte(orgId: string, sourceId: string): Promise<boolean>
     // Revalida após I/O: uma organização suspensa ou um material arquivado não
     // ganha conteúdo por uma leitura iniciada antes da decisão.
     const [aindaEmpresa, aindaFonte] = await Promise.all([negocio(orgId), fonteDaOrg(orgId, sourceId)]);
-    if (!aindaEmpresa || aindaEmpresa.url !== estado.url || aindaFonte?.status !== "building" || aindaFonte.is_active) return false;
+    if (!aindaEmpresa || (!veioDoAcervo && aindaEmpresa.url !== estado.url) || aindaFonte?.status !== "building" || aindaFonte.is_active) return false;
     const reservaAtual = lerEstadoDoSite(aindaFonte.source_metadata);
     if (reservaAtual?.inicio !== iniciado.inicio || reservaAtual.tentativas !== iniciado.tentativas) return false;
     const admin = createAdminClient();
     if (resultado.produtos.length) {
-      const { error } = await admin.from("catalog_products").upsert(resultado.produtos.map((p) => ({
+      const codigos = resultado.produtos.map((p) => p.codigo);
+      const { data: conferidos, error: conferidosError } = await admin.from("catalog_products")
+        .select("codigo").eq("organization_id", orgId).eq("ativo", true).in("codigo", codigos);
+      if (conferidosError) throw new Error("site_produtos_nao_gravados");
+      const codigosConferidos = new Set((conferidos ?? []).map((p) => p.codigo));
+      const produtosAtualizaveis = resultado.produtos.filter((p) => !codigosConferidos.has(p.codigo));
+      const { error } = produtosAtualizaveis.length === 0 ? { error: null } : await admin.from("catalog_products").upsert(produtosAtualizaveis.map((p) => ({
         organization_id: orgId, codigo: p.codigo, nome: p.nome, descricao: p.descricao ?? null,
         preco_cents: p.preco_cents, moeda: p.moeda, origem: ORIGEM_SITE,
         ativo: false, controla_estoque: false,
-      })), { onConflict: "organization_id,codigo", ignoreDuplicates: true });
+      })), { onConflict: "organization_id,codigo" });
       if (error) throw new Error("site_produtos_nao_gravados");
     }
+    const { error: apagarFaqError } = await admin.from("ai_faq_items").delete()
+      .eq("organization_id", orgId).eq("knowledge_source_id", sourceId);
+    if (apagarFaqError) throw new Error("site_perguntas_nao_gravadas");
     if (resultado.perguntas.length) {
       const { error } = await admin.from("ai_faq_items").upsert(resultado.perguntas.map((p, position) => ({
         id: idEstavel(`${sourceId}:faq:${p.pergunta}`), organization_id: orgId,
         knowledge_source_id: sourceId, question: p.pergunta, answer: p.resposta, position,
-      })), { onConflict: "id", ignoreDuplicates: true });
+      })), { onConflict: "id" });
       if (error) throw new Error("site_perguntas_nao_gravadas");
     }
     const concluidaEm = new Date().toISOString();
@@ -183,6 +215,15 @@ async function processarFonte(orgId: string, sourceId: string): Promise<boolean>
       source_metadata: { ...metadata, site: { ...iniciado, motivo: "site_gravacao_indisponivel", concluidaEm: new Date().toISOString() } },
     });
     return false;
+  }
+}
+
+/** Processa uma fonte específica; a fila durável e o cron continuam como garantia. */
+export async function processarFonteDoSite(orgId: string, sourceId: string): Promise<void> {
+  try {
+    await processarFonte(orgId, sourceId);
+  } catch {
+    logger.error("acervo.site_leitura_pendente", { organizationId: orgId, sourceId });
   }
 }
 
@@ -222,11 +263,17 @@ export async function recuperarLeiturasDoSite(): Promise<{ enfileiradas: number;
 export async function reenfileirarSite(orgId: string, sourceId: string): Promise<boolean> {
   const fonte = await fonteDaOrg(orgId, sourceId);
   const estado = lerEstadoDoSite(fonte?.source_metadata);
-  if (!fonte || fonte.status !== "failed" || fonte.is_active || !estado || estado.tentativas >= MAX_TENTATIVAS) return false;
+  if (!fonte || fonte.status === "building" || fonte.status === "archived" || !estado) return false;
   const empresa = await negocio(orgId);
-  if (!empresa || empresa.url !== estado.url) return false;
-  return mudarFonte(fonte, { status: "building", last_index_status: null, last_index_error: null,
-    source_metadata: { ...fonte.source_metadata, site: { ...estado, inicio: null, concluidaEm: null } } });
+  const veioDoAcervo = fonte.source_metadata.site_origem === ORIGEM_ACERVO;
+  if (!empresa || (!veioDoAcervo && empresa.url !== estado.url)) return false;
+  return mudarFonte(fonte, { status: "building", is_active: false, last_index_status: null, last_index_error: null,
+    source_metadata: { ...fonte.source_metadata, site: {
+      ...estado, resumo: "", paginasLidas: 0, limiteAtingido: false, recusas: [],
+      tentativas: 0, inicio: null, concluidaEm: null, motivo: undefined,
+      revisadoEm: undefined, revisadoPor: undefined, revisaoConteudoHash: undefined,
+      revisaoToken: undefined, revisaoInicio: undefined,
+    } } });
 }
 
 /** Snapshot: nunca inicia nem aguarda crawling/embeddings/modelo. */

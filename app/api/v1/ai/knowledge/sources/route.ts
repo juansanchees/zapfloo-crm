@@ -137,6 +137,14 @@ export async function POST(req: NextRequest): Promise<Response> {
       { requestId },
     );
   }
+  if (tipo === "site") {
+    return fail(
+      "unprocessable_entity",
+      t("Para adicionar um site, informe o endereço no leitor seguro do acervo."),
+      422,
+      { requestId },
+    );
+  }
   if (!permiteCadastroManual(tipo)) {
     return fail("unprocessable_entity", t("O material do site é criado pela leitura do endereço informado na configuração inicial."), 422, { requestId });
   }

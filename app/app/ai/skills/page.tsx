@@ -5,6 +5,8 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SkillsState } from "@/hooks/ai/useSkills";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { matcherVisivel } from "@/lib/ai/skills/apresentacao";
+import { contarQuaseAtivacoes } from "@/lib/ai/skills/quase-ativacoes";
 import { SkillsClient } from "./_client";
 
 export const dynamic = "force-dynamic";
@@ -31,10 +33,11 @@ export default async function SkillsPage() {
 
   const { data: versionsRaw } =
     versionIds.length > 0
-      ? await admin.from("skill_versions").select("id, description, forked_from_version_id").in("id", versionIds)
+      ? await admin.from("skill_versions").select("id, description, forked_from_version_id, matcher").in("id", versionIds)
       : { data: [] };
   const versionById = new Map((versionsRaw ?? []).map((v) => [v.id, v]));
 
+  const nearMisses = await contarQuaseAtivacoes(activeOrg.orgId, orgRows.map((p) => p.name));
   const installed: SkillsState["installed"] = orgRows.map((p) => {
     const v = versionById.get(p.version_id);
     return {
@@ -43,6 +46,8 @@ export default async function SkillsPage() {
       version_id: p.version_id,
       source: (v?.forked_from_version_id ? "catalog" : "manual") as "catalog" | "manual",
       updated_at: p.updated_at,
+      triggers: matcherVisivel(v?.matcher).any_keywords,
+      near_misses: nearMisses[p.name] ?? 0,
     };
   });
 
