@@ -201,6 +201,13 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "orçamento, criativo e performance de quem anuncia.",
   },
   {
+    tabela: "ad_insights_oauth_requests",
+    razao:
+      "tests/invariants/meta-ads-oauth.test.ts — privilégio nenhum para anon/authenticated, " +
+      "PostgREST real recusa leitura e RPC, RLS ligada sem policies e tentativas cross-org " +
+      "recusadas pelas RPCs. São capacidades server-side, não dados de sessão do tenant.",
+  },
+  {
     tabela: "ad_conversion_dispatches",
     razao:
       "tests/invariants/credencial-de-anuncios-e-server-side.test.ts — mesmo " +

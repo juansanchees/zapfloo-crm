@@ -274,6 +274,8 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20260913190100` | `0233_onboarding_reparar_funcionario_principal` | Reparo genérico e idempotente apenas com recibo/audit íntegros e a mesma versão ainda publicada/ativa. NOTICE conta promoções, principal preexistente, falta de evidência e principais arquivados (só reportados). Não altera canal, allowlist ou ativação. |
 | `20260914120000` | `0234_planos_por_organizacao` | Assinatura isolada de settings, com CHECK/RLS e escrita somente pelo backend de plataforma. Backfill idempotente preserva organizações existentes em Completo ativo; novas organizações nascem em teste por gatilho. |
 
+| `20260915210000` | `0235_meta_ads_oauth` | OAuth de anúncios com solicitações duráveis server-side: link de agência 30min, sessão 10min, consumo único e conclusão separados. RPCs serializam por organização, revalidam o papel vigente e revogam pendentes ao trocar token/desconectar, inclusive antes da primeira conexão. Metadados reais de validade na conexão existente, NULL para legado/manual; nenhum bearer em claro no banco. Notifica o PostgREST após criar os contratos, inclusive no aplicador do kit por statement. |
+
 ## Tables created (33 total, all RLS enabled)
 
 - **Platform**: organizations, user_organizations, platform_admins, api_tokens, api_audit_log, user_recovery_codes, idempotency_keys

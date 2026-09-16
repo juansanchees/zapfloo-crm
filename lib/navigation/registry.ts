@@ -850,10 +850,9 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: Megaphone,
     group: "organizacao",
     section: "Sua empresa",
-    // `admin` pelo mesmo critério da vizinha, mesmo o token sendo só de
-    // leitura: ele expõe orçamento e performance da conta inteira, e quem
-    // apenas LÊ a tela (`manager`) não precisa poder trocar a credencial.
-    minRole: "admin",
+    // Autorização delegada e seleção da conta compartilham o piso da leitura.
+    // A escrita manual do token e a desconexão continuam restritas a admin.
+    minRole: "manager",
   },
   {
     href: "/app/settings/marca",

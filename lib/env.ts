@@ -300,6 +300,13 @@ const schema = z.object({
   GOOGLE_CALENDAR_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional().default(""),
 
+  // Login comercial opcional. META_APP_SECRET já serve ao HMAC do WhatsApp:
+  // compartilhar a leitura não altera aquele canal nem exige chave no boot.
+  META_APP_ID: z.string().optional().default(""),
+  META_APP_SECRET: z.string().optional().default(""),
+  META_LOGIN_CONFIG_ID: z.string().optional().default(""),
+  META_GRAPH_VERSION: z.string().optional().default("v22.0"),
+
   // Nuvemshop — opcional (template genérico open-source). Só exigidas quando
   // NUVEMSHOP_ENABLED=true; o runtime já degrada via getConfig()==null.
   NUVEMSHOP_APP_ID: z.string().optional().default(""),

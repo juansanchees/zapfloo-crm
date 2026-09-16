@@ -58,6 +58,15 @@ describe("integridade do registro", () => {
 });
 
 describe("canSee", () => {
+  it("a conexão de anúncios aparece para manager e admin, mas não para agent ou viewer", () => {
+    for (const papel of [ADMIN, MANAGER]) {
+      expect(canSee(dest("/app/settings/meta-ads"), papel.platform, papel.role)).toBe(true);
+    }
+    for (const papel of [AGENT, VIEWER]) {
+      expect(canSee(dest("/app/settings/meta-ads"), papel.platform, papel.role)).toBe(false);
+    }
+  });
+
   it("nega quem está abaixo do minRole", () => {
     expect(canSee(dest("/app/audit"), MANAGER.platform, MANAGER.role)).toBe(true);
     expect(canSee(dest("/app/audit"), AGENT.platform, AGENT.role)).toBe(false);

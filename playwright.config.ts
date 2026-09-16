@@ -89,13 +89,27 @@ function publicarNoProcesso(env: Record<string, string>): Record<string, string>
 // Porta do dev server sob teste. Default 3001; sobrescreva com E2E_PORT quando
 // a 3001 já estiver ocupada por outro checkout/worktree.
 const PORT = process.env.E2E_PORT ?? "3001";
-const BASE_URL = `http://localhost:${PORT}`;
+const HTTPS_LOCAL = process.env.E2E_LOCAL_HTTPS === "1";
+if (HTTPS_LOCAL && process.env.E2E_META_ADS_FIXTURE !== "1") {
+  throw new Error("HTTPS local exclusivo do harness OAuth sintético.");
+}
+const BASE_URL = HTTPS_LOCAL ? "https://localhost:3443" : `http://localhost:${PORT}`;
+const ENV_E2E = publicarNoProcesso(envDoE2E());
+if (process.env.E2E_META_ADS_FIXTURE === "1") {
+  // O placeholder do gerador histórico tem menos de 32 caracteres. O OAuth
+  // exige uma chave de assinatura forte: teste e Next recebem A MESMA chave
+  // fictícia, sem modificar .env.e2e nem enfraquecer o requisito do produto.
+  const segredoSintetico = "meta-ads-oauth-assinatura-local-somente-testes-2026";
+  process.env.INTERNAL_SECRET = segredoSintetico;
+  ENV_E2E.INTERNAL_SECRET = segredoSintetico;
+}
 
 // Preloads são opt-ins somente do processo Next isolado. Compor os dois permite
 // provar a jornada inteira sem serviço de IA, DNS ou site de cliente real.
 const preloads = [
   ...(process.env.E2E_ONBOARDING_SYNTHETIC_PROVIDER === "1" ? ["onboarding-provider-preload.mjs"] : []),
   ...(process.env.E2E_ONBOARDING_SITE_FIXTURE === "1" ? ["site-provider-preload.mjs"] : []),
+  ...(process.env.E2E_META_ADS_FIXTURE === "1" ? ["meta-ads-provider-preload.mjs"] : []),
 ].map((file) => `--import "${pathToFileURL(resolve(`tests/e2e/helpers/${file}`)).href}"`).join(" ");
 
 export default defineConfig({
@@ -122,6 +136,9 @@ export default defineConfig({
   retries: 0,
   use: {
     baseURL: BASE_URL,
+    // O proxy é loopback, com certificado gerado só para este teste. Fora do
+    // opt-in os erros TLS seguem sendo recusados pelo navegador.
+    ignoreHTTPSErrors: HTTPS_LOCAL,
     // ⚠️ Era `on-first-retry`, e com `retries: 0` logo acima isso significa
     // **trace nunca gravado**. As duas linhas estão certas isoladamente e
     // erradas juntas: uma diz "só no retry", a outra diz "não há retry".
@@ -142,7 +159,9 @@ export default defineConfig({
     // Produção (`next build` antes!): dev-server compila por rota (40-80s) e
     // Turbopack dev quebra cookies() fora do request scope — inviável p/ e2e.
     // Opt-in do harness: preload só neste Next isolado, nunca no runner/workers ou na produção.
-    command: preloads
+    command: HTTPS_LOCAL
+      ? "node tests/e2e/helpers/meta-ads-https-server.mjs"
+      : preloads
       ? `node ${preloads} node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port ${PORT}`
       : `corepack pnpm exec next start --port ${PORT}`,
     // O ambiente do servidor sob teste vem do `.env.e2e`, INJETADO aqui — e não
@@ -157,8 +176,12 @@ export default defineConfig({
     // `publicarNoProcesso` acima que garante que o `process.env` do runner tenha
     // o que aquele conserto precisa: sem ele, num worktree sem `.env.local`, o
     // seed não tinha NENHUMA das duas fontes.
-    env: publicarNoProcesso(envDoE2E()),
+    env: {
+      ...ENV_E2E,
+      ...(HTTPS_LOCAL ? { NEXT_PUBLIC_APP_URL: BASE_URL } : {}),
+    },
     url: BASE_URL,
+    ignoreHTTPSErrors: HTTPS_LOCAL,
     // false: reusar um server que já ocupa a porta pode ser OUTRO processo
     // (ex.: bundle do Remotion na 3000) — o teste precisa do NOSSO next start.
     reuseExistingServer: false,

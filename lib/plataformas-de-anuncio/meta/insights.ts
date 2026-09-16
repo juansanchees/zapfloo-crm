@@ -46,6 +46,7 @@
  * ao carregar" — o operador precisa saber que a espera resolve.
  */
 import { logger } from "@/lib/logger";
+import { ORCAMENTO_LEITURA_CONTAS_MS } from "./limites";
 import type {
   ContaDeAnuncio,
   FalhaDeLeitura,
@@ -59,8 +60,6 @@ import type {
  * a lição do achado 2 acima é justamente que campo válido some entre versões.
  */
 const VERSAO_DA_API = "v22.0";
-
-const TEMPO_LIMITE_MS = 20_000;
 
 /**
  * Teto de páginas por leitura.
@@ -145,9 +144,6 @@ interface RespostaPaginada<T> {
 interface ErroGraph {
   error?: {
     code?: number;
-    error_subcode?: number;
-    message?: string;
-    type?: string;
   };
 }
 
@@ -203,6 +199,24 @@ export function classificarErroGraph(
 // O transporte
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** A paginação é dado externo, não autorização para mudar de destino. */
+function paginaSegura(valor: string): string | null {
+  try {
+    const url = new URL(valor);
+    if (url.origin !== "https://graph.facebook.com" || url.username || url.password) return null;
+    // A API costuma repetir estas credenciais na URL seguinte. Só o bearer do
+    // servidor pode autenticar a leitura; a URL usada pelo fetch nunca as leva.
+    const sensiveis = new Set(["access_token", "appsecret_proof", "client_secret", "app_secret", "code"]);
+    for (const chave of [...url.searchParams.keys()]) {
+      if (sensiveis.has(chave.toLowerCase())) url.searchParams.delete(chave);
+    }
+    url.hash = "";
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * GET numa URL da Graph, seguindo `paging.next` até o fim.
  *
@@ -220,64 +234,76 @@ async function buscarPaginado<T>(
   const acumulado: T[] = [];
   let url: string | null = urlInicial;
   let pagina = 0;
+  const controlador = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const falhaSegura = (detalhe: string): ResultadoDeLeitura<T[]> => ({ ok: false, falha: "transitorio", detalhe });
 
-  while (url && pagina < MAXIMO_DE_PAGINAS) {
-    pagina += 1;
+  const executar = async (): Promise<ResultadoDeLeitura<T[]>> => {
+    while (url && pagina < MAXIMO_DE_PAGINAS) {
+      if (controlador.signal.aborted) return falhaSegura("request_timeout");
+      const segura = paginaSegura(url);
+      if (!segura) return falhaSegura("invalid_pagination");
+      pagina += 1;
 
-    let resposta: Response;
-    try {
-      resposta = await fetch(url, {
-        method: "GET",
-        headers: { authorization: `Bearer ${token}` },
-        // Sob demanda de verdade: a tela promete "Atualizar" e um cache aqui
-        // devolveria número velho com cara de novo.
-        cache: "no-store",
-        signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
-      });
-    } catch (erro) {
-      return {
-        ok: false,
-        falha: "transitorio",
-        detalhe: erro instanceof Error ? erro.message : "falha de rede",
-      };
-    }
-
-    const texto = await resposta.text().catch(() => "");
-
-    if (!resposta.ok) {
-      let codigo: number | null = null;
-      let mensagem = texto.slice(0, 400);
+      let resposta: Response;
+      let texto: string;
       try {
-        const json = JSON.parse(texto) as ErroGraph;
-        if (typeof json.error?.code === "number") codigo = json.error.code;
-        if (json.error?.message) mensagem = json.error.message;
+        resposta = await fetch(segura, {
+          method: "GET",
+          headers: { authorization: `Bearer ${token}` },
+          // A tela promete "Atualizar": não entregar número cacheado como novo.
+          cache: "no-store", redirect: "error", credentials: "omit",
+          signal: controlador.signal,
+        });
+        texto = await resposta.text();
       } catch {
-        // Corpo não-JSON num erro é gateway/WAF no meio. Fica o texto cru.
+        // Error.message de fetch pode conter URL e segredo. Nunca atravessa
+        // esta fronteira, nem em detalhe da API, log ou captureException.
+        return falhaSegura(controlador.signal.aborted ? "request_timeout" : "network_failure");
       }
-      const falha = classificarErroGraph(resposta.status, codigo);
-      // A mensagem da plataforma entra no log; o token, nunca — nem o `url`,
-      // que a partir da segunda página o carrega na query.
-      logger.warn("[ads.meta.insights] leitura recusada", {
-        contexto,
-        status: resposta.status,
-        codigo,
-        falha,
-      });
-      return { ok: false, falha, detalhe: mensagem };
+      if (controlador.signal.aborted) return falhaSegura("request_timeout");
+
+      if (!resposta.ok) {
+        let codigo: number | null = null;
+        try {
+          const json = JSON.parse(texto) as ErroGraph | null;
+          if (typeof json?.error?.code === "number" && Number.isSafeInteger(json.error.code)) codigo = json.error.code;
+        } catch {
+          // HTML de gateway é tão opaco quanto message do provedor: não repassar.
+        }
+        const falha = classificarErroGraph(resposta.status, codigo);
+        logger.warn("[ads.meta.insights] leitura recusada", { contexto, status: resposta.status, codigo, falha });
+        return { ok: false, falha, detalhe: "provider_rejected" };
+      }
+
+      let json: RespostaPaginada<T> | null;
+      try { json = JSON.parse(texto) as RespostaPaginada<T> | null; }
+      catch { return falhaSegura("invalid_response"); }
+      if (!json || !Array.isArray(json.data) || json.data.some((item) => !item || typeof item !== "object")) {
+        return falhaSegura("invalid_response");
+      }
+      if (json.paging?.next !== undefined && typeof json.paging.next !== "string") return falhaSegura("invalid_pagination");
+      acumulado.push(...json.data);
+      url = json.paging?.next || null;
     }
 
-    let json: RespostaPaginada<T>;
-    try {
-      json = JSON.parse(texto) as RespostaPaginada<T>;
-    } catch {
-      return { ok: false, falha: "transitorio", detalhe: "resposta ilegível da plataforma" };
-    }
+    // Não afirmar que listou todas as contas quando o teto interrompeu a busca.
+    return url ? falhaSegura("pagination_limit") : { ok: true, dados: acumulado };
+  };
 
-    acumulado.push(...(json.data ?? []));
-    url = json.paging?.next ?? null;
+  const limite = new Promise<ResultadoDeLeitura<T[]>>((resolve) => {
+    timer = setTimeout(() => {
+      controlador.abort();
+      resolve(falhaSegura("request_timeout"));
+    }, ORCAMENTO_LEITURA_CONTAS_MS);
+  });
+  try {
+    // Um orçamento para a operação inteira. Cobre também corpo lento e impede
+    // que a segunda página renove o relógio enquanto o cliente já desistiu.
+    return await Promise.race([executar(), limite]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
-
-  return { ok: true, dados: acumulado };
 }
 
 function montarUrl(caminho: string, parametros: Record<string, string>): string {
