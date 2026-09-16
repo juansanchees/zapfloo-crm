@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { rotuloDoAtendente } from "@/lib/users/nome-do-atendente";
+import { rotuloDoAtendente } from "@/lib/users/rotulo-do-atendente";
 
 const ALL = "__all__";
 

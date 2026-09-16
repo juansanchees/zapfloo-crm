@@ -42,28 +42,7 @@ import { isServiceRoleConfigured } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const PAPEL_LEGIVEL: Record<string, string> = {
-  viewer: "Leitor",
-  agent: "Atendente",
-  manager: "Gestor",
-  admin: "Administrador",
-};
-
-/** Rótulo sem UUID e sem e-mail; pode ser usado por agenda, inbox e automações. */
-export function rotuloDoAtendente(args: {
-  userId: string;
-  usuarioAtualId?: string | null;
-  fullName?: string | null;
-  role?: string | null;
-  t?: (texto: string) => string;
-}): string {
-  const t = args.t ?? ((texto: string) => texto);
-  if (args.usuarioAtualId && args.userId === args.usuarioAtualId) return t("Você");
-  const nome = args.fullName?.trim();
-  if (nome) return nome;
-  const papel = PAPEL_LEGIVEL[args.role ?? ""] ?? args.role ?? "membro";
-  return `${t("Sem nome")} — ${t(papel)}`;
-}
+export { rotuloDoAtendente } from "./rotulo-do-atendente";
 
 /**
  * Custo, medido em 127.0.0.1 contra o GoTrue local: é **uma requisição HTTP por

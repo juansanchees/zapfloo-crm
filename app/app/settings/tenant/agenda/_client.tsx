@@ -11,6 +11,7 @@ import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { Button } from "@/components/ui/button";
 import { LOCAIS_DE_ATENDIMENTO } from "@/lib/agenda/locais";
 import { apiClient } from "@/lib/api/client";
+import { randomId } from "@/lib/random-id";
 
 export interface TipoRow {
   id: string;
@@ -142,7 +143,7 @@ export function TiposDeAgendamentoClient({
     }
     setSalvando(true);
     try {
-      const codigo = `AGENDA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const codigo = `AGENDA-${randomId().slice(0, 8).toUpperCase()}`;
       const resposta = await apiClient.post<{ data: ProdutoRow }>("/api/v1/products", {
         codigo,
         nome: novoProduto.nome.trim(),

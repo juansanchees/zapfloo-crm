@@ -2,7 +2,7 @@
 
 import { useT } from "@/hooks/i18n/useT";
 import { useAuth } from "@/hooks/auth/AuthProvider";
-import { rotuloDoAtendente } from "@/lib/users/nome-do-atendente";
+import { rotuloDoAtendente } from "@/lib/users/rotulo-do-atendente";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 

@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { useTransferConversation } from "@/hooks/inbox/useTransferConversation";
-import { rotuloDoAtendente } from "@/lib/users/nome-do-atendente";
+import { rotuloDoAtendente } from "@/lib/users/rotulo-do-atendente";
 
 interface Props {
   conversationId: string;
