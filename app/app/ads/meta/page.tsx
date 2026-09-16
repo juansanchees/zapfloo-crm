@@ -24,6 +24,8 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { existeConexaoDeLeitura } from "@/lib/plataformas-de-anuncio/credenciais-de-leitura";
+import { configuracaoOAuth } from "@/lib/plataformas-de-anuncio/meta/oauth/config";
+import { lerValidadeConexao } from "@/lib/plataformas-de-anuncio/meta/oauth/validade";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import { MetaAdsClient } from "./_components/MetaAdsClient";
@@ -41,13 +43,11 @@ export default async function MetaAdsPage() {
 
   const admin = createAdminClient();
   const conexao = await existeConexaoDeLeitura(admin, activeOrg.orgId, "meta_ads");
+  const validade = conexao.conectada ? await lerValidadeConexao(admin, activeOrg.orgId) : null;
 
   const idioma = user.idioma;
   const t = (texto: string) => traduzir(texto, idioma);
-  // Quem NÃO pode conectar não deve ler "vá em Configurações" — a tela lá é
-  // `admin`, e mandar um manager para uma porta que devolve 403 é pior que
-  // dizer a verdade: ele precisa pedir para alguém.
-  const podeConectar = user.is_platform_admin || ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin;
+  const podeConectar = user.is_platform_admin || ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin || Boolean(configuracaoOAuth());
 
   return (
     /*
@@ -68,6 +68,17 @@ export default async function MetaAdsPage() {
         </p>
       </header>
 
+      {validade && validade.estado !== "valida" && (
+        <div role="status" className="rounded-md border border-warning/40 bg-warning/10 p-4 text-sm">
+          <p>{validade.estado === "expirada"
+            ? t("A autorização da conta de anúncios venceu. Conecte novamente para voltar a consultar as campanhas.")
+            : validade.estado === "expirando"
+              ? t("A autorização da conta de anúncios vence em até 7 dias. Conecte novamente para evitar uma interrupção.")
+              : t("A validade desta autorização não foi informada. Isso não significa acesso permanente; se a leitura parar, conecte novamente.")}</p>
+          <a href="/app/settings/meta-ads" className="mt-2 inline-block font-medium underline">{t("Revisar conexão de anúncios")}</a>
+        </div>
+      )}
+
       {conexao.conectada ? (
         <MetaAdsClient contaPadrao={conexao.contaPadrao} idioma={idioma} />
       ) : (
@@ -76,7 +87,7 @@ export default async function MetaAdsPage() {
           <p className="mt-1 text-muted-foreground">
             {podeConectar
               ? t(
-                  "Conecte um token de acesso com permissão de leitura de anúncios para ver as campanhas aqui.",
+                  "Conecte a conta de anúncios em Configurações para ver as campanhas aqui.",
                 )
               : t(
                   "Peça a quem administra a organização para conectar a conta de anúncios em Configurações.",

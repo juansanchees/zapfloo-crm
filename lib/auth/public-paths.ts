@@ -40,6 +40,14 @@ export const PUBLIC_PATHS: RegExp[] = [
   // qualquer sub-path futuro nascer público de carona.
   /^\/api\/v1\/agenda\/google\/callback$/,
   /^\/api\/v1\/integrations\/nuvemshop\/callback$/,
+  // Consentimento de anúncios por link: a página valida assinatura, validade,
+  // recibo no banco e permissão atual de quem emitiu antes de ler o nome.
+  // O POST /agency e a volta /callback possuem guards próprios. /connect e
+  // /link continuam autenticados; não libere o prefixo /ads/meta/oauth/.
+  /^\/api\/v1\/ads\/meta\/oauth\/callback$/,
+  /^\/api\/v1\/ads\/meta\/oauth\/agency$/,
+  /^\/ads\/connect\/result$/,
+  /^\/ads\/connect\/[A-Za-z0-9_.-]{32,2048}$/,
   /^\/api\/internal\//,
   /^\/api\/mcp(\/.*)?$/,
   /^\/_next\//,

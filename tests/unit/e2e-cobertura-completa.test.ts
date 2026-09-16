@@ -68,6 +68,8 @@ function listaDoWorkflow(yml: string, chave: string): string[] {
 }
 
 const SPEC_LEITOR_SITE = "onboarding-leitor-de-site.spec.ts";
+const SPEC_META_ADS = "meta-ads-oauth.spec.ts";
+const PREPARAR_CIFRA_META = 'psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q -f tests/e2e/helpers/meta-ads-cifra.sql';
 
 /**
  * Esta spec sai de LISTA porque precisa de dois receivers e preloads próprios.
@@ -84,6 +86,15 @@ function passosDoWorkflow(workflow: string): string[] {
 function executaLeitorSite(passo: string): boolean {
   const run = /^ {8}run: (.+)$/m.exec(passo)?.[1];
   return run === `pnpm exec playwright test tests/e2e/${SPEC_LEITOR_SITE} --workers=1 --reporter=list`;
+}
+
+function executaMetaAds(passo: string): boolean {
+  return /^ {8}run: (.+)$/m.exec(passo)?.[1]
+    === `pnpm exec playwright test tests/e2e/${SPEC_META_ADS} --workers=1 --reporter=list`;
+}
+
+function preparaCifraMeta(passo: string): boolean {
+  return /^ {8}run: (.+)$/m.exec(passo)?.[1] === PREPARAR_CIFRA_META;
 }
 
 function pulaTeste(fonte: string): boolean {
@@ -117,6 +128,38 @@ function errosDaExecucaoDedicadaSite(workflow: string, spec: string): string[] {
   return erros;
 }
 
+/** A lista comum prova a ausência de configuração; somente esta segunda execução
+ * prova consentimento e cookies Secure. Perder o passo não pode deixar o CI verde
+ * medindo apenas o primeiro ramo da spec. Os valores são fixtures, não segredos. */
+function errosDaExecucaoDedicadaMeta(workflow: string, spec: string): string[] {
+  const erros: string[] = [];
+  if (!listaDoWorkflow(workflow, "SPECS_PARTE_3").includes(SPEC_META_ADS)) erros.push("Meta Ads fora da parte 3");
+  if (listaDoWorkflow(workflow, "FORA_DO_CI").includes(SPEC_META_ADS)) erros.push("Meta Ads declarada fora do CI");
+  const passos = passosDoWorkflow(workflow).filter(executaMetaAds);
+  const preparos = passosDoWorkflow(workflow).filter(preparaCifraMeta);
+  if (preparos.length !== 1) erros.push("falta preparar a cifra real no banco local");
+  for (const preparo of preparos) {
+    if (/^ {8}if: (.+)$/m.exec(preparo)?.[1] !== "matrix.parte == 3") erros.push("preparo da cifra pode ser pulado");
+    if (/^ {8}continue-on-error:\s*(?:true|["']true["'])\s*$/m.test(preparo)) erros.push("falha de cifra é ignorada");
+    if (passos[0] && workflow.indexOf(preparo) > workflow.indexOf(passos[0])) erros.push("cifra preparada depois do OAuth");
+  }
+  if (passos.length !== 1) erros.push("falta uma execução dedicada real de Meta Ads");
+  for (const passo of passos) {
+    if (/^ {8}if: (.+)$/m.exec(passo)?.[1] !== "matrix.parte == 3") erros.push("execução Meta Ads pode ser pulada");
+    if (/^ {8}continue-on-error:\s*(?:true|["']true["'])\s*$/m.test(passo)) erros.push("falha Meta Ads é ignorada");
+    const env = /^ {8}env:\s*\n((?: {10}[^\n]*\n)+)/m.exec(passo)?.[1] ?? "";
+    for (const [nome, valor] of Object.entries({
+      E2E_META_ADS_FIXTURE: "1", E2E_LOCAL_HTTPS: "1",
+      META_APP_ID: "123456789012345", META_APP_SECRET: "meta-ads-oauth-local-fixture-only",
+      META_LOGIN_CONFIG_ID: "987654321098765",
+    })) {
+      if (!new RegExp(`^ {10}${nome}: ["']?${valor}["']?$`, "m").test(env)) erros.push(`fixture ausente: ${nome}`);
+    }
+  }
+  if (pulaTeste(spec)) erros.push("Meta Ads contém skip/fixme");
+  return erros;
+}
+
 const yml = readFileSync(WORKFLOW, "utf8");
 const parte1 = listaDoWorkflow(yml, "SPECS_PARTE_1");
 const parte2 = listaDoWorkflow(yml, "SPECS_PARTE_2");
@@ -126,6 +169,7 @@ const noDisco = readdirSync(DIR_SPECS)
   .filter((f) => f.endsWith(".spec.ts"))
   .sort();
 const specLeitorSite = readFileSync(path.join(DIR_SPECS, SPEC_LEITOR_SITE), "utf8");
+const specMetaAds = readFileSync(path.join(DIR_SPECS, SPEC_META_ADS), "utf8");
 
 describe("cobertura do e2e no CI", () => {
   it("o parser está vivo — controle positivo antes de qualquer conclusão", () => {
@@ -218,6 +262,67 @@ describe("cobertura do e2e no CI", () => {
 
   it("o leitor de site tem execução dedicada com os dois preloads e não ganha skip", () => {
     expect(errosDaExecucaoDedicadaSite(yml, specLeitorSite)).toEqual([]);
+  });
+
+  it("Meta Ads roda sem configuração e também com OAuth HTTPS sintético, sem skip", () => {
+    expect(errosDaExecucaoDedicadaMeta(yml, specMetaAds)).toEqual([]);
+  });
+
+  it("Meta Ads prepara a cifra real antes da jornada, sem chave fixa ou rotação", () => {
+    const sql = readFileSync(path.join(DIR_SPECS, "helpers", "meta-ads-cifra.sql"), "utf8");
+    const executavel = sql.replace(/--[^\n]*/g, "");
+    expect(executavel).toMatch(/insert into private\.app_secrets/);
+    expect(executavel).toMatch(/gen_random_bytes\(32\)/);
+    expect(executavel).toMatch(/on conflict \(name\) do nothing/);
+    expect(executavel).toMatch(/set local role service_role/);
+    expect(executavel).toMatch(/public\.fn_encrypt_oauth\(controle\)/);
+    expect(executavel).toMatch(/public\.fn_decrypt_oauth\(cifrado\) is distinct from controle/);
+    expect(executavel).toMatch(/raise exception/);
+  });
+
+  it("SABOTAGEM Meta Ads: perder ou atrasar o preparo da cifra reprova", () => {
+    const preparo = passosDoWorkflow(yml).find(preparaCifraMeta);
+    expect(preparo, "controle positivo: passo de cifra local").toBeDefined();
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(preparo!, ""), specMetaAds))
+      .toContain("falta preparar a cifra real no banco local");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(preparo!, preparo!.replace("if: matrix.parte == 3", "if: false")), specMetaAds))
+      .toContain("preparo da cifra pode ser pulado");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(preparo!, `${preparo}\n        continue-on-error: true`), specMetaAds))
+      .toContain("falha de cifra é ignorada");
+    expect(errosDaExecucaoDedicadaMeta(`${yml.replace(preparo!, "")}\n${preparo}`, specMetaAds))
+      .toContain("cifra preparada depois do OAuth");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(PREPARAR_CIFRA_META, PREPARAR_CIFRA_META.replace("-v ON_ERROR_STOP=1 ", "")), specMetaAds))
+      .toContain("falta preparar a cifra real no banco local");
+  });
+
+  it("SABOTAGEM Meta Ads: apagar a execução OAuth reprova mesmo mantendo a spec na lista", () => {
+    const passo = passosDoWorkflow(yml).find(executaMetaAds);
+    expect(passo, "controle positivo: execução OAuth precisa existir").toBeDefined();
+    const sabotado = yml.replace(passo!, `      # run: pnpm exec playwright test tests/e2e/${SPEC_META_ADS} --workers=1 --reporter=list`);
+    expect(listaDoWorkflow(sabotado, "SPECS_PARTE_3")).toContain(SPEC_META_ADS);
+    expect(errosDaExecucaoDedicadaMeta(sabotado, specMetaAds)).toContain("falta uma execução dedicada real de Meta Ads");
+  });
+
+  it.each(["E2E_META_ADS_FIXTURE", "E2E_LOCAL_HTTPS", "META_APP_ID", "META_APP_SECRET", "META_LOGIN_CONFIG_ID"])(
+    "SABOTAGEM Meta Ads: retirar %s do passo dedicado reprova", (flag) => {
+      const passo = passosDoWorkflow(yml).find(executaMetaAds)!;
+      const sabotado = yml.replace(passo, passo.replace(new RegExp(`^ {10}${flag}:.*\\n`, "m"), ""));
+      expect(errosDaExecucaoDedicadaMeta(sabotado, specMetaAds)).toContain(`fixture ausente: ${flag}`);
+    },
+  );
+
+  it("SABOTAGEM Meta Ads: desativar o passo, ignorar erro ou pular teste reprova", () => {
+    const passo = passosDoWorkflow(yml).find(executaMetaAds)!;
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(passo, passo.replace("if: matrix.parte == 3", "if: false")), specMetaAds))
+      .toContain("execução Meta Ads pode ser pulada");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(passo, `${passo}\n        continue-on-error: true`), specMetaAds))
+      .toContain("falha Meta Ads é ignorada");
+    expect(errosDaExecucaoDedicadaMeta(yml.replace(/FORA_DO_CI:\s*>-/, `FORA_DO_CI: >-\n        ${SPEC_META_ADS}`), specMetaAds))
+      .toContain("Meta Ads declarada fora do CI");
+    for (const desvio of ["test.skip(true)", "test.describe.skip('OAuth', () => {})", "test.fixme(true)"]) {
+      expect(errosDaExecucaoDedicadaMeta(yml, `${specMetaAds}\n${desvio}`)).toContain("Meta Ads contém skip/fixme");
+    }
+    expect(errosDaExecucaoDedicadaMeta(yml, `${specMetaAds}\n// test.skip(true)`)).toEqual([]);
   });
 
   it("SABOTAGEM: apagar o passo dedicado reprova, mesmo com o nome ainda na lista e num comentário", () => {

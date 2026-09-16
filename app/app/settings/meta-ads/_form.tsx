@@ -95,8 +95,9 @@ export function FormularioDeMetaAds({
           <Label htmlFor="access_token">{t("Token de acesso")}</Label>
           <Input
             id="access_token"
+            name="meta_ads_access_token"
             type="password"
-            autoComplete="off"
+            autoComplete="new-password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
             placeholder={conectada ? t("Guardado — preencha só para trocar") : "EAA…"}
@@ -114,6 +115,10 @@ export function FormularioDeMetaAds({
           <Label htmlFor="default_account_id">{t("Conta padrão (opcional)")}</Label>
           <Input
             id="default_account_id"
+            name="meta_ads_default_account_id"
+            type="text"
+            autoComplete="off"
+            inputMode="text"
             value={conta}
             onChange={(e) => setConta(e.target.value)}
             placeholder="act_123456789012345"

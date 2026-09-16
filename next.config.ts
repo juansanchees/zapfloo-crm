@@ -82,6 +82,22 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/ads/connect/:path*",
+        // A metadata pode chegar por streaming: proteja a capacidade desde o primeiro byte.
+        // Só a origem vai no Referer; o POST HTTPS conserva Origin para o guard de CSRF.
+        headers: [{ key: "Referrer-Policy", value: "strict-origin" }],
+      },
+      {
+        source: "/api/v1/ads/meta/oauth/:path*",
+        // O header global também alcança os 303: preserve o sigilo na ida ao consentimento.
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+      {
+        source: "/ads/connect/result",
+        // O resultado não envia formulário e permanece privado, inclusive antes da metadata.
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
     ];
   },
 };

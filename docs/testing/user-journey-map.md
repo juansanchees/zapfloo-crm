@@ -2083,3 +2083,32 @@ arquivado continua sendo um caso fora de escopo do leitor, apenas contado.
 Auditoria de leitores, instrumentação da concorrência, sabotagens e limites em
 `docs/testing/onboarding-funcionario-principal.md`; evidências em
 `.superpowers/evidence/funcionario-principal/`.
+
+## Conexão de anúncios com Facebook e link de conexão — 15/set/2026
+
+| Caso | Prioridade | Prova executada / limite |
+|---|---|---|
+| Admin e manager iniciam autorização e escolhem conta pela tela | `[P0]` | `meta-ads-oauth.spec.ts`, OAuth HTTPS com Graph controlado: consentimento, callback, cifra e conta persistida; Auth, banco, RPCs e cookies reais locais. |
+| Destinatário abre link sem sessão, vê só nome e botão; recarregar não consome | `[P0]` | A mesma spec completa a autorização da agência e recusa novo uso; mede header HTTP, Origin nativo, Referer sem capacidade e ausência de token nas respostas concluídas/lidas. |
+| Link inválido/expirado/usado e banco indisponível não exibem nome ou formulário | `[P0]` | Unidade cobre os quatro casos; Playwright cobre expiração e reuso pela tela. A suíte de banco passou com PostgreSQL/PostgREST reais, incluindo expiração, replay, grants e isolamento. |
+| Cancelamento, erro ou revogação não grava conexão e pede nova autorização | `[P0]` | Rotas com HMAC real e banco controlado; assinatura/cookie/consumo sabotados reprovam. Banco real exercita revogação e callback tardio. Cancelamento pelo consentimento externo real não foi medido. |
+| Validade vencida, próxima ou desconhecida é tratada sem inventar prazo | `[P1]` | `oauth/validade.test.ts` cobre os relógios; Playwright mostra o aviso com prazo de seis dias informado pelo provedor controlado, em 1280×720 e 390×844. |
+| Instalação sem OAuth e preenchimento automático | `[P0]` | Playwright mantém o formulário manual para admin e o aviso para manager, sem botão OAuth; confere campos vazios e atributos de autocomplete. Cofre real de senhas do Chrome não foi exercitado. |
+| Viewer e agent não obtêm autorização pela URL/API | `[P0]` | Casos negativos na mesma spec; permissões e MFA também cobertos por testes de rotas e banco. |
+| Excesso de tentativas na página, início da agência e callback | `[P0]` | `meta-ads-oauth-rate-limit.test.ts` exercita o contador canônico e a resposta 429 antes de consumir recibos; GET/HEAD, query, percent-encoding e sufixo de asset cobertos. As três provas HTTP de `meta-ads-oauth.spec.ts` passaram: tentativa 21 → 429, sem chamada ao Graph. Os oito cenários existentes também passaram, sem retry. |
+
+Correção da precondição do CI: o job `34999563137/104484293844` registrou
+`NUVEMSHOP_OAUTH_ENCRYPTION_KEY ausente` nos três callbacks completos. O baseline
+não semeia a chave da instalação. `tests/e2e/helpers/meta-ads-cifra.sql` prepara
+somente o banco descartável de QA, preserva chave existente e exige cifra/decifra
+reais sob `service_role`; o guarda do workflow reprova sua retirada. Não se
+substituiu a cifra por mock nem se afrouxaram cookie, assinatura ou assertions.
+Reprodução em outro banco fresco sem cifra: três jornadas completas vermelhas;
+após o preparo idempotente (0 → 1 → 1 chave), nove configuradas e duas sem OAuth
+verdes na mesma compilação. Logs `e2e-pr23-sem-cifra.log`,
+`e2e-pr23-com-cifra.log` e `e2e-pr23-sem-oauth.log` registram os resultados.
+
+Contrato e Living System Checklist em `docs/integracoes/meta-ads-oauth.md`.
+Evidências locais em `.superpowers/evidence/meta-ads-oauth/`. Consentimento,
+token de longa duração, permissões e aprovação de aplicativo contra uma conta
+real do Facebook **não foram medidos** por testes com provedor controlado.

@@ -12,6 +12,23 @@ import { scrubMessage, scrubUrl, sentryScrubHooks } from "./scrub";
 const TOKEN = "wht_9f3a1c8b2e4d6a0f";
 
 describe("scrubUrl", () => {
+  it("redige o link de conexão de anúncios em erro, span, transação e breadcrumb", () => {
+    const link = "capacidade-assinada-sintetica-oauth-nao-real";
+    const url = `https://crm.exemplo.com/ads/connect/${link}`;
+    const resultados = [
+      scrubUrl(url),
+      sentryScrubHooks.beforeSend({ request: { url } }),
+      sentryScrubHooks.beforeSendTransaction({ transaction: `GET ${url}` }),
+      sentryScrubHooks.beforeSendSpan({ description: url, data: { "url.full": url } }),
+      sentryScrubHooks.beforeBreadcrumb({ message: url, data: { url } }),
+      sentryScrubHooks.beforeSend({ request: { url: "https://crm.exemplo.com/api/v1/ads/plataforma/oauth/agency", data: `link=${link}` } }),
+      sentryScrubHooks.beforeSendTransaction({ request: { url: "https://crm.exemplo.com/api/v1/ads/plataforma/oauth/agency", data: { link } } }),
+    ];
+    expect(JSON.stringify(resultados)).not.toContain(link);
+    expect(scrubUrl(url)).toContain("/ads/connect/[TOKEN]");
+    expect(scrubUrl("https://crm.exemplo.com/ads/connect/result")).toContain("/ads/connect/result");
+  });
+
   it("redige o token das rotas em que ele é credencial, inclusive canal novo", () => {
     for (const path of [
       `/api/v1/webhooks/in/${TOKEN}`,
@@ -70,6 +87,44 @@ describe("scrubMessage", () => {
 
 describe("sentryScrubHooks", () => {
   const urlComToken = `https://crm.exemplo.com/api/v1/webhooks/in/${TOKEN}?sig=deadbeef`;
+
+  it("redige as URLs reais de navegação em data.from e data.to", () => {
+    // Formato emitido por Breadcrumbs do SDK browser, inclusive paths relativos.
+    // Não há `message` nem `data.url` neste evento de history.pushState.
+    const origem = "capacidade-ficticia-do-link-de-origem";
+    const destino = "capacidade-ficticia-do-link-de-destino";
+    const crumb = sentryScrubHooks.beforeBreadcrumb({
+      category: "navigation",
+      data: {
+        from: `/ads/connect/${origem}`,
+        to: `https://crm.exemplo.com/ads/connect/${destino}?state=estado-ficticio`,
+        outro: "contexto preservado",
+      },
+    });
+    expect(crumb.data.from).toBe("/ads/connect/[TOKEN]");
+    expect(crumb.data.to).toBe("https://crm.exemplo.com/ads/connect/[TOKEN]?state=[REDACTED]");
+    expect(crumb.data.outro).toBe("contexto preservado");
+    expect(JSON.stringify(crumb)).not.toContain(origem);
+    expect(JSON.stringify(crumb)).not.toContain(destino);
+    expect(JSON.stringify(crumb)).not.toContain("estado-ficticio");
+  });
+
+  it("redige capacidade e query dentro de message e exception sem perder o scrub de dados pessoais", () => {
+    const capacidade = "capacidade-ficticia-em-erro";
+    const mensagem = `Falha em https://crm.exemplo.com/ads/connect/${capacidade}?state=estado-ficticio para joao@exemplo.com, CPF 123.456.789-01`;
+    const evento = sentryScrubHooks.beforeSend({
+      message: mensagem,
+      exception: { values: [{ value: mensagem }] },
+    });
+    for (const texto of [evento.message, evento.exception.values[0]?.value]) {
+      expect(texto).toContain("/ads/connect/[TOKEN]?state=[REDACTED]");
+      expect(texto).toContain("[EMAIL]");
+      expect(texto).toContain("[CPF]");
+      expect(texto).not.toContain(capacidade);
+      expect(texto).not.toContain("estado-ficticio");
+      expect(texto).not.toContain("joao@exemplo.com");
+    }
+  });
 
   it("limpa header sensível por padrão, inclusive de integração que ainda não existe", () => {
     const event = sentryScrubHooks.beforeSend({

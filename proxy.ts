@@ -3,6 +3,7 @@ import { cookieSecure } from "@/lib/supabase/cookie-secure";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { isPublicPath } from "@/lib/auth/public-paths";
+import { limitarPaginaOAuth } from "@/lib/plataformas-de-anuncio/meta/oauth/limite";
 import {
   verifyImpersonateCookieEdge,
   IMPERSONATE_COOKIE_NAME_EDGE,
@@ -16,6 +17,9 @@ export async function proxy(request: NextRequest) {
   // Inject X-Request-Id for downstream correlation (audit log, error wrappers).
   const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
   response.headers.set("x-request-id", requestId);
+
+  const limiteOAuth = await limitarPaginaOAuth(request, requestId);
+  if (limiteOAuth) return limiteOAuth;
 
   const { pathname, search } = request.nextUrl;
   // Expose pathname to Server Components via header (used by onboarding layout).
@@ -124,6 +128,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Capacidade pública não é asset, mesmo se um token inválido terminar em .js/.png.
+    "/ads/connect/:path*",
     // Run on all paths except static assets / Next internals.
     "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
   ],

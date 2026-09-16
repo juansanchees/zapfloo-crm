@@ -43,8 +43,8 @@ export interface AuthRateLimits {
  * `null` em vez de uma string sentinela: "não sei de onde veio" precisa ser
  * inexprimível como se fosse uma origem, senão vira balde compartilhado.
  */
-async function clientIp(): Promise<string | null> {
-  const hdrs = await headers();
+async function clientIp(requestHeaders?: Headers): Promise<string | null> {
+  const hdrs = requestHeaders ?? await headers();
   const encaminhado = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (encaminhado) return encaminhado;
   const real = hdrs.get("x-real-ip")?.trim();
@@ -65,8 +65,10 @@ export async function authRateLimited(
   action: string,
   identifier: string | null,
   limits: AuthRateLimits,
+  /** Proxy recebe os headers explicitamente; as demais chamadas mantêm o contexto do Next. */
+  requestHeaders?: Headers,
 ): Promise<boolean> {
-  const ip = await clientIp();
+  const ip = await clientIp(requestHeaders);
 
   // SEM IP identificável, o limite por IP não entra — e isto é decisão de
   // segurança, não relaxamento.
