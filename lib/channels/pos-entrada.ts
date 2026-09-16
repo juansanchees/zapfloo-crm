@@ -128,17 +128,6 @@ export async function aplicarEfeitosPosEntrada(
     texto: entrada.texto,
   });
   await pedirDespachoDoAgente(admin, entrada);
-  // Agora o evento do agente já existe. Sem esta segunda passagem, a primeira
-  // varre uma fila ainda sem esse evento e o pedido recém-gravado espera a
-  // próxima varredura (até o cron de um minuto). O consumidor só materializa
-  // o job com debounce (8s por padrão); a LLM não roda nesta request e
-  // mensagens consecutivas continuam agrupadas.
-  await acelerarPipelineDeEventos(admin, {
-    organizationId: entrada.organizationId,
-    contactId: entrada.contactId,
-    messageId: entrada.messageId,
-    texto: entrada.texto,
-  });
 }
 
 /**

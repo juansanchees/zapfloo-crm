@@ -39,6 +39,24 @@ describe("loadEnv — vazio é ausente (contrato BYOK do README)", () => {
   });
 });
 
+describe("loadEnv — mensagem nova acorda o worker em segundos", () => {
+  it("limita a espera ociosa a 2s e preserva 8s de agrupamento", () => {
+    const env = loadEnv(REQUIRED);
+    expect(env.CRM_DRAIN_IDLE_INTERVAL_MS).toBe(2_000);
+    expect(env.INBOUND_DEBOUNCE_MS).toBe(8_000);
+  });
+
+  it("continua configurável pela instalação", () => {
+    const env = loadEnv({
+      ...REQUIRED,
+      CRM_DRAIN_IDLE_INTERVAL_MS: "1000",
+      INBOUND_DEBOUNCE_MS: "5000",
+    });
+    expect(env.CRM_DRAIN_IDLE_INTERVAL_MS).toBe(1_000);
+    expect(env.INBOUND_DEBOUNCE_MS).toBe(5_000);
+  });
+});
+
 /**
  * A metade que NADA guardava. Medido: remover `OPENAI_API_KEY` deste schema não
  * reprova nenhum teste E passa no `tsc` — o parâmetro de `llmEdgeConfigFromEnv`
