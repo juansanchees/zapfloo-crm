@@ -20,6 +20,7 @@ import { useDashboardPreferences } from "./useDashboardPreferences";
 import type { DashboardWidgetId, DashboardWidgetSize } from "@/lib/dashboard/preferences";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import styles from "./dashboard.module.css";
+import { AiServiceStatus } from "@/components/ai/AiServiceStatus";
 
 function WidgetSlot({
   size,
@@ -196,6 +197,7 @@ export function Dashboard() {
           </Button>
         </div>
       )}
+      <AiServiceStatus canConfigure={d.canConfigureAiAccess} />
       <div className={styles.columns}>
         {place(
           "conversation_summary",

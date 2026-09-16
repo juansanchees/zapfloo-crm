@@ -16,7 +16,7 @@ const proof = { run_id: run, revision: 1, version_id: vid, sample_message: "Olá
 beforeEach(() => {
   vi.clearAllMocks(); f.limit.mockResolvedValue({ allowed: true }); f.ctx.mockResolvedValue({ orgId: org, userId: user });
   f.rpc.mockImplementation(async (name: string) => ({ data: name === "fn_iniciar_ensaio_onboarding" ? { run_id: run, snapshot } : proof, error: null }));
-  f.execute.mockResolvedValue({ ok: true, response: "Resposta", call_id: user });
+  f.execute.mockResolvedValue({ ok: true, response: "Resposta", call_id: user, model_used: "modelo" });
 });
 describe("ensaio: o browser nunca fornece prompt/prova/identidade", () => {
   it("limite técnico recusa nova chamada antes de gravar ou cobrar IA", async () => {
@@ -29,6 +29,25 @@ describe("ensaio: o browser nunca fornece prompt/prova/identidade", () => {
     expect(f.execute).toHaveBeenCalledWith(snapshot, "Olá");
     expect(Object.isFrozen(f.execute.mock.calls[0]![0])).toBe(true);
     expect(f.rpc).toHaveBeenLastCalledWith("fn_finalizar_ensaio_onboarding", expect.objectContaining({ p_org_id: org, p_actor_id: user, p_run_id: run, p_call_id: user, p_response: "Resposta" }));
+  });
+  it("grava o modelo reserva no rascunho antes de aceitar o ensaio", async () => {
+    f.execute.mockResolvedValue({ ok: true, response: "Resposta", call_id: user, model_used: "modelo-reserva" });
+    expect(await iniciarEnsaio(input)).toEqual({ ok: true, proof });
+    expect(f.rpc).toHaveBeenNthCalledWith(2, "fn_adotar_modelo_reserva_ensaio", expect.objectContaining({
+      p_org_id: org, p_actor_id: user, p_run_id: run, p_model_used: "modelo-reserva",
+    }));
+    expect(f.rpc).toHaveBeenLastCalledWith("fn_finalizar_ensaio_onboarding", expect.objectContaining({ p_error: null }));
+  });
+  it("não produz falso verde quando o modelo reserva não pode ser gravado", async () => {
+    f.execute.mockResolvedValue({ ok: true, response: "Resposta", call_id: user, model_used: "modelo-reserva" });
+    f.rpc
+      .mockResolvedValueOnce({ data: { run_id: run, snapshot }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "rehearsal_conflict" } })
+      .mockResolvedValueOnce({ data: { ...proof, status: "failed", response: null, error: "provider_model" }, error: null });
+    expect(await iniciarEnsaio(input)).toMatchObject({ ok: true, proof: { status: "failed", error: "provider_model" } });
+    expect(f.rpc).toHaveBeenLastCalledWith("fn_finalizar_ensaio_onboarding", expect.objectContaining({
+      p_response: null, p_error: "provider_model",
+    }));
   });
   it.each([{ prompt: "forjado" }, { organization_id: user }, { provider: "openai" }, { sample_message: " " }])("recusa input forjado %j antes da IA", async patch => {
     expect(await iniciarEnsaio({ ...input, ...patch })).toEqual({ ok: false, error: "invalid_input" });

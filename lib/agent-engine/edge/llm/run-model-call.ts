@@ -155,6 +155,29 @@ export interface RunModelCallDeps {
   log?: Logger;
 }
 
+export interface FalhaLlmRegistrada {
+  callId: string | null;
+  errorCode: string;
+  httpStatus: number | null;
+  providerErrorType: string | null;
+  providerErrorCode: string | null;
+  finishReason: string | null;
+}
+
+/**
+ * Mantém o erro original (alguns workers tomam decisões pela classe) e associa
+ * a ele somente os identificadores seguros que acabaram de ser persistidos.
+ * WeakMap evita acrescentar campos enumeráveis ao erro e, portanto, evita que
+ * logger/Sentry serializem acidentalmente o corpo bruto devolvido pelo provider.
+ */
+const falhasRegistradas = new WeakMap<object, FalhaLlmRegistrada>();
+
+export function detalhesDaFalhaRegistrada(error: unknown): FalhaLlmRegistrada | null {
+  return error !== null && (typeof error === 'object' || typeof error === 'function')
+    ? falhasRegistradas.get(error as object) ?? null
+    : null;
+}
+
 /**
  * Texto do aviso de limiar. É PONTEIRO, não retrato: manda ver os números na
  * tela em vez de congelar um "80%" que envelhece no mesmo minuto em que o gasto
@@ -491,18 +514,20 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
     // Grava e RELANÇA: quem chama continua decidindo o que fazer com a falha
     // (o worker reagenda, o dry-run mostra na tela). Engolir aqui trocaria uma
     // falha invisível por uma silenciosa, que é pior.
-    await registrarFalha(db, {
+    const falha = await registrarFalha(db, {
       input,
       purpose,
       provider: config.provider,
       model,
       origem: decisao.origem,
+      credentialSource: config.credentialSource,
       latencyMs: Date.now() - startedAt,
       erro: err,
-    }).catch(() => {
-      // O log da falha não pode causar uma segunda falha. Se o próprio INSERT
-      // de erro falhar, o erro ORIGINAL é o que interessa a quem chamou.
-    });
+    }).catch(() => null);
+    if (falha && err !== null && (typeof err === 'object' || typeof err === 'function')) {
+      falhasRegistradas.set(err as object, falha);
+    }
+    // Se o próprio INSERT falhar, o erro ORIGINAL continua sendo o que sobe.
     deps.log?.error('llm: chamada falhou', {
       organization_id: input.tenantId,
       purpose,
@@ -527,8 +552,8 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
     `insert into llm_calls
        (organization_id, contact_id, job_id, variant_id, purpose, provider, model,
         input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_cents, latency_ms,
-        status, origem_da_escolha, agent_id)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'ok', $14, $15)
+        status, origem_da_escolha, agent_id, finish_reason)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'ok', $14, $15, $16)
      returning id`,
     [
       input.tenantId,
@@ -546,6 +571,7 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
       latencyMs,
       decisao.origem,
       input.agentId ?? null,
+      result.finishReason ? String(result.finishReason) : null,
     ],
   );
 
@@ -606,12 +632,13 @@ export function normalizarErro(err: unknown): {
   error_code: string;
   error_message: string;
   http_status: number | null;
+  provider_error_type: string | null;
+  provider_error_code: string | null;
+  finish_reason: string | null;
 } {
   const bruto = err instanceof Error ? err.message : String(err);
-  const status =
-    (err as { statusCode?: number; status?: number })?.statusCode ??
-    (err as { statusCode?: number; status?: number })?.status ??
-    null;
+  const provider = extrairDetalhesSegurosDoProvedor(err);
+  const status = provider.http_status;
 
   // O único erro deste seam que NÃO vem do provedor: a recusa é NOSSA, e é
   // deliberada. Casada pela CLASSE e não por regex, porque aqui não há três
@@ -619,7 +646,10 @@ export function normalizarErro(err: unknown): {
   // construímos. Sem este ramo a tela de Execuções mostraria "Não conseguimos
   // classificar esta falha" no caso mais bem explicado do produto.
   if (err instanceof LlmBudgetExceededError) {
-    return { error_code: 'orcamento_esgotado', error_message: redigirMensagemDoProvedor(bruto), http_status: null };
+    return {
+      error_code: 'orcamento_esgotado', error_message: redigirMensagemDoProvedor(bruto), http_status: null,
+      provider_error_type: null, provider_error_code: null, finish_reason: null,
+    };
   }
 
   let codigo = 'erro_desconhecido';
@@ -649,7 +679,69 @@ export function normalizarErro(err: unknown): {
     // ecoar no corpo de erro o header de autorização ou o prompt recebido.
     error_message: redigirMensagemDoProvedor(bruto),
     http_status: typeof status === 'number' ? status : null,
+    provider_error_type: provider.provider_error_type,
+    provider_error_code: provider.provider_error_code,
+    finish_reason: provider.finish_reason,
   };
+}
+
+type RegistroLivre = Record<string, unknown>;
+
+function comoRegistro(valor: unknown): RegistroLivre | null {
+  return valor !== null && typeof valor === 'object' && !Array.isArray(valor)
+    ? valor as RegistroLivre
+    : null;
+}
+
+function identificadorSeguro(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null;
+  const limpo = valor.trim();
+  return /^[A-Za-z0-9_.:-]{1,120}$/.test(limpo) ? limpo : null;
+}
+
+function jsonSeguro(valor: unknown): RegistroLivre | null {
+  if (typeof valor !== 'string' || valor.length > 20_000) return null;
+  try { return comoRegistro(JSON.parse(valor)); } catch { return null; }
+}
+
+/** Extrai somente IDs técnicos allowlistados; nunca retorna corpo ou mensagem. */
+export function extrairDetalhesSegurosDoProvedor(error: unknown): {
+  http_status: number | null;
+  provider_error_type: string | null;
+  provider_error_code: string | null;
+  finish_reason: string | null;
+} {
+  const raiz = comoRegistro(error);
+  const corpo = jsonSeguro(raiz?.responseBody) ?? comoRegistro(raiz?.data);
+  const erroDoCorpo = comoRegistro(corpo?.error) ?? corpo;
+  const causa = comoRegistro(raiz?.cause);
+  const candidatos = [raiz, erroDoCorpo, corpo, causa].filter((v): v is RegistroLivre => v !== null);
+  const primeiro = (chaves: readonly string[]) => {
+    for (const item of candidatos) {
+      for (const chave of chaves) {
+        const lido = identificadorSeguro(item[chave]);
+        if (lido) return lido;
+      }
+    }
+    return null;
+  };
+  const statusBruto = raiz?.statusCode ?? raiz?.status ?? erroDoCorpo?.status;
+  const finishBruto = raiz?.finishReason ?? raiz?.finish_reason ?? erroDoCorpo?.finishReason ?? erroDoCorpo?.finish_reason;
+  const finishObjeto = comoRegistro(finishBruto);
+  return {
+    http_status: typeof statusBruto === 'number' && Number.isInteger(statusBruto) ? statusBruto : null,
+    provider_error_type: primeiro(['type', 'error_type']),
+    provider_error_code: primeiro(['code', 'error_code']),
+    finish_reason: identificadorSeguro(finishBruto)
+      ?? identificadorSeguro(finishObjeto?.unified)
+      ?? identificadorSeguro(finishObjeto?.raw),
+  };
+}
+
+export function erroIndicaSaldoEsgotado(error: Pick<FalhaLlmRegistrada, 'providerErrorType' | 'providerErrorCode'>): boolean {
+  return error.providerErrorType === 'insufficient_quota'
+    || error.providerErrorCode === 'insufficient_quota'
+    || error.providerErrorCode === 'credit_balance_exhausted';
 }
 
 /**
@@ -691,17 +783,22 @@ async function registrarFalha(
     provider: string;
     model: string;
     origem: string;
+    credentialSource?: 'organization' | 'platform';
     latencyMs: number;
     erro: unknown;
   },
-): Promise<void> {
-  const { error_code, error_message, http_status } = normalizarErro(d.erro);
-  await db.query(
+): Promise<FalhaLlmRegistrada> {
+  const {
+    error_code, error_message, http_status, provider_error_type, provider_error_code, finish_reason,
+  } = normalizarErro(d.erro);
+  const { rows } = await db.query<{ id: string }>(
     `insert into llm_calls
        (organization_id, contact_id, job_id, variant_id, purpose, provider, model,
         input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_cents, latency_ms,
-        status, error_code, error_message, http_status, origem_da_escolha, agent_id)
-     values ($1, $2, $3, $4, $5, $6, $7, 0, 0, 0, 0, null, $8, 'erro', $9, $10, $11, $12, $13)`,
+        status, error_code, error_message, http_status, origem_da_escolha, agent_id,
+        provider_error_type, provider_error_code, finish_reason)
+     values ($1, $2, $3, $4, $5, $6, $7, 0, 0, 0, 0, null, $8, 'erro', $9, $10, $11, $12, $13, $14, $15, $16)
+     returning id`,
     [
       d.input.tenantId,
       d.input.leadId ?? null,
@@ -716,6 +813,44 @@ async function registrarFalha(
       http_status,
       d.origem,
       d.input.agentId ?? null,
+      provider_error_type,
+      provider_error_code,
+      finish_reason,
     ],
   );
+  const registrada: FalhaLlmRegistrada = {
+    callId: rows[0]?.id ?? null,
+    errorCode: error_code,
+    httpStatus: http_status,
+    providerErrorType: provider_error_type,
+    providerErrorCode: provider_error_code,
+    finishReason: finish_reason,
+  };
+  if (
+    d.provider === 'openai'
+    && d.credentialSource === 'platform'
+    && erroIndicaSaldoEsgotado(registrada)
+  ) {
+    await db.query(
+      `insert into incidents (organization_id, type, severity, payload)
+       select null, 'ai_provider_balance_exhausted', 'critical', $1::jsonb
+       where not exists (
+         select 1 from incidents
+          where organization_id is null
+            and type = 'ai_provider_balance_exhausted'
+            and status <> 'resolved'
+            and payload->>'provider' = $2
+       )
+       on conflict do nothing`,
+      [JSON.stringify({
+        provider: d.provider,
+        message: 'A IA parou porque o saldo da conta da OpenAI acabou.',
+        http_status,
+        provider_error_code,
+      }), d.provider],
+    ).catch(() => {
+      // A Central indisponível não pode substituir o erro original do provider.
+    });
+  }
+  return registrada;
 }

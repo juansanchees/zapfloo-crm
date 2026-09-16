@@ -12,6 +12,7 @@ import { AgentCard } from "./AgentCard";
 import { AgentsListFilters, type StatusFilter } from "./AgentsListFilters";
 import { deriveAgentStatus } from "./AgentStatusBadge";
 import { usePlano } from "@/components/billing/PlanoProvider";
+import { AiServiceStatus } from "@/components/ai/AiServiceStatus";
 
 interface Props {
   initialData: AgentRow[];
@@ -54,21 +55,25 @@ export function AgentsList({ initialData, canWrite }: Props) {
 
   if (!isLoading && agents.length === 0) {
     return (
-      <Card className="flex flex-col items-center gap-3 p-10 text-center">
-        <Robot size={36} aria-hidden className="text-muted-foreground" />
-        <h2 className="font-medium">{t("Nenhum agent configurado")}</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          {t(
-            "Crie um agent para responder a conversas no WhatsApp com IA. Você configura prompt, tools, gatilhos e janela de contexto.",
-          )}
-        </p>
-        {canWrite && <div className="mt-1">{botaoNovo}</div>}
-      </Card>
+      <div className="flex flex-col gap-4">
+        <AiServiceStatus canConfigure={canWrite} />
+        <Card className="flex flex-col items-center gap-3 p-10 text-center">
+          <Robot size={36} aria-hidden className="text-muted-foreground" />
+          <h2 className="font-medium">{t("Nenhum agent configurado")}</h2>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            {t(
+              "Crie um agent para responder a conversas no WhatsApp com IA. Você configura prompt, tools, gatilhos e janela de contexto.",
+            )}
+          </p>
+          {canWrite && <div className="mt-1">{botaoNovo}</div>}
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
+      <AiServiceStatus canConfigure={canWrite} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <AgentsListFilters
           status={status}

@@ -46,7 +46,7 @@ interface ConversaEmbed {
  */
 export async function decidirElegibilidadeDaConversaViaSupabase(
   admin: SupabaseClient,
-  input: { organizationId: string; conversationId: string; agora: Date; ttlMs: number },
+  input: { organizationId: string; conversationId: string; agora: Date; ttlMs: number; messageId?: string },
 ): Promise<DecisaoDeElegibilidade | null> {
   const { data, error } = await admin
     .from("conversations")
@@ -63,18 +63,39 @@ export async function decidirElegibilidadeDaConversaViaSupabase(
   if (data == null) return null;
 
   const row = data as unknown as ConversaEmbed;
+  const estadoBase = {
+    aiGate: row.channel_sessions?.metadata?.["ai_gate"] ?? null,
+    aiGateMode: row.channel_sessions?.metadata?.["ai_gate_mode"] ?? null,
+    aiTestPhoneNumbers: row.channel_sessions?.metadata?.["ai_test_phone_numbers"] ?? null,
+    contactPhoneNumber: row.contacts?.phone_number ?? null,
+    forceHuman: row.contacts?.force_human ?? false,
+    assigneeKind: row.assignee_kind,
+    botSilencedUntil: row.bot_silenced_until,
+    aiAuthorizedAt: row.contacts?.ai_authorized_at ?? null,
+    aiStartedAt: row.channel_sessions?.metadata?.["ai_gate_started_at"] ?? null,
+    agora: input.agora,
+    ttlMs: input.ttlMs,
+  };
+  const estadoNormalizado = montarEstadoDeElegibilidade(estadoBase);
+  const decisaoBase = decidirElegibilidade(estadoNormalizado);
+  // Não toca a tabela de mensagens quando o número já está barrado. Além de
+  // evitar I/O inútil, isto mantém o gate como primeira barreira: histórico só
+  // é relevante para uma mensagem que teria permissão de seguir.
+  if (!decisaoBase.permite || !input.messageId || estadoNormalizado.aiStartedAt == null) return decisaoBase;
+
+  let messageReceivedAt: string | null = null;
+  const message = await admin.from("messages").select("created_at")
+    .eq("organization_id", input.organizationId)
+    .eq("conversation_id", input.conversationId)
+    .eq("id", input.messageId).maybeSingle();
+  if (message.error) throw new Error(`elegibilidade: mensagem falhou — ${message.error.message}`);
+  if (!message.data?.created_at) throw new Error("elegibilidade: mensagem não encontrada");
+  messageReceivedAt = message.data.created_at;
+
   return decidirElegibilidade(
     montarEstadoDeElegibilidade({
-      aiGate: row.channel_sessions?.metadata?.["ai_gate"] ?? null,
-      aiGateMode: row.channel_sessions?.metadata?.["ai_gate_mode"] ?? null,
-      aiTestPhoneNumbers: row.channel_sessions?.metadata?.["ai_test_phone_numbers"] ?? null,
-      contactPhoneNumber: row.contacts?.phone_number ?? null,
-      forceHuman: row.contacts?.force_human ?? false,
-      assigneeKind: row.assignee_kind,
-      botSilencedUntil: row.bot_silenced_until,
-      aiAuthorizedAt: row.contacts?.ai_authorized_at ?? null,
-      agora: input.agora,
-      ttlMs: input.ttlMs,
+      ...estadoBase,
+      messageReceivedAt,
     }),
   );
 }

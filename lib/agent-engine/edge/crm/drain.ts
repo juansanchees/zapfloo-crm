@@ -307,6 +307,7 @@ async function processEvent(
     const elegib = await decidirElegibilidadeDaConversa(pool, {
       organizationId: event.organization_id,
       conversationId: p.conversation_id,
+      messageId: p.inbound_message_id,
       agora: new Date(),
       ttlMs: knobs.allowlistTtlMs ?? ALLOWLIST_TTL_MS_PADRAO,
     });

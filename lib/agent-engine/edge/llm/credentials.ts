@@ -139,6 +139,15 @@ export interface OrgLlmConfig {
   provider: string;
   /** plaintext decifrado — existe só em memória, jamais logado/persistido */
   apiKey: string;
+  /**
+   * Distingue a chave compartilhada da instalação de uma BYOK do tenant.
+   *
+   * Um saldo esgotado na primeira para TODAS as organizações e precisa abrir
+   * incidente global; o mesmo erro numa BYOK pertence somente ao cliente. Sem
+   * esta origem explícita, o runtime não consegue avisar a plataforma sem
+   * transformar uma falha isolada em pane geral aparente.
+   */
+  credentialSource: 'organization' | 'platform';
   defaultModel: string | null;
   params: Record<string, unknown>;
   enabledModels: string[];
@@ -350,6 +359,7 @@ export async function resolveOrgLlmConfig(
       );
 
   let apiKey: string;
+  let credentialSource: OrgLlmConfig['credentialSource'];
   const cred = credRows[0];
   if (override?.strictCredential && override.credentialId && cred === undefined) {
     throw new LlmNotConfiguredError();
@@ -360,12 +370,16 @@ export async function resolveOrgLlmConfig(
       iv: byteaToBuffer(cred.api_key_iv),
       tag: byteaToBuffer(cred.api_key_tag),
     });
+    credentialSource = 'organization';
   } else if (provider === 'anthropic' && cfg.anthropicApiKey) {
     apiKey = cfg.anthropicApiKey;
+    credentialSource = 'platform';
   } else if (provider === 'openai' && cfg.openaiApiKey) {
     apiKey = cfg.openaiApiKey;
+    credentialSource = 'platform';
   } else if (provider === 'openrouter' && cfg.openrouterApiKey) {
     apiKey = cfg.openrouterApiKey;
+    credentialSource = 'platform';
   } else {
     throw new LlmNotConfiguredError();
   }
@@ -373,6 +387,7 @@ export async function resolveOrgLlmConfig(
   return {
     provider,
     apiKey,
+    credentialSource,
     defaultModel: settings.default_model ?? null,
     params: settings.params,
     enabledModels: settings.enabled_models,
