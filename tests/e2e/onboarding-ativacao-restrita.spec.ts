@@ -234,6 +234,7 @@ for (const { locale, semModeloPadrao } of [
     if (channelWrite.error) throw channelWrite.error;
     await page.getByRole("button", { name: translated("Conferir canais conectados", "Comprobar canales conectados") }).click();
     await page.locator("#canal-teste").selectOption(channel);
+    await page.getByRole("button", { name: translated("Atender só os meus números de teste", "Atender solo mis números de prueba") }).click();
     const activate = page.getByRole("button", { name: translated("Ativar para estes números de teste", "Activar para estos números de prueba") });
     await expect(activate).toBeDisabled();
     await page.getByRole("button", { name: translated("Configurar acesso da IA", "Configurar acceso de la IA") }).click();

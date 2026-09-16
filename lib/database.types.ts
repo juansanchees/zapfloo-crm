@@ -2251,6 +2251,7 @@ export type Database = {
           booking_window_days: number
           buffer_after_minutes: number
           buffer_before_minutes: number
+          catalog_product_id: string | null
           category: string
           created_at: string
           default_owner_user_id: string | null
@@ -2276,6 +2277,7 @@ export type Database = {
           booking_window_days?: number
           buffer_after_minutes?: number
           buffer_before_minutes?: number
+          catalog_product_id?: string | null
           category?: string
           created_at?: string
           default_owner_user_id?: string | null
@@ -2301,6 +2303,7 @@ export type Database = {
           booking_window_days?: number
           buffer_after_minutes?: number
           buffer_before_minutes?: number
+          catalog_product_id?: string | null
           category?: string
           created_at?: string
           default_owner_user_id?: string | null
@@ -2323,6 +2326,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "calendar_event_types_catalog_product_org_fkey"
+            columns: ["organization_id", "catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "calendar_event_types_organization_id_fkey"
             columns: ["organization_id"]

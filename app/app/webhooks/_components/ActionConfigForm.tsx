@@ -1,6 +1,8 @@
 "use client";
 
 import { useT } from "@/hooks/i18n/useT";
+import { useAuth } from "@/hooks/auth/AuthProvider";
+import { rotuloDoAtendente } from "@/lib/users/nome-do-atendente";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -314,6 +316,7 @@ function AddTagForm({ config, onChange }: FormProps<{ tags: string[] }>) {
 
 function AssignOwnerForm({ config, onChange }: FormProps<{ user_id: string }>) {
   const t = useT();
+  const { user } = useAuth();
   const { data: members } = useAssignableMembers(true);
   return (
     <div className="space-y-1">
@@ -325,7 +328,7 @@ function AssignOwnerForm({ config, onChange }: FormProps<{ user_id: string }>) {
         <SelectContent>
           {(members ?? []).map((m) => (
             <SelectItem key={m.user_id} value={m.user_id}>
-              {m.full_name ?? m.user_id.slice(0, 8)}
+              {rotuloDoAtendente({ userId: m.user_id, usuarioAtualId: user.id, fullName: m.full_name, role: m.role, t })}
             </SelectItem>
           ))}
         </SelectContent>

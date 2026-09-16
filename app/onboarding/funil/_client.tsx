@@ -6,7 +6,7 @@ import { useT } from "@/hooks/i18n/useT";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { aplicarQuadro, pularQuadro, type QuadroAtual } from "@/app/actions/onboarding/montarQuadro";
+import { aplicarQuadro, criarNovoQuadro, pularQuadro, type QuadroAtual } from "@/app/actions/onboarding/montarQuadro";
 import { explicacaoDoPasso } from "@/lib/leads/agent-mapping";
 import { MAX_ETAPAS, MIN_ETAPAS, type PropostaDeFunil } from "@/lib/onboarding/proposta-de-funil";
 import { PACOTES } from "@/lib/onboarding/pacotes-de-funil";
@@ -34,6 +34,7 @@ export function QuadroClient({
   const [origem, setOrigem] = useState<"ia" | "pacote">(sugestao.origem);
   const [trocando, setTrocando] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [recusa, setRecusa] = useState<string | null>(null);
 
   // Coluna sem nome é DESCARTADA por `normalizarProposta` — e descartar em
   // silêncio o que a pessoa acabou de acrescentar seria a falha calada clássica:
@@ -228,6 +229,27 @@ export function QuadroClient({
         )}
       </div>
 
+      {recusa ? (
+        <div role="alert" className="space-y-3 rounded-lg border border-warning/40 bg-warning/5 p-4">
+          <p className="text-sm">{recusa}</p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending || semNome}
+            onClick={() => startTransition(async () => {
+              const fd = new FormData();
+              fd.set("quadro", JSON.stringify(quadro));
+              fd.set("origem", origem);
+              const res = await criarNovoQuadro(fd);
+              if (res && !res.ok) toast.error(res.erro);
+            })}
+          >
+            {t("Criar um funil novo com este modelo")}
+          </Button>
+          <p className="text-xs text-muted-foreground">{t("O funil atual e os clientes que já estão nele não serão alterados.")}</p>
+        </div>
+      ) : null}
+
       {/* `flex-wrap`: com o aviso "Dê um nome..." mais os dois botões, a linha
           passava de 320-375px sem margem nenhuma — este é o rodapé de
           navegação do wizard, o botão que a pessoa mais precisa achar. */}
@@ -257,7 +279,10 @@ export function QuadroClient({
               fd.set("origem", origem);
               const res = await aplicarQuadro(fd);
               // Sucesso redireciona no servidor; só o desfecho ruim volta.
-              if (res && !res.ok) toast.error(res.erro);
+              if (res && !res.ok) {
+                if (res.motivo === "funil_com_negocios") setRecusa(res.erro);
+                else toast.error(res.erro);
+              }
             })
           }
         >

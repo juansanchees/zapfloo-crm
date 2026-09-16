@@ -1,10 +1,14 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+const quadroFns = vi.hoisted(() => ({ aplicar: vi.fn(), criarNovo: vi.fn(), pular: vi.fn() }));
 
 vi.mock("@/app/actions/onboarding/acceptWelcome", () => ({ acceptWelcome: vi.fn() }));
 vi.mock("@/app/actions/onboarding/finishOnboarding", () => ({ finishOnboarding: vi.fn() }));
-vi.mock("@/app/actions/onboarding/montarQuadro", () => ({ aplicarQuadro: vi.fn(), pularQuadro: vi.fn() }));
+vi.mock("@/app/actions/onboarding/montarQuadro", () => ({ aplicarQuadro: quadroFns.aplicar, criarNovoQuadro: quadroFns.criarNovo, pularQuadro: quadroFns.pular }));
 
 import { WelcomeForm } from "@/app/onboarding/welcome/_form";
 import { DoneClient } from "@/app/onboarding/done/_client";
@@ -47,6 +51,34 @@ describe("resultado real do site no quadro", () => {
     rerender(<QuadroClient atual={null} sugestao={{ origem: "pacote", pacote: PACOTE_PADRAO, porque: "a leitura não terminou" }} />);
     expect(screen.queryByText(/Li o seu site/)).toBeNull();
     expect(screen.getByText(/Não consegui pedir uma sugestão/)).toHaveTextContent("a leitura não terminou");
+  });
+
+  it("funil com clientes oferece criar outro sem tocar no atual", async () => {
+    quadroFns.aplicar.mockResolvedValue({
+      ok: false,
+      motivo: "funil_com_negocios",
+      erro: "Este quadro já tem 3 cliente(s) dentro.",
+    });
+    quadroFns.criarNovo.mockResolvedValue({ ok: false, erro: "parou no redirect simulado" });
+    const user = userEvent.setup();
+    render(<QuadroClient atual={{ pipelineId: "p-1", nome: "Atual", colunas: ["Novo"] }} sugestao={{ origem: "pacote", pacote: PACOTE_PADRAO, porque: "teste" }} />);
+
+    await user.click(screen.getByRole("button", { name: "Usar este quadro" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("3 cliente(s)");
+    const saida = screen.getByRole("button", { name: "Criar um funil novo com este modelo" });
+    expect(saida).toBeEnabled();
+    await user.click(saida);
+    expect(quadroFns.criarNovo).toHaveBeenCalledOnce();
+  });
+
+  it("a action preserva o motivo estruturado que abre a saída do funil ocupado", () => {
+    const fonte = readFileSync(
+      path.join(process.cwd(), "app/actions/onboarding/montarQuadro.ts"),
+      "utf8",
+    );
+    expect(fonte).toContain(
+      'r.motivo === "funil_com_negocios" ? { motivo: "funil_com_negocios" as const }',
+    );
   });
 });
 
