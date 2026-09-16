@@ -138,6 +138,8 @@ import { camadaLigada, lerCamadasDaOrg } from '../guardrails/camadas-da-org';
 import { fusoDaOrganizacao } from './fuso-da-org';
 import { renderAgora } from '@/lib/tempo/agora';
 import { decidirElegibilidadeDaConversa } from '@/lib/ai/elegibilidade/consulta-pg';
+import { avisarAudioIlegivel, ultimoInboundEhAudioComFalha } from './aviso-de-audio-ilegivel';
+import { comPresencaDeDigitacao } from './presenca-de-digitacao';
 
 /**
  * Superfície ESTÁTICA das tools do agente (description + inputSchema) — parte do
@@ -1680,6 +1682,21 @@ async function executarTurnoDoAgente(
     },
   };
 
+  // Falha de transcrição não vira silêncio nem chamada de modelo sem contexto.
+  if (ultimoInboundEhAudioComFalha(openingContext.context)) {
+    await avisarAudioIlegivel(
+      pool,
+      { tenantId, leadId, conversationId: input.conversationId,
+        channelSessionId: input.channelSessionId, jobId: job.id },
+      { channel, optedOutThisTurn, now: clock(), log: runLog, lgpd,
+        agentId: agentConfig?.agentId ?? null,
+        ...(deps.knobs.disclosureMode !== undefined ? { disclosureMode: deps.knobs.disclosureMode } : {}),
+        ...(deps.sleep !== undefined ? { sleep: deps.sleep } : {}) },
+    );
+    runLog.warn('áudio sem transcrição — cliente orientado a escrever ou reenviar');
+    return;
+  }
+
   // F4-06 (acceptance 1): detecção DETERMINÍSTICA (regex PT-BR, sem LLM) de pedido explícito
   // de atendimento humano na última mensagem do lead. Handoff é cidadão de 1ª classe (exigência
   // Meta fiscalizada, blueprint 5.5) — dispara ANTES do modelo: o bot não gasta LLM.
@@ -2987,10 +3004,13 @@ async function executarTurnoDoAgente(
   // este corpo inteiro. Escoltar aqui deixaria de fora as chamadas de modelo dos
   // auxiliares (`classifyStage`, `maybeCompact`), que rodam ANTES desta e por
   // isso são as que estouram primeiro.
-  const turn = await runModelCall(
-    pool,
-    deps.llmCfg,
-    {
+  const turn = await comPresencaDeDigitacao(
+    channel,
+    { conversationId: input.conversationId, channelSessionId: input.channelSessionId },
+    () => runModelCall(
+      pool,
+      deps.llmCfg,
+      {
       tenantId,
       leadId,
       jobId: job.id,
@@ -3010,8 +3030,10 @@ async function executarTurnoDoAgente(
             llmOverride: { provider: agentConfig.provider, credentialId: agentConfig.credentialId },
           }
         : {}),
-    },
-    { registry: deps.registry, log: runLog },
+      },
+      { registry: deps.registry, log: runLog },
+    ),
+    { log: runLog },
   );
 
   // F4-04: correlação dos dois sinais do MESMO turno — jailbreak ALTO + tentativa de

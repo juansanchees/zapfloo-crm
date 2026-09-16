@@ -53,6 +53,8 @@ export interface LeadContextMessage {
   type?: string;
   media_storage_path?: string | null;
   media_mime?: string | null;
+  /** Estado do derivado; permite ao runtime distinguir espera de falha final. */
+  media_derived_status?: string | null;
 }
 
 /**
@@ -171,6 +173,7 @@ interface HistoryRow {
   media_storage_path: string | null;
   media_mime: string | null;
   media_derived_text: string | null;
+  media_derived_status: string | null;
   sent_at: Date;
 }
 
@@ -229,7 +232,7 @@ export async function getLeadContext(
     ? (
         await db.query<HistoryRow>(
           `select direction, type, body, media_url, media_storage_path, media_mime,
-                  media_derived_text, sent_at
+                  media_derived_text, media_derived_status, sent_at
            from messages
            where organization_id = $1 and conversation_id = $2
              and direction in ('inbound', 'outbound')
@@ -309,7 +312,12 @@ function fitToBudget(
       // Hora de PAREDE do tenant, não UTC cru — ver o comentário de `sent_at` na
       // interface acima e o cabeçalho de `isoLocalComOffset`.
       sent_at: isoLocalComOffset(m.sent_at, fuso),
-      ...(hasMedia ? { type: m.type, media_storage_path: m.media_storage_path, media_mime: m.media_mime } : {}),
+      ...(hasMedia ? {
+        type: m.type,
+        media_storage_path: m.media_storage_path,
+        media_mime: m.media_mime,
+        media_derived_status: m.media_derived_status,
+      } : {}),
     };
   });
   const build = (msgs: LeadContextMessage[]): LeadContext => ({ ...base, messages: msgs });
