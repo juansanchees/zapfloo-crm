@@ -8,6 +8,27 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.1.0] — 2026-09-16
+
+### Adicionado
+
+- **Conectar contas de anúncios com Facebook e link para a pessoa responsável pelos anúncios** Em Configurações → Meta Ads, agora é possível conectar a conta com Facebook
+  ou gerar um link temporário para a agência ou pessoa responsável pelos anúncios
+  autorizar sem entrar no CRM. Depois da autorização, escolha a conta de anúncios
+  que quer acompanhar.
+
+  O sistema mostra a validade informada pelo provedor e avisa quando é preciso
+  conectar novamente. O cadastro manual existente continua disponível para quem
+  administra a organização, inclusive nas instalações sem a configuração
+  opcional de login com Facebook.
+
+  As entradas públicas de conexão limitam tentativas excessivas e informam
+  quando tentar novamente, sem consumir a autorização ao bloquear.
+
+### Corrigido
+
+- **O onboarding explica quando a IA está indisponível** Quando o serviço de IA recusa, demora ou interrompe o ensaio, a tela agora explica o motivo em linguagem simples e deixa o cliente continuar conectando o WhatsApp com a IA desligada. Saldo esgotado da conta da plataforma também abre um incidente para o administrador, sem expor segredo nem culpar o cliente.
+
 ## [2.0.0] — 2026-09-15
 
 ### ⚠️ Requer atenção
@@ -3381,7 +3402,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.0.0...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.1...v2.0.0
 [1.19.1]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.0...v1.19.1
 [1.19.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.18.0...v1.19.0
