@@ -96,6 +96,8 @@ export interface ChannelAdapter {
   readonly channel: string;
   /** envia UMA mensagem pelo sink idempotente do canal. */
   send(input: ChannelSendInput): Promise<ChannelSendResult>;
+  /** Presença efêmera; opcional para canais que não oferecem esse recurso. */
+  setTyping?(input: { conversationId: string; channelSessionId: string; active: boolean }): Promise<void>;
   /**
    * saúde da sessão do número. Regra dura nº 4: message-plane NUNCA fala com o
    * canal direto — a implementação lê o espelho durável do watchdog (F2-14).

@@ -111,6 +111,9 @@ beforeEach(() => {
   garantirLeadDaConversa.mockClear();
   garantirLeadDaConversa.mockResolvedValue({ criado: true, leadId: "lead-1" } as never);
   vi.mocked(acelerarPipelineDeEventos).mockClear();
+  vi.mocked(acelerarPipelineDeEventos).mockImplementation(async () => {
+    sequencia.push("acelerar:event_log");
+  });
 });
 
 describe("a ordem dos três efeitos", () => {
@@ -220,6 +223,16 @@ describe("opt-out", () => {
 });
 
 describe("despacho do agente", () => {
+  it("acorda a fila de novo DEPOIS de gravar o evento do agente", async () => {
+    await rodar();
+
+    expect(sequencia.indexOf("rpc:ai_agent.dispatch_requested")).toBeGreaterThanOrEqual(0);
+    expect(sequencia.indexOf("rpc:ai_agent.dispatch_requested")).toBeLessThan(
+      sequencia.lastIndexOf("acelerar:event_log"),
+    );
+    expect(sequencia.filter((passo) => passo === "acelerar:event_log")).toHaveLength(2);
+  });
+
   it("emite com o payload que o consumidor lê, campo a campo", async () => {
     // O consumidor é UM só. Um payload por canal faria o worker adivinhar de
     // quem veio.

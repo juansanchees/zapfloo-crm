@@ -24,6 +24,8 @@ import type {
 import { CrmTransportError, type CrmEdgeConfig } from '../crm/mcp-client';
 import { sendTurnMessage, SendToolError } from '../crm/send-message';
 import { SESSION_HEALTHY_STATUS } from '../crm/session-watchdog';
+import { getWahaClient } from '@/lib/waha/client';
+import { resolveCanonicalCusChatId } from '@/lib/waha/resolve-contact-whatsapp-id';
 
 /** id do canal da v1 — o único adapter (WAHA através do sink do CRM). */
 export const WAHA_VIA_CRM_CHANNEL = 'waha_via_crm';
@@ -65,6 +67,31 @@ export class WahaChannelAdapter implements ChannelAdapter {
       }
       throw err;
     }
+  }
+
+  async setTyping(input: { conversationId: string; channelSessionId: string; active: boolean }): Promise<void> {
+    const client = getWahaClient();
+    if (client === null) return;
+    const { rows } = await this.db.query<{
+      waha_session_name: string | null;
+      provider_conversation_id: string | null;
+      phone_number: string | null;
+    }>(
+      `select s.waha_session_name, c.provider_conversation_id, ct.phone_number
+       from conversations c
+       join channel_sessions s on s.organization_id = c.organization_id and s.id = c.channel_session_id
+       join contacts ct on ct.organization_id = c.organization_id and ct.id = c.contact_id
+       where c.id = $1 and c.channel_session_id = $2
+       limit 1`,
+      [input.conversationId, input.channelSessionId],
+    );
+    const row = rows[0];
+    if (!row?.waha_session_name) return;
+    const fallback = row.phone_number?.replace(/\D/g, '');
+    const bruto = row.provider_conversation_id ?? (fallback ? `${fallback}@c.us` : null);
+    if (!bruto) return;
+    const chatId = await resolveCanonicalCusChatId(client, row.waha_session_name, bruto);
+    await client.setPresence(row.waha_session_name, chatId, input.active ? 'typing' : 'paused');
   }
 
   async sessionHealth(channelSessionId: string): Promise<ChannelSessionHealth> {

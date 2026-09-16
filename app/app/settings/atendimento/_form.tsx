@@ -24,6 +24,8 @@ export interface AtendimentoConfig {
   max_retries: number;
   backoff_seconds: number;
   visibility_mode: VisibilityMode;
+  owner_phone: string | null;
+  handoff_reminder_minutes: number;
 }
 
 const MODO_COPY: Record<RoutingMode, { titulo: string; corpo: string }> = {
@@ -232,6 +234,29 @@ export function AtendimentoForm({ initial }: { initial: AtendimentoConfig }) {
             )}
           </p>
         ) : null}
+      </Card>
+
+      <Card className="space-y-4 p-4">
+        <div>
+          <h2 className="text-sm font-semibold">{t("Aviso de conversa esperando uma pessoa")}</h2>
+          <p className="text-xs text-muted-foreground">
+            {t("Se a IA passar uma conversa e ninguém estiver disponível, avisamos este número pelo WhatsApp. Deixe vazio para não enviar avisos.")}
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="owner_phone">{t("WhatsApp do dono")}</Label>
+            <Input id="owner_phone" inputMode="tel" autoComplete="tel" placeholder="5511999999999"
+              value={form.owner_phone ?? ""} disabled={isPending}
+              onChange={(e) => setForm((f) => ({ ...f, owner_phone: e.target.value || null }))} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="handoff_reminder_minutes">{t("Cobrar de novo depois de (minutos)")}</Label>
+            <Input id="handoff_reminder_minutes" type="number" min={1} max={1440}
+              value={form.handoff_reminder_minutes} disabled={isPending}
+              onChange={(e) => setForm((f) => ({ ...f, handoff_reminder_minutes: Number(e.target.value) }))} />
+          </div>
+        </div>
       </Card>
 
       <div className="flex items-center gap-3">
