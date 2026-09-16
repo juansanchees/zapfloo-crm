@@ -147,7 +147,7 @@ export async function performHumanHandoff(
   // está (nunca rouba do humano nem reabre encerrada). Fase 3: junto, zera a aderência
   // ao agente do router — se o bot for reativado, o router decide de novo (não reassume
   // o mesmo agente por inércia).
-  await db.query(
+  const inbox = await db.query<{ id: string }>(
     `update conversations
         set status = case when status = 'ai_handling' then 'pending' else status end,
             bot_silenced_until = $3,
@@ -172,7 +172,8 @@ export async function performHumanHandoff(
      where not exists (
        select 1 from agent_inbox_items
        where organization_id = $1 and kind = 'handoff' and ref_kind = 'contact' and ref_id = $4 and status = 'open'
-     )`,
+     )
+     returning id`,
     [
       ids.tenantId,
       opts.inboxTitle ?? 'Handoff humano solicitado — assumir a conversa',
@@ -180,6 +181,19 @@ export async function performHumanHandoff(
       ids.leadId,
     ],
   );
+
+  // Só o PRIMEIRO insert deste episódio pede o aviso externo. Replays do mesmo
+  // handoff encontram o inbox aberto e não criam outro evento/cobrança.
+  if (inbox.rows[0]) {
+    await db.query(
+      `insert into event_log
+         (organization_id, event_type, entity_kind, entity_id, status, payload, metadata)
+       values ($1, 'handoff.owner_alert_requested', 'conversation', $2, 'pending',
+               jsonb_build_object('conversation_id', $2, 'contact_id', $3, 'phase', 'initial'),
+               '{}'::jsonb)`,
+      [ids.tenantId, ids.conversationId, ids.leadId],
+    );
+  }
 
   // (e) A IDA na linha do tempo do NEGÓCIO. `triggerHandoff` (o caminho do CRM)
   // já gravava `handoff_triggered`; este caminho — o do harness e o do "Assumir

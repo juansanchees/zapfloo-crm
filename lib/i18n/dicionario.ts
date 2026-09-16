@@ -8526,6 +8526,10 @@ export const DICIONARIO: Traducoes = {
   "Escolha uma conta de anúncios válida.": { es: "Elige una cuenta publicitaria válida." },
   "Conecte a conta de anúncios antes de continuar.": { es: "Conecta la cuenta publicitaria antes de continuar." },
   "Não foi possível conferir a conexão. Tente novamente.": { es: "No se pudo comprobar la conexión. Inténtalo de nuevo." },
+  "Aviso de conversa esperando uma pessoa": { es: "Aviso de conversación esperando a una persona" },
+  "Se a IA passar uma conversa e ninguém estiver disponível, avisamos este número pelo WhatsApp. Deixe vazio para não enviar avisos.": { es: "Si la IA deriva una conversación y nadie está disponible, avisamos a este número por WhatsApp. Déjalo vacío para no enviar avisos." },
+  "WhatsApp do dono": { es: "WhatsApp del dueño" },
+  "Cobrar de novo depois de (minutos)": { es: "Volver a avisar después de (minutos)" },
   "A conexão mudou. Atualize a lista e escolha a conta novamente.": { es: "La conexión cambió. Actualiza la lista y elige la cuenta de nuevo." },
   "A autorização foi cancelada. Use Conectar com Facebook para começar novamente.": { es: "La autorización se canceló. Usa Conectar con Facebook para empezar de nuevo." },
 };
