@@ -218,7 +218,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   return (
     <aside
       className={cn(
-        "border-divider sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r bg-shell bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)] text-[13.5px] text-text shadow-lg transition-[width] duration-[220ms] ease-[ease] [--color-bg:var(--color-shell)] [--color-border:var(--color-neutral-800)] [--color-surface-elevated:var(--color-neutral-900)] [--color-surface:var(--color-neutral-900)] [--color-text:var(--color-neutral-100)]",
+        "border-divider sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r bg-shell bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)] text-[13.5px] text-text shadow-lg transition-[width] duration-[220ms] ease-[ease] [--color-accent:var(--color-accent-300)] [--color-bg:var(--color-shell)] [--color-border:var(--color-neutral-800)] [--color-surface-elevated:var(--color-neutral-900)] [--color-surface:var(--color-neutral-900)] [--color-text:var(--color-neutral-100)]",
         collapsed ? "w-16" : "w-60",
       )}
     >

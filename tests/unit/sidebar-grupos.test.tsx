@@ -169,6 +169,7 @@ describe("Sidebar compacto", () => {
       "bg-shell",
       "bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)]",
       "duration-[220ms]",
+      "[--color-accent:var(--color-accent-300)]",
       "[--color-bg:var(--color-shell)]",
       "[--color-surface:var(--color-neutral-900)]",
       "[--color-text:var(--color-neutral-100)]",
