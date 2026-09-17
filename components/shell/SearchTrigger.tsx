@@ -41,8 +41,8 @@ export function SearchTrigger({
         </span>
         <kbd
           className={cn(
-            "border-divider ml-auto rounded-sm border px-1 py-0.5 text-[10px] text-neutral-400",
-            !sidebar && "hidden md:inline",
+            "border-divider ml-auto rounded-sm border px-1 py-0.5 text-[10px]",
+            sidebar ? "text-neutral-400" : "hidden text-text-muted md:inline",
           )}
         >
           ⌘K

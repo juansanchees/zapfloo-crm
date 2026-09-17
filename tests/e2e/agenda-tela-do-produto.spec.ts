@@ -37,16 +37,20 @@ test.describe("a Agenda como o dono do produto a usa", () => {
 
   test("chego na Agenda CLICANDO no menu, não digitando a URL", async () => {
     await page.goto("/app");
-    // O item vive no grupo "Atendimento", junto do Inbox — decisão registrada
-    // no `registry.ts`: a Agenda é onde o dia acontece, não onde se configura.
-    // No celular, a mesma porta fica na navegação recolhida. Abrir o menu
-    // mantém a prova pelo clique, sem substituir a jornada por um goto.
+    // A casca Nocturne reúne Tarefas e Agenda em uma única porta. A jornada
+    // continua inteira pela tela: abre a área pelo menu e escolhe a aba Agenda.
+    // No celular, a mesma porta fica na navegação recolhida.
     const mobile = (page.viewportSize()?.width ?? 1280) < 768;
     if (mobile) await page.getByRole("button", { name: "Abrir navegação", exact: true }).click();
     const navigation = mobile ? page.getByRole("dialog") : page;
-    const item = navigation.getByRole("link", { name: "Calendário", exact: true }).first();
+    const item = navigation.getByRole("link", { name: "Tarefas e agenda", exact: true }).first();
     await expect(item).toBeVisible({ timeout: ESPERA });
     await item.click();
+    await expect(page).toHaveURL(/\/app\/tasks/, { timeout: ESPERA });
+    const opcoesDaArea = page.getByRole("navigation", { name: /Tarefas e agenda.*Opções da área/ });
+    const agenda = opcoesDaArea.getByRole("link", { name: "Agenda", exact: true });
+    await expect(agenda).toBeVisible({ timeout: ESPERA });
+    await agenda.click();
 
     await expect(page).toHaveURL(/\/app\/agenda/, { timeout: ESPERA });
     await expect(page.getByTestId("tela-agenda")).toBeVisible();

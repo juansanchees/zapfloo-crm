@@ -262,7 +262,7 @@ test.describe("navegação compacta", () => {
     // procura por "oficial". A busca varre a descrição além do rótulo.
     await page.keyboard.press("ControlOrMeta+k");
     await page.getByRole("combobox").fill("oficial");
-    await expect(page.getByRole("option", { name: /Conexões/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /Instâncias WhatsApp/ })).toBeVisible();
   });
 
   test("⌘K abre, filtra e navega", async ({ page }) => {

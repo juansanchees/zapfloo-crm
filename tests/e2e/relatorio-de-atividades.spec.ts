@@ -284,17 +284,17 @@ test.describe("Relatório de atividades — o período, pela tela", () => {
 
     // A porta é de DUAS camadas desde o redesenho: a barra lateral desenha oito
     // ÁREAS, e as telas irmãs viraram abas da área (`lib/navigation/registry.ts`).
-    // "Atividades" é aba de `Relatórios` (`/app/analise`), não link da nav
+    // "Atividades" é aba de `Relatórios` (`/app/metrics`), não link da nav
     // principal — antes esta linha procurava o link solto e não achava.
     const sidebar = page.getByRole("navigation", { name: "Navegação principal" });
     const porta = sidebar.getByRole("link", { name: "Relatórios", exact: true });
     await expect(porta, "tela sem porta é tela que só existe para quem digita a URL").toBeVisible({
       timeout: 30_000,
     });
-    expect(await porta.getAttribute("href")).toBe("/app/analise");
+    expect(await porta.getAttribute("href")).toBe("/app/metrics");
 
     await porta.click();
-    await page.waitForURL(/\/app\/analise/, { timeout: 30_000 });
+    await page.waitForURL(/\/app\/metrics/, { timeout: 30_000 });
 
     // O grupo importa: "Atividades" é irmã de Desempenho e Audit Log, não de
     // Inbox. Ir parar no grupo errado é a diferença entre achar e caçar.

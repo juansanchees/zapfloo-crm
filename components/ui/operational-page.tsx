@@ -29,7 +29,7 @@ export function OperationalPage({
       <header className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           {eyebrow && (
-            <p className="mb-1 text-[0.65rem] font-medium tracking-[0.14em] text-accent uppercase">
+            <p className="mb-1 text-[0.65rem] font-medium tracking-[0.14em] text-accent-700 uppercase dark:text-accent-300">
               {eyebrow}
             </p>
           )}

@@ -30,18 +30,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "border border-accent bg-transparent text-accent hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_22%,transparent)]",
+          "border border-accent bg-transparent text-accent-700 hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_22%,transparent)] dark:text-accent-300",
         default:
-          "border border-accent bg-transparent text-accent hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_22%,transparent)]",
+          "border border-accent bg-transparent text-accent-700 hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_22%,transparent)] dark:text-accent-300",
         secondary:
           "border border-border bg-transparent text-text hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] active:bg-[color-mix(in_srgb,var(--color-text)_14%,transparent)]",
         outline:
           "border border-border bg-transparent text-text hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] active:bg-[color-mix(in_srgb,var(--color-text)_14%,transparent)]",
         ghost:
-          "bg-transparent text-accent hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)]",
+          "bg-transparent text-accent-700 hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] dark:text-accent-300",
         destructive:
           "border border-error bg-transparent text-error-fg hover:bg-error-bg active:bg-error-bg active:brightness-90",
-        link: "bg-transparent text-accent underline underline-offset-4 decoration-1 hover:decoration-2 h-auto p-0",
+        link: "bg-transparent text-accent-700 underline underline-offset-4 decoration-1 hover:decoration-2 h-auto p-0 dark:text-accent-300",
       },
       // Alturas de toque: abaixo de `lg` (mesmo corte que o resto da casca
       // usa pra decidir "é celular/tablet, é mouse") toda variante bate os

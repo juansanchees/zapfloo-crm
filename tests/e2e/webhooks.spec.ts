@@ -363,18 +363,17 @@ test.describe("webhooks & automações — fluxo completo", () => {
         // `/app/webhooks` pela aba "Entradas e webhooks". Zero era o resultado
         // garantido, com RBAC ligado ou desligado.
         //
-        // Quem fecha a porta para o `agent` é o `minRole: "manager"` da área
-        // Automações (`lib/navigation/registry.ts`). E por isso o CONTROLE
-        // POSITIVO vem primeiro: provado que a nav principal pintou de verdade
-        // para este usuário, o zero de "Automações" passa a significar ausência
-        // por papel — e não nav que não renderizou.
+        // O controle negativo usa a mesma porta real do manager: a busca global.
+        // Assim, zero significa filtro por papel, não apenas ausência no menu.
         const navDoAgente = agentPage.getByRole("navigation", { name: "Navegação principal" });
         await expect(
           navDoAgente.getByRole("link", { name: "Conversas", exact: true }),
         ).toBeVisible();
-        await expect(
-          navDoAgente.getByRole("link", { name: "Automações", exact: true }),
-        ).toHaveCount(0);
+        await agentPage.keyboard.press("ControlOrMeta+k");
+        const buscaDoAgente = agentPage.getByRole("combobox");
+        await expect(buscaDoAgente).toBeVisible();
+        await buscaDoAgente.fill("Webhooks");
+        await expect(agentPage.getByRole("option", { name: /Webhooks/ })).toHaveCount(0);
 
         await agentPage.goto(`${APP_URL}/app/webhooks`);
         await agentPage.waitForURL(/\/app\/inbox/);

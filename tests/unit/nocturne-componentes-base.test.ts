@@ -13,6 +13,10 @@ function fonte(nome: string) {
   return fs.readFileSync(path.join(RAIZ, "components/ui", nome), "utf8");
 }
 
+function fonteDoShell(nome: string) {
+  return fs.readFileSync(path.join(RAIZ, "components/shell", nome), "utf8");
+}
+
 function fontesDosPrimitivos() {
   return fs
     .readdirSync(path.join(RAIZ, "components/ui"))
@@ -83,7 +87,8 @@ describe("casca Nocturne nos componentes base", () => {
       const classes = buttonVariants({ variant: variante });
       expect(classes).toContain("bg-transparent");
       expect(classes).toContain("border-accent");
-      expect(classes).toContain("text-accent");
+      expect(classes).toContain("text-accent-700");
+      expect(classes).toContain("dark:text-accent-300");
       expect(classes).toContain(
         "hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]",
       );
@@ -93,7 +98,8 @@ describe("casca Nocturne nos componentes base", () => {
     }
 
     expect(buttonVariants({ variant: "secondary" })).toContain("border-border");
-    expect(buttonVariants({ variant: "ghost" })).toContain("text-accent");
+    expect(buttonVariants({ variant: "ghost" })).toContain("text-accent-700");
+    expect(buttonVariants({ variant: "ghost" })).toContain("dark:text-accent-300");
     expect(buttonVariants()).toContain("focus-visible:outline-2");
     expect(buttonVariants()).toContain("focus-visible:outline-accent");
     expect(buttonVariants()).toContain("focus-visible:outline-offset-2");
@@ -104,6 +110,30 @@ describe("casca Nocturne nos componentes base", () => {
     expect(destrutivo).toContain("border-error");
     expect(destrutivo).toContain("bg-transparent");
     expect(destrutivo).toContain("text-error-fg");
+  });
+
+  it("reserva o accent de componente para bordas e usa a rampa legível em texto pequeno", () => {
+    const claro = tokensDoTema(":root").token;
+    const escuro = tokensDoTema('[data-theme="dark"]').token;
+
+    for (const fundo of ["--color-bg", "--color-surface", "--color-workspace"] as const) {
+      expect(
+        razaoDeContraste(claro("--color-accent-700"), claro(fundo)),
+        fundo,
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        razaoDeContraste(escuro("--color-accent-300"), escuro(fundo)),
+        fundo,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+
+    expect(fonte("avatar.tsx")).toContain("bg-muted text-text");
+    expect(fonte("operational-page.tsx")).toContain(
+      "text-accent-700 uppercase dark:text-accent-300",
+    );
+    expect(fonteDoShell("SearchTrigger.tsx")).toContain(
+      'sidebar ? "text-neutral-400" : "hidden text-text-muted md:inline"',
+    );
   });
 
   it("usa superfície, raio 8 e tipografia Nocturne nos cartões", () => {
