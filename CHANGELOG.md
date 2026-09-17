@@ -8,6 +8,32 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.2.0] — 2026-09-16
+
+### Adicionado
+
+- **O dono pode receber aviso de conversa esperando uma pessoa** Em Configurações → Atendimento, a organização pode informar um WhatsApp para receber aviso quando a IA passar uma conversa e ninguém estiver disponível, com uma única cobrança configurável se a conversa continuar sem responsável.
+
+- **O WhatsApp mostra quando a IA está digitando** Durante um atendimento automático, o contato vê o indicador de digitação. O indicador é encerrado quando a resposta sai, quando ocorre uma falha ou quando o teto de tempo é atingido.
+
+- **Skills explicam quando entram** A lista de skills instaladas agora explica quais palavras fazem cada habilidade entrar e mostra quantas vezes ela quase foi acionada, sem expor o conteúdo das conversas.
+
+- **Site pode alimentar o acervo a qualquer momento** O acervo de conhecimento agora aceita o endereço de um site a qualquer momento, reutiliza a leitura segura da configuração inicial e permite ler novamente com a data da última leitura visível.
+
+- **Tipos de agendamento usam o preço do catálogo** Agora um tipo de agendamento pode apontar para um produto, mantendo uma única fonte de preço. Tipos sem vínculo continuam funcionando e aparecem como sem preço definido.
+
+### Corrigido
+
+- **Mensagens novas acordam o atendimento sem esperar o próximo minuto** O worker agora confere mensagens novas no máximo a cada 2 segundos quando está ocioso, mantendo a janela configurável de 8 segundos que agrupa mensagens consecutivas e o agendamento periódico como segurança.
+
+- **Áudios sem transcrição deixam de virar silêncio** Quando um áudio não puder ser transcrito depois das tentativas automáticas, o motivo fica registrado e o cliente recebe uma orientação para escrever ou enviar o áudio novamente.
+
+- **Um funil ocupado não bloqueia mais o onboarding** Quando o funil atual já possui clientes, a recusa segura continua, mas agora é possível criar um novo funil com o modelo aprovado sem alterar o quadro existente.
+
+- **Seletores de atendente não exibem mais pedaços de identificador** A própria conta aparece como Você; membros sem nome aparecem como Sem nome e o papel correspondente, sem expor e-mail nem fragmento técnico.
+
+- **A ativação mostra com clareza quem a IA vai atender** O onboarding agora apresenta com o mesmo destaque a opção de testar em números autorizados e a opção de atender todos os clientes, incluindo uma saída imediata após a confirmação.
+
 ## [2.1.0] — 2026-09-16
 
 ### Adicionado
@@ -3402,7 +3428,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.1.0...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.1...v2.0.0
 [1.19.1]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.0...v1.19.1
