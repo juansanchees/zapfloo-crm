@@ -177,6 +177,24 @@ async function medir(page: Page, nome: string) {
 }
 
 async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[]) {
+  const prefetchesBloqueados: string[] = [];
+  // O App Router pode abrir um prefetch RSC e abandoná-lo sem emitir término.
+  // Bloqueamos somente a combinação inequívoca dos dois headers, antes de a
+  // requisição sair. Toda resposta que realmente alcança a rede continua sob
+  // a prova integral abaixo, sem timeout maior nem exceção de leitura.
+  await page.route("**/*", async route => {
+    const requisicao = route.request();
+    const url = new URL(requisicao.url());
+    const headers = requisicao.headers();
+    if (url.origin === origem
+      && headers["next-router-prefetch"] === "1"
+      && headers.rsc === "1") {
+      prefetchesBloqueados.push(url.pathname);
+      await route.abort("blockedbyclient");
+      return;
+    }
+    await route.fallback();
+  });
   const cdp = await page.context().newCDPSession(page);
   // CDP conserva o corpo fora do renderer: OAuth troca de processo/origem e o
   // callback navega imediatamente. Ler no fim da jornada perdia corpos reais.
@@ -185,8 +203,13 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
   await cdp.send("Network.configureDurableMessages", {
     maxTotalBufferSize: 32 * 1024 * 1024, maxResourceBufferSize: 4 * 1024 * 1024,
   });
-  type Medida = { caminho: string; status: number; tipo: string; tokenExposto: boolean; erroLeitura: boolean; concluida: boolean; lida: boolean; falhaRede: string | null };
+  type Medida = {
+    caminho: string; status: number; tipo: string;
+    tokenExposto: boolean; erroLeitura: boolean; concluida: boolean; lida: boolean;
+    falhaRede: string | null;
+  };
   const respostas = new Map<string, Medida>();
+  const tokens = [TOKEN_CURTO, TOKEN_LONGO];
   // Registra a ordem do protocolo, inclusive término anterior à resposta. Não
   // infere aborto da navegação nem inclui URL/query, headers ou corpo no recibo.
   const ciclos: Array<{ evento: string; requestId: string; loaderId?: string; caminho?: string; instante?: number }> = [];
@@ -209,12 +232,13 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     if (/\/api\/v1\/ads\/meta\/oauth\/(?:connect|agency)$/.test(url.pathname)) return;
     if (url.origin !== origem || response.status < 200 || response.status >= 300
       || !/text\/html|application\/json|text\/x-component/.test(response.mimeType)) return;
-    respostas.set(requestId, {
+    const medida: Medida = {
       caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]"),
       status: response.status, tipo: response.mimeType,
-      tokenExposto: [TOKEN_CURTO, TOKEN_LONGO].some(token => JSON.stringify(response.headers).includes(token)),
+      tokenExposto: tokens.some(token => JSON.stringify(response.headers).includes(token)),
       erroLeitura: false, concluida: false, lida: false, falhaRede: null,
-    });
+    };
+    respostas.set(requestId, medida);
   });
   cdp.on("Network.loadingFinished", ({ requestId, timestamp }) => {
     if (requisicoesLocais.has(requestId)) ciclos.push({ evento: "concluida", requestId, instante: timestamp });
@@ -223,7 +247,7 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     medida.concluida = true;
     void cdp.send("Network.getResponseBody", { requestId }).then(({ body, base64Encoded }) => {
       const corpo = base64Encoded ? Buffer.from(body, "base64").toString("utf8") : body;
-      medida.tokenExposto ||= [TOKEN_CURTO, TOKEN_LONGO].some(token => corpo.includes(token));
+      medida.tokenExposto ||= tokens.some(token => corpo.includes(token));
       medida.lida = true;
     }).catch(() => { medida.erroLeitura = true; });
   });
@@ -236,32 +260,33 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     const medida: Medida = {
       caminho: new URL(resposta.url()).pathname, status: resposta.status(),
       tipo: resposta.headers()["content-type"] ?? "text/html",
-      tokenExposto: [TOKEN_CURTO, TOKEN_LONGO].some(token => JSON.stringify(resposta.headers()).includes(token)),
+      tokenExposto: tokens.some(token => JSON.stringify(resposta.headers()).includes(token)),
       erroLeitura: false, concluida: true, lida: false, falhaRede: null,
     };
     respostas.set(`inicio-real-${respostas.size}`, medida);
     try {
       const corpo = await resposta.text();
-      medida.tokenExposto ||= [TOKEN_CURTO, TOKEN_LONGO].some(token => corpo.includes(token));
+      medida.tokenExposto ||= tokens.some(token => corpo.includes(token));
       medida.lida = true;
     } catch { medida.erroLeitura = true; }
   }, async provar() {
     // Congela o conjunto observado, NÃO uma lista de promises que ainda pode
     // crescer. loadingFinished significa transferência concluída, não corpo já
-    // lido: só getResponseBody resolvido autoriza lida=true. A drenagem limitada
-    // exige desfecho de TODA resposta observada, inclusive prefetch pendente.
+    // lido: só getResponseBody resolvido autoriza lida=true.
     capturando = false;
     const medidas = [...respostas.values()];
+    const semDesfecho = () => medidas.filter(medida => !medida.lida && !medida.erroLeitura && !medida.falhaRede);
     try {
-      await expect.poll(() => medidas.filter(medida => !medida.lida && !medida.erroLeitura && !medida.falhaRede)
-        .map(medida => medida.caminho), { timeout: 10_000, intervals: [100, 250, 500],
-        message: "toda resposta observada termina com corpo lido ou falha/aborto explícito" }).toEqual([]);
+      await expect.poll(() => semDesfecho().map(medida => medida.caminho), {
+        timeout: 10_000, intervals: [100, 250, 500],
+        message: "toda resposta real termina com corpo lido ou falha/aborto explícito" }).toEqual([]);
     } finally {
       await test.info().attach("respostas-sem-token", { body: JSON.stringify(medidas), contentType: "application/json" });
       await test.info().attach("ciclo-requisicoes-sem-segredos", { body: JSON.stringify(ciclos), contentType: "application/json" });
+      await test.info().attach("prefetches-rsc-bloqueados", {
+        body: JSON.stringify(prefetchesBloqueados), contentType: "application/json",
+      });
     }
-    // Prefetches RSC abortados pela navegação ficam registrados, mas não contam
-    // como corpo entregue/provado. Nenhuma resposta CONCLUÍDA pode perder corpo.
     const concluidas = medidas.filter(medida => medida.concluida);
     expect(concluidas.length, "controle positivo: respostas reais do app foram lidas").toBeGreaterThan(0);
     expect(concluidas.some(medida => medida.erroLeitura), "a prova não ignora corpo concluído que não conseguiu ler").toBe(false);
