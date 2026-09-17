@@ -51,9 +51,7 @@ const SOURCE_NAME = `SSRF Source ${ts}`;
 const RULE_NAME = `SSRF Outbound ${ts}`;
 
 function cardOf(locator: Locator): Locator {
-  return locator.locator(
-    "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' border-border ')][1]",
-  );
+  return locator.locator('xpath=ancestor::*[@data-slot="card"][1]');
 }
 
 async function login(page: Page, email: string): Promise<void> {
