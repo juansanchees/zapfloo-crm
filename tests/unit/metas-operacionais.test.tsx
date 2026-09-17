@@ -1,0 +1,56 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+
+import { MetasClient } from "@/app/app/metas/_components/MetasClient";
+
+const progress = {
+  window: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
+  scope: "team" as const,
+  team: {
+    revenue: [{ currency: "BRL", current_cents: 125_000, target_cents: 500_000 }],
+    conversations: { current: 12, target: null },
+  },
+  members: [{
+    user_id: "11111111-1111-4111-8111-111111111111",
+    name: "Ana",
+    revenue: [{ currency: "BRL", current_cents: 125_000, target_cents: 200_000 }],
+    conversations: { current: 12, target: 30 },
+  }],
+};
+const goals = { data: { currency: "BRL", team: { monthly_revenue_cents: 500_000 }, members: {} } };
+
+vi.mock("@/hooks/metas/useGoals", () => ({
+  useGoals: () => ({
+    isLoading: false,
+    isError: false,
+    data: goals,
+  }),
+  useUpdateGoals: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+vi.mock("@/hooks/metas/useGoalProgress", () => ({
+  useGoalProgress: () => ({ isLoading: false, isError: false, data: { data: progress } }),
+}));
+
+afterEach(cleanup);
+
+describe("Metas operacionais", () => {
+  it("oferece configuração apenas a manager/admin e apresenta valores reais", () => {
+    render(<MetasClient canManage />);
+
+    expect(screen.getByRole("heading", { name: "Configurar metas" })).toBeVisible();
+    expect(screen.getAllByText("Ana").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/R\$\s*1\.250,00/).length).toBeGreaterThan(0);
+    expect(screen.getByText("12 · Meta não definida")).toBeVisible();
+  });
+
+  it("mantém agente em leitura e não apresenta linguagem de competição", () => {
+    render(<MetasClient canManage={false} />);
+
+    expect(screen.queryByRole("heading", { name: "Configurar metas" })).toBeNull();
+    expect(screen.getByText("Ana")).toBeVisible();
+    const text = document.body.textContent?.toLowerCase() ?? "";
+    for (const forbidden of ["xp", "ranking", "troféu", "prêmio", "competição"]) {
+      expect(text).not.toContain(forbidden);
+    }
+  });
+});
