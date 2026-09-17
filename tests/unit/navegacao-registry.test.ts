@@ -10,6 +10,7 @@ import {
   searchable,
   sidebarGroups,
 } from "@/lib/navigation/registry";
+import { UsersThree } from "@/lib/ui/icons";
 
 /**
  * O registro é a fonte única da navegação. Estes testes cobrem as projeções
@@ -165,6 +166,15 @@ describe("compactAreas", () => {
       ["administracao", "Usuários e permissões", "/app/team"],
       ["administracao", "Plano e pagamentos", "/app/settings/billing"],
     ]);
+  });
+
+  it("usa o ícone de grupo aprovado para Contatos em todas as projeções", () => {
+    const contatos = compactAreas(ADMIN.platform, ADMIN.role).find(
+      (area) => area.id === "contatos",
+    );
+
+    expect(contatos?.icon).toBe(UsersThree);
+    expect(dest("/app/contacts").icon).toBe(UsersThree);
   });
 
   it("expõe as telas retiradas do sidebar como abas contextuais", () => {

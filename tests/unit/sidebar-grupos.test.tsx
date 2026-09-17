@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 
 import { Sidebar } from "@/components/shell/Sidebar";
 import type { ActiveOrg, AuthUser } from "@/lib/auth/types";
+import { Sparkle } from "@/lib/ui/icons";
 
 const authRef: { user: Pick<AuthUser, "is_platform_admin">; activeOrg: ActiveOrg | null } = {
   user: { is_platform_admin: false },
@@ -82,12 +83,15 @@ describe("Sidebar compacto", () => {
     comoPapel("agent");
     render(<Sidebar collapsed={false} />);
 
-    expect(screen.getByRole("link", { name: "Pergunte à IA" })).toHaveAttribute(
-      "href",
-      "/app/ai/ask",
+    const chamada = screen.getByRole("link", { name: "Pergunte à IA" });
+    expect(chamada).toHaveAttribute("href", "/app/ai/ask");
+    const referencia = render(<Sparkle size={19} weight="fill" aria-hidden />);
+    expect(chamada.querySelector("svg")?.outerHTML).toBe(
+      referencia.container.querySelector("svg")?.outerHTML,
     );
+    referencia.unmount();
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
-    expect(nav.contains(screen.getByRole("link", { name: "Pergunte à IA" }))).toBe(false);
+    expect(nav.contains(chamada)).toBe(false);
   });
 
   it("mantém o controle de recolher no rodapé fora da área rolável", () => {

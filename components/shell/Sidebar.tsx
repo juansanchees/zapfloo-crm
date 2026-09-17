@@ -13,7 +13,7 @@ import { useT } from "@/hooks/i18n/useT";
 import { useConversationCounts } from "@/hooks/inbox/useConversationCounts";
 import { useMarcaDaInstalacao } from "@/lib/branding/contexto";
 import { compactAreaForPath, compactAreas, type CompactArea } from "@/lib/navigation/registry";
-import { Brain, CaretDoubleLeft, CaretDoubleRight } from "@/lib/ui/icons";
+import { CaretDoubleLeft, CaretDoubleRight, Sparkle } from "@/lib/ui/icons";
 import { roleAtLeast } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
@@ -162,7 +162,7 @@ export function SidebarContent({
               collapsed && "justify-center px-2",
             )}
           >
-            <Brain size={19} weight="fill" aria-hidden />
+            <Sparkle size={19} weight="fill" aria-hidden />
             {!collapsed && <span className="truncate">{t("Pergunte à IA")}</span>}
           </Link>
         </div>
