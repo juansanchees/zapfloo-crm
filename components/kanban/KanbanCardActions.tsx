@@ -36,10 +36,10 @@ export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardAct
   const editMutation = useEditLead(pipelineId);
   // spec 13 §4: escrita no funil é agent+ — viewer não reatribui (a rota
   // PATCH também recusa; aqui é só não oferecer o que seria negado).
-  const canAssign = usePermission("pipeline.move_card");
-  const { data: members } = useAssignableMembers(canAssign);
+  const canMutate = usePermission("pipeline.move_card");
+  const { data: members } = useAssignableMembers(canMutate);
   // A rota já devolve só agente ativo e não arquivado — é o picker.
-  const { data: agents } = useAssignableAgents(canAssign);
+  const { data: agents } = useAssignableAgents(canMutate);
 
   const reassignToUser = (ownerUserId: string | null) => {
     if (ownerUserId === lead.owner_user_id) return;
@@ -59,6 +59,8 @@ export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardAct
       patch: lead.owner_agent_id ? { owner_agent_id: null } : { owner_user_id: null },
     });
   };
+
+  if (!canMutate) return null;
 
   return (
     <>
@@ -90,7 +92,7 @@ export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardAct
               {t("Avançar")}
             </DropdownMenuItem>
           )}
-          {canAssign && (
+          {canMutate && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Users size={14} className="mr-2" /> {t("Responsável")}

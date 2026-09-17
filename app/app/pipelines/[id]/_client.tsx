@@ -29,6 +29,7 @@ import { Plus } from "@/lib/ui/icons";
 import type { LeadFilters } from "@/lib/kanban/filters";
 import { applyFilters, filtersFromParams, filtersToParams } from "@/lib/kanban/filters";
 import type { CurrencyTotals } from "@/lib/kanban/summary";
+import { usePermission } from "@/hooks/auth/AuthProvider";
 
 function TotaisPorMoeda({ valores }: { valores: CurrencyTotals }) {
   const t = useT();
@@ -66,11 +67,17 @@ export function PipelinePageClient({
   const filters = useMemo(() => filtersFromParams(searchParams), [searchParams]);
   const setFilters = useCallback(
     (next: LeadFilters) => {
-      const qs = filtersToParams(next);
+      // `pipeline` e `lead` escolhem contexto do workspace, não são filtros.
+      // Apagá-los ao filtrar trocava silenciosamente a aba ativa pelo default.
+      const params = new URLSearchParams(searchParams.toString());
+      for (const key of ["owner", "status", "tag", "q", "overdue"]) params.delete(key);
+      for (const [key, value] of new URLSearchParams(filtersToParams(next))) params.set(key, value);
+      const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, pathname],
+    [router, pathname, searchParams],
   );
+  const canMutate = usePermission("pipeline.move_card");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newOpen, setNewOpen] = useState(false);
 
@@ -150,13 +157,13 @@ export function PipelinePageClient({
           leadInicial={searchParams.get("lead")}
         />
       )}
-      <BulkActionBar
+      {canMutate && <BulkActionBar
         selectedIds={selectedIds}
         stages={data?.stages ?? []}
         pipelineId={pipelineId}
         vocabulary={data?.pipeline.vocabulary ?? null}
         onClear={() => setSelectedIds([])}
-      />
+      />}
     </div>
   );
 }

@@ -37,6 +37,7 @@ interface StageColumnProps {
   /** Próxima etapa operacional, calculada pelo board respeitando terminais. */
   nextStageId?: string | null;
   onAdvance?: (lead: Lead, stageId: string) => void;
+  canMutate?: boolean;
 }
 
 function formatMoney(cents: number, currency: string): string {
@@ -65,6 +66,7 @@ export function StageColumn({
   onOpen,
   nextStageId,
   onAdvance,
+  canMutate = false,
 }: StageColumnProps) {
   const t = useT();
   const totals = totalsByCurrency(leads);
@@ -113,7 +115,7 @@ export function StageColumn({
           ref={(el) => {
             if (el) el.indeterminate = selecionadosAqui > 0 && !todosSelecionados;
           }}
-          disabled={idsVisiveis.length === 0}
+          disabled={idsVisiveis.length === 0 || !canMutate}
           onChange={alternarEtapa}
           aria-label={
             todosSelecionados
@@ -181,6 +183,7 @@ export function StageColumn({
                 onSelect={aoSelecionar}
                 onOpen={onOpen}
                 onAdvance={nextStageId && onAdvance ? () => onAdvance(lead, nextStageId) : undefined}
+                canMutate={canMutate}
               />
             ))}
             {provided.placeholder}

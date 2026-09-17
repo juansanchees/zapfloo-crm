@@ -15,6 +15,7 @@ import type { Pipeline, Stage } from "@/lib/kanban/types";
 import { StageColumn } from "./StageColumn";
 import { LeadDossier } from "./LeadDossier";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
+import { usePermission } from "@/hooks/auth/AuthProvider";
 
 interface KanbanBoardProps {
   pipelineId: string;
@@ -83,6 +84,7 @@ export function KanbanBoard({
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
   const queryResult = useBoard(useExternal ? null : pipelineId);
   const moveCard = useMoveCard(pipelineId);
+  const canMutate = usePermission("pipeline.move_card");
   const { data: members } = useAssignableMembers(true);
   const ownerNames = useMemo(
     () => new Map((members ?? []).map((m) => [m.user_id, m.full_name])),
@@ -191,6 +193,7 @@ export function KanbanBoard({
 
   const handleDragEnd = useCallback(
     (result: DropResult) => {
+      if (!canMutate) return;
       if (!data || !grouped) return;
       const { source, destination, draggableId } = result;
       if (!destination) return;
@@ -230,12 +233,12 @@ export function KanbanBoard({
         expectedUpdatedAt: lead.updated_at,
       });
     },
-    [data, grouped, moveCard],
+    [canMutate, data, grouped, moveCard],
   );
 
   const handleAdvance = useCallback(
     (lead: Lead, stageId: string) => {
-      if (!grouped) return;
+      if (!canMutate || !grouped) return;
       const destination = grouped.get(stageId) ?? [];
       const last = destination.at(-1) ?? null;
       const positionInStage = midpoint(last?.position_in_stage ?? null, null);
@@ -247,7 +250,7 @@ export function KanbanBoard({
         expectedUpdatedAt: lead.updated_at,
       });
     },
-    [grouped, moveCard],
+    [canMutate, grouped, moveCard],
   );
 
   if (isLoading) {
@@ -294,6 +297,7 @@ export function KanbanBoard({
             onOpen={setDossieId}
             nextStageId={nextOperationalStageById.get(stage.id) ?? null}
             onAdvance={handleAdvance}
+            canMutate={canMutate}
           />
         ))}
       </div>

@@ -28,6 +28,7 @@ export function calculateBoardSummary(
   now = new Date(),
 ): BoardSummary {
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   const open: BoardSummaryInput[] = [];
   const wonThisMonth: BoardSummaryInput[] = [];
 
@@ -36,7 +37,8 @@ export function calculateBoardSummary(
     if (
       lead.status === "won" &&
       lead.closed_at !== null &&
-      new Date(lead.closed_at).getTime() >= startOfMonth.getTime()
+      new Date(lead.closed_at).getTime() >= startOfMonth.getTime() &&
+      new Date(lead.closed_at).getTime() < startOfNextMonth.getTime()
     ) {
       wonThisMonth.push(lead);
     }

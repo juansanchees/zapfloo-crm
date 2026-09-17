@@ -45,6 +45,7 @@ interface KanbanCardProps {
   onOpen?: (leadId: string) => void;
   /** Não existe em etapa terminal; o menu não promete uma etapa seguinte. */
   onAdvance?: () => void;
+  canMutate?: boolean;
 }
 
 function formatBRL(cents: number | null, currency: string | null): string | null {
@@ -83,6 +84,7 @@ export function KanbanCard({
   onSelect,
   onOpen,
   onAdvance,
+  canMutate = false,
 }: KanbanCardProps) {
   const t = useT();
   const value = formatBRL(card.valueCents, card.currency);
@@ -128,7 +130,7 @@ export function KanbanCard({
   const handleClick = (e: MouseEvent<HTMLDivElement>) => decidirClique(e);
 
   return (
-    <Draggable draggableId={card.id} index={index}>
+    <Draggable draggableId={card.id} index={index} isDragDisabled={!canMutate}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
@@ -194,11 +196,12 @@ export function KanbanCard({
                   // O card inteiro tem onClick (abre o dossiê): sem parar a
                   // propagação, marcar a caixa abriria o dossiê por cima.
                   e.stopPropagation();
-                  onSelect?.(card.id, e.shiftKey ? "intervalo" : "alterna");
+                if (canMutate) onSelect?.(card.id, e.shiftKey ? "intervalo" : "alterna");
                 }}
                 onChange={() => {
                   /* estado vem de `isSelected`; quem decide é o onClick acima */
                 }}
+                disabled={!canMutate}
                 className={cn(
                   "mt-1 h-4 w-4 shrink-0 cursor-pointer accent-accent transition-opacity",
                   "focus:opacity-100 focus-visible:outline-2 focus-visible:outline-accent",
@@ -255,7 +258,8 @@ export function KanbanCard({
           </p>
 
           <p className="h-5 truncate text-[11px] leading-5 text-text-muted">
-            {[lead.contact?.full_name, lead.source].filter(Boolean).join(" · ") || t("Sem contato")}
+            <span>{lead.contact?.full_name ?? t("Sem contato")}</span>
+            {lead.source && <span> · {lead.source}</span>}
           </p>
 
           {/* ③ a linha do agente — um slot, três estados, nunca três blocos. */}

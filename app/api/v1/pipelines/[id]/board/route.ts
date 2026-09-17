@@ -16,7 +16,7 @@ import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
-import { loadAuthUser } from "@/lib/auth/server";
+import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import {
   roteiaProximasAcoes,
@@ -390,12 +390,18 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
   const authUser = await loadAuthUser();
+  const activeOrg = authUser ? await resolveActiveOrg(authUser) : null;
+  if (!activeOrg) {
+    return fail("unauthenticated", "Auth required.", 401, { requestId });
+  }
   const t = (texto: string) => traduzir(texto, authUser?.idioma ?? "pt-BR");
 
   const { data: pipeline, error: pipelineErr } = await supabase
     .from("crm_pipelines")
     .select("*")
     .eq("id", pipelineId)
+    .eq("organization_id", activeOrg.orgId)
+    .eq("is_archived", false)
     .maybeSingle();
   if (pipelineErr) return fail("internal_error", pipelineErr.message, 500, { requestId });
   if (!pipeline) return fail("resource_not_found", t("Pipeline não encontrado."), 404, { requestId });
@@ -403,7 +409,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   // A linha do funil é a fonte confiável do tenant. Depois de a RLS autorizar
   // essa linha, TODAS as leituras dependentes carregam `organization_id`
   // explícito — não basta o id do funil numa sessão que participa de duas orgs.
-  const organizationId = (pipeline as Pipeline).organization_id;
+  const organizationId = activeOrg.orgId;
   const [
     { data: stages, error: stagesErr },
     { data: leads, error: leadsErr },

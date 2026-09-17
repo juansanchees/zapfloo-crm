@@ -61,12 +61,15 @@ export function FunisClient({
   funis: funisDoServidor,
   podeGerenciar,
   podeImportar,
+  onFunisChange,
 }: {
   funis: FunilDaLista[];
   /** Espelha o `requireRole("manager")` das rotas — ver o comentário da page. */
   podeGerenciar: boolean;
   /** Espelha o `requireRole("agent")` de `POST /api/v1/leads/import`. */
   podeImportar: boolean;
+  /** A resposta autoritativa das mutações também atualiza as abas do workspace. */
+  onFunisChange?: (funis: FunilDaLista[]) => void;
 }) {
   const { permiteQuantidade } = usePlano();
   const t = useT();
@@ -108,6 +111,7 @@ export function FunisClient({
     criar.mutate(nome, {
       onSuccess: (r) => {
         setFunis(r.data.pipelines);
+        onFunisChange?.(r.data.pipelines);
         setNovo(null);
       },
       onError: (e) => setErro({ id: null, texto: textoDoErro(e, t) }),
@@ -119,7 +123,10 @@ export function FunisClient({
     criar.mutate(
       { template_id: templateId },
       {
-        onSuccess: (r) => setFunis(r.data.pipelines),
+        onSuccess: (r) => {
+          setFunis(r.data.pipelines);
+          onFunisChange?.(r.data.pipelines);
+        },
         onError: (e) => setErro({ id: null, texto: textoDoErro(e, t) }),
       },
     );
@@ -132,6 +139,7 @@ export function FunisClient({
       {
         onSuccess: (r) => {
           setFunis(r.data.pipelines);
+          onFunisChange?.(r.data.pipelines);
           setRenomeando(null);
         },
         onError: (e) => setErro({ id, texto: textoDoErro(e, t) }),
@@ -146,6 +154,7 @@ export function FunisClient({
       {
         onSuccess: (r) => {
           setFunis(r.data.pipelines);
+          onFunisChange?.(r.data.pipelines);
           setArquivando(null);
         },
         // A recusa fica NO PAINEL, não numa faixa longe do botão: ela é a
