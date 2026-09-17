@@ -64,9 +64,7 @@ const TAG = "e2e-tag";
 // Card do design system (Card/CardHeader) — mesmas classes em toda a app.
 // Sobe do texto (título) até o container do card pra escopar asserções vizinhas.
 function cardOf(locator: Locator): Locator {
-  return locator.locator(
-    "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' border-border ')][1]",
-  );
+  return locator.locator('xpath=ancestor::div[@data-slot="card"][1]');
 }
 
 async function login(page: Page, email: string): Promise<void> {
@@ -126,23 +124,19 @@ test.describe("webhooks & automações — fluxo completo", () => {
 
     try {
       // --- Step 1: login como manager; a porta de webhooks existe na tela ---
-      // O redesenho tirou "Webhooks" da nav principal: a barra lateral desenha
-      // oito ÁREAS, e `/app/webhooks` virou a aba "Entradas e webhooks" da área
-      // Automações (`lib/navigation/registry.ts`, área `automacoes`, que exige
-      // `manager` — que é o papel deste login).
+      // O Nocturne reserva a barra lateral às nove portas do trabalho diário.
+      // Destinos de configuração continuam alcançáveis pela busca real do topo;
+      // o teste usa essa porta em vez de reintroduzir "Automações" no menu.
       await login(page, creds.users.manager!.email);
-      const automacoes = page
-        .getByRole("navigation", { name: "Navegação principal" })
-        .getByRole("link", { name: "Automações", exact: true });
-      await expect(automacoes).toBeVisible();
-      await automacoes.click();
-      await page.waitForURL(/\/app\/ai\/followups/);
-      const abaWebhooks = page
-        .getByRole("navigation", { name: /Opções da área/ })
-        .getByRole("link", { name: "Entradas e webhooks" });
-      await expect(abaWebhooks).toBeVisible();
-      await abaWebhooks.click();
-      await page.waitForURL(/\/app\/webhooks/);
+      await page.keyboard.press("ControlOrMeta+k");
+      await page.getByRole("combobox").fill("webhooks");
+      const entradaWebhooks = page.getByRole("option", { name: /Webhooks/ });
+      await expect(entradaWebhooks).toBeVisible();
+      expect(new URL(page.url()).pathname).not.toBe("/app/webhooks");
+      await entradaWebhooks.click();
+      await page.waitForURL((url) => url.pathname === "/app/webhooks");
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog", { name: "Buscar telas" })).toBeHidden();
 
       // --- Step 2: aba "Receber dados" — criar fonte ---
       await expect(page.getByRole("tab", { name: "Receber dados" })).toHaveAttribute(
@@ -176,7 +170,9 @@ test.describe("webhooks & automações — fluxo completo", () => {
 
       // --- Step 3: sheet da fonte abre sozinho; URL visível + lead de teste ---
       const sheet = page.getByRole("dialog").filter({ hasText: SOURCE_NAME });
-      await expect(sheet.locator("code", { hasText: "/api/v1/webhooks/in/" }).first()).toBeVisible();
+      await expect(
+        sheet.locator("code", { hasText: "/api/v1/webhooks/in/" }).first(),
+      ).toBeVisible();
       await sheet.getByRole("button", { name: "Enviar lead de teste" }).click();
       await expectToast(page, "Funcionou! Um lead de teste entrou no seu funil.");
       await page.keyboard.press("Escape");
@@ -189,9 +185,7 @@ test.describe("webhooks & automações — fluxo completo", () => {
       await ruleSheet.locator("#rule-name").fill(RULE_NAME);
 
       await ruleSheet.getByRole("combobox").first().click();
-      await page
-        .getByRole("option", { name: "Quando entrar um contato novo (webhook)" })
-        .click();
+      await page.getByRole("option", { name: "Quando entrar um contato novo (webhook)" }).click();
 
       await ruleSheet.getByRole("combobox").filter({ hasText: "Adicionar ação" }).click();
       await page.getByRole("option", { name: "Adicionar tag" }).click();
@@ -354,9 +348,7 @@ test.describe("webhooks & automações — fluxo completo", () => {
       // junto com o desenho, e ninguém soube porque ela nunca rodou em gate
       // (issue #63). Afirmar o `title` mantém a garantia que importa: a tag que
       // a automação aplicou CHEGOU ao card.
-      const leadCard = leadHeading.locator(
-        "xpath=ancestor::div[@role='group'][1]",
-      );
+      const leadCard = leadHeading.locator("xpath=ancestor::div[@role='group'][1]");
       await expect(leadCard).toHaveAttribute("title", new RegExp(`Tags:.*${TAG}`));
 
       // --- Step 9: AGENT não vê "Webhooks" e é redirecionado ---
@@ -377,10 +369,12 @@ test.describe("webhooks & automações — fluxo completo", () => {
         // para este usuário, o zero de "Automações" passa a significar ausência
         // por papel — e não nav que não renderizou.
         const navDoAgente = agentPage.getByRole("navigation", { name: "Navegação principal" });
-        await expect(navDoAgente.getByRole("link", { name: "Conversas", exact: true })).toBeVisible();
-        await expect(navDoAgente.getByRole("link", { name: "Automações", exact: true })).toHaveCount(
-          0,
-        );
+        await expect(
+          navDoAgente.getByRole("link", { name: "Conversas", exact: true }),
+        ).toBeVisible();
+        await expect(
+          navDoAgente.getByRole("link", { name: "Automações", exact: true }),
+        ).toHaveCount(0);
 
         await agentPage.goto(`${APP_URL}/app/webhooks`);
         await agentPage.waitForURL(/\/app\/inbox/);

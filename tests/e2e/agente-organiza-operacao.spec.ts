@@ -139,9 +139,7 @@ async function agenteChama(
  * enxerga como um cartão. Mesmo recurso do spec irmão de SSRF.
  */
 function cardDe(locator: Locator): Locator {
-  return locator.locator(
-    "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' border-border ')][1]",
-  );
+  return locator.locator('xpath=ancestor::div[@data-slot="card"][1]');
 }
 
 async function login(page: Page, quem: "manager"): Promise<void> {
@@ -300,10 +298,9 @@ test.describe("o agente organiza a operação e a tela conta quem foi", () => {
       // O receiver REAL é a testemunha. O guard anti-SSRF recusa 127.0.0.1 antes
       // do fetch, então o correto aqui é ZERO — e é isso que prova que a
       // capacidade nova do agente não abriu caminho por fora da proteção.
-      expect(
-        recebidas,
-        "o guard de egress deixou passar um POST para endereço privado",
-      ).toEqual([]);
+      expect(recebidas, "o guard de egress deixou passar um POST para endereço privado").toEqual(
+        [],
+      );
 
       // E a tentativa TEM que estar registrada: barrar em silêncio seria pior.
       await page.goto(`${APP_URL}/app/webhooks`);
