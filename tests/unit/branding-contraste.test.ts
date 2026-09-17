@@ -108,46 +108,48 @@ describe("extrairRegua — os pares saem do globals.css, nunca de lista à mão"
     const soft = REGUA.escuro.tingidas.find((t) => t.chave === "--color-accent-soft");
     expect(papel?.fonte).toMatchObject({ tipo: "pino", indice: 5, alfa: 1 });
     expect(soft?.fonte).toMatchObject({ tipo: "pino", indice: 5, alfa: 0.16 });
-    if (papel?.fonte.tipo !== "pino" || soft?.fonte.tipo !== "pino") {
+    const fontePapel = papel?.fonte;
+    const fonteSoft = soft?.fonte;
+    if (fontePapel?.tipo !== "pino" || fonteSoft?.tipo !== "pino") {
       throw new Error("o literal do produto deixou de ser pino");
     }
-    const distancias = REGUA.rampaDoProduto.map((hex) => deltaEOklab(papel.fonte.hex, hex));
-    expect(distancias[papel.fonte.indice]).toBe(Math.min(...distancias));
+    const distancias = REGUA.rampaDoProduto.map((hex) => deltaEOklab(fontePapel.hex, hex));
+    expect(distancias[fontePapel.indice]).toBe(Math.min(...distancias));
     const parNoProduto = medirPares(REGUA.escuro, REGUA.rampaDoProduto, 0).find(
       (par) => par.papel === "--color-accent" && par.superficie === "--color-bg",
     );
     expect(parNoProduto?.razao).toBeCloseTo(
-      razaoDeContraste(papel.fonte.hex, REGUA.escuro.base[0]!.hex),
+      razaoDeContraste(fontePapel.hex, REGUA.escuro.base[0]!.hex),
       10,
     );
 
     // O produto usa o pixel literal, inclusive na superfície translúcida.
     const produto = derivarMarca("#808080", REGUA);
-    const rgbProduto = hexParaRgb(papel.fonte.hex);
-    expect(produto.escuro.accent).toBe(papel.fonte.hex);
+    const rgbProduto = hexParaRgb(fontePapel.hex);
+    expect(produto.escuro.accent).toBe(fontePapel.hex);
     expect(produto.escuro.accentSoft).toBe(
-      `rgba(${rgbProduto.r}, ${rgbProduto.g}, ${rgbProduto.b}, ${soft.fonte.alfa})`,
+      `rgba(${rgbProduto.r}, ${rgbProduto.g}, ${rgbProduto.b}, ${fonteSoft.alfa})`,
     );
 
     // Uma marca configurada usa o stop perceptualmente mais próximo como âncora;
     // o literal Zapfloo não vaza para a instalação white-label. Hover segue grau.
     const customizada = derivarMarca("#2563eb", REGUA);
-    const accentRemapeado = customizada.rampa[papel.fonte.indice];
+    const accentRemapeado = customizada.rampa[fontePapel.indice]!;
     const rgbCustomizado = hexParaRgb(accentRemapeado);
     expect(customizada.origemDaRampa).toBe("semente");
     expect(customizada.escuro.accent).toBe(accentRemapeado);
-    expect(customizada.escuro.accent).not.toBe(papel.fonte.hex);
+    expect(customizada.escuro.accent).not.toBe(fontePapel.hex);
     expect(customizada.escuro.accentHover).toBe(customizada.rampa[REGUA.escuro.indices.hover]);
     expect(customizada.escuro.accentSoft).toBe(
-      `rgba(${rgbCustomizado.r}, ${rgbCustomizado.g}, ${rgbCustomizado.b}, ${soft.fonte.alfa})`,
+      `rgba(${rgbCustomizado.r}, ${rgbCustomizado.g}, ${rgbCustomizado.b}, ${fonteSoft.alfa})`,
     );
 
     // Empate preserva o menor índice: duas paradas sintéticas no mesmo pixel do
     // pino devem ancorar na primeira delas, nunca na ordem incidental do parser.
     const empate = CSS.replace(
       /(--color-accent-400:\s*)#[0-9a-f]{6}/i,
-      `$1${papel.fonte.hex}`,
-    ).replace(/(--color-accent-500:\s*)#[0-9a-f]{6}/i, `$1${papel.fonte.hex}`);
+      `$1${fontePapel.hex}`,
+    ).replace(/(--color-accent-500:\s*)#[0-9a-f]{6}/i, `$1${fontePapel.hex}`);
     const pinoEmpatado = extrairRegua(empate).escuro.papeis.find(
       (p) => p.token === "--color-accent",
     )?.fonte;
