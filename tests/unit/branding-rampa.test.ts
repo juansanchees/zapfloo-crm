@@ -24,12 +24,13 @@ const RAIZ = process.cwd();
 const CSS = fs.readFileSync(path.join(RAIZ, "app/globals.css"), "utf8");
 
 /**
- * Os stops esperados saem do CSS, NÃO de uma cópia colada aqui.
+ * Os stops do produto saem do CSS, NÃO de uma cópia colada aqui.
  *
  * Copiar à mão criaria uma segunda fonte da verdade que envelhece em silêncio: quem
- * mexesse na paleta do design system veria este teste verde contra a paleta de ontem, e
- * a catraca deixaria de calibrar contra a régua. Lendo do arquivo, mudar a Sage quebra
- * este teste — que é exatamente o aviso que se quer.
+ * mexesse na paleta do design system veria este teste verde contra a paleta de ontem.
+ * A rampa oficial e a rampa white-label têm responsabilidades diferentes: a primeira
+ * pode ser desenhada à mão; a segunda precisa continuar determinística para qualquer
+ * semente cadastrada por um cliente.
  */
 /**
  * O bloco `:root` sai por casamento de chaves, e não por `slice` entre duas
@@ -48,7 +49,7 @@ function blocoRoot(css: string): string {
   return css.slice(i, fim);
 }
 
-function stopsSageDoCss(): string[] {
+function stopsDoProdutoNoCss(): string[] {
   const raiz = blocoRoot(CSS);
   return GRAUS.map((g) => {
     const m = new RegExp(`--color-accent-${g}:\\s*(#[0-9a-f]{6})`, "i").exec(raiz);
@@ -103,22 +104,36 @@ describe("conversões de cor", () => {
 });
 
 describe("rampaDeSemente — catraca de calibração contra o design system", () => {
-  const esperados = stopsSageDoCss();
+  const produto = stopsDoProdutoNoCss();
+  const sageCalibrada = [
+    "#f3f6f1",
+    "#e4ebe0",
+    "#c8d6c1",
+    "#a4ba9a",
+    "#82a077",
+    "#67885d",
+    "#506d48",
+    "#41573b",
+    "#374731",
+    "#2f3c2b",
+    "#171f15",
+  ] as const;
 
   it("lê 11 stops distintos do globals.css (guarda de vacuidade)", () => {
     // Sem isto, um regex quebrado devolveria lista vazia e a comparação abaixo passaria
     // por não ter o que comparar — instrumento morto tem cara de teste verde.
-    expect(esperados).toHaveLength(11);
-    expect(new Set(esperados).size).toBe(11);
-    expect(esperados[K]).toBe("#506d48");
+    expect(produto).toHaveLength(11);
+    expect(new Set(produto).size).toBe(11);
   });
 
-  it("reproduz os 11 stops Sage a partir de #506d48 com Δ ≤ 2/255 por canal", () => {
+  it("mantém calibrada a derivação white-label sem exigir que a rampa oficial seja algorítmica", () => {
     const derivada = rampaDeSemente("#506d48");
-    const distancias = esperados.map((esperado, i) => distanciaPorCanal(esperado, derivada[i]!));
+    const distancias = sageCalibrada.map((esperado, i) =>
+      distanciaPorCanal(esperado, derivada[i]!),
+    );
     expect(
       Math.max(...distancias),
-      `derivada: ${derivada.join(" ")}\nesperada: ${esperados.join(" ")}\nΔ: ${distancias.join(",")}`,
+      `derivada: ${derivada.join(" ")}\ncalibração: ${sageCalibrada.join(" ")}\nΔ: ${distancias.join(",")}`,
     ).toBeLessThanOrEqual(2);
   });
 

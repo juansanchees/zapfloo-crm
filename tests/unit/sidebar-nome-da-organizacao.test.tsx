@@ -32,6 +32,9 @@ vi.mock("@/components/connections/ConnectionHealthDot", () => ({
   ConnectionHealthDot: () => null,
 }));
 vi.mock("@/components/shell/VersionFooter", () => ({ VersionFooter: () => null }));
+vi.mock("@/hooks/inbox/useConversationCounts", () => ({
+  useConversationCounts: () => ({ data: undefined }),
+}));
 
 /**
  * A marca da INSTALAÇÃO, como o SERVIDOR a entrega.

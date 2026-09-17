@@ -10,9 +10,10 @@ import { VersionFooter } from "@/components/shell/VersionFooter";
 import { SearchTrigger } from "@/components/shell/SearchTrigger";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
+import { useConversationCounts } from "@/hooks/inbox/useConversationCounts";
 import { useMarcaDaInstalacao } from "@/lib/branding/contexto";
 import { compactAreaForPath, compactAreas, type CompactArea } from "@/lib/navigation/registry";
-import { Brain, CaretDoubleLeft, CaretDoubleRight } from "@/lib/ui/icons";
+import { CaretDoubleLeft, CaretDoubleRight, Sparkle } from "@/lib/ui/icons";
 import { roleAtLeast } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,7 @@ interface SidebarContentProps {
 }
 
 /**
- * Oito portas para o produto inteiro.
+ * Nove portas visíveis para o produto inteiro.
  *
  * O componente só desenha a projeção de `compactAreas()`: permissões, rotas e
  * ordem continuam decididas no registro canônico. As telas secundárias ficam
@@ -38,12 +39,16 @@ export function SidebarContent({
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const { user, activeOrg } = useAuth();
+  const { data: counts } = useConversationCounts(activeOrg?.orgId ?? null);
   const areas = compactAreas(user.is_platform_admin, activeOrg?.role ?? null);
   const areaAtiva = compactAreaForPath(pathname, areas);
   const principais = areas.filter((area) => area.position === "main");
-  const operacao = principais.filter((area) => area.section === "operacao");
-  const crescimento = principais.filter((area) => area.section === "crescimento");
-  const rodape = areas.filter((area) => area.position === "footer");
+  const secoes = [
+    { id: "operacao" as const, label: "Operação" },
+    { id: "equipe" as const, label: "Equipe" },
+    { id: "administracao" as const, label: "Administração" },
+  ];
+  const fila = counts?.fila ?? counts?.unassigned;
   const canAsk = user.is_platform_admin || (!!activeOrg && roleAtLeast(activeOrg.role, "agent"));
 
   const brand = useMarcaDaInstalacao();
@@ -61,18 +66,27 @@ export function SidebarContent({
         key={area.id}
         href={area.href}
         title={collapsed ? t(area.label) : undefined}
+        aria-label={t(area.label)}
         aria-current={ativa ? "page" : undefined}
         onClick={onNavigate}
         className={cn(
-          "relative flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+          "relative flex min-h-9 items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-transparent before:content-['']",
           ativa
-            ? "bg-accent text-accent-foreground shadow-sm"
-            : "text-white/70 hover:bg-white/10 hover:text-white",
+            ? "bg-accent-900 text-accent-200 before:bg-accent"
+            : "text-neutral-300 hover:bg-neutral-900 hover:text-text",
           collapsed && "justify-center px-2",
         )}
       >
         <Icon size={19} weight={ativa ? "fill" : "regular"} aria-hidden />
         {!collapsed && <span className="truncate">{t(area.label)}</span>}
+        {!collapsed && area.id === "conversas" && fila !== undefined && (
+          <span
+            aria-label={`${fila} ${t("na fila")}`}
+            className="ml-auto rounded-full bg-accent-800 px-1.5 py-0.5 text-[10.5px] leading-none font-medium text-accent-100"
+          >
+            {fila}
+          </span>
+        )}
         {area.healthDot && (
           <ConnectionHealthDot
             className={cn(collapsed ? "absolute top-1.5 right-1.5" : "ml-auto")}
@@ -86,23 +100,26 @@ export function SidebarContent({
     <>
       <div
         className={cn(
-          "flex h-16 items-center border-b border-white/10 px-4",
+          "border-divider flex h-14 items-center border-b px-4",
           collapsed ? "justify-center" : "justify-start",
         )}
       >
         {logo && !collapsed ? (
           // URL administrável em runtime; next/image exigiria allowlist no build.
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logo}
-            alt={nomeDaMarca}
-            className="h-9 w-auto max-w-[10rem] object-contain"
-          />
+          <img src={logo} alt={nomeDaMarca} className="h-9 w-auto max-w-[10rem] object-contain" />
         ) : (
-          <span className={cn("font-semibold tracking-tight", collapsed && "sr-only")}>{nomeDaMarca}</span>
+          <span
+            className={cn(
+              "text-[17px] font-medium tracking-[-0.01em] text-text",
+              collapsed && "sr-only",
+            )}
+          >
+            {nomeDaMarca}
+          </span>
         )}
         {collapsed && (
-          <span aria-hidden className="text-lg font-bold text-white">
+          <span aria-hidden className="text-lg font-medium text-accent-200">
             {[...nomeDaMarca][0]?.toUpperCase() ?? brand.initial}
           </span>
         )}
@@ -110,16 +127,18 @@ export function SidebarContent({
 
       {activeOrg && !collapsed && (
         <div className="px-3 pt-3">
-          <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/8 bg-white/7 p-3">
+          <div className="border-divider flex min-w-0 items-center gap-3 rounded-lg border bg-surface p-2">
             <span
               aria-hidden
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent/20 text-sm font-bold text-accent"
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-accent-800 text-xs font-medium text-accent-100"
             >
               {[...nomeDaEmpresa][0]?.toUpperCase()}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold text-white">{nomeDaEmpresa}</span>
-              <span className="block text-[11px] text-white/50">{t("Sua empresa")}</span>
+              <span className="block truncate text-[12.5px] font-medium text-text">
+                {nomeDaEmpresa}
+              </span>
+              <span className="block text-[10.5px] text-neutral-400">{t("Sua empresa")}</span>
             </span>
           </div>
         </div>
@@ -139,32 +158,37 @@ export function SidebarContent({
             aria-label={collapsed ? t("Pergunte à IA") : undefined}
             onClick={onNavigate}
             className={cn(
-              "flex min-h-11 items-center gap-3 rounded-xl bg-accent px-3 py-2.5 text-sm font-semibold text-accent-foreground shadow-xs transition-[filter,transform] hover:brightness-105 active:translate-y-px",
+              "flex min-h-9 items-center gap-3 rounded-lg border border-accent bg-transparent px-3 py-2 text-[13px] font-medium text-accent transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_22%,transparent)]",
               collapsed && "justify-center px-2",
             )}
           >
-            <Brain size={19} weight="fill" aria-hidden />
+            <Sparkle size={19} weight="fill" aria-hidden />
             {!collapsed && <span className="truncate">{t("Pergunte à IA")}</span>}
           </Link>
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto p-3" aria-label={t("Navegação principal")}>
-        <div className="space-y-1">{operacao.map(linkDaArea)}</div>
-        {crescimento.length > 0 && (
-          <div className="mt-4 space-y-1">
-            {!collapsed && (
-              <h2 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                {t("Crescimento")}
-              </h2>
-            )}
-            {crescimento.map(linkDaArea)}
-          </div>
-        )}
+      <nav
+        className="flex-1 [scrollbar-width:thin] [scrollbar-color:var(--color-neutral-800)_transparent] overflow-y-auto px-3 pt-0.5 pb-3 [&::-webkit-scrollbar]:w-[10px] [&::-webkit-scrollbar-thumb]:rounded-[8px] [&::-webkit-scrollbar-thumb]:bg-neutral-800 [&::-webkit-scrollbar-track]:bg-transparent"
+        aria-label={t("Navegação principal")}
+      >
+        {secoes.map((secao) => {
+          const itens = principais.filter((area) => area.section === secao.id);
+          if (itens.length === 0) return null;
+          return (
+            <div key={secao.id} className="space-y-0.5">
+              {!collapsed && (
+                <h2 className="px-2 pt-3.5 pb-1.5 text-[10px] font-medium tracking-[0.14em] text-neutral-500 uppercase">
+                  {t(secao.label)}
+                </h2>
+              )}
+              {itens.map(linkDaArea)}
+            </div>
+          );
+        })}
       </nav>
 
-      <div className="border-t border-white/10 p-3">
-        <div className="mb-1 space-y-1">{rodape.map(linkDaArea)}</div>
+      <div className="border-divider shrink-0 border-t px-3 pt-2.5 pb-3.5">
         <VersionFooter collapsed={collapsed} onNavigate={onNavigate} />
         {showCollapseControl && (
           <button
@@ -172,7 +196,7 @@ export function SidebarContent({
             onClick={() => startTransition(() => toggleSidebar(collapsed))}
             disabled={isPending}
             className={cn(
-              "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/55 transition-colors hover:bg-white/10 hover:text-white",
+              "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[12.5px] text-neutral-400 transition-colors hover:bg-neutral-900 hover:text-text",
               collapsed && "justify-center px-2",
             )}
             aria-label={collapsed ? t("Expandir sidebar") : t("Recolher sidebar")}
@@ -182,7 +206,7 @@ export function SidebarContent({
             ) : (
               <CaretDoubleLeft size={14} aria-hidden />
             )}
-            {!collapsed && <span>{t("Recolher")}</span>}
+            {!collapsed && <span>{t("Recolher menu")}</span>}
           </button>
         )}
       </div>
@@ -194,7 +218,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   return (
     <aside
       className={cn(
-        "sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-white/10 bg-shell text-white shadow-xl transition-[width] duration-200",
+        "border-divider sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r bg-shell bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)] text-[13.5px] text-text shadow-lg transition-[width] duration-[220ms] ease-[ease] [--color-accent:var(--color-accent-300)] [--color-bg:var(--color-shell)] [--color-border:var(--color-neutral-800)] [--color-surface-elevated:var(--color-neutral-900)] [--color-surface:var(--color-neutral-900)] [--color-text:var(--color-neutral-100)]",
         collapsed ? "w-16" : "w-60",
       )}
     >

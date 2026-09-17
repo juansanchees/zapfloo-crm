@@ -2,12 +2,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useT } from "@/hooks/i18n/useT";
 import { SidebarContent } from "@/components/shell/Sidebar";
 import { List } from "@/lib/ui/icons";
@@ -38,7 +33,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 border-white/10 bg-[#111827] p-0 text-white sm:max-w-xs dark:bg-[#090d16]"
+        className="border-divider flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 bg-shell bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)] p-0 text-[13.5px] text-text [--color-accent:var(--color-accent-300)] [--color-bg:var(--color-shell)] [--color-border:var(--color-neutral-800)] [--color-surface-elevated:var(--color-neutral-900)] [--color-surface:var(--color-neutral-900)] [--color-text:var(--color-neutral-100)] sm:max-w-xs"
       >
         <SheetTitle className="sr-only">{t("Navegação principal")}</SheetTitle>
         <SidebarContent

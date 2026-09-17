@@ -29,12 +29,14 @@ export function OperationalPage({
       <header className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           {eyebrow && (
-            <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-accent">
+            <p className="mb-1 text-[0.65rem] font-medium tracking-[0.14em] text-accent-700 uppercase dark:text-accent-300">
               {eyebrow}
             </p>
           )}
-          <h1 className="text-2xl font-semibold tracking-[-0.035em] text-text">{title}</h1>
-          {description && <p className="mt-1 max-w-3xl text-sm leading-6 text-text-muted">{description}</p>}
+          <h1 className="text-2xl font-medium tracking-[-0.035em] text-text">{title}</h1>
+          {description && (
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-text-muted">{description}</p>
+          )}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
       </header>
@@ -43,7 +45,7 @@ export function OperationalPage({
         <div
           role="region"
           aria-label={`Ferramentas de ${title}`}
-          className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-panel p-2.5 shadow-xs"
+          className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-panel p-2.5 shadow-xs"
         >
           {toolbar}
         </div>

@@ -87,7 +87,11 @@ describe("CommandPalette", () => {
 
   it("sem texto, oferece o trabalho do dia em vez de tela vazia", () => {
     abrir();
-    expect(screen.getByRole("option", { name: /Inbox/ })).toBeTruthy();
+    const conversas = screen
+      .getAllByRole("option")
+      .find((option) => option.getAttribute("data-href") === "/app/inbox");
+    expect(conversas).toBeDefined();
+    expect(conversas?.textContent).toContain("Conversas");
   });
 
   it("diz quando não achou, em vez de sumir sem explicação", async () => {

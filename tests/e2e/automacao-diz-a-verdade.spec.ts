@@ -61,7 +61,7 @@ const RULE_NAME = `E2E Abordar ${ts}`;
 const LEAD_NAME = `Carlos Verdade ${ts}`;
 
 /**
- * Sobe do texto até o CARD do design system (o container com `border-border`).
+ * Sobe do texto até o CARD do design system pelo marcador estrutural estável.
  *
  * Mesmo helper de `webhooks.spec.ts`, e a razão de ele existir foi medida aqui:
  * `locator("div").filter({ has: texto }).last()` devolve o div mais INTERNO que
@@ -69,9 +69,7 @@ const LEAD_NAME = `Carlos Verdade ${ts}`;
  * asserção reprovava com a tela certa na frente.
  */
 function cardDe(locator: Locator): Locator {
-  return locator.locator(
-    "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' border-border ')][1]",
-  );
+  return locator.locator('xpath=ancestor::div[@data-slot="card"][1]');
 }
 
 async function login(page: Page, email: string): Promise<void> {
@@ -198,10 +196,9 @@ test.describe("a automação conta o que aconteceu de verdade", () => {
       await expect(page.getByText("Automação ligada.")).toBeVisible({ timeout: 15_000 });
 
       // ── O lead entra pelo formulário ─────────────────────────────────────
-      const envio = await request.post(
-        `${APP_URL}/api/v1/webhooks/in/${fonte.data.path_token}`,
-        { data: { nome: LEAD_NAME, telefone: "11933332222" } },
-      );
+      const envio = await request.post(`${APP_URL}/api/v1/webhooks/in/${fonte.data.path_token}`, {
+        data: { nome: LEAD_NAME, telefone: "11933332222" },
+      });
       expect(envio.status()).toBe(200);
 
       // ── PRIMEIRO o backend, DEPOIS a tela ────────────────────────────────
@@ -220,9 +217,7 @@ test.describe("a automação conta o que aconteceu de verdade", () => {
       let execucoes = 0;
       for (let tentativa = 0; tentativa < 10 && execucoes === 0; tentativa++) {
         await drenar(request, page);
-        const resposta = await page.request.get(
-          `${APP_URL}/api/v1/automation-rules/runs?limit=50`,
-        );
+        const resposta = await page.request.get(`${APP_URL}/api/v1/automation-rules/runs?limit=50`);
         expect(resposta.ok()).toBeTruthy();
         const corpo = (await resposta.json()) as {
           data: Array<{ automation_rules: { name: string } | null }>;

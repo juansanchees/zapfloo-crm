@@ -1,4 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
@@ -54,10 +55,63 @@ async function provarSemPisca(page: Page, esperado: "light" | "dark", nome: stri
   expect(prova.quadros.length).toBeGreaterThan(0);
   expect([...new Set(prova.quadros.map(q => q.tema))]).toEqual([esperado]);
   expect([...new Set(prova.quadros.map(q => q.fundo))]).toEqual([prova.fundo]);
-  await test.info().attach(`${nome}-pintura`, { body: JSON.stringify(prova, null, 2), contentType: "application/json" });
   mkdirSync(evidencia, { recursive: true });
-  writeFileSync(path.join(evidencia, `${nome}.json`), JSON.stringify(prova, null, 2));
-  await page.screenshot({ path: path.join(evidencia, `${nome}.png`) });
+  const caminhoPng = path.join(evidencia, `${nome}.png`);
+  const captura = await page.screenshot();
+  writeFileSync(caminhoPng, captura);
+  // A prova anterior teve o PNG sobrescrito dois minutos depois do JSON. O
+  // digest torna essa divergência verificável, em vez de confiar só no nome.
+  const sha256 = createHash("sha256").update(captura).digest("hex");
+  const provaVinculada = {
+    ...prova,
+    captura: { arquivo: path.basename(caminhoPng), sha256 },
+  };
+  expect(
+    provaVinculada.captura.sha256,
+    "o JSON precisa identificar exatamente o PNG produzido pela mesma medicao",
+  ).toMatch(/^[a-f0-9]{64}$/);
+  expect(createHash("sha256").update(readFileSync(caminhoPng)).digest("hex")).toBe(sha256);
+  const json = JSON.stringify(provaVinculada, null, 2);
+  writeFileSync(path.join(evidencia, `${nome}.json`), json);
+  await test.info().attach(`${nome}-pintura`, { body: json, contentType: "application/json" });
+}
+
+async function capturarTemaInterno(page: Page, tema: "light" | "dark") {
+  await page.goto("/app/inbox");
+  await expect(page).toHaveURL(/\/app\/inbox$/);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", tema);
+  await expect(page.locator("main")).toBeVisible();
+
+  const medida = await page.evaluate(() => {
+    const main = document.querySelector("main");
+    const sidebar = document.querySelector("aside");
+    if (!main || !sidebar) throw new Error("shell interna incompleta");
+    return {
+      url: window.location.pathname,
+      data_theme: document.documentElement.getAttribute("data-theme"),
+      body_background_color: getComputedStyle(document.body).backgroundColor,
+      main_background_color: getComputedStyle(main).backgroundColor,
+      sidebar_background_color: getComputedStyle(sidebar).backgroundColor,
+    };
+  });
+
+  expect(medida).toMatchObject({
+    url: "/app/inbox",
+    data_theme: tema,
+    body_background_color: tema === "light" ? "rgb(247, 247, 251)" : "rgb(22, 24, 38)",
+  });
+  expect(medida.body_background_color).not.toBe("");
+
+  mkdirSync(evidencia, { recursive: true });
+  const caminhoPng = path.join(evidencia, `inbox-${tema}.png`);
+  const captura = await page.screenshot();
+  writeFileSync(caminhoPng, captura);
+  // JSON e imagem identificam a mesma captura; trocar só um deles quebra a prova.
+  const sha256 = createHash("sha256").update(captura).digest("hex");
+  expect(createHash("sha256").update(readFileSync(caminhoPng)).digest("hex")).toBe(sha256);
+  const json = JSON.stringify({ ...medida, captura: { arquivo: path.basename(caminhoPng), sha256 } }, null, 2);
+  writeFileSync(path.join(evidencia, `inbox-${tema}.json`), json);
+  await test.info().attach(`inbox-${tema}`, { body: json, contentType: "application/json" });
 }
 
 async function provarSidebarEscura(page: Page, tema: "light" | "dark") {
@@ -117,6 +171,7 @@ test.describe("padrão claro e preferências preservadas", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(tema).toHaveAttribute("aria-label", /Tema: dark\./);
     await provarSemPisca(page, "dark", "escuro-apos-reload");
+    await capturarTemaInterno(page, "dark");
     await provarSidebarEscura(page, "dark");
 
     // Sabotagem de entrada pedida: dark salvo vence; apagar a escolha volta ao claro.
@@ -127,6 +182,7 @@ test.describe("padrão claro e preferências preservadas", () => {
     await page.reload();
     await expect(tema).toHaveAttribute("aria-label", /Tema: light\./);
     await provarSemPisca(page, "light", "claro-apos-limpar");
+    await capturarTemaInterno(page, "light");
     expect(await page.evaluate(() => localStorage.getItem("deskcomm-theme"))).toBeNull();
 
     await tema.click(); // light → dark

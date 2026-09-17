@@ -18,4 +18,25 @@ describe("legibilidade das superfícies da interface", () => {
       }
     });
   }
+
+  it("usa para o texto sutil um degrau existente que mantém AA nos dois temas", () => {
+    for (const selector of [":root", '[data-theme="dark"]']) {
+      const start = css.indexOf(`${selector} {`);
+      const block = css.slice(start, css.indexOf("}", start));
+      const tokens = Object.fromEntries(
+        [...block.matchAll(/(--color-[a-z-]+):\s*(#[a-f0-9]{6});/gi)].map((m) => [m[1], m[2]]),
+      );
+
+      expect(tokens["--color-text-subtle"], selector).toBe(tokens["--color-text-muted"]);
+      for (const surface of ["bg", "surface", "surface-elevated"]) {
+        expect(
+          razaoDeContraste(
+            tokens["--color-text-subtle"]!,
+            tokens[`--color-${surface}`]!,
+          ),
+          `${selector} subtle/${surface}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
 });

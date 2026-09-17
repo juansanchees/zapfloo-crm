@@ -51,9 +51,7 @@ const SOURCE_NAME = `SSRF Source ${ts}`;
 const RULE_NAME = `SSRF Outbound ${ts}`;
 
 function cardOf(locator: Locator): Locator {
-  return locator.locator(
-    "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' border-border ')][1]",
-  );
+  return locator.locator('xpath=ancestor::*[@data-slot="card"][1]');
 }
 
 async function login(page: Page, email: string): Promise<void> {
@@ -103,22 +101,18 @@ test.describe("J6.8 — anti-SSRF do outbound call_webhook (real, ponta a ponta)
     try {
       // --- fonte inbound (para gerar o lead que dispara a regra) ---
       await login(page, creds.users.manager!.email);
-      // "Webhooks" saiu da nav principal no redesenho: `/app/webhooks` virou a
-      // aba "Entradas e webhooks" da área Automações
-      // (`lib/navigation/registry.ts`, área `automacoes`). Este caso morria no
-      // clique do link que não existe mais — e ele é o ÚNICO teste ponta a ponta
-      // do guard anti-SSRF do outbound, então navegar pela tela (e não por
-      // `goto`) é o que prova que a porta existe para quem opera.
-      await page
-        .getByRole("navigation", { name: "Navegação principal" })
-        .getByRole("link", { name: "Automações", exact: true })
-        .click();
-      await page.waitForURL(/\/app\/ai\/followups/);
-      await page
-        .getByRole("navigation", { name: /Opções da área/ })
-        .getByRole("link", { name: "Entradas e webhooks" })
-        .click();
+      // Webhooks saiu das nove portas da casca, mas continua encontrável pela
+      // busca global. O clique na opção prova a porta sem usar `goto` direto.
+      await page.keyboard.press("ControlOrMeta+k");
+      const busca = page.getByRole("combobox");
+      await expect(busca).toBeVisible();
+      await busca.fill("Webhooks");
+      const webhooks = page.getByRole("option", { name: /Webhooks/ });
+      await expect(webhooks).toBeVisible();
+      await webhooks.click();
       await page.waitForURL(/\/app\/webhooks/);
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog", { name: "Buscar telas" })).toBeHidden();
       await page.getByRole("button", { name: /Nova fonte|Criar primeira fonte/ }).click();
       await page.locator("#src-name").fill(SOURCE_NAME);
       const dialog = page.getByRole("dialog");

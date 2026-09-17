@@ -42,8 +42,10 @@ test("Leads abre o quadro; Funis permite trocar e gerenciar sem esconder a opera
     await expect(page).toHaveURL(/\/app/);
 
     const principal = page.getByRole("navigation", { name: "Navegação principal" });
-    const area = page.getByRole("navigation", { name: /Leads.*Opções da área/ });
-    await principal.getByRole("link", { name: "Leads", exact: true }).click();
+    const area = page.getByRole("navigation", { name: /Funis de vendas.*Opções da área/ });
+    await principal.getByRole("link", { name: "Funis de vendas", exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/kanban$/);
+    await area.getByRole("link", { name: "Leads", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/app/pipelines/${padrao}$`));
     await expect(page.getByRole("heading", { name: "Oportunidades QA", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Novo Lead", exact: true })).toBeEnabled();
@@ -51,7 +53,7 @@ test("Leads abre o quadro; Funis permite trocar e gerenciar sem esconder a opera
     mkdirSync(".superpowers/evidence/leads-navegacao", { recursive: true });
     await page.screenshot({ path: ".superpowers/evidence/leads-navegacao/quadro-desktop.png" });
 
-    await area.getByRole("link", { name: "Funis", exact: true }).click();
+    await area.getByRole("link", { name: "Funis de vendas", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Funis", exact: true })).toBeVisible();
     await expect(page.getByTestId("novo-funil")).toBeVisible();
     await page.getByTestId(`abrir-${outroFunil}`).click();
@@ -62,10 +64,12 @@ test("Leads abre o quadro; Funis permite trocar e gerenciar sem esconder a opera
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/app");
       if (width < 768) await page.getByRole("button", { name: "Abrir navegação" }).click();
-      await principal.getByRole("link", { name: "Leads", exact: true }).click();
+      await principal.getByRole("link", { name: "Funis de vendas", exact: true }).click();
+      await expect(page).toHaveURL(/\/app\/kanban$/);
+      await area.getByRole("link", { name: "Leads", exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`/app/pipelines/${padrao}$`));
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      await expect(area.getByRole("link", { name: "Funis", exact: true })).toBeVisible();
+      await expect(area.getByRole("link", { name: "Funis de vendas", exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "Novo Lead", exact: true })).toBeEnabled();
       await page.screenshot({ path: `.superpowers/evidence/leads-navegacao/quadro-${width}.png` });
     }
@@ -86,7 +90,7 @@ test("Leads abre o quadro; Funis permite trocar e gerenciar sem esconder a opera
     await expect(page).toHaveURL(new RegExp(`/app/pipelines/${outroFunil}$`));
     await expect(page.getByText("Aguardando QA", { exact: true })).toBeVisible();
     await expect(area.getByRole("link", { name: "Etapas do funil" })).toHaveCount(0);
-    await area.getByRole("link", { name: "Funis", exact: true }).click();
+    await area.getByRole("link", { name: "Funis de vendas", exact: true }).click();
     await expect(page.getByTestId(`abrir-${outroFunil}`)).toBeVisible();
     await expect(page.getByTestId("novo-funil")).toHaveCount(0);
   } finally {

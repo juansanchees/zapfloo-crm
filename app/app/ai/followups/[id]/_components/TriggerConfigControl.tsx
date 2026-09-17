@@ -391,7 +391,7 @@ export function TriggerConfigControl({ flowId, triggerConfig, variant = "popover
       {/* O limite também respeita o espaço abaixo/acima do disparador. Só os
           campos rolam; a ação permanece dentro da área pintada, mesmo quando
           o formulário é maior que a viewport disponível. */}
-      <PopoverContent className="flex max-h-[min(70dvh,var(--radix-popover-content-available-height))] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-0" align="end" collisionPadding={8} data-testid="trigger-config-panel">
+      <PopoverContent className="flex max-h-[min(70dvh,calc(var(--radix-popover-content-available-height)-1px))] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-0" align="end" collisionPadding={8} data-testid="trigger-config-panel">
         <div className="min-h-0 overflow-y-auto p-4">{fields}</div>
         <div className="shrink-0 border-t border-border p-3">{saveButton}</div>
       </PopoverContent>

@@ -82,7 +82,9 @@ async function expectSemOverflowHorizontal(page: Page, contexto: string): Promis
 test.describe.configure({ timeout: 120_000 });
 
 test.describe("navegação compacta", () => {
-  test("visão geral usa dados locais reais e preserva navegação no desktop e celular", async ({ page }) => {
+  test("visão geral usa dados locais reais e preserva navegação no desktop e celular", async ({
+    page,
+  }) => {
     // Esta jornada mede o tema escuro; seguir o SO agora exige uma escolha explícita.
     await page.addInitScript(() => localStorage.setItem("deskcomm-theme", "system"));
     await page.emulateMedia({ colorScheme: "dark" });
@@ -100,19 +102,29 @@ test.describe("navegação compacta", () => {
     const counts = await page.request.get("/api/v1/conversations/counts");
     expect(counts.ok()).toBe(true);
     const { data } = await counts.json();
-    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(String(data.all));
-    await expect(page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Painel de controle" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(
+      String(data.all),
+    );
+    await expect(
+      page
+        .getByRole("navigation", { name: "Navegação principal" })
+        .getByRole("link", { name: "Painel de controle" }),
+    ).toHaveAttribute("aria-current", "page");
     await expectSemOverflowHorizontal(page, "dashboard desktop");
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.screenshot({ path: path.join(EVIDENCE, "dashboard-desktop.png"), fullPage: true });
     await page.getByRole("link", { name: "Abrir fila", exact: true }).click();
     await expect(page).toHaveURL(/\/app\/inbox\?filter=unassigned$/);
-    await expect(sidebar(page).getByRole("link", { name: "Painel de controle" })).not.toHaveAttribute("aria-current");
+    await expect(
+      sidebar(page).getByRole("link", { name: "Painel de controle" }),
+    ).not.toHaveAttribute("aria-current");
     await page.goto("/app");
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();
     await expectSemOverflowHorizontal(page, "dashboard mobile");
-    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(String(data.all));
+    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(
+      String(data.all),
+    );
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.screenshot({ path: path.join(EVIDENCE, "dashboard-mobile.png"), fullPage: true });
     await page
@@ -122,22 +134,27 @@ test.describe("navegação compacta", () => {
     await expect(page).toHaveURL(/\/app\/tasks$/);
   });
 
-  test("o sidebar mostra somente as oito portas operacionais aprovadas", async ({ page }) => {
+  test("o sidebar mostra somente as nove portas aprovadas nos três grupos", async ({ page }) => {
     await loginAdmin(page);
 
-    await expect(sidebar(page).getByRole("link")).toHaveText([
+    const links = sidebar(page).getByRole("link");
+    await expect(links).toHaveCount(9);
+    expect(
+      await links.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
+    ).toEqual([
       "Painel de controle",
       "Conversas",
-      "Calendário",
+      "Funis de vendas",
       "Contatos",
-      "Leads",
-      "Agentes de IA",
-      "Automações",
+      "Tarefas e agenda",
       "Relatórios",
+      "Instâncias WhatsApp",
+      "Usuários e permissões",
+      "Plano e pagamentos",
     ]);
-    await expect(sidebar(page).getByRole("heading", { name: "Crescimento" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Calendário" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Configurações" })).toBeVisible();
+    await expect(sidebar(page).getByRole("heading", { name: "Operação" })).toBeVisible();
+    await expect(sidebar(page).getByRole("heading", { name: "Equipe" })).toBeVisible();
+    await expect(sidebar(page).getByRole("heading", { name: "Administração" })).toBeVisible();
 
     await page.screenshot({
       path: path.join(EVIDENCE, "nav-sidebar-compacto.png"),
@@ -156,12 +173,12 @@ test.describe("navegação compacta", () => {
     // abaixo é específica (`settings/tenant/pipelines`) e não o antigo
     // /pipelines/, que casa com as duas.
     //
-    await sidebar(page).getByRole("link", { name: "Leads" }).click();
-    await page.waitForURL(/\/app\/pipelines\//);
-    const opcoes = page.getByRole("navigation", { name: /Leads.*Opções da área/ });
+    await sidebar(page).getByRole("link", { name: "Funis de vendas" }).click();
+    await page.waitForURL(/\/app\/kanban/);
+    const opcoes = page.getByRole("navigation", { name: /Funis de vendas.*Opções da área/ });
     await expect(opcoes.getByRole("link")).toHaveText([
+      "Funis de vendas",
       "Leads",
-      "Funis",
       "Produtos",
       "Etapas do funil",
     ]);
@@ -179,10 +196,10 @@ test.describe("navegação compacta", () => {
 
     await expect(sidebar(page).getByRole("link", { name: "Produtos" })).toHaveCount(0);
 
-    await sidebar(page).getByRole("link", { name: "Leads" }).click();
-    await page.waitForURL(/\/app\/pipelines\//);
+    await sidebar(page).getByRole("link", { name: "Funis de vendas" }).click();
+    await page.waitForURL(/\/app\/kanban/);
     await page
-      .getByRole("navigation", { name: /Leads.*Opções da área/ })
+      .getByRole("navigation", { name: /Funis de vendas.*Opções da área/ })
       .getByRole("link", { name: "Produtos" })
       .click();
     await page.waitForURL(/\/app\/products/);
@@ -190,10 +207,7 @@ test.describe("navegação compacta", () => {
 
   test("e a lista de funis é o item vizinho, com nome próprio", async ({ page }) => {
     await loginAdmin(page);
-    await sidebar(page).getByRole("link", { name: "Leads", exact: true }).click();
-    await page.waitForURL(/\/app\/pipelines\//);
-    await page.getByRole("navigation", { name: /Leads.*Opções da área/ })
-      .getByRole("link", { name: "Funis", exact: true }).click();
+    await sidebar(page).getByRole("link", { name: "Funis de vendas", exact: true }).click();
     await page.waitForURL(/\/app\/kanban/);
     await expect(page.getByRole("heading", { name: "Funis", level: 1 })).toBeVisible({
       timeout: 30_000,
@@ -203,7 +217,10 @@ test.describe("navegação compacta", () => {
   test("chega em Conhecimento, que só existia atrás das abas de IA", async ({ page }) => {
     await loginAdmin(page);
 
-    await sidebar(page).getByRole("link", { name: "Agentes de IA" }).click();
+    await page.getByRole("link", { name: "Pergunte à IA" }).click();
+    await page.waitForURL(/\/app\/ai\/ask$/);
+    const opcoesDaIa = page.getByRole("navigation", { name: /Agentes de IA.*Opções da área/ });
+    await opcoesDaIa.getByRole("link", { name: "Visão geral" }).click();
     await page.waitForURL(/\/app\/ai$/);
 
     // O hub organiza por jornada, não numa grade solta.
@@ -225,15 +242,10 @@ test.describe("navegação compacta", () => {
    * A porta, portanto, é Conexões — agora uma opção contextual de
    * Configurações, em vez de um item primário concorrendo com a rotina.
    */
-  test("chega ao canal oficial por Configurações → Conexões", async ({ page }) => {
+  test("chega ao canal oficial por Instâncias WhatsApp", async ({ page }) => {
     await loginAdmin(page);
 
-    await page.getByRole("link", { name: "Configurações" }).click();
-    await page.waitForURL(/\/app\/settings$/);
-    await page
-      .getByRole("navigation", { name: /Configurações.*Opções da área/ })
-      .getByRole("link", { name: "Conexões" })
-      .click();
+    await sidebar(page).getByRole("link", { name: "Instâncias WhatsApp" }).click();
     await page.waitForURL(/\/app\/connections/);
     const comparativo = page.getByRole("region", { name: "Escolha sabendo a diferença" });
     await expect(comparativo).toBeVisible();
@@ -250,7 +262,7 @@ test.describe("navegação compacta", () => {
     // procura por "oficial". A busca varre a descrição além do rótulo.
     await page.keyboard.press("ControlOrMeta+k");
     await page.getByRole("combobox").fill("oficial");
-    await expect(page.getByRole("option", { name: /Conexões/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /Instâncias WhatsApp/ })).toBeVisible();
   });
 
   test("⌘K abre, filtra e navega", async ({ page }) => {
@@ -275,7 +287,7 @@ test.describe("navegação compacta", () => {
    *
    * Medido por ferramenta, nunca a olho.
    */
-  test("as oito portas principais cabem sem scroll em 900px", async ({ page }) => {
+  test("as nove portas principais cabem sem scroll em 900px", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
@@ -288,7 +300,7 @@ test.describe("navegação compacta", () => {
       };
     });
 
-    expect(m.links).toBe(8);
+    expect(m.links).toBe(9);
     expect(m.rola, "em 900px o menu inteiro tem de caber sem scroll").toBe(false);
   });
 
@@ -298,7 +310,10 @@ test.describe("navegação compacta", () => {
     test("em 390px, o sidebar vira gaveta e não cria overflow horizontal", async ({ page }) => {
       await loginAdmin(page);
 
-      await expect(sidebar(page), "o sidebar desktop fica fora da árvore acessível no mobile").toHaveCount(0);
+      await expect(
+        sidebar(page),
+        "o sidebar desktop fica fora da árvore acessível no mobile",
+      ).toHaveCount(0);
       await expectSemOverflowHorizontal(page, "shell mobile após login");
 
       await page.getByRole("button", { name: "Abrir navegação" }).click();
@@ -309,8 +324,8 @@ test.describe("navegação compacta", () => {
         fullPage: true,
       });
 
-      await sidebar(page).getByRole("link", { name: "Leads", exact: true }).click();
-      await page.waitForURL(/\/app\/pipelines\//);
+      await sidebar(page).getByRole("link", { name: "Funis de vendas", exact: true }).click();
+      await page.waitForURL(/\/app\/kanban/);
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expectSemOverflowHorizontal(page, "shell mobile após navegar pelo drawer");
 
@@ -321,27 +336,30 @@ test.describe("navegação compacta", () => {
     });
   });
 
-  test("Configurações fica fixo no rodapé, fora da área que rola", async ({ page }) => {
+  test("Recolher menu fica fixo no rodapé, fora da área que rola", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 768 });
     await loginAdmin(page);
 
-    const config = page.getByRole("link", { name: "Configurações" });
-    await expect(config).toBeVisible();
+    const recolher = page.getByRole("button", { name: "Recolher sidebar" });
+    await expect(recolher).toBeVisible();
+    await expect(recolher).toContainText("Recolher menu");
 
     const dentroDaNav = await page.evaluate(() => {
       const nav = document.querySelector('nav[aria-label="Navegação principal"]')!;
-      const link = [...document.querySelectorAll("a")].find(
-        (a) => a.textContent?.trim() === "Configurações",
+      const botao = [...document.querySelectorAll("button")].find(
+        (item) => item.getAttribute("aria-label") === "Recolher sidebar",
       );
-      return nav.contains(link!);
+      return nav.contains(botao!);
     });
-    expect(dentroDaNav, "Configurações não pode depender de scroll para aparecer").toBe(false);
+    expect(dentroDaNav, "Recolher menu não pode depender de scroll para aparecer").toBe(false);
   });
 
-  test("um agent não vê a porta de IA acima de seu papel", async ({ page }) => {
+  test("um agent não vê as portas administrativas acima de seu papel", async ({ page }) => {
     await login(page, creds.users.agent!.email);
 
-    await expect(sidebar(page).getByRole("link", { name: "Agentes de IA" })).toHaveCount(0);
+    await expect(sidebar(page).getByRole("link", { name: "Instâncias WhatsApp" })).toHaveCount(0);
+    await expect(sidebar(page).getByRole("link", { name: "Plano e pagamentos" })).toHaveCount(0);
+    await expect(sidebar(page).getByRole("link", { name: "Usuários e permissões" })).toBeVisible();
     await expect(sidebar(page).getByRole("link", { name: "Conversas" })).toBeVisible();
   });
 });

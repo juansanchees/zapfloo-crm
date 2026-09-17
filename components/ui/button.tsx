@@ -5,11 +5,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 /**
- * Button — Sage design system.
+ * Button — Nocturne design system.
  * Variants:
- *   - primary (default): accent fill, branded CTA
- *   - secondary: surface-elevated com border, ação neutra
- *   - ghost: transparent, hover suave (toolbar/inline)
+ *   - primary (default): contorno accent, nunca preenchimento saturado
+ *   - secondary: contorno divider, ação neutra
+ *   - ghost: texto accent sem preenchimento padrão (toolbar/inline)
  *   - destructive: error fill (delete/cancel destrutivo)
  *   - outline: alias de secondary com background transparente (compat shadcn)
  *   - link: text-only com underline
@@ -18,11 +18,11 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   [
     "inline-flex items-center justify-center gap-2 whitespace-nowrap",
-    "rounded-lg font-medium",
+    "rounded-md font-medium",
     "transition-[background-color,border-color,color,box-shadow,transform]",
     "duration-fast ease-out",
-    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
-    "disabled:pointer-events-none disabled:opacity-50",
+    "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+    "disabled:pointer-events-none disabled:opacity-[.45]",
     "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
     "active:translate-y-px",
   ].join(" "),
@@ -30,19 +30,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs",
+          "border border-accent bg-transparent text-accent-700 hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_22%,transparent)] dark:text-accent-300",
         default:
-          "bg-accent text-accent-foreground hover:bg-accent-hover shadow-xs",
+          "border border-accent bg-transparent text-accent-700 hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_22%,transparent)] dark:text-accent-300",
         secondary:
-          "bg-surface-elevated text-text border border-border hover:border-accent hover:text-accent",
+          "border border-border bg-transparent text-text hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] active:bg-[color-mix(in_srgb,var(--color-text)_14%,transparent)]",
         outline:
-          "bg-transparent text-text border border-border hover:border-accent hover:text-accent",
+          "border border-border bg-transparent text-text hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] active:bg-[color-mix(in_srgb,var(--color-text)_14%,transparent)]",
         ghost:
-          "bg-transparent text-text hover:bg-accent-soft hover:text-accent",
+          "bg-transparent text-accent-700 hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] dark:text-accent-300",
         destructive:
-          "bg-error text-white hover:brightness-95 shadow-xs",
-        link:
-          "bg-transparent text-accent underline underline-offset-4 decoration-1 hover:decoration-2 h-auto p-0",
+          "border border-error bg-transparent text-error-fg hover:bg-error-bg active:bg-error-bg active:brightness-90",
+        link: "bg-transparent text-accent-700 underline underline-offset-4 decoration-1 hover:decoration-2 h-auto p-0 dark:text-accent-300",
       },
       // Alturas de toque: abaixo de `lg` (mesmo corte que o resto da casca
       // usa pra decidir "é celular/tablet, é mouse") toda variante bate os
@@ -66,8 +65,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
@@ -75,11 +73,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
+      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
     );
   },
 );
