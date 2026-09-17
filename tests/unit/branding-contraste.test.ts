@@ -83,15 +83,15 @@ describe("extrairRegua — os pares saem do globals.css, nunca de lista à mão"
   });
 
   it("alcança o anel de foco, que mora em @layer base e uma lista à mão perderia", () => {
-    // O claro usa o mesmo grau do accent; o escuro usa o passo claro indicado pelo
-    // Nocturne. Ler só `--color-accent` perderia este consumidor direto da rampa.
+    // Os dois usam o papel do accent resolvido. No claro ele é o grau 600; no
+    // escuro é o pino literal do Nocturne, ancorado mecanicamente na rampa.
     const foco = REGUA.claro.papeis.find((p) => p.token.includes(":focus-visible"));
     expect(foco, "o anel de foco sumiu da régua").toBeDefined();
     expect(foco?.tipo).toBe("componente");
     expect(foco?.fonte).toMatchObject({ tipo: "grau", indice: 6 });
 
     const focoEscuro = REGUA.escuro.papeis.find((p) => p.token.includes(":focus-visible"));
-    expect(focoEscuro?.fonte).toMatchObject({ tipo: "grau", indice: 4 });
+    expect(focoEscuro?.fonte).toMatchObject({ tipo: "pino", indice: 5 });
   });
 
   it("classifica -fg como texto e -soft como superfície", () => {

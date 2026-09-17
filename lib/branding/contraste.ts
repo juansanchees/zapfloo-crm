@@ -273,6 +273,7 @@ function lerDeclaracoes(corpo: string): Declaracao[] {
 }
 
 const REF_ACCENT = /var\(\s*--color-accent-(\d{2,3})\s*\)/;
+const REF_ACCENT_PAPEL = /var\(\s*--color-accent\s*\)/;
 const RGBA = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/;
 
 function grauParaIndice(rotulo: string): number | null {
@@ -316,11 +317,15 @@ const SEMANTICAS = ["success", "warning", "error", "info"] as const;
  *  - token terminado em `-fg` é TEXTO, medido contra o token de mesmo nome sem o sufixo;
  *  - token terminado em `-soft` é SUPERFÍCIE (algo é pintado nela), não papel;
  *  - regra que declara `background`+`color` juntos é um par de TEXTO já pronto (`::selection`);
- *  - qualquer outra referência direta a `var(--color-accent-NNN)` é COMPONENTE, medido
- *    contra todas as superfícies do tema.
+ *  - qualquer outra referência direta a `var(--color-accent-NNN)` é COMPONENTE,
+ *    medido contra todas as superfícies do tema;
+ *  - o anel de foco também pode consumir o papel white-label
+ *    `var(--color-accent)` diretamente e continua entrando na mesma medição.
  *
- * Referência INDIRETA (`--primary: var(--color-accent)`) é ignorada de propósito: é
- * alias do mesmo pixel, e medi-la duas vezes só inflaria a contagem de pares.
+ * Referência INDIRETA em outro token (`--primary: var(--color-accent)`) e usos de
+ * animação já cobertos pelo próprio papel são ignorados de propósito: são o mesmo
+ * pixel e medi-los de novo só inflaria a contagem de pares. O foco é a exceção porque
+ * é um contrato de acessibilidade que o gate precisa localizar nominalmente.
  */
 export function extrairRegua(css: string): Regua {
   const regras = varrerRegras(css);
@@ -458,9 +463,12 @@ function montarTema(
       continue;
     }
     for (const d of regra.decls) {
-      if (!REF_ACCENT.test(d.valor)) continue;
-      const fonte = lerFonte(d.valor);
-      if (fonte?.tipo !== "grau") continue;
+      const fonte = REF_ACCENT.test(d.valor)
+        ? lerFonte(d.valor)
+        : regra.seletor.includes(":focus-visible") && REF_ACCENT_PAPEL.test(d.valor)
+          ? fonteDoToken("--color-accent")
+          : null;
+      if (fonte?.tipo !== "grau" && fonte?.tipo !== "pino") continue;
       papeis.push({
         token: `${regra.seletor}/${d.prop}`,
         tipo: "componente",

@@ -166,8 +166,12 @@ describe("Sidebar compacto", () => {
 
     const aside = container.querySelector("aside");
     expect(aside).toHaveClass(
+      "bg-shell",
       "bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)]",
       "duration-[220ms]",
+      "[--color-bg:var(--color-shell)]",
+      "[--color-surface:var(--color-neutral-900)]",
+      "[--color-text:var(--color-neutral-100)]",
     );
     expect(screen.getByRole("link", { name: "Conversas" })).toHaveClass("before:bg-accent");
   });

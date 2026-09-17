@@ -127,10 +127,10 @@ describe("casca Nocturne nos componentes base", () => {
       expect(controle).toContain("disabled:opacity-[.45]");
     }
 
-    expect(fonte("input.tsx")).toContain("h-11");
-    expect(fonte("input.tsx")).toContain("lg:h-9");
-    expect(fonte("select.tsx")).toContain("h-11");
-    expect(fonte("select.tsx")).toContain("lg:h-9");
+    expect(fonte("input.tsx")).toContain("h-9");
+    expect(fonte("input.tsx")).not.toContain("h-11");
+    expect(fonte("select.tsx")).toContain("h-9");
+    expect(fonte("select.tsx")).not.toContain("h-11");
   });
 
   it("pinta a etiqueta padrão com a rampa, sem apagar estados semânticos", () => {
@@ -189,6 +189,24 @@ describe("casca Nocturne nos componentes base", () => {
       expect(componente, arquivo).toContain("focus-visible:outline-accent");
       expect(componente, arquivo).toContain("focus-visible:outline-offset-2");
     }
+  });
+
+  it("usa o accent resolvido no foco global e peso 500 nos títulos", () => {
+    const css = fs.readFileSync(path.join(RAIZ, "app/globals.css"), "utf8");
+    const foco = css.match(/:focus-visible\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? "";
+    expect(foco).toContain("outline: 2px solid var(--color-accent)");
+    expect(foco).not.toContain("accent-400");
+    expect(foco).not.toContain("accent-600");
+
+    for (const arquivo of ["alert-dialog.tsx", "dialog.tsx", "sheet.tsx"]) {
+      const componente = fonte(arquivo);
+      expect(componente, arquivo).toMatch(/Title[\s\S]*?font-medium/);
+      expect(componente, arquivo).not.toMatch(/Title[\s\S]*?font-semibold/);
+    }
+
+    const pagina = fonte("operational-page.tsx");
+    expect(pagina).toContain('h1 className="text-2xl font-medium');
+    expect(pagina).not.toContain('h1 className="text-2xl font-semibold');
   });
 
   it("mantém o destrutivo legível no repouso e no hover dos dois temas", () => {

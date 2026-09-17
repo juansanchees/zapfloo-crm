@@ -33,7 +33,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="border-divider flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)] p-0 text-[13.5px] text-text sm:max-w-xs"
+        className="border-divider flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 bg-shell bg-[linear-gradient(180deg,var(--color-accent-900)_0%,var(--color-bg)_42%)] p-0 text-[13.5px] text-text [--color-bg:var(--color-shell)] [--color-border:var(--color-neutral-800)] [--color-surface-elevated:var(--color-neutral-900)] [--color-surface:var(--color-neutral-900)] [--color-text:var(--color-neutral-100)] sm:max-w-xs"
       >
         <SheetTitle className="sr-only">{t("Navegação principal")}</SheetTitle>
         <SidebarContent

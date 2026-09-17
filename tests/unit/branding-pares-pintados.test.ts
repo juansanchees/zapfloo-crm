@@ -381,13 +381,13 @@ describe("a navy #0f172a — o defeito que a prova em tela achou", () => {
   it("os quatro números do anel de foco, agora acima do piso", () => {
     // ANTES (medido no browser, servidor de dev na 3111): claro 10,77 e 10,22;
     // escuro 2,86 e 2,37 — os dois de baixo abaixo do piso 3,0, porque o anel
-    // pintava a rampa crua. Com os papéis Nocturne o tema escuro anda -2 e a
-    // rampa emitida acompanha esse deslocamento.
+    // pintava a rampa crua. O foco agora acompanha o papel white-label do
+    // accent; a régua emitida continua andando junto com a marca.
     const p = pintadosDaSemente("#0f172a");
     expect(foco(p.claro, "--color-bg")).toBeCloseTo(16.71, 2);
     expect(foco(p.claro, "--color-surface-elevated")).toBeCloseTo(15.74, 2);
-    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(9.14, 2);
-    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(6.99, 2);
+    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(5.09, 2);
+    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(3.89, 2);
     for (const superficie of ["--color-bg", "--color-surface-elevated"] as const) {
       expect(foco(p.escuro, superficie), superficie).toBeGreaterThanOrEqual(PISOS.componente);
     }

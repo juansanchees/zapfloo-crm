@@ -29,11 +29,11 @@ export function OperationalPage({
       <header className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           {eyebrow && (
-            <p className="mb-1 text-[0.65rem] font-semibold tracking-[0.14em] text-accent uppercase">
+            <p className="mb-1 text-[0.65rem] font-medium tracking-[0.14em] text-accent uppercase">
               {eyebrow}
             </p>
           )}
-          <h1 className="text-2xl font-semibold tracking-[-0.035em] text-text">{title}</h1>
+          <h1 className="text-2xl font-medium tracking-[-0.035em] text-text">{title}</h1>
           {description && (
             <p className="mt-1 max-w-3xl text-sm leading-6 text-text-muted">{description}</p>
           )}
