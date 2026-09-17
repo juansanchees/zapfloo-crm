@@ -6,12 +6,12 @@ import { useDraftReply } from "@/hooks/inbox/useDraftReply";
 
 interface Props {
   conversationId: string;
-  onDraft: (text: string) => void;
+  onSuggestions: (suggestions: string[]) => void;
   disabled?: boolean;
 }
 
 /** Onda 5.1: botão "Sugerir resposta" — gera rascunho via agente publicado, sem enviar. */
-export function DraftReplyButton({ conversationId, onDraft, disabled }: Props) {
+export function DraftReplyButton({ conversationId, onSuggestions, disabled }: Props) {
   const t = useT();
   const mutation = useDraftReply();
 
@@ -26,7 +26,7 @@ export function DraftReplyButton({ conversationId, onDraft, disabled }: Props) {
       disabled={disabled || mutation.isPending}
       onClick={() => {
         mutation.mutate(conversationId, {
-          onSuccess: (res) => onDraft(res.data.draft),
+          onSuccess: (res) => onSuggestions(res.data.suggestions),
         });
       }}
     >

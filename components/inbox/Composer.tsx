@@ -75,6 +75,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
 ) {
   const t = useT();
   const [text, setText] = useState("");
+  const [draftSuggestions, setDraftSuggestions] = useState<string[]>([]);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [menuDismissed, setMenuDismissed] = useState(false);
@@ -162,6 +163,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     // concatena (inserir no cursor grudaria dois textos completos, gerando uma
     // mensagem sem sentido). O vendedor edita/envia a partir daqui.
     setText(draft);
+    setDraftSuggestions([]);
     requestAnimationFrame(() => {
       taRef.current?.focus();
       autoresize();
@@ -278,6 +280,20 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             </button>
           </div>
         )}
+        {mode === "reply" && draftSuggestions.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {draftSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => applyDraft(suggestion)}
+                className="max-w-full rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-left text-xs text-accent-foreground transition-colors hover:bg-accent/20"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-end gap-2">
           {mode === "reply" && (
             <AttachMenu
@@ -287,7 +303,11 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             />
           )}
           {mode === "reply" && (
-            <DraftReplyButton conversationId={conversationId} disabled={isDisabled} onDraft={applyDraft} />
+            <DraftReplyButton
+              conversationId={conversationId}
+              disabled={isDisabled}
+              onSuggestions={setDraftSuggestions}
+            />
           )}
           <EmojiButton
             disabled={isDisabled}

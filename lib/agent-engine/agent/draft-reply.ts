@@ -23,8 +23,44 @@ export interface DraftReplyInput {
 }
 
 export type DraftReplyResult =
-  | { ok: true; draft: string }
-  | { ok: false; reason: 'no_agent' | 'blocked' | 'empty' | 'error' };
+  | { ok: true; suggestions: string[] }
+  | { ok: false; reason: 'blocked' | 'empty' | 'error' };
+
+/**
+ * A borda do modelo é texto livre, ainda que o prompt peça JSON. Validamos o
+ * contrato inteiro aqui antes de entregá-lo à tela: um valor estranho não pode
+ * virar uma sugestão clicável no composer.
+ */
+function parseSuggestions(text: string | null | undefined): string[] | null {
+  if (!text?.trim()) return null;
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('suggestions' in payload) ||
+    !Array.isArray(payload.suggestions) ||
+    !payload.suggestions.every((suggestion) => typeof suggestion === 'string')
+  ) {
+    return null;
+  }
+
+  const seen = new Set<string>();
+  const suggestions: string[] = [];
+  for (const raw of payload.suggestions) {
+    const suggestion = raw.replace(/\s+/g, ' ').trim();
+    if (!suggestion || seen.has(suggestion)) continue;
+    seen.add(suggestion);
+    suggestions.push(suggestion);
+    if (suggestions.length === 3) break;
+  }
+  return suggestions.length > 0 ? suggestions : null;
+}
 
 export async function generateDraftReply(
   db: pg.Pool,
@@ -33,7 +69,9 @@ export async function generateDraftReply(
   input: DraftReplyInput,
 ): Promise<DraftReplyResult> {
   const agent = await loadPublishedAgentConfig(db, input.tenantId, input.channelSessionId);
-  if (agent === null) return { ok: false, reason: 'no_agent' };
+  // Não há configuração publicada para este canal: não é incidente nem impede
+  // o atendimento humano. A rota devolve uma lista vazia, sem chamar o modelo.
+  if (agent === null) return { ok: true, suggestions: [] };
 
   const ctx = await getLeadContext(
     db,
@@ -82,9 +120,9 @@ export async function generateDraftReply(
 
   const system =
     `${agent.systemPrompt}\n\n` +
-    `[MODO RASCUNHO] Gere UMA resposta pronta para o vendedor humano enviar ao cliente. ` +
+    `[MODO RASCUNHO] Gere de UMA a TRÊS respostas alternativas prontas para o vendedor humano enviar ao cliente. ` +
     `Escreva como o vendedor (NÃO se identifique como assistente/IA, NÃO use disclosure de bot). ` +
-    `Responda só com o texto da mensagem, sem aspas nem comentários.` +
+    `Responda SOMENTE JSON estrito no formato {"suggestions":["resposta 1"]}, sem markdown, aspas externas ou comentários.` +
     blocoDecisao;
 
   const messages: ModelMessage[] = ctx.context.messages.map((m) => ({
@@ -109,7 +147,7 @@ export async function generateDraftReply(
     // result.text vem pronto, sem risco do modelo tentar chamar send_message.
   });
 
-  const draft = (result.text ?? '').trim();
-  if (!draft) return { ok: false, reason: 'empty' };
-  return { ok: true, draft };
+  const suggestions = parseSuggestions(result.text);
+  if (!suggestions) return { ok: false, reason: 'empty' };
+  return { ok: true, suggestions };
 }

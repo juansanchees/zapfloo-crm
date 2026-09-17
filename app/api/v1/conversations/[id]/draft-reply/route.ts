@@ -15,7 +15,11 @@ import { type NextRequest } from "next/server";
 import { generateDraftReply, type DraftReplyResult } from "@/lib/agent-engine/agent/draft-reply";
 import { getRequestPool } from "@/lib/agent-engine/db/request-pool";
 import { crmEdgeConfigFromEnv } from "@/lib/agent-engine/edge/crm/mcp-client";
-import { llmEdgeConfigFromEnv } from "@/lib/agent-engine/edge/llm/run-model-call";
+import {
+  llmEdgeConfigFromEnv,
+  LlmNotConfiguredError,
+  normalizarErro,
+} from "@/lib/agent-engine/edge/llm/run-model-call";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { env } from "@/lib/env";
@@ -32,7 +36,6 @@ const REASON_TO_RESPONSE: Record<
   Exclude<DraftReplyResult, { ok: true }>["reason"],
   [code: string, message: string, status: number]
 > = {
-  no_agent: ["no_agent", "Nenhum agente publicado para sugerir resposta.", 422],
   blocked: ["blocked", "Contato bloqueado/anonimizado.", 422],
   empty: ["empty", "A IA não gerou um rascunho.", 422],
   error: ["internal_error", "Erro ao gerar rascunho.", 500],
@@ -65,28 +68,38 @@ export async function POST(_req: NextRequest, { params }: RouteParams): Promise<
     return fail("unavailable", t("Rascunho da IA indisponível (config)."), 503, { requestId });
   }
 
-  // Falha controlada (getLeadContext ok:false) volta como reason:'error' e vira
-  // 500 abaixo. Exceção inesperada (credencial inválida, provider fora, pool
-  // morto, orçamento atingido) NÃO é engolida: sobe pro handler global do Next, que a
-  // registra — perder a causa raiz de uma chamada de LLM seria cegueira em prod.
-  const result: DraftReplyResult = await generateDraftReply(
-    pool,
-    llmEdgeConfigFromEnv(env),
-    crmEdgeConfigFromEnv({
-      SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
-    }),
-    {
-      tenantId: org.orgId,
-      leadId: conv.contact_id,
-      conversationId: conv.id,
-      channelSessionId: conv.channel_session_id,
-    },
-  );
+  let result: DraftReplyResult;
+  try {
+    result = await generateDraftReply(
+      pool,
+      llmEdgeConfigFromEnv(env),
+      crmEdgeConfigFromEnv({
+        SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+      }),
+      {
+        tenantId: org.orgId,
+        leadId: conv.contact_id,
+        conversationId: conv.id,
+        channelSessionId: conv.channel_session_id,
+      },
+    );
+  } catch (error) {
+    // Configuração ausente ou chave recusada não pode tirar do vendedor o
+    // caminho humano. Outros incidentes (orçamento, timeout, provider fora)
+    // continuam visíveis pelo tratamento global já existente.
+    if (
+      error instanceof LlmNotConfiguredError ||
+      normalizarErro(error).error_code === "credencial_recusada"
+    ) {
+      return ok({ suggestions: [] }, { requestId });
+    }
+    throw error;
+  }
 
   if (!result.ok) {
     const [code, message, status] = REASON_TO_RESPONSE[result.reason];
     return fail(code, t(message), status, { requestId });
   }
-  return ok({ draft: result.draft }, { requestId });
+  return ok({ suggestions: result.suggestions }, { requestId });
 }

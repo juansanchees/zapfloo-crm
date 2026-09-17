@@ -27,35 +27,35 @@ describe("DraftReplyButton", () => {
   it("clicar dispara a mutation e desabilita enquanto pendente", async () => {
     let resolvePost!: (v: unknown) => void;
     postMock.mockReturnValue(new Promise((resolve) => (resolvePost = resolve)));
-    const onDraft = vi.fn();
+    const onSuggestions = vi.fn();
 
-    render(wrap(<DraftReplyButton conversationId="conv-1" onDraft={onDraft} />));
+    render(wrap(<DraftReplyButton conversationId="conv-1" onSuggestions={onSuggestions} />));
     const btn = screen.getByRole("button", { name: "Sugerir resposta" });
     fireEvent.click(btn);
 
     await waitFor(() =>
-      expect(postMock).toHaveBeenCalledWith("/api/v1/conversations/conv-1/draft-reply", {}),
+      expect(postMock).toHaveBeenCalledWith("/api/v1/conversations/conv-1/draft-reply", {}, { retry: false }),
     );
     await waitFor(() => expect(btn).toBeDisabled());
     expect(btn).toHaveAttribute("aria-busy", "true");
 
-    resolvePost({ data: { draft: "texto sugerido" } });
-    await waitFor(() => expect(onDraft).toHaveBeenCalledWith("texto sugerido"));
+    resolvePost({ data: { suggestions: ["texto A", "texto B"] } });
+    await waitFor(() => expect(onSuggestions).toHaveBeenCalledWith(["texto A", "texto B"]));
   });
 
   it("erro chama showApiError e não chama onDraft", async () => {
     postMock.mockRejectedValue(new Error("falhou"));
-    const onDraft = vi.fn();
+    const onSuggestions = vi.fn();
 
-    render(wrap(<DraftReplyButton conversationId="conv-1" onDraft={onDraft} />));
+    render(wrap(<DraftReplyButton conversationId="conv-1" onSuggestions={onSuggestions} />));
     fireEvent.click(screen.getByRole("button", { name: "Sugerir resposta" }));
 
     await waitFor(() => expect(showApiErrorMock).toHaveBeenCalled());
-    expect(onDraft).not.toHaveBeenCalled();
+    expect(onSuggestions).not.toHaveBeenCalled();
   });
 
   it("disabled prop desabilita o botão", () => {
-    render(wrap(<DraftReplyButton conversationId="conv-1" onDraft={vi.fn()} disabled />));
+    render(wrap(<DraftReplyButton conversationId="conv-1" onSuggestions={vi.fn()} disabled />));
     expect(screen.getByRole("button", { name: "Sugerir resposta" })).toBeDisabled();
   });
 });

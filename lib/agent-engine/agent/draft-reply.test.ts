@@ -81,11 +81,22 @@ beforeEach(() => {
 });
 
 describe("generateDraftReply", () => {
-  it("agente publicado + contexto com histórico → chama runModelCall SEM tools/maxSteps e retorna o rascunho", async () => {
+  it("agente publicado + contexto com histórico → uma chamada, normaliza/deduplica e limita a três sugestões", async () => {
     mockLoadAgent.mockResolvedValue(AGENT);
     mockGetLeadContext.mockResolvedValue(contextResult());
     mockRunModelCall.mockResolvedValue({
-      result: { text: "  Olá! O produto X custa R$ 99,90.  " },
+      result: {
+        text: JSON.stringify({
+          suggestions: [
+            "  Resposta A  ",
+            "Resposta B",
+            "Resposta A",
+            "Resposta C",
+            "Resposta D",
+            "   ",
+          ],
+        }),
+      },
       callId: "call-1",
       provider: "anthropic",
       model: "claude-sonnet-4-6",
@@ -96,7 +107,7 @@ describe("generateDraftReply", () => {
 
     const result = await generateDraftReply(db, llmCfg, crmCfg, input);
 
-    expect(result).toEqual({ ok: true, draft: "Olá! O produto X custa R$ 99,90." });
+    expect(result).toEqual({ ok: true, suggestions: ["Resposta A", "Resposta B", "Resposta C"] });
     expect(mockRunModelCall).toHaveBeenCalledTimes(1);
     const call = mockRunModelCall.mock.calls[0]!;
     const runInput = call[2];
@@ -107,12 +118,12 @@ describe("generateDraftReply", () => {
     expect(runInput).not.toHaveProperty("maxSteps");
   });
 
-  it("sem agente publicado → no_agent, sem chamar runModelCall", async () => {
+  it("sem agente publicado → sugestões vazias, sem chamar runModelCall", async () => {
     mockLoadAgent.mockResolvedValue(null);
 
     const result = await generateDraftReply(db, llmCfg, crmCfg, input);
 
-    expect(result).toEqual({ ok: false, reason: "no_agent" });
+    expect(result).toEqual({ ok: true, suggestions: [] });
     expect(mockGetLeadContext).not.toHaveBeenCalled();
     expect(mockRunModelCall).not.toHaveBeenCalled();
   });
@@ -202,6 +213,24 @@ describe("generateDraftReply", () => {
 
     expect(result).toEqual({ ok: false, reason: "empty" });
   });
+
+  it("resposta que não é JSON estrito de sugestões válidas → empty", async () => {
+    mockLoadAgent.mockResolvedValue(AGENT);
+    mockGetLeadContext.mockResolvedValue(contextResult());
+    mockRunModelCall.mockResolvedValue({
+      result: { text: JSON.stringify({ suggestions: ["ok", 42] }) },
+      callId: "call-1",
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      usage: { inputTokens: 1, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      costCents: 1,
+      latencyMs: 1,
+    } as never);
+
+    const result = await generateDraftReply(db, llmCfg, crmCfg, input);
+
+    expect(result).toEqual({ ok: false, reason: "empty" });
+  });
 });
 
 describe("o rascunho conhece a decisão do vendedor", () => {
@@ -216,7 +245,7 @@ describe("o rascunho conhece a decisão do vendedor", () => {
       context: { ...base.context, last_human_decision: decisao },
     });
     mockRunModelCall.mockResolvedValue({
-      result: { text: "Claro! Segue o valor." },
+      result: { text: JSON.stringify({ suggestions: ["Claro! Segue o valor."] }) },
       provider: "anthropic",
       model: "claude-sonnet-4-6",
       usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 },
