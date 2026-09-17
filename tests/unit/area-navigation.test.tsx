@@ -25,8 +25,13 @@ describe("navegação contextual da área", () => {
     render(<AreaNavigation />);
 
     expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Funis" })).toHaveAttribute("href", "/app/kanban");
-    expect(screen.getByRole("link", { name: "Funis" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Funis de vendas" })).toHaveAttribute(
+      "href",
+      "/app/kanban",
+    );
+    expect(screen.getByRole("link", { name: "Funis de vendas" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("deixa a troca de funil disponível para viewer sem oferecer configuração de etapas", () => {
@@ -34,7 +39,10 @@ describe("navegação contextual da área", () => {
     authRef.activeOrg = { orgId: "org-1", name: "Org", role: "viewer" };
     render(<AreaNavigation />);
 
-    expect(screen.getByRole("link", { name: "Funis" })).toHaveAttribute("href", "/app/kanban");
+    expect(screen.getByRole("link", { name: "Funis de vendas" })).toHaveAttribute(
+      "href",
+      "/app/kanban",
+    );
     expect(screen.queryByRole("link", { name: "Etapas do funil" })).toBeNull();
   });
 

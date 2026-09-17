@@ -7,6 +7,8 @@ import {
   Brain,
   Buildings,
   CalendarBlank,
+  CalendarCheck,
+  ChatsCircle,
   ChartBar,
   ChartLineUp,
   ClipboardText,
@@ -38,7 +40,10 @@ import {
   UserCircle,
   Users,
   UsersThree,
+  UserGear,
   WebhooksLogo,
+  WhatsappLogo,
+  CreditCard,
 } from "@/lib/ui/icons";
 
 /**
@@ -91,13 +96,15 @@ export type CompactAreaId =
   | "conversas"
   | "funis"
   | "contatos"
+  | "tarefas"
   | "ia"
-  | "automacoes"
   | "relatorios"
-  | "agenda"
+  | "conexoes"
+  | "usuarios"
+  | "pagamentos"
   | "configuracoes";
 
-export type CompactAreaSection = "operacao" | "crescimento";
+export type CompactAreaSection = "operacao" | "equipe" | "administracao";
 
 export interface CompactAreaTab {
   href: string;
@@ -109,7 +116,8 @@ export interface CompactArea {
   label: string;
   href: string;
   icon: PhosphorIcon;
-  position: "main" | "footer";
+  /** `contextual` conserva hubs e abas sem acrescentar uma porta ao menu. */
+  position: "main" | "contextual";
   section: CompactAreaSection;
   tabs: CompactAreaTab[];
   /** Propaga a saúde de um destino secundário crítico para a porta compacta. */
@@ -150,13 +158,11 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 /**
- * Grupo cujo hub vive no RODAPÉ fixo do sidebar, fora da área que rola.
+ * Compatibilidade da projeção antiga `sidebarGroups`.
  *
- * Medido em tela (1280×768, o notebook comum): com todos os grupos na área
- * rolável, o conteúdo dava 1019px contra 663px visíveis — Configurações ficava
- * fora da dobra em TODAS as alturas testadas, inclusive 1080px. É o item que
- * mais se procura quando não se acha algo; deixá-lo dependendo de scroll
- * recriaria, em outra forma, o problema que esta reorganização veio resolver.
+ * O menu compacto Nocturne não usa este grupo no rodapé: o inventário completo
+ * de Organização continua no hub de Configurações e no ⌘K, enquanto o rodapé
+ * visível fica reservado à versão e ao controle "Recolher menu".
  */
 export const GRUPO_NO_RODAPE: NavGroupId = "organizacao";
 
@@ -166,12 +172,15 @@ interface CompactAreaSpec extends Omit<CompactArea, "tabs"> {
 }
 
 /**
- * Oito portas para o produto inteiro — contrato aprovado pelo proprietário.
+ * Nove portas visíveis para o produto inteiro — contrato aprovado pelo proprietário.
  *
  * Isto NÃO é outro registro de telas: todo `href` abaixo resolve para um
  * `NAV_DESTINATIONS` ou para um hub já declarado em `NAV_GROUPS`. É só a
- * projeção da frequência de uso. O inventário completo continua nos hubs e no
- * ⌘K; por isso reduzir o sidebar não torna rota órfã.
+ * projeção da frequência de uso. O inventário completo continua nos hubs, nas
+ * abas contextuais e no ⌘K; por isso reduzir o sidebar não torna rota órfã.
+ *
+ * Chat interno, Metas e Suporte interno entram somente quando suas telas
+ * existirem. Link que aponta para uma promessa não é navegação: é beco sem saída.
  */
 const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
   {
@@ -187,7 +196,7 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     id: "conversas",
     label: "Conversas",
     href: "/app/inbox",
-    icon: Inbox,
+    icon: ChatsCircle,
     position: "main",
     section: "operacao",
     tabs: [
@@ -197,13 +206,18 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     ],
   },
   {
-    id: "agenda",
-    label: "Calendário",
-    href: "/app/agenda",
-    icon: CalendarBlank,
+    id: "funis",
+    label: "Funis de vendas",
+    href: "/app/kanban",
+    icon: Kanban,
     position: "main",
     section: "operacao",
-    tabs: [{ href: "/app/agenda", label: "Compromissos" }, { href: "/app/tasks" }],
+    tabs: [
+      { href: "/app/kanban", label: "Funis de vendas" },
+      { href: "/app/leads", label: "Leads" },
+      { href: "/app/products" },
+      { href: "/app/settings/tenant/pipelines" },
+    ],
   },
   {
     id: "contatos",
@@ -215,61 +229,83 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     tabs: [],
   },
   {
-    id: "funis",
-    label: "Leads",
-    href: "/app/leads",
-    icon: Kanban,
+    id: "tarefas",
+    label: "Tarefas e agenda",
+    href: "/app/tasks",
+    icon: CalendarCheck,
     position: "main",
     section: "operacao",
     tabs: [
-      { href: "/app/leads", label: "Leads" },
-      { href: "/app/kanban", label: "Funis" },
-      { href: "/app/products" },
-      { href: "/app/settings/tenant/pipelines" },
+      { href: "/app/tasks", label: "Tarefas" },
+      { href: "/app/agenda", label: "Agenda" },
     ],
+  },
+  {
+    id: "relatorios",
+    label: "Relatórios",
+    href: "/app/metrics",
+    icon: ChartBar,
+    position: "main",
+    section: "equipe",
+    tabs: [
+      { href: "/app/metrics", label: "Relatórios" },
+      { href: "/app/analise", label: "Visão geral" },
+      { href: "/app/activities" },
+      { href: "/app/ads/meta" },
+      { href: "/app/ai/evolution" },
+    ],
+  },
+  {
+    id: "conexoes",
+    label: "Instâncias WhatsApp",
+    href: "/app/connections",
+    icon: WhatsappLogo,
+    position: "main",
+    section: "administracao",
+    minRole: "admin",
+    tabs: [
+      { href: "/app/connections", label: "Instâncias WhatsApp" },
+      { href: "/app/integrations/nuvemshop" },
+      { href: "/app/webhooks", label: "Entradas e webhooks" },
+    ],
+  },
+  {
+    id: "usuarios",
+    label: "Usuários e permissões",
+    href: "/app/team",
+    icon: UserGear,
+    position: "main",
+    section: "administracao",
+    tabs: [
+      { href: "/app/team", label: "Usuários e permissões" },
+      { href: "/app/settings/atendimento", label: "Distribuição" },
+    ],
+  },
+  {
+    id: "pagamentos",
+    label: "Plano e pagamentos",
+    href: "/app/settings/billing",
+    icon: CreditCard,
+    position: "main",
+    section: "administracao",
+    minRole: "admin",
+    tabs: [{ href: "/app/settings/billing", label: "Plano e pagamentos" }],
   },
   {
     id: "ia",
     label: "Agentes de IA",
     href: "/app/ai",
     icon: Robot,
-    position: "main",
+    position: "contextual",
     section: "operacao",
     minRole: "manager",
     tabs: [
       { href: "/app/ai", label: "Visão geral" },
       { href: "/app/ai/agents" },
+      { href: "/app/ai/followups", label: "Fluxos e follow-ups" },
       { href: "/app/ai/knowledge/sources" },
       { href: "/app/ai/routers", label: "Distribuição" },
       { href: "/app/ai/providers", label: "Avançado" },
-    ],
-  },
-  {
-    id: "automacoes",
-    label: "Automações",
-    href: "/app/ai/followups",
-    icon: FlowArrow,
-    position: "main",
-    section: "crescimento",
-    minRole: "manager",
-    tabs: [
-      { href: "/app/ai/followups", label: "Fluxos e follow-ups" },
-      { href: "/app/webhooks", label: "Entradas e webhooks" },
-    ],
-  },
-  {
-    id: "relatorios",
-    label: "Relatórios",
-    href: "/app/analise",
-    icon: ChartBar,
-    position: "main",
-    section: "crescimento",
-    tabs: [
-      { href: "/app/analise", label: "Visão geral" },
-      { href: "/app/metrics" },
-      { href: "/app/activities" },
-      { href: "/app/ads/meta" },
-      { href: "/app/ai/evolution" },
     ],
   },
   {
@@ -277,8 +313,8 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     label: "Configurações",
     href: "/app/settings",
     icon: Gear,
-    position: "footer",
-    section: "operacao",
+    position: "contextual",
+    section: "administracao",
     tabs: [
       { href: "/app/settings", label: "Visão geral" },
       { href: "/app/team", label: "Empresa e equipe" },
@@ -305,7 +341,7 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
 export const NAV_DESTINATIONS: NavDestination[] = [
   {
     href: "/app",
-    label: "Visão geral",
+    label: "Painel de controle",
     description: "Conversas, tarefas e oportunidades: o próximo passo do seu negócio.",
     icon: Gauge,
     group: "atendimento",
@@ -314,7 +350,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   // ---- Atendimento — onde o operador passa o dia ----
   {
     href: "/app/inbox",
-    label: "Inbox",
+    label: "Conversas",
     description: "As conversas de WhatsApp, com você e a IA atendendo lado a lado.",
     icon: Inbox,
     group: "atendimento",
@@ -382,7 +418,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     // abre o quadro de cada um. "Pipeline" é palavra de quem construiu o
     // sistema; "funil de vendas" é palavra de quem vende.
     href: "/app/kanban",
-    label: "Funis",
+    label: "Funis de vendas",
     description: "Seus funis de venda — clique em um para abrir o quadro de clientes.",
     icon: Kanban,
     group: "crm",
@@ -404,7 +440,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     // o que o time combinou (é informação de operação), e a criação é cobrada
     // pela rota, com `requireRole("agent")`.
     href: "/app/tasks",
-    label: "Tarefas",
+    label: "Tarefas e agenda",
     description: "O que ficou combinado, com prazo — e o que já venceu sem ninguém fazer.",
     icon: ListChecks,
     group: "crm",
@@ -638,7 +674,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   // ---- Canais — por onde as mensagens entram e saem ----
   {
     href: "/app/connections",
-    label: "Conexões",
+    label: "Instâncias WhatsApp",
     // Cobre os DOIS caminhos desde o PR #105: número por QR e canal oficial da
     // Meta (com os templates dele), cada um numa aba. A descrição cita "oficial"
     // e "Meta" de propósito — é por esses nomes que se procura no ⌘K, e a busca
@@ -706,7 +742,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   // frase que explica para que servem. O ⌘K também as acha por nome.
   {
     href: "/app/metrics",
-    label: "Desempenho",
+    label: "Relatórios",
     description: "Funil e performance por atendente nos últimos 30 dias.",
     icon: ChartBar,
     group: "analise",
@@ -791,7 +827,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   },
   {
     href: "/app/team",
-    label: "Equipe",
+    label: "Usuários e permissões",
     description: "Quem trabalha aqui, com qual papel e quanta conversa cada um aguenta.",
     icon: UsersThree,
     group: "organizacao",
@@ -871,7 +907,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   },
   {
     href: "/app/settings/billing",
-    label: "Billing",
+    label: "Plano e pagamentos",
     description: "Plano e cobrança.",
     icon: Receipt,
     group: "organizacao",
@@ -979,24 +1015,27 @@ const AREA_PADRAO_POR_GRUPO: Record<NavGroupId, CompactAreaId> = {
   atendimento: "conversas",
   crm: "funis",
   ia: "ia",
-  canais: "automacoes",
+  canais: "conexoes",
   analise: "relatorios",
   organizacao: "configuracoes",
 };
 
 function pathPertence(pathname: string, href: string): boolean {
-  // O quadro tem ID no caminho, mas pertence à entrada operacional de Leads.
+  // O quadro tem ID no caminho, mas pertence à entrada operacional de Funis de vendas.
   if (href === "/app/leads" && pathname.startsWith("/app/pipelines/")) return true;
   if (href === "/app") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /** Mesma resolução de rota usada pelo sidebar e pelas abas contextuais. */
-export function compactTabForPath(pathname: string, tabs: CompactAreaTab[]): CompactAreaTab | undefined {
+export function compactTabForPath(
+  pathname: string,
+  tabs: CompactAreaTab[],
+): CompactAreaTab | undefined {
   return [...tabs]
-    .filter((tab) => tab.label === "Visão geral"
-      ? pathname === tab.href
-      : pathPertence(pathname, tab.href))
+    .filter((tab) =>
+      tab.label === "Visão geral" ? pathname === tab.href : pathPertence(pathname, tab.href),
+    )
     .sort((a, b) => b.href.length - a.href.length)[0];
 }
 
