@@ -4,11 +4,36 @@ import { describe, expect, it } from "vitest";
 
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { razaoDeContraste } from "@/lib/branding/contraste";
+import { compor } from "@/lib/branding/rampa";
 
 const RAIZ = process.cwd();
 
 function fonte(nome: string) {
   return fs.readFileSync(path.join(RAIZ, "components/ui", nome), "utf8");
+}
+
+function fontesDosPrimitivos() {
+  return fs
+    .readdirSync(path.join(RAIZ, "components/ui"))
+    .filter((nome) => nome.endsWith(".tsx"))
+    .map((nome) => ({ nome, conteudo: fonte(nome) }));
+}
+
+function tokensDoTema(seletor: ":root" | '[data-theme="dark"]') {
+  const css = fs.readFileSync(path.join(RAIZ, "app/globals.css"), "utf8");
+  const seletorEscapado = seletor.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const bloco = css.match(new RegExp(`${seletorEscapado}\\s*\\{([\\s\\S]*?)\\n\\}`))?.[1];
+  if (!bloco) throw new Error(`tema ${seletor} ausente`);
+
+  const token = (nome: string) => {
+    const nomeEscapado = nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const valor = bloco.match(new RegExp(`${nomeEscapado}:\\s*([^;]+);`))?.[1]?.trim();
+    if (!valor) throw new Error(`${nome} ausente em ${seletor}`);
+    return valor;
+  };
+
+  return { token };
 }
 
 describe("casca Nocturne nos componentes base", () => {
@@ -32,6 +57,12 @@ describe("casca Nocturne nos componentes base", () => {
     expect(buttonVariants()).toContain("focus-visible:outline-accent");
     expect(buttonVariants()).toContain("focus-visible:outline-offset-2");
     expect(buttonVariants()).toContain("disabled:opacity-[.45]");
+    expect(buttonVariants()).toContain("rounded-md");
+
+    const destrutivo = buttonVariants({ variant: "destructive" });
+    expect(destrutivo).toContain("border-error");
+    expect(destrutivo).toContain("bg-transparent");
+    expect(destrutivo).toContain("text-error-fg");
   });
 
   it("usa superfície, raio 8 e tipografia Nocturne nos cartões", () => {
@@ -75,6 +106,8 @@ describe("casca Nocturne nos componentes base", () => {
     expect(fonte("separator.tsx")).toContain("48px");
     expect(fonte("table.tsx")).toContain("linear-gradient(to_right");
     expect(fonte("table.tsx")).toContain("48px");
+    expect(fonte("table.tsx")).toContain("hover:bg-[linear-gradient(color-mix");
+    expect(fonte("table.tsx")).toContain(",linear-gradient(to_right,transparent");
   });
 
   it("usa o barril Phosphor nos primitivos tocados", () => {
@@ -82,6 +115,62 @@ describe("casca Nocturne nos componentes base", () => {
       const componente = fonte(arquivo);
       expect(componente).not.toContain('from "lucide-react"');
       expect(componente).toContain('from "@/lib/ui/icons"');
+    }
+  });
+
+  it("não reintroduz preto, branco, foco azul nem disabled acima de 45%", () => {
+    for (const { nome, conteudo } of fontesDosPrimitivos()) {
+      expect(conteudo, nome).not.toMatch(/\b(?:bg|text)-(?:black|white)(?:\/\d+)?\b/);
+      expect(conteudo, nome).not.toContain("outline-hidden");
+      expect(conteudo, nome).not.toMatch(/focus(?:-visible)?:[^\s"']*ring/);
+
+      const opacidadesDesabilitadas = conteudo.match(
+        /(?:peer-|data-\[disabled\]:|disabled:)opacity-[^\s"']+/g,
+      );
+      for (const opacidade of opacidadesDesabilitadas ?? []) {
+        expect(opacidade, nome).toMatch(/opacity-\[\.45\]$/);
+      }
+    }
+  });
+
+  it("dá a todo primitivo antes preso ao ring legado o outline Nocturne", () => {
+    for (const arquivo of [
+      "dialog.tsx",
+      "dropdown-menu.tsx",
+      "popover.tsx",
+      "select.tsx",
+      "sheet.tsx",
+      "switch.tsx",
+      "tabs.tsx",
+    ]) {
+      const componente = fonte(arquivo);
+      expect(componente, arquivo).toContain("focus-visible:outline-2");
+      expect(componente, arquivo).toContain("focus-visible:outline-accent");
+      expect(componente, arquivo).toContain("focus-visible:outline-offset-2");
+    }
+  });
+
+  it("mantém o destrutivo legível no repouso e no hover dos dois temas", () => {
+    for (const seletor of [":root", '[data-theme="dark"]'] as const) {
+      const { token } = tokensDoTema(seletor);
+      const frente = token("--color-error-fg");
+      const fundo = token("--color-bg");
+      const erro = token("--color-error");
+      const alfa = Number(token("--color-error-bg").match(/,\s*([\d.]+)\)$/)?.[1]);
+      const hover = compor(erro, alfa, fundo);
+
+      expect(razaoDeContraste(frente, fundo), seletor).toBeGreaterThanOrEqual(4.5);
+      expect(razaoDeContraste(frente, hover), seletor).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("mantém overlays no token e superfícies de cartão no raio 8", () => {
+    for (const arquivo of ["alert-dialog.tsx", "dialog.tsx", "sheet.tsx"]) {
+      expect(fonte(arquivo)).toContain("bg-overlay");
+    }
+
+    for (const { nome, conteudo } of fontesDosPrimitivos()) {
+      expect(conteudo, nome).not.toContain("rounded-xl");
     }
   });
 });
