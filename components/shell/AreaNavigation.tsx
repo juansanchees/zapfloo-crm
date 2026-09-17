@@ -24,7 +24,7 @@ export function AreaNavigation() {
     <div className="border-b bg-surface/90 px-4 backdrop-blur md:px-6">
       <nav
         aria-label={`${t(area.label)} — ${t("Opções da área")}`}
-        className="scrollbar-none flex min-w-0 gap-1 overflow-x-auto py-2"
+        className="flex min-w-0 scrollbar-none gap-1 overflow-x-auto py-2"
       >
         {area.tabs.map((tab) => {
           const ativa = tabAtiva?.href === tab.href;
@@ -34,9 +34,9 @@ export function AreaNavigation() {
               href={tab.href}
               aria-current={ativa ? "page" : undefined}
               className={cn(
-                "shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-colors md:text-sm",
+                "shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-colors md:text-[13.5px]",
                 ativa
-                  ? "bg-accent text-accent-foreground shadow-xs"
+                  ? "bg-accent-900 text-accent-200 shadow-xs"
                   : "text-muted-foreground hover:bg-surface-elevated hover:text-foreground",
               )}
             >

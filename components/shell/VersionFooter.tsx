@@ -33,7 +33,7 @@ export function VersionFooter({
   if (!alerta) {
     return (
       <p
-        className={cn("px-3 py-1 text-[11px] text-white/60", collapsed && "px-0 text-center")}
+        className={cn("px-2.5 py-1 text-[11px] text-neutral-400", collapsed && "px-0 text-center")}
         title={`${t("Versão")} ${label}`}
       >
         {collapsed ? label.split(".").slice(0, 2).join(".") : `${t("versão")} ${label}`}
@@ -48,7 +48,7 @@ export function VersionFooter({
       onClick={onNavigate}
       title={`${t("Nova versão")} ${novo} ${t("disponível")}`}
       className={cn(
-        "flex items-center gap-2 rounded-md px-3 py-2 text-xs text-white hover:bg-accent/50",
+        "flex items-center gap-2 rounded-md px-2.5 py-2 text-xs text-accent-200 hover:bg-accent-900",
         collapsed && "justify-center px-2",
       )}
     >
@@ -58,7 +58,8 @@ export function VersionFooter({
       </span>
       {!collapsed && (
         <span className="truncate">
-          {t("Nova versão")}{novo ? ` · ${novo}` : ""}
+          {t("Nova versão")}
+          {novo ? ` · ${novo}` : ""}
         </span>
       )}
       {collapsed && <ArrowCircleUp size={16} aria-hidden />}

@@ -123,11 +123,7 @@ describe("sidebarGroups", () => {
     // A lista é EXATA de propósito. `toContain` deixaria um sexto item entrar
     // calado no sidebar e reabrir a mesma corrida por pixel.
     const crm = sidebarGroups(true, null).find((g) => g.group.id === "crm");
-    expect(crm?.items.map((i) => i.href)).toEqual([
-      "/app/leads",
-      "/app/contacts",
-      "/app/tasks",
-    ]);
+    expect(crm?.items.map((i) => i.href)).toEqual(["/app/leads", "/app/contacts", "/app/tasks"]);
     expect(NAV_GROUPS.find((g) => g.id === "crm")?.hub?.href).toBe("/app/crm");
   });
 
@@ -153,19 +149,21 @@ describe("sidebarGroups", () => {
 });
 
 describe("compactAreas", () => {
-  it("organiza o menu compacto em operação e crescimento", () => {
-    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+  it("organiza o menu visível em operação, equipe e administração", () => {
+    const areas = compactAreas(ADMIN.platform, ADMIN.role).filter(
+      (area) => area.position === "main",
+    );
 
-    expect(areas.map((area) => [area.position, area.label, area.href])).toEqual([
-      ["main", "Painel de controle", "/app"],
-      ["main", "Conversas", "/app/inbox"],
-      ["main", "Calendário", "/app/agenda"],
-      ["main", "Contatos", "/app/contacts"],
-      ["main", "Leads", "/app/leads"],
-      ["main", "Agentes de IA", "/app/ai"],
-      ["main", "Automações", "/app/ai/followups"],
-      ["main", "Relatórios", "/app/analise"],
-      ["footer", "Configurações", "/app/settings"],
+    expect(areas.map((area) => [area.section, area.label, area.href])).toEqual([
+      ["operacao", "Painel de controle", "/app"],
+      ["operacao", "Conversas", "/app/inbox"],
+      ["operacao", "Funis de vendas", "/app/kanban"],
+      ["operacao", "Contatos", "/app/contacts"],
+      ["operacao", "Tarefas e agenda", "/app/tasks"],
+      ["equipe", "Relatórios", "/app/metrics"],
+      ["administracao", "Instâncias WhatsApp", "/app/connections"],
+      ["administracao", "Usuários e permissões", "/app/team"],
+      ["administracao", "Plano e pagamentos", "/app/settings/billing"],
     ]);
   });
 
@@ -179,36 +177,55 @@ describe("compactAreas", () => {
       ["Precisam de atenção", "/app/radar"],
       ["Respostas rápidas", "/app/templates"],
     ]);
-    expect(abas("Leads")).toEqual([
+    expect(abas("Funis de vendas")).toEqual([
+      ["Funis de vendas", "/app/kanban"],
       ["Leads", "/app/leads"],
-      ["Funis", "/app/kanban"],
       ["Produtos", "/app/products"],
       ["Etapas do funil", "/app/settings/tenant/pipelines"],
     ]);
-    expect(abas("Calendário")).toEqual([
-      ["Compromissos", "/app/agenda"],
+    expect(abas("Tarefas e agenda")).toEqual([
       ["Tarefas", "/app/tasks"],
+      ["Agenda", "/app/agenda"],
     ]);
   });
 
   it("mantém o mesmo filtro de permissão do registro", () => {
     const viewer = compactAreas(VIEWER.platform, VIEWER.role);
 
-    expect(viewer.map((area) => area.label)).not.toContain("Agentes de IA");
+    expect(viewer.filter((area) => area.position === "main").map((area) => area.label)).toEqual([
+      "Painel de controle",
+      "Conversas",
+      "Funis de vendas",
+      "Contatos",
+      "Tarefas e agenda",
+      "Relatórios",
+      "Usuários e permissões",
+    ]);
     expect(
       viewer.find((area) => area.label === "Configurações")?.tabs.map((tab) => tab.href),
     ).not.toContain("/app/connections");
     expect(viewer.find((area) => area.label === "Configurações")?.healthDot).toBe(false);
     expect(
-      compactAreas(ADMIN.platform, ADMIN.role).find(
-        (area) => area.label === "Configurações",
-      )?.healthDot,
+      compactAreas(ADMIN.platform, ADMIN.role).find((area) => area.label === "Configurações")
+        ?.healthDot,
     ).toBe(true);
   });
 
   it("mantém Contatos ativo também no detalhe de uma pessoa", () => {
     const areas = compactAreas(ADMIN.platform, ADMIN.role);
     expect(compactAreaForPath("/app/contacts/contato-1", areas)?.id).toBe("contatos");
+  });
+
+  it("mantém os hubs secundários como contexto sem mostrá-los no menu", () => {
+    const areas = compactAreas(ADMIN.platform, ADMIN.role);
+    const contextuais = areas.filter((area) => area.position === "contextual");
+
+    expect(contextuais.map((area) => [area.label, area.href])).toEqual([
+      ["Agentes de IA", "/app/ai"],
+      ["Configurações", "/app/settings"],
+    ]);
+    expect(compactAreaForPath("/app/ai/knowledge/sources", areas)?.label).toBe("Agentes de IA");
+    expect(compactAreaForPath("/app/settings/profile", areas)?.label).toBe("Configurações");
   });
 });
 

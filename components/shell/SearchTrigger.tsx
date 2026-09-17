@@ -28,8 +28,8 @@ export function SearchTrigger({
         size="sm"
         className={cn(
           sidebar
-            ? "w-full justify-start gap-3 rounded-xl border-white/10 bg-white/7 text-white/70 hover:bg-white/12 hover:text-white"
-            : "gap-2 rounded-full bg-surface text-muted-foreground md:w-full md:max-w-xs md:justify-start",
+            ? "border-divider h-9 w-full justify-start gap-3 rounded-full bg-surface px-3 text-neutral-400 hover:border-accent-600 hover:bg-surface hover:text-text"
+            : "border-divider h-9 gap-2 rounded-full bg-surface text-muted-foreground hover:border-accent-600 hover:bg-surface md:w-full md:max-w-xs md:justify-start",
           className,
         )}
         onClick={() => setOpen(true)}
@@ -39,7 +39,12 @@ export function SearchTrigger({
         <span className={sidebar ? "inline" : "hidden md:inline"}>
           {t(sidebar ? "Pesquisar" : "Buscar...")}
         </span>
-        <kbd className={cn("ml-auto rounded-md border px-1.5 py-0.5 text-[10px]", sidebar ? "border-white/10 bg-white/6" : "hidden bg-muted md:inline")}>
+        <kbd
+          className={cn(
+            "border-divider ml-auto rounded-sm border px-1 py-0.5 text-[10px] text-neutral-400",
+            !sidebar && "hidden md:inline",
+          )}
+        >
           ⌘K
         </kbd>
       </Button>

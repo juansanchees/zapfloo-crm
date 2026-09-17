@@ -22,7 +22,7 @@ export function AppShell({ sidebarCollapsed, children, notice, onboardingNotice 
   useCrmAlerts();
   useNotifyOpenFromServiceWorker();
   return (
-    <div className="flex h-screen h-dvh w-full overflow-hidden bg-workspace">
+    <div className="flex h-screen h-dvh w-full overflow-hidden bg-workspace text-[13.5px]">
       <div className="hidden h-full md:block">
         <Sidebar collapsed={sidebarCollapsed} />
       </div>
