@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api/client";
+import type { GoalsCacheScope } from "./useGoals";
 
 export interface GoalRevenueProgress {
   currency: string;
@@ -24,11 +25,12 @@ export interface GoalProgress {
   members: GoalProgressRow[];
 }
 
-export const GOAL_PROGRESS_QUERY_KEY = ["operational-goals-progress"] as const;
+export const GOAL_PROGRESS_QUERY_KEY = ({ orgId, userId, role }: GoalsCacheScope) =>
+  ["operational-goals-progress", orgId, userId, role] as const;
 
-export function useGoalProgress() {
+export function useGoalProgress(scope: GoalsCacheScope) {
   return useQuery({
-    queryKey: GOAL_PROGRESS_QUERY_KEY,
+    queryKey: GOAL_PROGRESS_QUERY_KEY(scope),
     queryFn: async () => apiClient.get<{ data: GoalProgress }>("/api/v1/goals/progress"),
     staleTime: 15_000,
     refetchOnWindowFocus: true,

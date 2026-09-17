@@ -6,11 +6,15 @@ import { audit } from "@/lib/audit";
 import { fail, ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import {
-  operationalGoalsFromSettings,
+  operationalGoalsForStorage,
+  operationalGoalsFromStored,
   operationalGoalsSchema,
+  parseOperationalGoalMembers,
+  storedOperationalGoalsFromSettings,
 } from "@/lib/metas/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { decryptWebhookSecret, encryptWebhookSecret } from "@/lib/webhooks/secrets";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +31,23 @@ export async function GET(): Promise<Response> {
     .maybeSingle();
   if (error) return fail("internal_error", error.message, 500, { requestId });
 
-  return ok(operationalGoalsFromSettings(data?.settings), { requestId });
+  const stored = storedOperationalGoalsFromSettings(data?.settings);
+  const members = await readMembers(stored.members_enc);
+  if (members === null) return fail("internal_error", "Não foi possível ler as metas individuais.", 500, { requestId });
+  const goals = operationalGoalsFromStored(stored, members);
+
+  // A cifra é a proteção contra leitura direta do jsonb por PostgREST. Mesmo
+  // aqui, quem é agent só recebe sua própria chave; manager/admin recebe a
+  // configuração completa porque é quem a administra.
+  return ok(
+    {
+      ...goals,
+      members: authz.org.role === "manager" || authz.org.role === "admin" || authz.user.is_platform_admin
+        ? goals.members
+        : goals.members[authz.user.id] ? { [authz.user.id]: goals.members[authz.user.id] } : {},
+    },
+    { requestId },
+  );
 }
 
 export async function PATCH(req: NextRequest): Promise<Response> {
@@ -49,25 +69,42 @@ export async function PATCH(req: NextRequest): Promise<Response> {
     });
   }
 
-  // `organizations` só aceita escrita do platform admin por RLS. O papel foi
-  // decidido antes, com org de fonte confiável; por isso o admin client recebe
-  // o filtro explícito de tenant tanto na leitura quanto na escrita.
   const admin = createAdminClient();
-  const { data: current, error: readError } = await admin
-    .from("organizations")
-    .select("settings")
-    .eq("id", authz.org.orgId)
-    .maybeSingle();
-  if (readError) return fail("internal_error", readError.message, 500, { requestId });
-  if (!current) return fail("tenant_not_found", "Organização não encontrada.", 404, { requestId });
+  const membersEnc = Object.keys(parsed.data.members).length > 0
+    ? await encryptWebhookSecret(admin, JSON.stringify(parsed.data.members))
+    : undefined;
+  if (Object.keys(parsed.data.members).length > 0 && !membersEnc) {
+    return fail("encryption_unavailable", "Não foi possível guardar as metas individuais com segurança.", 422, { requestId });
+  }
 
-  const currentSettings = (current.settings as Record<string, unknown> | null) ?? {};
-  const nextSettings = { ...currentSettings, operational_goals: parsed.data };
-  const { error: updateError } = await admin
-    .from("organizations")
-    .update({ settings: nextSettings })
-    .eq("id", authz.org.orgId);
-  if (updateError) return fail("internal_error", updateError.message, 500, { requestId });
+  // Não existe RPC genérica de settings neste recorte. O CAS compara o jsonb
+  // que foi lido e tenta de novo sobre a versão nova: assim nunca reaplica o
+  // snapshot antigo por cima de routing/branding/segurança de outra aba.
+  let saved = false;
+  for (let attempt = 0; attempt < 3 && !saved; attempt += 1) {
+    const { data: current, error: readError } = await admin
+      .from("organizations")
+      .select("settings")
+      .eq("id", authz.org.orgId)
+      .maybeSingle();
+    if (readError) return fail("internal_error", readError.message, 500, { requestId });
+    if (!current) return fail("tenant_not_found", "Organização não encontrada.", 404, { requestId });
+
+    const currentSettings = (current.settings as Record<string, unknown> | null) ?? {};
+    const nextSettings = {
+      ...currentSettings,
+      operational_goals: operationalGoalsForStorage(parsed.data, membersEnc ?? undefined),
+    };
+    const { data: updated, error: updateError } = await admin
+      .from("organizations")
+      .update({ settings: nextSettings })
+      .eq("id", authz.org.orgId)
+      .eq("settings", JSON.stringify(currentSettings))
+      .select("id");
+    if (updateError) return fail("internal_error", updateError.message, 500, { requestId });
+    saved = (updated ?? []).length === 1;
+  }
+  if (!saved) return fail("conflict", "A configuração mudou enquanto era salva. Tente novamente.", 409, { requestId });
 
   // A lista canônica de audit actions é mantida fora desta superfície por
   // ownership da leva. O cast só permite registrar o código já contratado;
@@ -87,4 +124,11 @@ export async function PATCH(req: NextRequest): Promise<Response> {
   });
 
   return ok(parsed.data, { requestId });
+}
+
+async function readMembers(ciphertext: string | undefined) {
+  if (!ciphertext) return {};
+  const plaintext = await decryptWebhookSecret(createAdminClient(), ciphertext);
+  if (!plaintext) return null;
+  return parseOperationalGoalMembers(plaintext);
 }

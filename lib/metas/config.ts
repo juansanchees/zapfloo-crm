@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MOEDAS_SERVIDAS } from "@/lib/money";
+
 /**
  * Metas são um termômetro operacional, não um placar: a ausência é significativa
  * e nunca é convertida em zero. O json fica em `organizations.settings` para não
@@ -12,14 +14,28 @@ const targetSchema = z
   })
   .strict();
 
+export const operationalGoalMembersSchema = z.record(z.string().uuid(), targetSchema);
+
 export const operationalGoalsSchema = z
   .object({
     /** Moeda da meta monetária; resultados continuam separados por moeda. */
-    currency: z.string().regex(/^[A-Z]{3}$/, "Use o código ISO-4217 da moeda.").optional(),
+    currency: z.enum(MOEDAS_SERVIDAS).optional(),
     team: targetSchema.default({}),
-    members: z.record(z.string().uuid(), targetSchema).default({}),
+    members: operationalGoalMembersSchema.default({}),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const hasRevenueTarget =
+      value.team.monthly_revenue_cents !== undefined ||
+      Object.values(value.members).some((target) => target.monthly_revenue_cents !== undefined);
+    if (hasRevenueTarget && !value.currency) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["currency"],
+        message: "Defina uma moeda para a meta de receita.",
+      });
+    }
+  });
 
 export type OperationalGoals = z.infer<typeof operationalGoalsSchema>;
 export type OperationalGoalTarget = z.infer<typeof targetSchema>;
@@ -28,13 +44,57 @@ export function emptyOperationalGoals(): OperationalGoals {
   return { team: {}, members: {} };
 }
 
-/** Leitura defensiva de `organizations.settings.operational_goals`. */
-export function operationalGoalsFromSettings(settings: unknown): OperationalGoals {
+/** Forma persistida: os alvos individuais nunca ficam legíveis no jsonb. */
+const storedOperationalGoalsSchema = z
+  .object({
+    currency: z.enum(MOEDAS_SERVIDAS).optional(),
+    team: targetSchema.default({}),
+    members_enc: z.string().min(1).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.team.monthly_revenue_cents !== undefined && !value.currency) {
+      ctx.addIssue({ code: "custom", path: ["currency"], message: "Meta monetária sem moeda." });
+    }
+  });
+
+export type StoredOperationalGoals = z.infer<typeof storedOperationalGoalsSchema>;
+
+/** Leitura defensiva da parte pública de `organizations.settings.operational_goals`. */
+export function storedOperationalGoalsFromSettings(settings: unknown): StoredOperationalGoals {
   const raw =
     settings && typeof settings === "object" && !Array.isArray(settings)
       ? (settings as Record<string, unknown>).operational_goals
       : undefined;
-  return operationalGoalsSchema.catch(emptyOperationalGoals()).parse(raw ?? {});
+  return storedOperationalGoalsSchema.catch({ team: {} }).parse(raw ?? {});
+}
+
+/** Nenhum caller deve retornar `members_enc`; ele é apenas material de armazenamento. */
+export function operationalGoalsFromStored(
+  stored: StoredOperationalGoals,
+  members: unknown = {},
+): OperationalGoals {
+  return operationalGoalsSchema.parse({ currency: stored.currency, team: stored.team, members });
+}
+
+export function operationalGoalsForStorage(
+  goals: OperationalGoals,
+  membersEnc: string | undefined,
+): StoredOperationalGoals {
+  return {
+    ...(goals.currency ? { currency: goals.currency } : {}),
+    team: goals.team,
+    ...(membersEnc ? { members_enc: membersEnc.replace(/^\\x/, "") } : {}),
+  };
+}
+
+/** O resultado decifrado continua passando por Zod antes de reaparecer na API. */
+export function parseOperationalGoalMembers(json: string): OperationalGoals["members"] | null {
+  try {
+    return operationalGoalMembersSchema.parse(JSON.parse(json));
+  } catch {
+    return null;
+  }
 }
 
 export type RevenueEvent = {

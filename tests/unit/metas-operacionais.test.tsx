@@ -35,7 +35,7 @@ afterEach(cleanup);
 
 describe("Metas operacionais", () => {
   it("oferece configuração apenas a manager/admin e apresenta valores reais", () => {
-    render(<MetasClient canManage />);
+    render(<MetasClient canManage orgId="org-a" userId="user-a" role="manager" />);
 
     expect(screen.getByRole("heading", { name: "Configurar metas" })).toBeVisible();
     expect(screen.getAllByText("Ana").length).toBeGreaterThan(0);
@@ -44,12 +44,12 @@ describe("Metas operacionais", () => {
   });
 
   it("mantém agente em leitura e não apresenta linguagem de competição", () => {
-    render(<MetasClient canManage={false} />);
+    render(<MetasClient canManage={false} orgId="org-a" userId="user-a" role="agent" />);
 
     expect(screen.queryByRole("heading", { name: "Configurar metas" })).toBeNull();
     expect(screen.getByText("Ana")).toBeVisible();
     const text = document.body.textContent?.toLowerCase() ?? "";
-    for (const forbidden of ["xp", "ranking", "troféu", "prêmio", "competição"]) {
+    for (const forbidden of ["xp", "ranking", "troféu", "prêmio", "competição", "nível", "ofensiva", "desafio", "ponto", "medalha"]) {
       expect(text).not.toContain(forbidden);
     }
   });

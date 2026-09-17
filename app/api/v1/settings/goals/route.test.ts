@@ -30,14 +30,19 @@ function db() {
           }),
         }),
         update: ({ settings }: { settings: Record<string, unknown> }) => ({
-          eq: async (_column: string, id: string) => {
-            if (orgs[id]) orgs[id].settings = settings;
-            updates.push({ id, settings });
-            return { error: null };
-          },
+          eq: (_column: string, id: string) => ({
+            eq: () => ({
+              select: async () => {
+                if (orgs[id]) orgs[id].settings = settings;
+                updates.push({ id, settings });
+                return { data: [{ id }], error: null };
+              },
+            }),
+          }),
         }),
       };
     },
+    rpc: async (_name: string, { plaintext }: { plaintext: string }) => ({ data: `\\x${Buffer.from(plaintext).toString("hex")}`, error: null }),
   };
 }
 
@@ -105,6 +110,6 @@ describe("/api/v1/settings/goals", () => {
     const payload = { team: { monthly_conversations: 30 }, members: {} };
     await PATCH(request(payload));
     await PATCH(request(payload));
-    expect(orgs[ORG_A]!.settings.operational_goals).toEqual({ team: { monthly_conversations: 30 }, members: {} });
+    expect(orgs[ORG_A]!.settings.operational_goals).toEqual({ team: { monthly_conversations: 30 } });
   });
 });

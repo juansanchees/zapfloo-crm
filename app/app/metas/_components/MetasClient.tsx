@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useGoalProgress, type GoalProgressRow, type GoalRevenueProgress } from "@/hooks/metas/useGoalProgress";
-import { useGoals, useUpdateGoals } from "@/hooks/metas/useGoals";
+import { useGoals, useUpdateGoals, type GoalsCacheScope } from "@/hooks/metas/useGoals";
 import { emptyOperationalGoals, type OperationalGoals } from "@/lib/metas/config";
 
 function money(value: number, currency: string) {
@@ -56,7 +56,7 @@ function MetricBar({
 
 function RevenueBars({ revenue }: { revenue: GoalRevenueProgress[] }) {
   if (revenue.length === 0) {
-    return <MetricBar label="Receita mensal" current={0} target={null} format={(value) => money(value, "BRL")} />;
+    return <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">Receita mensal: Meta não definida</p>;
   }
   return revenue.map((entry) => (
     <MetricBar
@@ -73,8 +73,8 @@ function numberValue(value: number | undefined) {
   return value === undefined ? "" : String(value);
 }
 
-function GoalsEditor({ initial, members }: { initial: OperationalGoals; members: GoalProgressRow[] }) {
-  const updateGoals = useUpdateGoals();
+function GoalsEditor({ initial, members, scope }: { initial: OperationalGoals; members: GoalProgressRow[]; scope: GoalsCacheScope }) {
+  const updateGoals = useUpdateGoals(scope);
   const [draft, setDraft] = useState<OperationalGoals>(initial);
   const setTeam = (key: "monthly_revenue_cents" | "monthly_conversations", value: string) => {
     setDraft((current) => ({ ...current, team: { ...current.team, [key]: optionalInteger(value) } }));
@@ -92,7 +92,7 @@ function GoalsEditor({ initial, members }: { initial: OperationalGoals; members:
       <p className="mt-1 text-sm text-muted-foreground">Deixe em branco o que não deve ter meta neste mês.</p>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <label className="grid gap-1 text-sm">Moeda da receita
-          <input className="h-9 rounded-md border bg-background px-3" aria-label="Moeda da receita" maxLength={3} value={draft.currency ?? ""} onChange={(event) => setDraft((current) => ({ ...current, currency: event.target.value.toUpperCase() || undefined }))} />
+          <input className="h-9 rounded-md border bg-background px-3" aria-label="Moeda da receita" maxLength={3} value={draft.currency ?? ""} onChange={(event) => setDraft((current) => ({ ...current, currency: (event.target.value.toUpperCase() || undefined) as OperationalGoals["currency"] }))} />
         </label>
         <label className="grid gap-1 text-sm">Receita mensal da equipe (centavos)
           <input className="h-9 rounded-md border bg-background px-3" aria-label="Receita mensal da equipe" inputMode="numeric" value={numberValue(draft.team.monthly_revenue_cents)} onChange={(event) => setTeam("monthly_revenue_cents", event.target.value)} />
@@ -117,9 +117,10 @@ function GoalsEditor({ initial, members }: { initial: OperationalGoals; members:
   );
 }
 
-export function MetasClient({ canManage }: { canManage: boolean }) {
-  const goalsQuery = useGoals();
-  const progressQuery = useGoalProgress();
+export function MetasClient({ canManage, orgId, userId, role }: { canManage: boolean } & GoalsCacheScope) {
+  const scope = { orgId, userId, role };
+  const goalsQuery = useGoals(scope, canManage);
+  const progressQuery = useGoalProgress(scope);
   const progress = progressQuery.data?.data;
 
   if (goalsQuery.isLoading || progressQuery.isLoading) {
@@ -161,7 +162,7 @@ export function MetasClient({ canManage }: { canManage: boolean }) {
         </div>
       </section>
 
-      {canManage && <GoalsEditor key={JSON.stringify(goalsQuery.data?.data ?? emptyOperationalGoals())} initial={goalsQuery.data?.data ?? emptyOperationalGoals()} members={progress.members} />}
+      {canManage && <GoalsEditor key={JSON.stringify(goalsQuery.data?.data ?? emptyOperationalGoals())} initial={goalsQuery.data?.data ?? emptyOperationalGoals()} members={progress.members} scope={scope} />}
     </div>
   );
 }

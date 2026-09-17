@@ -12,6 +12,7 @@ describe("operationalGoalsSchema", () => {
 
   it("aceita metas de equipe e individuais opcionais", () => {
     const parsed = operationalGoalsSchema.parse({
+      currency: "BRL",
       team: { monthly_revenue_cents: 5_000_000, monthly_conversations: 300 },
       members: { [USER_ID]: { monthly_revenue_cents: 800_000, monthly_conversations: 60 } },
     });
@@ -21,6 +22,8 @@ describe("operationalGoalsSchema", () => {
   });
 
   it.each([
+    { team: { monthly_revenue_cents: 1 } },
+    { currency: "EUR", team: { monthly_revenue_cents: 1 } },
     { team: { monthly_revenue_cents: -1 } },
     { team: { monthly_revenue_cents: 1.5 } },
     { team: { monthly_conversations: -1 } },

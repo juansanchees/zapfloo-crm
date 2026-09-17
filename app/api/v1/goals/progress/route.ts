@@ -6,12 +6,16 @@ import { requireRole } from "@/lib/auth/require-role";
 import { roleAtLeast } from "@/lib/auth/types";
 import {
   buildOperationalProgress,
-  operationalGoalsFromSettings,
+  operationalGoalsFromStored,
+  parseOperationalGoalMembers,
+  storedOperationalGoalsFromSettings,
   type ConversationEvent,
   type RevenueEvent,
 } from "@/lib/metas/config";
 import { createClient } from "@/lib/supabase/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +53,7 @@ export async function GET(): Promise<Response> {
     .from("crm_leads")
     .select("owner_user_id, value_cents, currency")
     .eq("organization_id", authz.org.orgId)
+    .eq("status", "won")
     .gte("closed_at", from)
     .lt("closed_at", to);
   let conversationsQuery = supabase
@@ -80,8 +85,16 @@ export async function GET(): Promise<Response> {
     name: managerView ? (names.get(user_id) ?? null) : null,
   }));
 
+  const storedGoals = storedOperationalGoalsFromSettings(settingsRes.data?.settings);
+  const members = await readMembers(storedGoals.members_enc);
+  if (members === null) return fail("internal_error", "Não foi possível ler as metas individuais.", 500, { requestId });
+  const goals = operationalGoalsFromStored(storedGoals, members);
+  const scopedGoals = managerView
+    ? goals
+    : { ...goals, members: goals.members[authz.user.id] ? { [authz.user.id]: goals.members[authz.user.id]! } : {} };
+
   const progress = buildOperationalProgress({
-    goals: operationalGoalsFromSettings(settingsRes.data?.settings),
+    goals: scopedGoals,
     roster,
     revenue: (revenueRes.data ?? []).map((row) => ({
       user_id: row.owner_user_id,
@@ -101,4 +114,11 @@ export async function GET(): Promise<Response> {
     },
     { requestId },
   );
+}
+
+async function readMembers(ciphertext: string | undefined) {
+  if (!ciphertext) return {};
+  const plaintext = await decryptWebhookSecret(createAdminClient(), ciphertext);
+  if (!plaintext) return null;
+  return parseOperationalGoalMembers(plaintext);
 }
