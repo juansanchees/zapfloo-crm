@@ -8,6 +8,16 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.3.0] — 2026-09-17
+
+### Alterado
+
+- **A casca do produto ganha o visual Nocturne** A paleta, os componentes básicos e o menu passam a seguir o sistema visual Nocturne, mantendo o tema claro como padrão e todas as telas existentes acessíveis pelos mesmos hubs, abas e busca.
+
+### Corrigido
+
+- **O teste de segurança da conexão Meta Ads deixa de oscilar** O gate da conexão Meta Ads continua lendo todas as respostas reais e rejeitando qualquer vazamento de token, mas agora impede que prefetches especulativos abandonados pelo Next cheguem à rede.
+
 ## [2.2.0] — 2026-09-16
 
 ### Adicionado
@@ -3428,7 +3438,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.2.0...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/juansanchees/zapfloo-crm/compare/v1.19.1...v2.0.0
