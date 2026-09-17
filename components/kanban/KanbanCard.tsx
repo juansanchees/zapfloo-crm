@@ -43,6 +43,8 @@ interface KanbanCardProps {
   onSelect?: (leadId: string, gesto: GestoDeSelecao) => void;
   /** Abrir o dossiê. Separado de `onSelect`: são gestos e intenções diferentes. */
   onOpen?: (leadId: string) => void;
+  /** Não existe em etapa terminal; o menu não promete uma etapa seguinte. */
+  onAdvance?: () => void;
 }
 
 function formatBRL(cents: number | null, currency: string | null): string | null {
@@ -80,6 +82,7 @@ export function KanbanCard({
   pulseCount = 0,
   onSelect,
   onOpen,
+  onAdvance,
 }: KanbanCardProps) {
   const t = useT();
   const value = formatBRL(card.valueCents, card.currency);
@@ -238,7 +241,7 @@ export function KanbanCard({
                 </button>
               </h3>
             </div>
-            <KanbanCardActions lead={lead} pipelineId={pipelineId} />
+            <KanbanCardActions lead={lead} pipelineId={pipelineId} onAdvance={onAdvance} />
           </div>
 
           {/* ② valor — altura reservada mesmo sem valor, senão o card encolhe. */}
@@ -249,6 +252,10 @@ export function KanbanCard({
             )}
           >
             {value ?? "—"}
+          </p>
+
+          <p className="h-5 truncate text-[11px] leading-5 text-text-muted">
+            {[lead.contact?.full_name, lead.source].filter(Boolean).join(" · ") || t("Sem contato")}
           </p>
 
           {/* ③ a linha do agente — um slot, três estados, nunca três blocos. */}

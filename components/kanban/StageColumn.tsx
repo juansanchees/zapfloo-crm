@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { Lead } from "@/lib/types/leads";
 import type { Stage } from "@/lib/kanban/types";
 import { buildCardInput } from "@/lib/kanban/card-state";
+import { totalsByCurrency } from "@/lib/kanban/summary";
 import { intervaloDaColuna } from "@/lib/kanban/selecao";
 import { KanbanCard, type GestoDeSelecao } from "./KanbanCard";
 
@@ -33,17 +34,20 @@ interface StageColumnProps {
   onSelectMany?: (leadIds: string[], marcar: boolean) => void;
   /** Abrir o dossiê — atravessa o board até o card, como `pulses`. */
   onOpen?: (leadId: string) => void;
+  /** Próxima etapa operacional, calculada pelo board respeitando terminais. */
+  nextStageId?: string | null;
+  onAdvance?: (lead: Lead, stageId: string) => void;
 }
 
-function formatBRL(cents: number): string {
+function formatMoney(cents: number, currency: string): string {
   try {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: "BRL",
+      currency,
       maximumFractionDigits: 0,
     }).format(cents / 100);
   } catch {
-    return `R$ ${(cents / 100).toFixed(0)}`;
+    return `${(cents / 100).toFixed(0)} ${currency}`;
   }
 }
 
@@ -59,9 +63,11 @@ export function StageColumn({
   pulses,
   onSelectMany,
   onOpen,
+  nextStageId,
+  onAdvance,
 }: StageColumnProps) {
   const t = useT();
-  const totalCents = leads.reduce((sum, l) => sum + (l.value_cents ?? 0), 0);
+  const totals = totalsByCurrency(leads);
 
   const idsVisiveis = leads.map((l) => l.id);
   const selecionadosAqui = idsVisiveis.filter((id) => selectedLeadIds?.has(id)).length;
@@ -136,9 +142,13 @@ export function StageColumn({
         </span>
       </div>
 
-      {totalCents > 0 && (
+      {Object.keys(totals).length > 0 && (
         <div className="border-b border-border px-3 py-1.5 text-[11px] tabular-nums text-text-muted">
-          {formatBRL(totalCents)}
+          {Object.entries(totals).map(([currency, cents]) => (
+            <span key={currency} className="mr-2 last:mr-0">
+              {formatMoney(cents, currency)}
+            </span>
+          ))}
         </div>
       )}
 
@@ -170,6 +180,7 @@ export function StageColumn({
                 pulseCount={pulses?.get(lead.id) ?? 0}
                 onSelect={aoSelecionar}
                 onOpen={onOpen}
+                onAdvance={nextStageId && onAdvance ? () => onAdvance(lead, nextStageId) : undefined}
               />
             ))}
             {provided.placeholder}

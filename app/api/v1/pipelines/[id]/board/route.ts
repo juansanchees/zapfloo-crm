@@ -26,6 +26,7 @@ import {
 import type { LeadCandidate } from "@/lib/leads/active-lead";
 import { createClient } from "@/lib/supabase/server";
 import type { BoardData, Pipeline, Stage } from "@/lib/kanban/types";
+import { calculateBoardSummary } from "@/lib/kanban/summary";
 import type { Lead } from "@/lib/types/leads";
 
 export const dynamic = "force-dynamic";
@@ -288,6 +289,37 @@ async function withConversas(
   };
 }
 
+/**
+ * Anexa contatos em uma única leitura limitada à organização já autorizada.
+ * Lead sem contato é válido e continua no quadro sem uma identidade inventada.
+ */
+async function withContacts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationId: string,
+  leads: Lead[],
+): Promise<{ leads: Lead[]; error: string | null }> {
+  const contactIds = [...new Set(leads.map((lead) => lead.contact_id).filter((id): id is string => !!id))];
+  if (contactIds.length === 0) return { leads, error: null };
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("id, full_name")
+    .eq("organization_id", organizationId)
+    .in("id", contactIds);
+  if (error) return { leads, error: error.message };
+
+  const byId = new Map(
+    ((data ?? []) as Array<{ id: string; full_name: string | null }>).map((contact) => [contact.id, contact]),
+  );
+  return {
+    leads: leads.map((lead) => {
+      const contact = lead.contact_id ? byId.get(lead.contact_id) : undefined;
+      return contact ? { ...lead, contact } : lead;
+    }),
+    error: null,
+  };
+}
+
 async function withNextActions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   organizationId: string,
@@ -360,34 +392,44 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const authUser = await loadAuthUser();
   const t = (texto: string) => traduzir(texto, authUser?.idioma ?? "pt-BR");
 
+  const { data: pipeline, error: pipelineErr } = await supabase
+    .from("crm_pipelines")
+    .select("*")
+    .eq("id", pipelineId)
+    .maybeSingle();
+  if (pipelineErr) return fail("internal_error", pipelineErr.message, 500, { requestId });
+  if (!pipeline) return fail("resource_not_found", t("Pipeline não encontrado."), 404, { requestId });
+
+  // A linha do funil é a fonte confiável do tenant. Depois de a RLS autorizar
+  // essa linha, TODAS as leituras dependentes carregam `organization_id`
+  // explícito — não basta o id do funil numa sessão que participa de duas orgs.
+  const organizationId = (pipeline as Pipeline).organization_id;
   const [
-    { data: pipeline, error: pipelineErr },
     { data: stages, error: stagesErr },
     { data: leads, error: leadsErr },
   ] = await Promise.all([
-    supabase.from("crm_pipelines").select("*").eq("id", pipelineId).maybeSingle(),
     supabase
       .from("crm_stages")
       .select("*")
+      .eq("organization_id", organizationId)
       .eq("pipeline_id", pipelineId)
       .eq("is_archived", false)
       .order("position"),
     supabase
       .from("crm_leads")
       .select("*")
+      .eq("organization_id", organizationId)
       .eq("pipeline_id", pipelineId)
       .neq("status", "archived")
       .order("position_in_stage"),
   ]);
 
-  if (pipelineErr) return fail("internal_error", pipelineErr.message, 500, { requestId });
   if (stagesErr) return fail("internal_error", stagesErr.message, 500, { requestId });
   if (leadsErr) return fail("internal_error", leadsErr.message, 500, { requestId });
-  if (!pipeline) return fail("resource_not_found", t("Pipeline não encontrado."), 404, { requestId });
 
   const leadsWithOwner = await withOwnerAgents(
     supabase,
-    (pipeline as Pipeline).organization_id,
+    organizationId,
     (leads ?? []) as Lead[],
   );
   if (leadsWithOwner.error) {
@@ -397,13 +439,13 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const { data: pipelinePadrao } = await supabase
     .from("crm_pipelines")
     .select("id")
-    .eq("organization_id", (pipeline as Pipeline).organization_id)
+    .eq("organization_id", organizationId)
     .eq("is_default", true)
     .maybeSingle();
 
   const leadsComAcao = await withNextActions(
     supabase,
-    (pipeline as Pipeline).organization_id,
+    organizationId,
     leadsWithOwner.leads,
     (pipelinePadrao as { id: string } | null)?.id ?? null,
   );
@@ -413,17 +455,25 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
 
   const leadsComScore = await withScores(
     supabase,
-    (pipeline as Pipeline).organization_id,
+    organizationId,
     leadsComAcao.leads,
   );
   if (leadsComScore.error) {
     return fail("internal_error", leadsComScore.error, 500, { requestId });
   }
 
+  const leadsComContato = await withContacts(
+    supabase,
+    organizationId,
+    leadsComScore.leads,
+  );
+  if (leadsComContato.error) {
+    return fail("internal_error", leadsComContato.error, 500, { requestId });
+  }
   const leadsComConversa = await withConversas(
     supabase,
-    (pipeline as Pipeline).organization_id,
-    leadsComScore.leads,
+    organizationId,
+    leadsComContato.leads,
   );
   if (leadsComConversa.error) {
     return fail("internal_error", leadsComConversa.error, 500, { requestId });
@@ -433,6 +483,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
     pipeline: pipeline as Pipeline,
     stages: (stages ?? []) as Stage[],
     leads: leadsComConversa.leads,
+    summary: calculateBoardSummary(leadsComConversa.leads),
   };
 
   return ok(board, { requestId });

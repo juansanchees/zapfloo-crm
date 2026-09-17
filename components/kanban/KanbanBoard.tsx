@@ -131,13 +131,16 @@ export function KanbanBoard({
     [selectedIds, internalSelected],
   );
 
-  const data = useExternal
-    ? {
-        pipeline: pipelineProp ?? ({} as Pipeline),
-        stages: stagesProp,
-        leads: leadsProp,
-      }
-    : queryResult.data;
+  const data = useMemo(
+    () => useExternal
+      ? {
+          pipeline: pipelineProp ?? ({} as Pipeline),
+          stages: stagesProp,
+          leads: leadsProp,
+        }
+      : queryResult.data,
+    [useExternal, pipelineProp, stagesProp, leadsProp, queryResult.data],
+  );
   const isLoading = useExternal ? false : queryResult.isLoading;
   const isError = useExternal ? false : queryResult.isError;
   const error = useExternal ? null : queryResult.error;
@@ -149,6 +152,18 @@ export function KanbanBoard({
   const grouped = useMemo(() => {
     if (!data) return null;
     return groupLeadsByStage(data.stages, data.leads);
+  }, [data]);
+
+  const nextOperationalStageById = useMemo(() => {
+    const next = new Map<string, string>();
+    if (!data) return next;
+    const operacionais = data.stages.filter((stage) => !stage.is_won && !stage.is_lost);
+    for (let index = 0; index < operacionais.length - 1; index += 1) {
+      const atual = operacionais[index];
+      const seguinte = operacionais[index + 1];
+      if (atual && seguinte) next.set(atual.id, seguinte.id);
+    }
+    return next;
   }, [data]);
 
   // Um conjunto por vez, e não um card por vez: o board recebe o resultado do
@@ -218,6 +233,23 @@ export function KanbanBoard({
     [data, grouped, moveCard],
   );
 
+  const handleAdvance = useCallback(
+    (lead: Lead, stageId: string) => {
+      if (!grouped) return;
+      const destination = grouped.get(stageId) ?? [];
+      const last = destination.at(-1) ?? null;
+      const positionInStage = midpoint(last?.position_in_stage ?? null, null);
+      if (Number.isNaN(positionInStage)) return;
+      moveCard.mutate({
+        leadId: lead.id,
+        stageId,
+        positionInStage,
+        expectedUpdatedAt: lead.updated_at,
+      });
+    },
+    [grouped, moveCard],
+  );
+
   if (isLoading) {
     return <BoardSkeleton />;
   }
@@ -260,6 +292,8 @@ export function KanbanBoard({
             selectedLeadIds={selectedLeadIds}
             onSelectMany={handleSelectMany}
             onOpen={setDossieId}
+            nextStageId={nextOperationalStageById.get(stage.id) ?? null}
+            onAdvance={handleAdvance}
           />
         ))}
       </div>

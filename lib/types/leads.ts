@@ -31,12 +31,20 @@ export interface LeadOwnerAgent {
   version_number: number | null;
 }
 
+/** Identidade mínima do contato para o card; não é uma segunda consulta da UI. */
+export interface LeadContact {
+  id: string;
+  full_name: string | null;
+}
+
 export interface Lead {
   id: string;
   organization_id: string;
   pipeline_id: string;
   stage_id: string;
   contact_id: string | null;
+  /** Derivado no snapshot do quadro com uma busca em lote, nunca N+1. */
+  contact?: LeadContact | null;
   title: string;
   description: string | null;
   status: LeadStatus;
@@ -92,6 +100,8 @@ export interface Lead {
   last_activity_at: string | null;
   expected_close_date: string | null;
   closed_at: string | null;
+  /** Carimbo da entrada na etapa, fonte da idade exibida no card. */
+  stage_changed_at: string | null;
   source: string;
   source_metadata: Record<string, unknown>;
   external_id: string | null;

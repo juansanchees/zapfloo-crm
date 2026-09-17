@@ -24,9 +24,11 @@ import type { Lead } from "@/lib/types/leads";
 interface KanbanCardActionsProps {
   lead: Lead;
   pipelineId: string;
+  /** Movimento existente do quadro, já com posição e controle de concorrência. */
+  onAdvance?: () => void;
 }
 
-export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) {
+export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardActionsProps) {
   const t = useT();
   const [loseOpen, setLoseOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -83,6 +85,11 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
           >
             <PencilSimple size={14} className="mr-2" /> {t("Editar")}
           </DropdownMenuItem>
+          {onAdvance && (
+            <DropdownMenuItem onSelect={onAdvance}>
+              {t("Avançar")}
+            </DropdownMenuItem>
+          )}
           {canAssign && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>

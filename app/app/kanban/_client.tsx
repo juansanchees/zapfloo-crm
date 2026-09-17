@@ -352,7 +352,7 @@ export function FunisClient({
                     </div>
                   ) : (
                     <Link
-                      href={`/app/pipelines/${funil.id}`}
+                      href={`/app/kanban?pipeline=${encodeURIComponent(funil.id)}`}
                       className="group flex flex-col"
                       data-testid={`abrir-${funil.id}`}
                     >
