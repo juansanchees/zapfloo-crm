@@ -177,6 +177,24 @@ async function medir(page: Page, nome: string) {
 }
 
 async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[]) {
+  const prefetchesBloqueados: string[] = [];
+  // O App Router pode abrir um prefetch RSC e abandoná-lo sem emitir término.
+  // Bloqueamos somente a combinação inequívoca dos dois headers, antes de a
+  // requisição sair. Toda resposta que realmente alcança a rede continua sob
+  // a prova integral abaixo, sem timeout maior nem exceção de leitura.
+  await page.route("**/*", async route => {
+    const requisicao = route.request();
+    const url = new URL(requisicao.url());
+    const headers = requisicao.headers();
+    if (url.origin === origem
+      && headers["next-router-prefetch"] === "1"
+      && headers.rsc === "1") {
+      prefetchesBloqueados.push(url.pathname);
+      await route.abort("blockedbyclient");
+      return;
+    }
+    await route.fallback();
+  });
   const cdp = await page.context().newCDPSession(page);
   // CDP conserva o corpo fora do renderer: OAuth troca de processo/origem e o
   // callback navega imediatamente. Ler no fim da jornada perdia corpos reais.
@@ -186,58 +204,22 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     maxTotalBufferSize: 32 * 1024 * 1024, maxResourceBufferSize: 4 * 1024 * 1024,
   });
   type Medida = {
-    caminho: string; status: number; tipo: string; prefetchRsc: boolean;
+    caminho: string; status: number; tipo: string;
     tokenExposto: boolean; erroLeitura: boolean; concluida: boolean; lida: boolean;
-    falhaRede: string | null; streamAtivo: boolean; erroStream: boolean;
+    falhaRede: string | null;
   };
   const respostas = new Map<string, Medida>();
-  const caudasDoStream = new Map<string, string>();
   const tokens = [TOKEN_CURTO, TOKEN_LONGO];
-  const maiorToken = Math.max(...tokens.map(token => token.length));
-  const inspecionarTrecho = (requestId: string, medida: Medida, trecho: string) => {
-    // Mantém a cauda porque um segredo pode atravessar a fronteira entre dois
-    // eventos dataReceived. O corpo completo continua sendo relido no término.
-    const acumulado = `${caudasDoStream.get(requestId) ?? ""}${trecho}`;
-    medida.tokenExposto ||= tokens.some(token => acumulado.includes(token));
-    caudasDoStream.set(requestId, acumulado.slice(-(maiorToken - 1)));
-  };
   // Registra a ordem do protocolo, inclusive término anterior à resposta. Não
   // infere aborto da navegação nem inclui URL/query, headers ou corpo no recibo.
-  const ciclos: Array<{ evento: string; requestId: string; loaderId?: string; caminho?: string; instante?: number; prefetchRsc?: boolean }> = [];
+  const ciclos: Array<{ evento: string; requestId: string; loaderId?: string; caminho?: string; instante?: number }> = [];
   const requisicoesLocais = new Set<string>();
-  const prefetchesRsc = new Map<string, boolean>();
-  const streamsRsc = new Map<string, { ativo: boolean; erro: boolean; antesDaResposta: string[] }>();
   cdp.on("Network.requestWillBeSent", ({ requestId, loaderId, request, timestamp }) => {
     const url = new URL(request.url);
     if (url.origin !== origem) return;
-    const headers = Object.fromEntries(Object.entries(request.headers)
-      .map(([nome, valor]) => [nome.toLowerCase(), String(valor)]));
-    const prefetchRsc = headers["next-router-prefetch"] === "1" && headers.rsc === "1";
     requisicoesLocais.add(requestId);
-    prefetchesRsc.set(requestId, prefetchRsc);
     ciclos.push({ evento: "inicio", requestId, loaderId, instante: timestamp,
-      caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]"),
-      prefetchRsc });
-    if (prefetchRsc) {
-      const stream = { ativo: false, erro: false, antesDaResposta: [] as string[] };
-      streamsRsc.set(requestId, stream);
-      // Deve ser ativado enquanto a requisição ainda está em voo. Depois de
-      // responseReceived, o Chromium pode já ter entregue bytes e recusar a
-      // ativação exatamente no prefetch que fica sem evento terminal.
-      void cdp.send("Network.streamResourceContent", { requestId }).then(({ bufferedData }) => {
-        stream.ativo = true;
-        const trecho = Buffer.from(bufferedData, "base64").toString("utf8");
-        const medida = respostas.get(requestId);
-        if (medida) {
-          medida.streamAtivo = true;
-          inspecionarTrecho(requestId, medida, trecho);
-        } else stream.antesDaResposta.push(trecho);
-      }).catch(() => {
-        stream.erro = true;
-        const medida = respostas.get(requestId);
-        if (medida) medida.erroStream = true;
-      });
-    }
+      caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]") });
   });
   let capturando = true;
   cdp.on("Network.responseReceived", ({ requestId, loaderId, response, timestamp }) => {
@@ -250,25 +232,13 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     if (/\/api\/v1\/ads\/meta\/oauth\/(?:connect|agency)$/.test(url.pathname)) return;
     if (url.origin !== origem || response.status < 200 || response.status >= 300
       || !/text\/html|application\/json|text\/x-component/.test(response.mimeType)) return;
-    const stream = streamsRsc.get(requestId);
     const medida: Medida = {
       caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]"),
       status: response.status, tipo: response.mimeType,
-      prefetchRsc: prefetchesRsc.get(requestId) === true && response.mimeType === "text/x-component",
       tokenExposto: tokens.some(token => JSON.stringify(response.headers).includes(token)),
       erroLeitura: false, concluida: false, lida: false, falhaRede: null,
-      streamAtivo: stream?.ativo ?? false, erroStream: stream?.erro ?? false,
     };
     respostas.set(requestId, medida);
-    for (const trecho of stream?.antesDaResposta ?? []) inspecionarTrecho(requestId, medida, trecho);
-    if (stream) stream.antesDaResposta.length = 0;
-  });
-  cdp.on("Network.dataReceived", ({ requestId, data }) => {
-    if (!data) return;
-    const trecho = Buffer.from(data, "base64").toString("utf8");
-    const medida = respostas.get(requestId);
-    if (medida) inspecionarTrecho(requestId, medida, trecho);
-    else streamsRsc.get(requestId)?.antesDaResposta.push(trecho);
   });
   cdp.on("Network.loadingFinished", ({ requestId, timestamp }) => {
     if (requisicoesLocais.has(requestId)) ciclos.push({ evento: "concluida", requestId, instante: timestamp });
@@ -290,10 +260,8 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     const medida: Medida = {
       caminho: new URL(resposta.url()).pathname, status: resposta.status(),
       tipo: resposta.headers()["content-type"] ?? "text/html",
-      prefetchRsc: false,
       tokenExposto: tokens.some(token => JSON.stringify(resposta.headers()).includes(token)),
       erroLeitura: false, concluida: true, lida: false, falhaRede: null,
-      streamAtivo: false, erroStream: false,
     };
     respostas.set(`inicio-real-${respostas.size}`, medida);
     try {
@@ -309,37 +277,16 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     const medidas = [...respostas.values()];
     const semDesfecho = () => medidas.filter(medida => !medida.lida && !medida.erroLeitura && !medida.falhaRede);
     try {
-      // Resposta de navegação/API que fica aberta é bug de produto. Ela não
-      // ganha a exceção dos prefetches especulativos do App Router.
-      await expect.poll(() => semDesfecho().filter(medida => !medida.prefetchRsc)
-        .map(medida => medida.caminho), { timeout: 10_000, intervals: [100, 250, 500],
-        message: "toda resposta real termina com corpo lido ou falha/aborto explícito" }).toEqual([]);
-
-      // O Next pode manter um prefetch RSC de segmento aberto mesmo depois de
-      // abandonar a tela que o iniciou. A evidência medida foi /app/contacts:
-      // HTTP 200 + next-router-prefetch=1, sem loadingFinished/loadingFailed.
-      // Ele só é aceito aberto quando o CDP confirma que todos os bytes
-      // entregues estão sob inspeção contínua; resposta real não ganha exceção.
-      const especulativasAbertas = semDesfecho().filter(medida => medida.prefetchRsc);
-      if (especulativasAbertas.length > 0) {
-        await expect.poll(() => especulativasAbertas
-          .filter(medida => !medida.streamAtivo || medida.erroStream)
-          .map(medida => medida.caminho), { timeout: 10_000, intervals: [100, 250, 500],
-          message: "prefetch RSC aberto tem cada byte inspecionado pelo stream do CDP" }).toEqual([]);
-      }
-
-      await expect.poll(() => semDesfecho()
-        .filter(medida => !medida.prefetchRsc || !medida.streamAtivo || medida.erroStream)
-        .map(medida => medida.caminho), {
+      await expect.poll(() => semDesfecho().map(medida => medida.caminho), {
         timeout: 10_000, intervals: [100, 250, 500],
-        message: "toda resposta termina ou permanece como prefetch RSC integralmente inspecionado",
-      }).toEqual([]);
+        message: "toda resposta real termina com corpo lido ou falha/aborto explícito" }).toEqual([]);
     } finally {
       await test.info().attach("respostas-sem-token", { body: JSON.stringify(medidas), contentType: "application/json" });
       await test.info().attach("ciclo-requisicoes-sem-segredos", { body: JSON.stringify(ciclos), contentType: "application/json" });
+      await test.info().attach("prefetches-rsc-bloqueados", {
+        body: JSON.stringify(prefetchesBloqueados), contentType: "application/json",
+      });
     }
-    // Um prefetch RSC ainda aberto fica registrado como stream inspecionado, não
-    // como concluído. Nenhuma resposta CONCLUÍDA pode perder a leitura integral.
     const concluidas = medidas.filter(medida => medida.concluida);
     expect(concluidas.length, "controle positivo: respostas reais do app foram lidas").toBeGreaterThan(0);
     expect(concluidas.some(medida => medida.erroLeitura), "a prova não ignora corpo concluído que não conseguiu ler").toBe(false);
