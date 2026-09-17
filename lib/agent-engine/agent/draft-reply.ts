@@ -143,6 +143,9 @@ export async function generateDraftReply(
     messages,
     model: agent.model,
     llmOverride: { provider: agent.provider, credentialId: agent.credentialId },
+    // Uma sugestão é solicitada sob demanda e revisável: não repita uma
+    // geração física que pode ter sido processada pelo provider sem resposta.
+    maxRetries: 0,
     // SEM tools, SEM maxSteps → o SDK para no 1º step (default stepCountIs(1)):
     // result.text vem pronto, sem risco do modelo tentar chamar send_message.
   });

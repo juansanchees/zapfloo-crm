@@ -23,7 +23,12 @@ import { scrubMessage } from '@/lib/sentry/scrub';
 
 import type { Logger } from '../../obs/logger';
 import { decidirParaOSeam } from './binding-do-ponto';
-import { resolveOrgLlmConfig, type LlmEdgeConfig, type OrcamentoDaOrg } from './credentials';
+import {
+  resolveOrgLlmConfig,
+  type LlmEdgeConfig,
+  type LlmResolveOverride,
+  type OrcamentoDaOrg,
+} from './credentials';
 import {
   AVISO_CORPO,
   AVISO_TITULO,
@@ -144,10 +149,15 @@ export interface RunModelCallInput {
   timeoutMs?: number;
   maxOutputTokens?: number;
   /**
+   * Tentativas físicas no provider. Ausente preserva o default do AI SDK; quem
+   * produz conteúdo revisável e sob demanda pode desligá-las explicitamente.
+   */
+  maxRetries?: number;
+  /**
    * Override de provider/credencial vindo da versão PUBLICADA do agente (Fase
    * 2B) — resolvido no seam, nunca no call site. Sem ele, config da org.
    */
-  llmOverride?: import('./credentials').LlmResolveOverride;
+  llmOverride?: LlmResolveOverride;
 }
 
 export interface RunModelCallDeps {
@@ -499,6 +509,7 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
       topK,
       maxOutputTokens: input.maxOutputTokens === undefined ? maxOutputTokens
         : Math.min(input.maxOutputTokens, maxOutputTokens ?? input.maxOutputTokens),
+      ...(input.maxRetries === undefined ? {} : { maxRetries: input.maxRetries }),
       ...(input.timeoutMs === undefined ? {} : { abortSignal: AbortSignal.timeout(input.timeoutMs) }),
     });
   } catch (err) {

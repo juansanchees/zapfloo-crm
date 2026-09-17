@@ -2,6 +2,7 @@
 import { useT } from "@/hooks/i18n/useT";
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -76,6 +77,8 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
   const t = useT();
   const [text, setText] = useState("");
   const [draftSuggestions, setDraftSuggestions] = useState<string[]>([]);
+  const latestConversationIdRef = useRef(conversationId);
+  latestConversationIdRef.current = conversationId;
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [menuDismissed, setMenuDismissed] = useState(false);
@@ -87,6 +90,13 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
   const templates = useMessageTemplates();
   const slash = resolveSlash(text);
   const menuOpen = mode === "reply" && slash.open && !menuDismissed;
+
+  // O Composer costuma remontar por conversa no InboxLayout, mas esta guarda
+  // também protege quem o reutilizar na mesma posição: sugestão de A nunca
+  // pode aparecer no campo de B, nem se a resposta da rede chegar tarde.
+  useEffect(() => {
+    setDraftSuggestions([]);
+  }, [conversationId]);
 
   useImperativeHandle(ref, () => ({
     focus: () => taRef.current?.focus(),
@@ -168,6 +178,14 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
       taRef.current?.focus();
       autoresize();
     });
+  }
+
+  function receiveDraftSuggestions(suggestions: string[]) {
+    // A callback criada em A pode terminar depois que a mesma instância já
+    // recebeu B. Comparar a origem capturada com o id mais recente descarta o
+    // resultado velho antes de ele tocar estado/renderização.
+    if (conversationId !== latestConversationIdRef.current) return;
+    setDraftSuggestions(suggestions);
   }
 
   /**
@@ -306,7 +324,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             <DraftReplyButton
               conversationId={conversationId}
               disabled={isDisabled}
-              onSuggestions={setDraftSuggestions}
+              onSuggestions={receiveDraftSuggestions}
             />
           )}
           <EmojiButton

@@ -5,7 +5,10 @@ import { requireRole } from "@/lib/auth/require-role";
 import { generateDraftReply } from "@/lib/agent-engine/agent/draft-reply";
 import { createClient } from "@/lib/supabase/server";
 import { fail } from "@/lib/api/wrappers";
-import { LlmNotConfiguredError } from "@/lib/agent-engine/edge/llm/run-model-call";
+import {
+  LlmBudgetExceededError,
+  LlmNotConfiguredError,
+} from "@/lib/agent-engine/edge/llm/run-model-call";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/agent-engine/agent/draft-reply", () => ({ generateDraftReply: vi.fn() }));
@@ -17,6 +20,7 @@ vi.mock("@/lib/agent-engine/edge/llm/run-model-call", () => ({
     error_code: error instanceof Error && /invalid api key/i.test(error.message) ? "credencial_recusada" : "erro_desconhecido",
   })),
   LlmNotConfiguredError: class LlmNotConfiguredError extends Error {},
+  LlmBudgetExceededError: class LlmBudgetExceededError extends Error {},
 }));
 vi.mock("@/lib/env", () => ({ env: { NEXT_PUBLIC_SUPABASE_URL: "http://example.test", SUPABASE_SERVICE_ROLE_KEY: "secret" } }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -113,5 +117,26 @@ describe("POST /api/v1/conversations/:id/draft-reply", () => {
     const response = await POST(request(), context());
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: { suggestions: [] } });
+  });
+
+  it("LGPD blocked continua visível em 422", async () => {
+    const { POST } = await import("./route");
+    vi.mocked(generateDraftReply).mockResolvedValueOnce({ ok: false, reason: "blocked" });
+
+    const response = await POST(request(), context());
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "blocked" } });
+  });
+
+  it.each([
+    ["orçamento", new LlmBudgetExceededError()],
+    ["timeout", new Error("request timeout")],
+    ["provedor indisponível", new Error("fetch failed")],
+    ["erro desconhecido", new Error("falha inesperada")],
+  ])("%s não é silenciado como lista vazia", async (_kind, error) => {
+    const { POST } = await import("./route");
+    vi.mocked(generateDraftReply).mockRejectedValueOnce(error);
+
+    await expect(POST(request(), context())).rejects.toBe(error);
   });
 });
