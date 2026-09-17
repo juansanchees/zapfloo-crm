@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { type ComponentType, type ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 
 import { AiServiceStatus } from "@/components/ai/AiServiceStatus";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/hooks/i18n/useT";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import type { DashboardCard, DashboardIcon, DashboardSurface } from "@/lib/dashboard/role-summary";
+import type { DashboardWidgetId, DashboardWidgetSize } from "@/lib/dashboard/preferences";
 import { useIdioma } from "@/lib/i18n/IdiomaProvider";
 import {
   ArrowRight,
@@ -16,6 +17,7 @@ import {
   ChatsCircle,
   Clock,
   ListChecks,
+  PencilSimple,
   Receipt,
   ShieldCheck,
   UserGear,
@@ -25,6 +27,8 @@ import {
 } from "@/lib/ui/icons";
 
 import { useDashboard } from "./useDashboard";
+import { DashboardCustomizer } from "./DashboardCustomizer";
+import { useDashboardPreferences } from "./useDashboardPreferences";
 import styles from "./dashboard.module.css";
 
 const ICONS: Record<DashboardIcon, ComponentType<{ size?: number; "aria-hidden"?: boolean }>> = {
@@ -39,6 +43,22 @@ const ICONS: Record<DashboardIcon, ComponentType<{ size?: number; "aria-hidden"?
   whatsapp: WhatsappLogo,
   seat: UserGear,
 };
+
+function WidgetSlot({
+  size,
+  order,
+  children,
+}: {
+  size: DashboardWidgetSize;
+  order: number;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`${styles.widgetSlot} ${styles[`size_${size}`]}`} style={{ order }}>
+      {children}
+    </div>
+  );
+}
 
 function Jump({ href, children }: { href: string; children: ReactNode }) {
   return (
@@ -106,7 +126,9 @@ function SummaryCard({ metric }: { metric: DashboardCard }) {
         {t(metric.label)}
         <Icon size={18} aria-hidden />
       </div>
-      <div className={styles.value}>{metric.value}</div>
+      <div className={styles.value} data-testid={`dashboard-value-${metric.id}`}>
+        {metric.value}
+      </div>
       <p>{t(metric.variation)}</p>
       <span className={styles.cardHint}>{t(metric.hint)}</span>
     </article>
@@ -115,7 +137,7 @@ function SummaryCard({ metric }: { metric: DashboardCard }) {
 
 function actionFor(surface: DashboardSurface) {
   if (surface === "manager") return { href: "/app/kanban", label: "Abrir funis" };
-  if (surface === "admin") return { href: "/app/channels", label: "Ver conexões" };
+  if (surface === "admin") return { href: "/app/connections", label: "Ver conexões" };
   return { href: "/app/inbox", label: "Abrir conversas" };
 }
 
@@ -123,6 +145,8 @@ export function Dashboard() {
   const t = useT();
   const idioma = useIdioma();
   const d = useDashboard();
+  const preferences = useDashboardPreferences();
+  const [customizing, setCustomizing] = useState(false);
   if (!d.activeOrg)
     return (
       <section className={styles.dashboard}>
@@ -141,26 +165,50 @@ export function Dashboard() {
   const tasks = [...(d.tasks.data ?? [])]
     .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
     .slice(0, 3);
+  const positioned = new Map(
+    preferences.layout.widgets.map((widget, index) => [widget.id, { ...widget, index }]),
+  );
+  function place(id: DashboardWidgetId, child: ReactNode) {
+    const widget = positioned.get(id);
+    if (!widget?.visible) return null;
+    return (
+      <WidgetSlot key={id} size={widget.size} order={widget.index}>
+        {child}
+      </WidgetSlot>
+    );
+  }
 
   return (
     <div className={styles.dashboard}>
       <header className={styles.greeting}>
         <div>
           <p className={styles.eyebrow}>{t("SEU NEGÓCIO, MAIS PERTO.")}</p>
-          <h1>{summary ? t(summary.hero.label) : t("Seu painel operacional")}</h1>
-          <p className={styles.muted}>
-            {summary ? t(summary.hero.hint) : t("Métricas conforme suas permissões.")}
-          </p>
+          <h1>{t("Vamos fazer o dia render?")}</h1>
+          <p className={styles.muted}>{t("Métricas conforme suas permissões.")}</p>
         </div>
-        <Button asChild className={styles.pill} size="lg">
-          <Link href={action.href}>
-            {t(action.label)}
-            <ArrowSquareOut aria-hidden />
-          </Link>
-        </Button>
+        <div className={styles.headerActions}>
+          <Button variant="outline" className={styles.pill} onClick={() => setCustomizing(true)}>
+            <PencilSimple aria-hidden />
+            {t("Personalizar painel")}
+          </Button>
+          <Button asChild className={styles.pill} size="lg">
+            <Link href={action.href}>
+              {t(action.label)}
+              <ArrowSquareOut aria-hidden />
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <AiServiceStatus canConfigure={d.canConfigureAiAccess} />
+      {preferences.isError && (
+        <div role="alert" className={styles.preferenceError}>
+          <span>{t("Não foi possível carregar sua personalização.")}</span>
+          <Button variant="ghost" size="sm" onClick={() => void preferences.refetch()}>
+            {t("Tentar novamente")}
+          </Button>
+        </div>
+      )}
       {d.summary.isLoading && (
         <p role="status" className={styles.muted}>
           {t("Carregando métricas…")}
@@ -174,121 +222,189 @@ export function Dashboard() {
           </Button>
         </div>
       )}
-      {summary && (
-        <section className={styles.summary} aria-label={t("Resumo operacional")}>
-          <article className={styles.heroMetric} aria-label={t(summary.hero.label)}>
-            <div>
-              <p className={styles.eyebrow}>{t(summary.hero.variation || "AGORA")}</p>
-              <h2>{t(summary.hero.label)}</h2>
-              <p className={styles.muted}>{t(summary.hero.hint)}</p>
-            </div>
-            <strong>{summary.hero.value}</strong>
-          </article>
-          <div className={styles.summaryCards}>
-            {summary.cards.map((metric) => (
-              <SummaryCard key={metric.id} metric={metric} />
-            ))}
-          </div>
-        </section>
-      )}
+      <div className={styles.columns}>
+        {summary &&
+          place(
+            "conversation_summary",
+            <section className={styles.summary} aria-label={t("Resumo operacional")}>
+              <article className={styles.heroMetric} aria-label={t(summary.hero.label)}>
+                <div>
+                  <p className={styles.eyebrow}>{t(summary.hero.variation || "AGORA")}</p>
+                  <h2>{t(summary.hero.label)}</h2>
+                  <p className={styles.muted}>{t(summary.hero.hint)}</p>
+                </div>
+                <strong data-testid={`dashboard-value-${summary.hero.id}`}>
+                  {summary.hero.value}
+                </strong>
+              </article>
+              <div className={styles.summaryCards}>
+                {summary.cards.map((metric) => (
+                  <SummaryCard key={metric.id} metric={metric} />
+                ))}
+              </div>
+            </section>,
+          )}
 
-      <div className={styles.detailGrid}>
-        <Panel
-          title={t("Conversas recentes")}
-          action={<Jump href="/app/inbox?filter=all">{t("Ver todas")}</Jump>}
-        >
-          <QueryState
-            loading={d.conversations.isLoading}
-            error={d.conversations.isError}
-            retry={d.conversations.refetch}
-          />
-          {!d.conversations.isLoading &&
-            !d.conversations.isError &&
-            (d.conversations.data?.length ? (
-              <ul className={styles.list}>
-                {d.conversations.data.map((conversation) => {
-                  const name = rotuloDoContato(conversation.contacts, t);
-                  return (
-                    <li key={conversation.id}>
-                      <Link
-                        className={styles.conversation}
-                        href={`/app/inbox?id=${encodeURIComponent(conversation.id)}`}
-                      >
-                        <span className={styles.avatar} aria-hidden>
-                          {[...name].slice(0, 2).join("").toUpperCase()}
-                        </span>
-                        <span className={styles.person}>
-                          <strong>{name}</strong>
-                          <span>
-                            {conversation.last_message_preview || t("Abra para ver a conversa")}
+        {place(
+          "recent_conversations",
+          <Panel
+            title={t("Conversas recentes")}
+            action={<Jump href="/app/inbox?filter=all">{t("Ver todas")}</Jump>}
+          >
+            <QueryState
+              loading={d.conversations.isLoading}
+              error={d.conversations.isError}
+              retry={d.conversations.refetch}
+            />
+            {!d.conversations.isLoading &&
+              !d.conversations.isError &&
+              (d.conversations.data?.length ? (
+                <ul className={styles.list}>
+                  {d.conversations.data.map((conversation) => {
+                    const name = rotuloDoContato(conversation.contacts, t);
+                    return (
+                      <li key={conversation.id}>
+                        <Link
+                          className={styles.conversation}
+                          href={`/app/inbox?id=${encodeURIComponent(conversation.id)}`}
+                        >
+                          <span className={styles.avatar} aria-hidden>
+                            {[...name].slice(0, 2).join("").toUpperCase()}
                           </span>
+                          <span className={styles.person}>
+                            <strong>{name}</strong>
+                            <span>
+                              {conversation.last_message_preview || t("Abra para ver a conversa")}
+                            </span>
+                          </span>
+                          <ArrowRight size={16} aria-hidden />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className={styles.empty}>
+                  <ChatsCircle size={26} aria-hidden />
+                  <p>{t("Nenhuma conversa aberta por aqui.")}</p>
+                  <Jump href="/app/inbox">{t("Ir para conversas")}</Jump>
+                </div>
+              ))}
+          </Panel>,
+        )}
+
+        {place(
+          "upcoming_work",
+          <Panel
+            title={t("Seu próximo passo")}
+            action={<Jump href="/app/tasks">{t("Ver tarefas")}</Jump>}
+          >
+            <QueryState
+              loading={d.tasks.isLoading}
+              error={d.tasks.isError}
+              retry={d.tasks.refetch}
+            />
+            {d.complete.isError && (
+              <p role="alert" className={styles.error}>
+                {t("Não foi possível concluir a tarefa. Tente novamente.")}
+              </p>
+            )}
+            {!d.tasks.isLoading &&
+              !d.tasks.isError &&
+              (tasks.length ? (
+                <ul className={styles.list}>
+                  {tasks.map((task) => (
+                    <li key={task.id} className={styles.task}>
+                      {d.canAct && (
+                        <input
+                          type="checkbox"
+                          checked={false}
+                          disabled={d.complete.isPending}
+                          aria-label={`${t("Concluir")} ${task.title}`}
+                          onChange={() => d.complete.mutate(task.id)}
+                        />
+                      )}
+                      <Link href="/app/tasks">
+                        <strong>{task.title}</strong>
+                        <span>
+                          {task.due_date
+                            ? new Date(task.due_date).toLocaleString(idioma, {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              })
+                            : t("Sem prazo definido")}
                         </span>
-                        <ArrowRight size={16} aria-hidden />
                       </Link>
                     </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <div className={styles.empty}>
-                <ChatsCircle size={26} aria-hidden />
-                <p>{t("Nenhuma conversa aberta por aqui.")}</p>
-                <Jump href="/app/inbox">{t("Ir para conversas")}</Jump>
-              </div>
-            ))}
-        </Panel>
-
-        <Panel
-          title={t("Seu próximo passo")}
-          action={<Jump href="/app/tasks">{t("Ver tarefas")}</Jump>}
-        >
-          <QueryState loading={d.tasks.isLoading} error={d.tasks.isError} retry={d.tasks.refetch} />
-          {d.complete.isError && (
-            <p role="alert" className={styles.error}>
-              {t("Não foi possível concluir a tarefa. Tente novamente.")}
+                  ))}
+                </ul>
+              ) : (
+                <div className={styles.empty}>
+                  <ListChecks size={26} aria-hidden />
+                  <p>{t("Nenhuma tarefa pendente. Combine o próximo passo com sua equipe.")}</p>
+                  <Jump href="/app/tasks">{t("Organizar tarefas")}</Jump>
+                </div>
+              ))}
+          </Panel>,
+        )}
+        {place(
+          "service_queue",
+          <Panel title={t("Fila de atendimento")}>
+            <p className={styles.muted}>{t("Acompanhe a fila no resumo operacional.")}</p>
+            <Jump href="/app/inbox?filter=unassigned">{t("Abrir fila")}</Jump>
+          </Panel>,
+        )}
+        {place(
+          "opportunities_by_stage",
+          <Panel title={t("Oportunidades por etapa")}>
+            <p className={styles.muted}>
+              {t("Consulte os valores do funil no resumo operacional.")}
             </p>
-          )}
-          {!d.tasks.isLoading &&
-            !d.tasks.isError &&
-            (tasks.length ? (
-              <ul className={styles.list}>
-                {tasks.map((task) => (
-                  <li key={task.id} className={styles.task}>
-                    {d.canAct && (
-                      <input
-                        type="checkbox"
-                        checked={false}
-                        disabled={d.complete.isPending}
-                        aria-label={`${t("Concluir")} ${task.title}`}
-                        onChange={() => d.complete.mutate(task.id)}
-                      />
-                    )}
-                    <Link href="/app/tasks">
-                      <strong>{task.title}</strong>
-                      <span>
-                        {task.due_date
-                          ? new Date(task.due_date).toLocaleString(idioma, {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : t("Sem prazo definido")}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className={styles.empty}>
-                <ListChecks size={26} aria-hidden />
-                <p>{t("Nenhuma tarefa pendente. Combine o próximo passo com sua equipe.")}</p>
-                <Jump href="/app/tasks">{t("Organizar tarefas")}</Jump>
-              </div>
-            ))}
-        </Panel>
+            <Jump href="/app/kanban">{t("Ver funis")}</Jump>
+          </Panel>,
+        )}
+        {place(
+          "period_conversion",
+          <Panel title={t("Conversão do período")}>
+            <p className={styles.muted}>
+              {t("Consulte os indicadores do período no relatório completo.")}
+            </p>
+            <Jump href="/app/metrics">{t("Abrir relatório completo")}</Jump>
+          </Panel>,
+        )}
+        {place(
+          "active_agents",
+          <Panel title={t("Agentes ativos")}>
+            <p className={styles.muted}>
+              {t("Acompanhe os agentes configurados para a organização.")}
+            </p>
+            <Jump href="/app/ai/agents">{t("Ver agentes")}</Jump>
+          </Panel>,
+        )}
+        {place(
+          "at_risk_clients",
+          <Panel title={t("Clientes que precisam de atenção")}>
+            <p className={styles.muted}>
+              {t("Consulte conversas sem resposta e oportunidades que podem esfriar.")}
+            </p>
+            <Jump href="/app/radar">{t("Consultar radar")}</Jump>
+          </Panel>,
+        )}
       </div>
       <footer className={styles.footer}>
         {t("Informações conforme suas permissões. Atualização automática a cada 30 segundos.")}
       </footer>
+      {customizing && (
+        <DashboardCustomizer
+          open
+          onOpenChange={setCustomizing}
+          layout={preferences.layout}
+          saving={preferences.save.isPending}
+          resetting={preferences.reset.isPending}
+          onSave={(layout) => preferences.save.mutateAsync(layout)}
+          onReset={() => preferences.reset.mutateAsync()}
+        />
+      )}
     </div>
   );
 }

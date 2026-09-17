@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -13,8 +13,12 @@ const auth = {
 vi.mock("@/hooks/auth/AuthProvider", () => ({ useAuth: () => auth }));
 
 let failSummary = false;
+let failPreferences = false;
+let failPreferenceSave = false;
 let taskDone = false;
 let requests: string[] = [];
+let savedPreferenceBody: unknown = null;
+let summarySurface: "agent" | "manager" | "admin" = "manager";
 const task = {
   id: "task-1",
   organization_id: "org-1",
@@ -33,8 +37,12 @@ const task = {
 
 beforeEach(() => {
   failSummary = false;
+  failPreferences = false;
+  failPreferenceSave = false;
   taskDone = false;
   requests = [];
+  savedPreferenceBody = null;
+  summarySurface = "manager";
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string, init?: RequestInit) => {
@@ -47,7 +55,7 @@ beforeEach(() => {
           });
         return Response.json({
           data: {
-            role_surface: "manager",
+            role_surface: summarySurface,
             hero: {
               id: "pipeline",
               label: "Pipeline aberto",
@@ -93,6 +101,18 @@ beforeEach(() => {
         taskDone = true;
         return Response.json({ data: { task: { ...task, status: "done" } } });
       }
+      if (url.includes("/dashboard/preferences")) {
+        if (failPreferences && (init?.method ?? "GET") === "GET")
+          return new Response(JSON.stringify({ error: { code: "internal_error" } }), {
+            status: 500,
+          });
+        if (failPreferenceSave && init?.method === "PUT")
+          return new Response(JSON.stringify({ error: { code: "internal_error" } }), {
+            status: 500,
+          });
+        if (init?.method === "PUT") savedPreferenceBody = JSON.parse(String(init.body));
+        return Response.json({ data: { layout: null, source: "default" } });
+      }
       if (url.includes("/tasks")) return Response.json({ data: { tasks: taskDone ? [] : [task] } });
       throw new Error(`Requisição inesperada no teste: ${url}`);
     }),
@@ -120,17 +140,86 @@ describe("Dashboard operacional", () => {
   it("renderiza somente as sentinelas da API, sem métricas de demonstração", async () => {
     mount();
 
-    expect(await screen.findByText("731")).toBeVisible();
-    expect(screen.getByText("R$ 12.345")).toBeVisible();
-    expect(screen.getByText("4m 17s")).toBeVisible();
-    expect(screen.queryByText("R$ 8.940")).not.toBeInTheDocument();
-    expect(screen.queryByText("94%")).not.toBeInTheDocument();
-    expect(screen.queryByText("68%")).not.toBeInTheDocument();
-    expect(screen.queryByText("128.400")).not.toBeInTheDocument();
+    const summary = await screen.findByRole("region", { name: "Resumo operacional" });
+    const renderedValues = Array.from(
+      summary.querySelectorAll<HTMLElement>("[data-testid^='dashboard-value-']"),
+      (element) => element.textContent,
+    );
+    expect(renderedValues).toEqual(["731", "R$ 12.345", "4m 17s"]);
+    expect(renderedValues).not.toContain("0");
+    expect(renderedValues).not.toContain("R$ 8.941");
     expect(await screen.findByRole("link", { name: /Contato teste/ })).toHaveAttribute(
       "href",
       "/app/inbox?id=conv-1",
     );
+  });
+
+  it.each([
+    ["agent", "/app/inbox"],
+    ["manager", "/app/kanban"],
+    ["admin", "/app/connections"],
+  ] as const)("usa CTA %s retornado pelo servidor", async (surface, href) => {
+    summarySurface = surface;
+    mount();
+    await screen.findByRole("region", { name: "Resumo operacional" });
+    expect(
+      screen.getByRole("link", { name: /Abrir conversas|Abrir funis|Ver conexões/ }),
+    ).toHaveAttribute("href", href);
+  });
+
+  it("restaura o editor, redimensiona e salva a preferência do painel", async () => {
+    mount();
+    await screen.findByRole("region", { name: "Resumo operacional" });
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    expect(within(dialog).getByTestId("dashboard-editor-service_queue")).toBeVisible();
+    fireEvent.change(
+      within(dialog).getByRole("slider", { name: "Redimensionar Fila de atendimento" }),
+      { target: { value: "0" } },
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Salvar painel" }));
+    await waitFor(() => expect(savedPreferenceBody).not.toBeNull());
+    expect(
+      (savedPreferenceBody as { widgets: Array<{ id: string; size: string }> }).widgets.find(
+        (widget) => widget.id === "service_queue",
+      )?.size,
+    ).toBe("medium");
+  });
+
+  it("reordena blocos por arrastar antes de salvar", async () => {
+    mount();
+    await screen.findByRole("region", { name: "Resumo operacional" });
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    const source = within(dialog).getByTestId("dashboard-editor-recent_conversations");
+    const target = within(dialog).getByTestId("dashboard-editor-service_queue");
+    fireEvent.dragStart(source);
+    fireEvent.dragOver(target);
+    fireEvent.drop(target);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Salvar painel" }));
+    await waitFor(() => expect(savedPreferenceBody).not.toBeNull());
+    const ids = (savedPreferenceBody as { widgets: Array<{ id: string }> }).widgets.map(
+      (widget) => widget.id,
+    );
+    expect(ids.indexOf("recent_conversations")).toBeLessThan(ids.indexOf("service_queue"));
+  });
+
+  it("mantém o padrão visível e informa quando a preferência não carrega", async () => {
+    failPreferences = true;
+    mount();
+    expect(await screen.findByRole("region", { name: "Resumo operacional" })).toBeVisible();
+    expect(screen.getByText("Não foi possível carregar sua personalização.")).toBeVisible();
+  });
+
+  it("mantém o editor aberto quando salvar a personalização falha", async () => {
+    failPreferenceSave = true;
+    mount();
+    await screen.findByRole("region", { name: "Resumo operacional" });
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Salvar painel" }));
+    expect(await within(dialog).findByText("Não foi possível salvar o painel.")).toBeVisible();
+    expect(dialog).toBeVisible();
   });
 
   it("não transforma falha do resumo em zero e permite tentar de novo", async () => {

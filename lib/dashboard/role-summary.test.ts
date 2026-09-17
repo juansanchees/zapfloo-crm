@@ -10,10 +10,12 @@ const sources: DashboardSources = {
     conversations_handled: 12,
     attendant_count: 3,
   },
-  pipeline: {
-    open_value_by_currency: { BRL: 1234500 },
-    won_value_by_currency: { BRL: 456700 },
-    won_count_by_currency: { BRL: 4 },
+  pipeline_open: {
+    value_by_currency: { BRL: 1234500 },
+  },
+  won_revenue: {
+    value_by_currency: { BRL: 456700 },
+    count_by_currency: { BRL: 4 },
   },
   channels: { online: 2, total: 3 },
   seats: { active: 4, limit: 8 },
@@ -66,13 +68,30 @@ describe("buildRoleSummary", () => {
   it("não soma valores de moedas diferentes", () => {
     const summary = buildRoleSummary("manager", {
       ...sources,
-      pipeline: {
-        ...sources.pipeline!,
-        open_value_by_currency: { BRL: 1234500, USD: 50000 },
+      pipeline_open: {
+        value_by_currency: { BRL: 1234500, USD: 50000 },
       },
     });
 
     expect(summary.cards.map((card) => card.id)).not.toContain("pipeline_value");
     expect(summary.omitted).toContainEqual({ id: "pipeline_value", reason: "multiple_currencies" });
+  });
+
+  it("não chama bucket vazio de múltiplas moedas", () => {
+    const summary = buildRoleSummary("manager", {
+      ...sources,
+      pipeline_open: { value_by_currency: {} },
+    });
+
+    expect(summary.omitted).toContainEqual({ id: "pipeline_value", reason: "source_unavailable" });
+    expect(summary.omitted).not.toContainEqual({
+      id: "pipeline_value",
+      reason: "multiple_currencies",
+    });
+  });
+
+  it("formata valores em espanhol quando a fonte declara o idioma", () => {
+    const summary = buildRoleSummary("manager", { ...sources, locale: "es" });
+    expect(summary.cards.find((card) => card.id === "pipeline_value")?.value).toBe("12.345 BRL");
   });
 });

@@ -51,10 +51,13 @@ export interface DashboardSources {
     conversations_handled: number;
     attendant_count: number;
   };
-  pipeline?: {
-    open_value_by_currency: Record<string, number>;
-    won_value_by_currency: Record<string, number>;
-    won_count_by_currency: Record<string, number>;
+  locale?: string;
+  pipeline_open?: {
+    value_by_currency: Record<string, number>;
+  };
+  won_revenue?: {
+    value_by_currency: Record<string, number>;
+    count_by_currency: Record<string, number>;
   };
   channels?: { online: number; total: number };
   seats?: { active: number; limit: number | null };
@@ -87,8 +90,8 @@ function formatDuration(seconds: number): string {
   return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
 }
 
-function formatCurrency(currency: string, cents: number): string {
-  return new Intl.NumberFormat("pt-BR", {
+function formatCurrency(locale: string | undefined, currency: string, cents: number): string {
+  return new Intl.NumberFormat(locale === "es" ? "es-ES" : "pt-BR", {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -98,11 +101,12 @@ function formatCurrency(currency: string, cents: number): string {
 
 function singleCurrency(
   values: Record<string, number>,
-): { currency: string; value: number } | null {
+): { currency: string; value: number } | "empty" | "multiple" {
   const entries = Object.entries(values);
-  if (entries.length !== 1) return null;
+  if (entries.length === 0) return "empty";
+  if (entries.length > 1) return "multiple";
   const [currency, value] = entries[0] ?? [];
-  return typeof currency === "string" && typeof value === "number" ? { currency, value } : null;
+  return typeof currency === "string" && typeof value === "number" ? { currency, value } : "empty";
 }
 
 function pushFirstResponse(
@@ -182,77 +186,80 @@ function buildAgentSummary(sources: DashboardSources): DashboardSummary {
 function buildManagerSummary(sources: DashboardSources): DashboardSummary {
   const omitted: DashboardOmission[] = [];
   const cards: DashboardCard[] = [];
-  const open = sources.pipeline && singleCurrency(sources.pipeline.open_value_by_currency);
-  const won = sources.pipeline && singleCurrency(sources.pipeline.won_value_by_currency);
-  const wonCount = sources.pipeline && singleCurrency(sources.pipeline.won_count_by_currency);
-  const hero = open
+  const open = sources.pipeline_open && singleCurrency(sources.pipeline_open.value_by_currency);
+  const won = sources.won_revenue && singleCurrency(sources.won_revenue.value_by_currency);
+  const wonCount = sources.won_revenue && singleCurrency(sources.won_revenue.count_by_currency);
+  const hasOpen = typeof open === "object";
+  const hasWon = typeof won === "object";
+  const hasWonCount = typeof wonCount === "object";
+  const hero = hasOpen
     ? card(
         "pipeline",
         "Pipeline aberto",
-        formatCurrency(open.currency, open.value),
+        formatCurrency(sources.locale, open.currency, open.value),
         "Agora",
         "Valor das oportunidades abertas.",
         "trend",
       )
     : unavailableHero("manager");
 
-  if (!sources.pipeline) {
-    omitted.push(
-      { id: "pipeline_value", reason: "source_unavailable" },
-      { id: "won_revenue", reason: "source_unavailable" },
-      { id: "average_ticket", reason: "source_unavailable" },
+  if (hasOpen) {
+    cards.push(
+      card(
+        "pipeline_value",
+        "Pipeline aberto",
+        formatCurrency(sources.locale, open.currency, open.value),
+        "Agora",
+        "Valor das oportunidades abertas.",
+        "trend",
+      ),
     );
   } else {
-    if (open) {
-      cards.push(
-        card(
-          "pipeline_value",
-          "Pipeline aberto",
-          formatCurrency(open.currency, open.value),
-          "Agora",
-          "Valor das oportunidades abertas.",
-          "trend",
-        ),
-      );
-    } else {
-      omitted.push({ id: "pipeline_value", reason: "multiple_currencies" });
-    }
+    omitted.push({
+      id: "pipeline_value",
+      reason: open === "multiple" ? "multiple_currencies" : "source_unavailable",
+    });
+  }
 
-    if (won) {
-      cards.push(
-        card(
-          "won_revenue",
-          "Receita ganha",
-          formatCurrency(won.currency, won.value),
-          "Mês atual",
-          "Negócios ganhos fechados neste mês.",
-          "money",
-        ),
-      );
-    } else {
-      omitted.push({ id: "won_revenue", reason: "multiple_currencies" });
-    }
+  if (hasWon) {
+    cards.push(
+      card(
+        "won_revenue",
+        "Receita ganha",
+        formatCurrency(sources.locale, won.currency, won.value),
+        "Mês atual",
+        "Negócios ganhos fechados neste mês.",
+        "money",
+      ),
+    );
+  } else {
+    omitted.push({
+      id: "won_revenue",
+      reason: won === "multiple" ? "multiple_currencies" : "source_unavailable",
+    });
+  }
 
-    if (won && wonCount && won.currency === wonCount.currency && wonCount.value > 0) {
-      cards.push(
-        card(
-          "average_ticket",
-          "Ticket médio",
-          formatCurrency(won.currency, Math.round(won.value / wonCount.value)),
-          "Mês atual",
-          "Receita ganha dividida pelos negócios ganhos.",
-          "receipt",
-        ),
-      );
-    } else {
-      omitted.push({
-        id: "average_ticket",
-        reason:
-          won && wonCount && won.currency !== wonCount.currency
-            ? "multiple_currencies"
-            : "source_unavailable",
-      });
-    }
+  if (hasWon && hasWonCount && won.currency === wonCount.currency && wonCount.value > 0) {
+    cards.push(
+      card(
+        "average_ticket",
+        "Ticket médio",
+        formatCurrency(sources.locale, won.currency, Math.round(won.value / wonCount.value)),
+        "Mês atual",
+        "Receita ganha dividida pelos negócios ganhos.",
+        "receipt",
+      ),
+    );
+  } else {
+    omitted.push({
+      id: "average_ticket",
+      reason:
+        won === "multiple" ||
+        wonCount === "multiple" ||
+        (hasWon && hasWonCount && won.currency !== wonCount.currency)
+          ? "multiple_currencies"
+          : "source_unavailable",
+    });
   }
 
   pushFirstResponse(
@@ -268,7 +275,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
         "Conversas por atendente",
         (sources.attendants.conversations_handled / sources.attendants.attendant_count).toFixed(1),
         "No período",
-        "Média de conversas atribuídas por atendente.",
+        "Média entre atendentes que receberam conversas no período.",
         "users",
       ),
     );

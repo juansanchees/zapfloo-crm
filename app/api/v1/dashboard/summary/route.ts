@@ -10,7 +10,13 @@ import { randomUUID } from "node:crypto";
 import { ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { roleAtLeast } from "@/lib/auth/types";
-import { PLANOS, type PlanoId } from "@/lib/billing/planos";
+import {
+  PLANO_PADRAO_DE_ORGANIZACAO_EXISTENTE,
+  limiteDoPlano,
+  resolverAcessoDaAssinatura,
+  type PlanoId,
+  type SituacaoDaAssinatura,
+} from "@/lib/billing/planos";
 import {
   buildRoleSummary,
   type DashboardSources,
@@ -83,11 +89,14 @@ async function readConversationCounts(
       .not("status", "in", `(${CONVERSATION_TERMINAL_STATUSES.join(",")})`),
   ]);
   const results = [fila, mine] as unknown as CountResult[];
-  if (results.some((result) => result.error)) return undefined;
+  if (results.some((result) => result.error || result.count === null)) return undefined;
+  const queueCount = results[0]?.count;
+  const mineCount = results[1]?.count;
+  if (typeof queueCount !== "number" || typeof mineCount !== "number") return undefined;
   return {
-    fila: results[0]?.count ?? 0,
-    unassigned: results[0]?.count ?? 0,
-    mine: results[1]?.count ?? 0,
+    fila: queueCount,
+    unassigned: queueCount,
+    mine: mineCount,
   };
 }
 
@@ -102,7 +111,7 @@ async function readOverdueTasks(
     .eq("organization_id", organizationId)
     .in("status", ["pending", "in_progress"])
     .lt("due_date", now)) as unknown as CountResult;
-  return result.error ? undefined : { overdue: result.count ?? 0 };
+  return result.error || result.count === null ? undefined : { overdue: result.count };
 }
 
 async function readAttendants(
@@ -132,7 +141,7 @@ async function readAttendants(
         ? responseTimes.reduce((sum, value) => sum + value, 0) / responseTimes.length
         : null,
     conversations_handled: rows.reduce((sum, row) => sum + row.conversations_handled, 0),
-    attendant_count: attendantCount ?? rows.length,
+    attendant_count: attendantCount ?? rows.filter((row) => row.conversations_handled > 0).length,
   };
 }
 
@@ -140,8 +149,8 @@ async function readManagerSources(
   supabase: Awaited<ReturnType<typeof createClient>>,
   organizationId: string,
   interval: ReturnType<typeof monthInterval>,
-): Promise<Pick<DashboardSources, "pipeline" | "attendants">> {
-  const [openResult, wonResult, membersResult, attendants] = await Promise.all([
+): Promise<Pick<DashboardSources, "pipeline_open" | "won_revenue" | "attendants">> {
+  const [openResult, wonResult, attendants] = await Promise.all([
     supabase
       .from("crm_leads")
       .select("value_cents,currency")
@@ -154,18 +163,11 @@ async function readManagerSources(
       .eq("status", "won")
       .gte("closed_at", interval.start)
       .lt("closed_at", interval.end),
-    supabase
-      .from("user_organizations")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .is("revoked_at", null)
-      .not("accepted_at", "is", null),
     readAttendants(supabase, organizationId, interval, null),
   ]);
 
   const open = openResult as unknown as RowsResult<LeadValueRow>;
   const won = wonResult as unknown as RowsResult<LeadValueRow>;
-  const members = membersResult as unknown as CountResult;
   const openValues = open.error ? undefined : bucketValues(open.data ?? []);
   const wonValues = won.error ? undefined : bucketValues(won.data ?? []);
   const wonCount = wonValues
@@ -177,17 +179,12 @@ async function readManagerSources(
     }
   }
   return {
-    pipeline:
-      openValues && wonValues && wonCount
-        ? {
-            open_value_by_currency: openValues,
-            won_value_by_currency: wonValues,
-            won_count_by_currency: wonCount,
-          }
+    pipeline_open: openValues ? { value_by_currency: openValues } : undefined,
+    won_revenue:
+      wonValues && wonCount
+        ? { value_by_currency: wonValues, count_by_currency: wonCount }
         : undefined,
-    attendants: attendants
-      ? { ...attendants, attendant_count: members.error ? 0 : (members.count ?? 0) }
-      : undefined,
+    attendants,
   };
 }
 
@@ -196,52 +193,74 @@ async function readAdminSources(
   organizationId: string,
   interval: ReturnType<typeof monthInterval>,
 ): Promise<Pick<DashboardSources, "channels" | "seats" | "attendants">> {
-  const [channelsResult, membersResult, subscriptionResult, attendants] = await Promise.all([
-    supabase
-      .from("channel_sessions")
-      .select("status")
-      .eq("organization_id", organizationId)
-      .is("archived_at", null),
-    supabase
-      .from("user_organizations")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .is("revoked_at", null)
-      .not("accepted_at", "is", null),
-    supabase
-      .from("organization_subscriptions")
-      .select("plan_id")
-      .eq("organization_id", organizationId)
-      .maybeSingle(),
-    readAttendants(supabase, organizationId, interval, null),
-  ]);
+  const [channelsResult, membersResult, subscriptionResult, organizationResult, attendants] =
+    await Promise.all([
+      supabase
+        .from("channel_sessions")
+        .select("status")
+        .eq("organization_id", organizationId)
+        .is("archived_at", null),
+      supabase
+        .from("user_organizations")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
+        .is("revoked_at", null)
+        .not("accepted_at", "is", null),
+      supabase
+        .from("organization_subscriptions")
+        .select("plan_id,status")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
+      supabase.from("organizations").select("created_at").eq("id", organizationId).maybeSingle(),
+      readAttendants(supabase, organizationId, interval, null),
+    ]);
   const channels = channelsResult as unknown as RowsResult<{ status: string }>;
   const members = membersResult as unknown as CountResult;
   const subscription = subscriptionResult as unknown as {
-    data: { plan_id: string } | null;
+    data: { plan_id: string; status: string } | null;
     error: QueryError;
   };
-  const planId = subscription.data?.plan_id as PlanoId | undefined;
-  const seatLimit = planId && planId in PLANOS ? PLANOS[planId].limites.usuarios : null;
+  const organization = organizationResult as unknown as {
+    data: { created_at: string } | null;
+    error: QueryError;
+  };
+  const assinatura = subscription.data;
+  const planId = (assinatura?.plan_id ?? PLANO_PADRAO_DE_ORGANIZACAO_EXISTENTE) as PlanoId;
+  const status = (assinatura?.status ?? "ativo") as SituacaoDaAssinatura;
+  const seatLimit =
+    subscription.error ||
+    organization.error ||
+    !organization.data ||
+    !(planId in { basico: true, essencial: true, completo: true })
+      ? null
+      : limiteDoPlano(
+          resolverAcessoDaAssinatura({
+            plano: planId,
+            situacao: status,
+            organizacaoCriadaEm: organization.data.created_at,
+          }),
+          "usuarios",
+        );
 
   return {
-    channels: channels.error
-      ? undefined
-      : {
-          online: (channels.data ?? []).filter((channel) => channel.status === "WORKING").length,
-          total: (channels.data ?? []).length,
-        },
-    seats:
-      members.error || subscription.error || seatLimit === null
+    channels:
+      channels.error || channels.data === null
         ? undefined
-        : { active: members.count ?? 0, limit: seatLimit },
+        : {
+            online: (channels.data ?? []).filter((channel) => channel.status === "WORKING").length,
+            total: (channels.data ?? []).length,
+          },
+    seats:
+      members.error || members.count === null || seatLimit === null
+        ? undefined
+        : { active: members.count, limit: seatLimit },
     attendants,
   };
 }
 
 export async function GET(): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("viewer", { requestId, resource: "dashboard_summary" });
+  const authz = await requireRole("agent", { requestId, resource: "dashboard_summary" });
   if (!authz.ok) return authz.response;
 
   const surface = surfaceFor(authz.org.role, authz.user.is_platform_admin);
@@ -256,11 +275,17 @@ export async function GET(): Promise<Response> {
       readOverdueTasks(supabase, authz.org.orgId, now.toISOString()),
       readAttendants(supabase, authz.org.orgId, interval, authz.user.id),
     ]);
-    sources = { conversation_counts, open_tasks, attendants };
+    sources = { conversation_counts, open_tasks, attendants, locale: authz.user.idioma };
   } else if (surface === "manager") {
-    sources = await readManagerSources(supabase, authz.org.orgId, interval);
+    sources = {
+      ...(await readManagerSources(supabase, authz.org.orgId, interval)),
+      locale: authz.user.idioma,
+    };
   } else {
-    sources = await readAdminSources(supabase, authz.org.orgId, interval);
+    sources = {
+      ...(await readAdminSources(supabase, authz.org.orgId, interval)),
+      locale: authz.user.idioma,
+    };
   }
 
   const summary = buildRoleSummary(surface, sources);
