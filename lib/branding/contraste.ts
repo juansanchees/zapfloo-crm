@@ -175,6 +175,17 @@ export type Tema = "claro" | "escuro";
 /** De onde uma cor vem. `grau` é o que o deslocamento do accent move. */
 export type Fonte =
   | { readonly tipo: "grau"; readonly indice: number; readonly alfa: number }
+  | {
+      /**
+       * Pino visual do produto entre dois stops. No produto o literal é medido
+       * exatamente; numa marca derivada ele acompanha o stop perceptualmente
+       * mais próximo, sem carregar a identidade cromática do Zapfloo.
+       */
+      readonly tipo: "pino";
+      readonly hex: string;
+      readonly indice: number;
+      readonly alfa: number;
+    }
   | { readonly tipo: "literal"; readonly hex: string; readonly alfa: number }
   | { readonly tipo: "frenteCalculada"; readonly sobre: Fonte };
 
@@ -315,18 +326,19 @@ export function extrairRegua(css: string): Regua {
   const regras = varrerRegras(css);
   const raiz = regras.find((r) => r.seletor === ":root");
   const escuro = regras.find(
-    (r) => r.seletor.includes('[data-theme="dark"]') && r.decls.some((d) => d.prop === "--color-bg"),
+    (r) =>
+      r.seletor.includes('[data-theme="dark"]') && r.decls.some((d) => d.prop === "--color-bg"),
   );
   if (!raiz || !escuro) {
-    throw new Error("régua: não achei os blocos :root e [data-theme=\"dark\"] no CSS");
+    throw new Error('régua: não achei os blocos :root e [data-theme="dark"] no CSS');
   }
 
   const rampaDoProduto = lerRampa(raiz.decls);
 
   return {
     rampaDoProduto,
-    claro: montarTema("claro", raiz.decls, regras, false),
-    escuro: montarTema("escuro", escuro.decls, regras, true),
+    claro: montarTema("claro", raiz.decls, regras, false, rampaDoProduto),
+    escuro: montarTema("escuro", escuro.decls, regras, true, rampaDoProduto),
   };
 }
 
@@ -350,11 +362,30 @@ function lerNeutros(decls: readonly Declaracao[]): Rampa {
   return stops as unknown as Rampa;
 }
 
+/**
+ * Ancora um pino literal na rampa sem decisão visual manual. ΔE em OKLab mede
+ * a distância perceptual; `<` (e não `<=`) faz um empate conservar o menor
+ * índice, portanto o resultado também é determinístico no caso-limite.
+ */
+function indiceDoStopMaisProximo(hex: string, rampa: Rampa): number {
+  let escolhido = 0;
+  let menorDistancia = Number.POSITIVE_INFINITY;
+  for (let indice = 0; indice < rampa.length; indice += 1) {
+    const distancia = deltaEOklab(hex, stop(rampa, indice));
+    if (distancia < menorDistancia) {
+      escolhido = indice;
+      menorDistancia = distancia;
+    }
+  }
+  return escolhido;
+}
+
 function montarTema(
   nome: Tema,
   decls: readonly Declaracao[],
   regras: readonly RegraCss[],
   ehEscuro: boolean,
+  rampaDoProduto: Rampa,
 ): TemaDaRegua {
   const base = CHAVES_DE_BASE.map((chave) => {
     const f = lerFonte(decls.find((d) => d.prop === chave)?.valor ?? "");
@@ -364,11 +395,22 @@ function montarTema(
 
   const tingidas: { chave: string; fonte: Fonte }[] = [];
   const papeis: Papel[] = [];
+  const fonteDoToken = (prop: string): Fonte | null => {
+    const fonte = lerFonte(decls.find((d) => d.prop === prop)?.valor ?? "");
+    const ehPinoDoAccent = prop === "--color-accent" || prop === "--color-accent-soft";
+    if (!ehPinoDoAccent || fonte?.tipo !== "literal") return fonte;
+    return {
+      tipo: "pino",
+      hex: fonte.hex,
+      indice: indiceDoStopMaisProximo(fonte.hex, rampaDoProduto),
+      alfa: fonte.alfa,
+    };
+  };
 
   for (const d of decls) {
     if (!d.prop.startsWith("--")) continue;
     if (/^--color-(accent|neutral)-\d/.test(d.prop)) continue; // a rampa e os neutros, não papéis
-    const fonte = lerFonte(d.valor);
+    const fonte = fonteDoToken(d.prop);
     if (!fonte) continue;
 
     if (d.prop.endsWith("-soft")) {
@@ -377,10 +419,10 @@ function montarTema(
     }
     if (d.prop.endsWith("-fg")) {
       const baseToken = d.prop.slice(0, -"-fg".length);
-      const alvo = lerFonte(decls.find((x) => x.prop === baseToken)?.valor ?? "");
+      const alvo = fonteDoToken(baseToken);
       // Só o `-fg` de um token derivado da rampa interessa: `--color-success-fg` é cor
       // nossa medida contra fundo nosso, e a marca do cliente não o move.
-      if (alvo?.tipo === "grau") {
+      if (alvo?.tipo === "grau" || alvo?.tipo === "pino") {
         papeis.push({
           token: d.prop,
           tipo: "texto",
@@ -390,7 +432,7 @@ function montarTema(
       }
       continue;
     }
-    if (fonte.tipo === "grau") {
+    if (fonte.tipo === "grau" || (d.prop === "--color-accent" && fonte.tipo === "pino")) {
       papeis.push({ token: d.prop, tipo: "componente", fonte, contra: null });
     }
   }
@@ -428,10 +470,10 @@ function montarTema(
     }
   }
 
-  const accent = lerFonte(decls.find((d) => d.prop === "--color-accent")?.valor ?? "");
+  const accent = fonteDoToken("--color-accent");
   const hover = lerFonte(decls.find((d) => d.prop === "--color-accent-hover")?.valor ?? "");
   const soft = tingidas.find((t) => t.chave === "--color-accent-soft")?.fonte;
-  if (accent?.tipo !== "grau" || hover?.tipo !== "grau" || !soft) {
+  if ((accent?.tipo !== "grau" && accent?.tipo !== "pino") || hover?.tipo !== "grau" || !soft) {
     throw new Error(`régua: tokens de papel do accent ausentes em ${nome}`);
   }
 
@@ -449,10 +491,9 @@ function montarTema(
     indices: {
       accent: accent.indice,
       hover: hover.indice,
-      // `--color-accent-soft` no escuro é `rgba(130,160,119,0.16)` — verde Sage CRU, que
-      // sobreviveria intacto a qualquer override da rampa. Sem índice, ele é reancorado
-      // no stop do accent (ver `resolverSoft`); é a única forma de ele acompanhar a marca.
-      soft: soft.tipo === "grau" ? soft.indice : null,
+      // Um soft literal do produto é um `pino`: fica exato na marca do produto e usa
+      // este índice como âncora quando a rampa pertence a uma marca white-label.
+      soft: soft.tipo === "grau" || soft.tipo === "pino" ? soft.indice : null,
     },
     // `frenteCalculada` só é construída para token `-fg`, nunca para `-soft`; o ramo
     // existe para o compilador, e 1 (opaco) é o default seguro se alguém mudar isso.
@@ -462,12 +503,21 @@ function montarTema(
 
 // ── Resolução de fontes sob um deslocamento ─────────────────────────────────
 
-function resolverFonte(fonte: Fonte, rampa: Rampa, deslocamento: number): { hex: string; alfa: number } {
+function resolverFonte(
+  fonte: Fonte,
+  rampa: Rampa,
+  deslocamento: number,
+  usarPinoLiteral: boolean,
+): { hex: string; alfa: number } {
   if (fonte.tipo === "grau") {
     return { hex: stop(rampa, fonte.indice + deslocamento), alfa: fonte.alfa };
   }
+  if (fonte.tipo === "pino") {
+    if (usarPinoLiteral && deslocamento === 0) return { hex: fonte.hex, alfa: fonte.alfa };
+    return { hex: stop(rampa, fonte.indice + deslocamento), alfa: fonte.alfa };
+  }
   if (fonte.tipo === "literal") return { hex: fonte.hex, alfa: fonte.alfa };
-  const sobre = resolverFonte(fonte.sobre, rampa, deslocamento);
+  const sobre = resolverFonte(fonte.sobre, rampa, deslocamento, usarPinoLiteral);
   return { hex: melhorFrenteSobre(sobre.hex), alfa: 1 };
 }
 
@@ -481,17 +531,21 @@ export function superficiesDoTema(
   tema: TemaDaRegua,
   rampa: Rampa,
   deslocamento: number,
+  usarPinoLiteral = true,
 ): { chave: string; hex: string }[] {
   const saida = tema.base.map((b) => ({ ...b }));
   for (const t of tema.tingidas) {
-    const { hex, alfa } = resolverFonte(t.fonte, rampa, deslocamento);
-    // Fonte literal numa tingida = o token não referencia a rampa (o caso do escuro).
-    // Reancoramos no stop que o tema pinta como accent: é o que faz a marca do cliente
-    // chegar ao chip em vez de o verde do produto ficar lá para sempre.
+    const { hex, alfa } = resolverFonte(t.fonte, rampa, deslocamento, usarPinoLiteral);
+    // Literal sem âncora continua degradando para o stop do accent; um pino já carrega
+    // a própria âncora e `resolverFonte` decide entre o pixel do produto e a marca.
     const tinta =
-      t.fonte.tipo === "grau" ? hex : stop(rampa, tema.indices.accent + deslocamento);
+      t.fonte.tipo === "grau" || t.fonte.tipo === "pino"
+        ? hex
+        : stop(rampa, tema.indices.accent + deslocamento);
     if (alfa >= 1) saida.push({ chave: t.chave, hex: tinta });
-    else for (const b of tema.base) saida.push({ chave: `${t.chave}@${b.chave}`, hex: compor(tinta, alfa, b.hex) });
+    else
+      for (const b of tema.base)
+        saida.push({ chave: `${t.chave}@${b.chave}`, hex: compor(tinta, alfa, b.hex) });
   }
   return saida;
 }
@@ -510,16 +564,17 @@ export function medirPares(
   tema: TemaDaRegua,
   rampa: Rampa,
   deslocamento: number,
+  usarPinoLiteral = true,
 ): ParMedido[] {
-  const superficies = superficiesDoTema(tema, rampa, deslocamento);
+  const superficies = superficiesDoTema(tema, rampa, deslocamento, usarPinoLiteral);
   const pares: ParMedido[] = [];
   for (const papel of tema.papeis) {
-    const frente = resolverFonte(papel.fonte, rampa, deslocamento);
+    const frente = resolverFonte(papel.fonte, rampa, deslocamento, usarPinoLiteral);
     const alvos =
       papel.contra === null
         ? superficies
         : papel.contra.map((f) => {
-            const r = resolverFonte(f, rampa, deslocamento);
+            const r = resolverFonte(f, rampa, deslocamento, usarPinoLiteral);
             return { chave: papel.token, hex: r.hex };
           });
     for (const alvo of alvos) {
@@ -570,6 +625,7 @@ export function escolherAccent(
   rampa: Rampa,
   tema: TemaDaRegua,
   alcance = 10,
+  usarPinoLiteral = false,
 ): EscolhaDeAccent {
   const sentidoUtil = tema.nome === "claro" ? 1 : -1;
   const candidatos: number[] = [0];
@@ -577,7 +633,7 @@ export function escolherAccent(
 
   let melhor: { d: number; pares: ParMedido[]; reprovas: ParMedido[]; folga: number } | null = null;
   for (const d of candidatos) {
-    const pares = medirPares(tema, rampa, d);
+    const pares = medirPares(tema, rampa, d, usarPinoLiteral);
     const reprovas = pares.filter((p) => !p.passa);
     if (reprovas.length === 0) {
       return {
@@ -673,7 +729,11 @@ export function reconciliarSemanticas(
       });
 
     let achou: { cor: string; rotacao: number; separacao: number } | null = null;
-    for (let passo = PASSO_DE_ROTACAO; passo <= ROTACAO_MAXIMA && !achou; passo += PASSO_DE_ROTACAO) {
+    for (
+      let passo = PASSO_DE_ROTACAO;
+      passo <= ROTACAO_MAXIMA && !achou;
+      passo += PASSO_DE_ROTACAO
+    ) {
       for (const sinal of [1, -1] as const) {
         const candidata = girar(hex, sinal * passo);
         const separacao = deltaESimulado(candidata, accent);
@@ -754,17 +814,35 @@ export type Marca = {
  * escuro usa de propósito (o chip precisa deixar a superfície aparecer); uniformizar
  * para `rgba()` mudaria o pixel do tema claro sem motivo.
  */
-function cssDoSoft(tema: TemaDaRegua, rampa: Rampa, deslocamento: number): string {
-  const tinta = stop(rampa, (tema.indices.soft ?? tema.indices.accent) + deslocamento);
-  if (tema.alfaDoSoft >= 1) return tinta;
-  const { r, g, b } = hexParaRgb(tinta);
-  return `rgba(${r}, ${g}, ${b}, ${tema.alfaDoSoft})`;
+function cssDoSoft(
+  tema: TemaDaRegua,
+  rampa: Rampa,
+  deslocamento: number,
+  usarPinoLiteral: boolean,
+): string {
+  const fonte = tema.tingidas.find((t) => t.chave === "--color-accent-soft")?.fonte;
+  const resolvida = fonte
+    ? resolverFonte(fonte, rampa, deslocamento, usarPinoLiteral)
+    : {
+        hex: stop(rampa, (tema.indices.soft ?? tema.indices.accent) + deslocamento),
+        alfa: tema.alfaDoSoft,
+      };
+  if (resolvida.alfa >= 1) return resolvida.hex;
+  const { r, g, b } = hexParaRgb(resolvida.hex);
+  return `rgba(${r}, ${g}, ${b}, ${resolvida.alfa})`;
 }
 
-function derivarTema(tema: TemaDaRegua, rampa: Rampa): { tokens: TokensDoTema; motivos: Motivo[] } {
-  const escolha = escolherAccent(rampa, tema);
+function derivarTema(
+  tema: TemaDaRegua,
+  rampa: Rampa,
+  usarPinoLiteral: boolean,
+): { tokens: TokensDoTema; motivos: Motivo[] } {
+  const escolha = escolherAccent(rampa, tema, 10, usarPinoLiteral);
   const d = escolha.deslocamento;
-  const accent = stop(rampa, tema.indices.accent + d);
+  const fonteDoAccent = tema.papeis.find((papel) => papel.token === "--color-accent")?.fonte;
+  const accent = fonteDoAccent
+    ? resolverFonte(fonteDoAccent, rampa, d, usarPinoLiteral).hex
+    : stop(rampa, tema.indices.accent + d);
   const reconciliacao = reconciliarSemanticas(accent, tema.semanticas);
   const motivos: Motivo[] = [];
 
@@ -819,7 +897,7 @@ function derivarTema(tema: TemaDaRegua, rampa: Rampa): { tokens: TokensDoTema; m
       accent,
       accentFg: melhorFrenteSobre(accent),
       accentHover: stop(rampa, tema.indices.hover + d),
-      accentSoft: cssDoSoft(tema, rampa, d),
+      accentSoft: cssDoSoft(tema, rampa, d, usarPinoLiteral),
       semanticas: reconciliacao.cores,
       pares: escolha.pares,
     },
@@ -842,8 +920,8 @@ export function derivarMarca(semente: string, regua: Regua): Marca {
   const acromatica = C < LIMIAR_ACROMATICO;
   const rampa = acromatica ? regua.rampaDoProduto : rampaDeSemente(marca);
 
-  const claro = derivarTema(regua.claro, rampa);
-  const escuro = derivarTema(regua.escuro, rampa);
+  const claro = derivarTema(regua.claro, rampa, acromatica);
+  const escuro = derivarTema(regua.escuro, rampa, acromatica);
   const motivos: Motivo[] = [...claro.motivos, ...escuro.motivos];
 
   if (acromatica) {

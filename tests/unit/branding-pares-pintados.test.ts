@@ -41,9 +41,22 @@ const REGUA = extrairRegua(CSS);
 
 /** A mesma fixture adversarial versionada de `branding-contraste.test.ts`. */
 const SEMENTES = [
-  "#0f172a", "#f5c518", "#ffffff", "#000000", "#808080", "#dc2626", "#22c55e",
-  "#f59e0b", "#2563eb", "#14b8a6", "#4b0082", "#e11d48", "#7c3aed", "#1a1f36",
-  "#fafafa", "#506d48",
+  "#0f172a",
+  "#f5c518",
+  "#ffffff",
+  "#000000",
+  "#808080",
+  "#dc2626",
+  "#22c55e",
+  "#f59e0b",
+  "#2563eb",
+  "#14b8a6",
+  "#4b0082",
+  "#e11d48",
+  "#7c3aed",
+  "#1a1f36",
+  "#fafafa",
+  "#506d48",
 ] as const;
 
 /** Quantos pares cada tema tem no globals.css de hoje — o piso da vacuidade. */
@@ -109,7 +122,7 @@ function rampaEmitida(bloco: Bloco): Map<number, string> {
 }
 
 function daRampa(fonte: Fonte, rampa: ReadonlyMap<number, string>): Cor {
-  if (fonte.tipo === "grau") {
+  if (fonte.tipo === "grau" || fonte.tipo === "pino") {
     const hex = rampa.get(fonte.indice);
     // Vacuidade: rampa incompleta viraria uma cor inventada e um par verde.
     if (hex === undefined) {
@@ -179,9 +192,7 @@ function paresPintados(tema: TemaDaRegua, bloco: Bloco): ParPintado[] {
     // `--color-accent-fg` é medido contra `--color-accent`: o `Fonte` que a
     // régua guarda (grau 6) é só a FORMA como o `globals.css` escreve esse
     // token, e na tela o fundo é o TOKEN, que o bloco emitido reescreve.
-    const tokenDoAlvo = papel.token.endsWith("-fg")
-      ? papel.token.slice(0, -"-fg".length)
-      : null;
+    const tokenDoAlvo = papel.token.endsWith("-fg") ? papel.token.slice(0, -"-fg".length) : null;
     const alvos =
       papel.contra === null
         ? superficies
@@ -219,28 +230,25 @@ const foco = (pares: readonly ParPintado[], superficie: string): number =>
 // ── Os testes ────────────────────────────────────────────────────────────────
 
 describe("o que o produto pinta — todo par, toda semente", () => {
-  it.each(SEMENTES)(
-    "%s: nenhum papel abaixo do piso, nos dois temas, no pixel emitido",
-    (hex) => {
-      const pintados = pintadosDaSemente(hex);
-      for (const { nome } of TEMAS) {
-        const pares = pintados[nome];
-        // Vacuidade POR SEMENTE E POR TEMA: uma instrumentação que devolvesse
-        // lista vazia passaria no filtro abaixo sem ter medido nada.
-        expect(pares.length, `${hex}/${nome}: nenhum par medido`).toBeGreaterThanOrEqual(
-          PARES_DE_HOJE[nome],
-        );
-        const reprovas = pares.filter((p) => !p.passa);
-        expect(
-          reprovas,
-          `${hex}/${nome}: ` +
-            reprovas
-              .map((r) => `${r.papel}×${r.superficie}=${r.razao.toFixed(2)}<${r.piso}`)
-              .join(" | "),
-        ).toEqual([]);
-      }
-    },
-  );
+  it.each(SEMENTES)("%s: nenhum papel abaixo do piso, nos dois temas, no pixel emitido", (hex) => {
+    const pintados = pintadosDaSemente(hex);
+    for (const { nome } of TEMAS) {
+      const pares = pintados[nome];
+      // Vacuidade POR SEMENTE E POR TEMA: uma instrumentação que devolvesse
+      // lista vazia passaria no filtro abaixo sem ter medido nada.
+      expect(pares.length, `${hex}/${nome}: nenhum par medido`).toBeGreaterThanOrEqual(
+        PARES_DE_HOJE[nome],
+      );
+      const reprovas = pares.filter((p) => !p.passa);
+      expect(
+        reprovas,
+        `${hex}/${nome}: ` +
+          reprovas
+            .map((r) => `${r.papel}×${r.superficie}=${r.razao.toFixed(2)}<${r.piso}`)
+            .join(" | "),
+      ).toEqual([]);
+    }
+  });
 
   it("a instrumentação vê os papéis frágeis — inclusive o de stop fixo por tema", () => {
     // O anel de foco usa stop FIXO por tema (500 no claro, 400 no escuro,
@@ -250,7 +258,10 @@ describe("o que o produto pinta — todo par, toda semente", () => {
     const pintados = pintadosDaSemente("#506d48");
     for (const { nome } of TEMAS) {
       const papeis = new Set(pintados[nome].map((p) => p.papel));
-      expect([...papeis].some((p) => p.includes(":focus-visible")), nome).toBe(true);
+      expect(
+        [...papeis].some((p) => p.includes(":focus-visible")),
+        nome,
+      ).toBe(true);
       expect([...papeis], nome).toContain("--ring");
       expect(papeis.size, nome).toBe(REGUA[nome].papeis.length);
     }
@@ -276,7 +287,7 @@ describe("o que o produto pinta — todo par, toda semente", () => {
 });
 
 describe("o bloco emitido não pode contradizer o globals.css", () => {
-  it("`--color-accent` É `var(--color-accent-NNN)`, como a folha declara", () => {
+  it("`--color-accent` respeita o grau ou o pino que a folha declara", () => {
     // ESTA é a forma curta do defeito. O `globals.css` declara
     // `--color-accent: var(--color-accent-600)` (claro) e `var(--color-accent-400)`
     // (escuro). Quando a emissão mandava a rampa CRUA e os papéis DESLOCADOS, o
@@ -285,26 +296,34 @@ describe("o bloco emitido não pode contradizer o globals.css", () => {
     // `:focus-visible`, `focus-visible:ring-accent-500` nos componentes) ficava
     // com a de antes da caminhada.
     for (const hex of SEMENTES) {
-      const { css } = cssDaMarca(corDe(hex));
+      const cor = corDe(hex);
+      const { css } = cssDaMarca(cor);
       const blocos = lerBlocos(css ?? "");
       for (const { nome, seletor } of TEMAS) {
         const bloco = blocos[seletor] ?? {};
-        const { indices } = REGUA[nome];
+        const tema = REGUA[nome];
+        const { indices } = tema;
         const rotulo = `${hex}/${nome}`;
-        expect(bloco["--color-accent"], `${rotulo}: --color-accent`).toBe(
-          bloco[`--color-accent-${GRAUS[indices.accent]}`],
-        );
+        const fonteDoAccent = tema.papeis.find((p) => p.token === "--color-accent")?.fonte;
+        const produtoComPino =
+          cor.derivada?.origemDaRampa === "produto" && fonteDoAccent?.tipo === "pino";
+        const accentEsperado = produtoComPino
+          ? fonteDoAccent.hex
+          : bloco[`--color-accent-${GRAUS[indices.accent]}`];
+        expect(bloco["--color-accent"], `${rotulo}: --color-accent`).toBe(accentEsperado);
         expect(bloco["--color-accent-hover"], `${rotulo}: --color-accent-hover`).toBe(
           bloco[`--color-accent-${GRAUS[indices.hover]}`],
         );
-        // `--color-accent-soft` no escuro é translúcido (`rgba(…, 0.16)`): a
-        // identidade vale sobre a TINTA, e o índice do soft de lá é nulo — o
-        // token é reancorado no stop do accent (ver `resolverSoft`).
+        // `--color-accent-soft` translúcido preserva o pino no produto e usa a
+        // âncora na rampa da marca, seguindo a mesma regra do accent.
         const tinta = lerCor(bloco["--color-accent-soft"] ?? "#000000").hex;
         const ancora = GRAUS[indices.soft ?? indices.accent];
-        expect(tinta, `${rotulo}: --color-accent-soft`).toBe(
-          lerCor(bloco[`--color-accent-${ancora}`] ?? "#000000").hex,
-        );
+        const fonteDoSoft = tema.tingidas.find((t) => t.chave === "--color-accent-soft")?.fonte;
+        const softEsperado =
+          cor.derivada?.origemDaRampa === "produto" && fonteDoSoft?.tipo === "pino"
+            ? fonteDoSoft.hex
+            : lerCor(bloco[`--color-accent-${ancora}`] ?? "#000000").hex;
+        expect(tinta, `${rotulo}: --color-accent-soft`).toBe(softEsperado);
       }
     }
   });
@@ -337,30 +356,18 @@ describe("o bloco emitido não pode contradizer o globals.css", () => {
 });
 
 describe("controle positivo — as novas superfícies preservam o contraste", () => {
-  it("a Sage reproduz, pintada, os números do design system", () => {
-    // `#506d48` é a semente do próprio produto: ela não desloca nada, e os pares
-    // pintados têm que dar o que o `globals.css` sempre deu. Se estes números
-    // mudarem, o conserto vazou para quem não pediu.
+  it("uma marca verde customizada é remapeada e continua acima do piso", () => {
+    // Esta semente era a identidade anterior do produto e agora é um controle
+    // white-label: nenhum literal Nocturne pode vazar para o bloco customizado.
     const cor = corDe("#506d48");
     expect(cor.derivada?.claro.deslocamento).toBe(0);
-    expect(cor.derivada?.escuro.deslocamento).toBe(0);
+    expect(cor.derivada?.escuro.deslocamento).toBe(-1);
+    expect(cor.derivada?.escuro.accent).toBe(cor.derivada?.rampa[4]);
 
     const p = pintadosDaSemente("#506d48");
-    // Claro: os dois números que `contraste.ts` documenta como medidos à mão.
-    expect(foco(p.claro, "--color-bg")).toBeCloseTo(3.81, 2);
-    expect(foco(p.claro, "--color-surface-elevated")).toBeCloseTo(3.56, 2);
-    // Escuro: 6,30 e 5,22 na rampa DERIVADA da semente; os literais do
-    // `globals.css` (`#82a077`) dão 6,31 e 5,23 — a rampa reproduz a Sage com
-    // Δ ≤ 2/255 por canal, e a diferença de 0,01 é esse arredondamento.
-    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(6.49, 2);
-    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(5.31, 2);
-    // No escuro o anel NÃO fica apertado contra as bases: quem aperta é o
-    // `-soft` COMPOSTO. 4,58 aqui — é este o par que a prova em tela reportou
-    // como "4,58 no escuro", e não `foco × --color-bg` (6,30). Nos literais do
-    // `globals.css` o mesmo par dá 4,59, e `superficiesDoTema` documenta o trio
-    // 4,99 · 4,59 · 4,02.
-    expect(foco(p.escuro, "--color-accent-soft@--color-surface")).toBeCloseTo(4.69, 2);
-    expect(foco(p.escuro, "--color-accent-soft@--color-surface-elevated")).toBeCloseTo(4.11, 2);
+    for (const pares of [p.claro, p.escuro]) {
+      expect(pares.filter((par) => !par.passa)).toEqual([]);
+    }
   });
 
   it("sem marca configurada nada é injetado, e a tela fica como está", () => {
@@ -374,13 +381,13 @@ describe("a navy #0f172a — o defeito que a prova em tela achou", () => {
   it("os quatro números do anel de foco, agora acima do piso", () => {
     // ANTES (medido no browser, servidor de dev na 3111): claro 10,77 e 10,22;
     // escuro 2,86 e 2,37 — os dois de baixo abaixo do piso 3,0, porque o anel
-    // pintava `--color-accent-400: #545f77`, o stop CRU. O tema escuro anda -1,
-    // então o anel agora pinta `#828a9d`, o stop 300 da rampa da marca.
+    // pintava a rampa crua. Com os papéis Nocturne o tema escuro anda -2 e a
+    // rampa emitida acompanha esse deslocamento.
     const p = pintadosDaSemente("#0f172a");
-    expect(foco(p.claro, "--color-bg")).toBeCloseTo(10.81, 2);
-    expect(foco(p.claro, "--color-surface-elevated")).toBeCloseTo(10.11, 2);
-    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(5.45, 2);
-    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(4.46, 2);
+    expect(foco(p.claro, "--color-bg")).toBeCloseTo(16.71, 2);
+    expect(foco(p.claro, "--color-surface-elevated")).toBeCloseTo(15.74, 2);
+    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(9.14, 2);
+    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(6.99, 2);
     for (const superficie of ["--color-bg", "--color-surface-elevated"] as const) {
       expect(foco(p.escuro, superficie), superficie).toBeGreaterThanOrEqual(PISOS.componente);
     }

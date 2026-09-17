@@ -25,24 +25,24 @@ import type { Regua } from "./contraste";
 
 export const REGUA_DO_PRODUTO: Regua = {
   "rampaDoProduto": [
-    "#f3f6f1",
-    "#e4ebe0",
-    "#c8d6c1",
-    "#a4ba9a",
-    "#82a077",
-    "#67885d",
-    "#506d48",
-    "#41573b",
-    "#374731",
-    "#2f3c2b",
-    "#171f15"
+    "#fafaff",
+    "#f5f4ff",
+    "#e7e5fe",
+    "#d2cefd",
+    "#b5abfc",
+    "#968ae0",
+    "#796cbf",
+    "#5d5294",
+    "#423a6a",
+    "#2b2741",
+    "#1b1830"
   ],
   "claro": {
     "nome": "claro",
     "base": [
       {
         "chave": "--color-bg",
-        "hex": "#faf9fc"
+        "hex": "#f7f7fb"
       },
       {
         "chave": "--color-surface",
@@ -50,7 +50,7 @@ export const REGUA_DO_PRODUTO: Regua = {
       },
       {
         "chave": "--color-surface-elevated",
-        "hex": "#f3f1f7"
+        "hex": "#f0f0f7"
       }
     ],
     "tingidas": [
@@ -108,7 +108,7 @@ export const REGUA_DO_PRODUTO: Regua = {
         "tipo": "componente",
         "fonte": {
           "tipo": "grau",
-          "indice": 5,
+          "indice": 6,
           "alfa": 1
         },
         "contra": null
@@ -134,7 +134,7 @@ export const REGUA_DO_PRODUTO: Regua = {
         "tipo": "componente",
         "fonte": {
           "tipo": "grau",
-          "indice": 5,
+          "indice": 6,
           "alfa": 1
         },
         "contra": null
@@ -159,17 +159,17 @@ export const REGUA_DO_PRODUTO: Regua = {
       }
     ],
     "neutros": [
-      "#faf9fc",
-      "#f3f1f7",
-      "#e4e0eb",
-      "#cec8d8",
-      "#a49dae",
-      "#6b6477",
-      "#575161",
-      "#46404f",
-      "#302a39",
-      "#24212c",
-      "#111014"
+      "#f8faff",
+      "#f3f5fe",
+      "#e4e7f5",
+      "#cfd3e5",
+      "#b2b6ca",
+      "#9397ab",
+      "#75798c",
+      "#595d6c",
+      "#3f424d",
+      "#292b31",
+      "#1a1b20"
     ],
     "indices": {
       "accent": 6,
@@ -183,23 +183,24 @@ export const REGUA_DO_PRODUTO: Regua = {
     "base": [
       {
         "chave": "--color-bg",
-        "hex": "#111114"
+        "hex": "#161826"
       },
       {
         "chave": "--color-surface",
-        "hex": "#19191e"
+        "hex": "#232532"
       },
       {
         "chave": "--color-surface-elevated",
-        "hex": "#24242b"
+        "hex": "#2b2e3d"
       }
     ],
     "tingidas": [
       {
         "chave": "--color-accent-soft",
         "fonte": {
-          "tipo": "literal",
-          "hex": "#82a077",
+          "tipo": "pino",
+          "hex": "#9184d9",
+          "indice": 5,
           "alfa": 0.16
         }
       }
@@ -209,8 +210,9 @@ export const REGUA_DO_PRODUTO: Regua = {
         "token": "--color-accent",
         "tipo": "componente",
         "fonte": {
-          "tipo": "grau",
-          "indice": 4,
+          "tipo": "pino",
+          "hex": "#9184d9",
+          "indice": 5,
           "alfa": 1
         },
         "contra": null
@@ -221,15 +223,17 @@ export const REGUA_DO_PRODUTO: Regua = {
         "fonte": {
           "tipo": "frenteCalculada",
           "sobre": {
-            "tipo": "grau",
-            "indice": 4,
+            "tipo": "pino",
+            "hex": "#9184d9",
+            "indice": 5,
             "alfa": 1
           }
         },
         "contra": [
           {
-            "tipo": "grau",
-            "indice": 4,
+            "tipo": "pino",
+            "hex": "#9184d9",
+            "indice": 5,
             "alfa": 1
           }
         ]
@@ -239,7 +243,7 @@ export const REGUA_DO_PRODUTO: Regua = {
         "tipo": "componente",
         "fonte": {
           "tipo": "grau",
-          "indice": 3,
+          "indice": 4,
           "alfa": 1
         },
         "contra": null
@@ -300,22 +304,22 @@ export const REGUA_DO_PRODUTO: Regua = {
       }
     ],
     "neutros": [
-      "#f4f2fa",
-      "#e8e4f0",
-      "#c2bccd",
-      "#aaa8b8",
-      "#9b97aa",
-      "#45424f",
-      "#303037",
-      "#24242b",
-      "#19191e",
-      "#111114",
-      "#0b0b0e"
+      "#f8faff",
+      "#f3f5fe",
+      "#e4e7f5",
+      "#cfd3e5",
+      "#b2b6ca",
+      "#9397ab",
+      "#75798c",
+      "#595d6c",
+      "#3f424d",
+      "#292b31",
+      "#1a1b20"
     ],
     "indices": {
-      "accent": 4,
-      "hover": 3,
-      "soft": null
+      "accent": 5,
+      "hover": 4,
+      "soft": 5
     },
     "alfaDoSoft": 0.16
   }
