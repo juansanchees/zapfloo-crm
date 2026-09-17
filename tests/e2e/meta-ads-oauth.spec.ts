@@ -185,18 +185,59 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
   await cdp.send("Network.configureDurableMessages", {
     maxTotalBufferSize: 32 * 1024 * 1024, maxResourceBufferSize: 4 * 1024 * 1024,
   });
-  type Medida = { caminho: string; status: number; tipo: string; tokenExposto: boolean; erroLeitura: boolean; concluida: boolean; lida: boolean; falhaRede: string | null };
+  type Medida = {
+    caminho: string; status: number; tipo: string; prefetchRsc: boolean;
+    tokenExposto: boolean; erroLeitura: boolean; concluida: boolean; lida: boolean;
+    falhaRede: string | null; streamAtivo: boolean; erroStream: boolean;
+  };
   const respostas = new Map<string, Medida>();
+  const caudasDoStream = new Map<string, string>();
+  const tokens = [TOKEN_CURTO, TOKEN_LONGO];
+  const maiorToken = Math.max(...tokens.map(token => token.length));
+  const inspecionarTrecho = (requestId: string, medida: Medida, trecho: string) => {
+    // Mantém a cauda porque um segredo pode atravessar a fronteira entre dois
+    // eventos dataReceived. O corpo completo continua sendo relido no término.
+    const acumulado = `${caudasDoStream.get(requestId) ?? ""}${trecho}`;
+    medida.tokenExposto ||= tokens.some(token => acumulado.includes(token));
+    caudasDoStream.set(requestId, acumulado.slice(-(maiorToken - 1)));
+  };
   // Registra a ordem do protocolo, inclusive término anterior à resposta. Não
   // infere aborto da navegação nem inclui URL/query, headers ou corpo no recibo.
-  const ciclos: Array<{ evento: string; requestId: string; loaderId?: string; caminho?: string; instante?: number }> = [];
+  const ciclos: Array<{ evento: string; requestId: string; loaderId?: string; caminho?: string; instante?: number; prefetchRsc?: boolean }> = [];
   const requisicoesLocais = new Set<string>();
+  const prefetchesRsc = new Map<string, boolean>();
+  const streamsRsc = new Map<string, { ativo: boolean; erro: boolean; antesDaResposta: string[] }>();
   cdp.on("Network.requestWillBeSent", ({ requestId, loaderId, request, timestamp }) => {
     const url = new URL(request.url);
     if (url.origin !== origem) return;
+    const headers = Object.fromEntries(Object.entries(request.headers)
+      .map(([nome, valor]) => [nome.toLowerCase(), String(valor)]));
+    const prefetchRsc = headers["next-router-prefetch"] === "1" && headers.rsc === "1";
     requisicoesLocais.add(requestId);
+    prefetchesRsc.set(requestId, prefetchRsc);
     ciclos.push({ evento: "inicio", requestId, loaderId, instante: timestamp,
-      caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]") });
+      caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]"),
+      prefetchRsc });
+    if (prefetchRsc) {
+      const stream = { ativo: false, erro: false, antesDaResposta: [] as string[] };
+      streamsRsc.set(requestId, stream);
+      // Deve ser ativado enquanto a requisição ainda está em voo. Depois de
+      // responseReceived, o Chromium pode já ter entregue bytes e recusar a
+      // ativação exatamente no prefetch que fica sem evento terminal.
+      void cdp.send("Network.streamResourceContent", { requestId }).then(({ bufferedData }) => {
+        stream.ativo = true;
+        const trecho = Buffer.from(bufferedData, "base64").toString("utf8");
+        const medida = respostas.get(requestId);
+        if (medida) {
+          medida.streamAtivo = true;
+          inspecionarTrecho(requestId, medida, trecho);
+        } else stream.antesDaResposta.push(trecho);
+      }).catch(() => {
+        stream.erro = true;
+        const medida = respostas.get(requestId);
+        if (medida) medida.erroStream = true;
+      });
+    }
   });
   let capturando = true;
   cdp.on("Network.responseReceived", ({ requestId, loaderId, response, timestamp }) => {
@@ -209,12 +250,25 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     if (/\/api\/v1\/ads\/meta\/oauth\/(?:connect|agency)$/.test(url.pathname)) return;
     if (url.origin !== origem || response.status < 200 || response.status >= 300
       || !/text\/html|application\/json|text\/x-component/.test(response.mimeType)) return;
-    respostas.set(requestId, {
+    const stream = streamsRsc.get(requestId);
+    const medida: Medida = {
       caminho: url.pathname.replace(/\/ads\/connect\/(?!result(?:\/|$))[^/]+/, "/ads/connect/[capacidade]"),
       status: response.status, tipo: response.mimeType,
-      tokenExposto: [TOKEN_CURTO, TOKEN_LONGO].some(token => JSON.stringify(response.headers).includes(token)),
+      prefetchRsc: prefetchesRsc.get(requestId) === true && response.mimeType === "text/x-component",
+      tokenExposto: tokens.some(token => JSON.stringify(response.headers).includes(token)),
       erroLeitura: false, concluida: false, lida: false, falhaRede: null,
-    });
+      streamAtivo: stream?.ativo ?? false, erroStream: stream?.erro ?? false,
+    };
+    respostas.set(requestId, medida);
+    for (const trecho of stream?.antesDaResposta ?? []) inspecionarTrecho(requestId, medida, trecho);
+    if (stream) stream.antesDaResposta.length = 0;
+  });
+  cdp.on("Network.dataReceived", ({ requestId, data }) => {
+    if (!data) return;
+    const trecho = Buffer.from(data, "base64").toString("utf8");
+    const medida = respostas.get(requestId);
+    if (medida) inspecionarTrecho(requestId, medida, trecho);
+    else streamsRsc.get(requestId)?.antesDaResposta.push(trecho);
   });
   cdp.on("Network.loadingFinished", ({ requestId, timestamp }) => {
     if (requisicoesLocais.has(requestId)) ciclos.push({ evento: "concluida", requestId, instante: timestamp });
@@ -223,7 +277,7 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     medida.concluida = true;
     void cdp.send("Network.getResponseBody", { requestId }).then(({ body, base64Encoded }) => {
       const corpo = base64Encoded ? Buffer.from(body, "base64").toString("utf8") : body;
-      medida.tokenExposto ||= [TOKEN_CURTO, TOKEN_LONGO].some(token => corpo.includes(token));
+      medida.tokenExposto ||= tokens.some(token => corpo.includes(token));
       medida.lida = true;
     }).catch(() => { medida.erroLeitura = true; });
   });
@@ -236,32 +290,56 @@ async function vigiarRespostas(page: Page, origem: string, obrigatorias: string[
     const medida: Medida = {
       caminho: new URL(resposta.url()).pathname, status: resposta.status(),
       tipo: resposta.headers()["content-type"] ?? "text/html",
-      tokenExposto: [TOKEN_CURTO, TOKEN_LONGO].some(token => JSON.stringify(resposta.headers()).includes(token)),
+      prefetchRsc: false,
+      tokenExposto: tokens.some(token => JSON.stringify(resposta.headers()).includes(token)),
       erroLeitura: false, concluida: true, lida: false, falhaRede: null,
+      streamAtivo: false, erroStream: false,
     };
     respostas.set(`inicio-real-${respostas.size}`, medida);
     try {
       const corpo = await resposta.text();
-      medida.tokenExposto ||= [TOKEN_CURTO, TOKEN_LONGO].some(token => corpo.includes(token));
+      medida.tokenExposto ||= tokens.some(token => corpo.includes(token));
       medida.lida = true;
     } catch { medida.erroLeitura = true; }
   }, async provar() {
     // Congela o conjunto observado, NÃO uma lista de promises que ainda pode
     // crescer. loadingFinished significa transferência concluída, não corpo já
-    // lido: só getResponseBody resolvido autoriza lida=true. A drenagem limitada
-    // exige desfecho de TODA resposta observada, inclusive prefetch pendente.
+    // lido: só getResponseBody resolvido autoriza lida=true.
     capturando = false;
     const medidas = [...respostas.values()];
+    const semDesfecho = () => medidas.filter(medida => !medida.lida && !medida.erroLeitura && !medida.falhaRede);
     try {
-      await expect.poll(() => medidas.filter(medida => !medida.lida && !medida.erroLeitura && !medida.falhaRede)
+      // Resposta de navegação/API que fica aberta é bug de produto. Ela não
+      // ganha a exceção dos prefetches especulativos do App Router.
+      await expect.poll(() => semDesfecho().filter(medida => !medida.prefetchRsc)
         .map(medida => medida.caminho), { timeout: 10_000, intervals: [100, 250, 500],
-        message: "toda resposta observada termina com corpo lido ou falha/aborto explícito" }).toEqual([]);
+        message: "toda resposta real termina com corpo lido ou falha/aborto explícito" }).toEqual([]);
+
+      // O Next pode manter um prefetch RSC de segmento aberto mesmo depois de
+      // abandonar a tela que o iniciou. A evidência medida foi /app/contacts:
+      // HTTP 200 + next-router-prefetch=1, sem loadingFinished/loadingFailed.
+      // Ele só é aceito aberto quando o CDP confirma que todos os bytes
+      // entregues estão sob inspeção contínua; resposta real não ganha exceção.
+      const especulativasAbertas = semDesfecho().filter(medida => medida.prefetchRsc);
+      if (especulativasAbertas.length > 0) {
+        await expect.poll(() => especulativasAbertas
+          .filter(medida => !medida.streamAtivo || medida.erroStream)
+          .map(medida => medida.caminho), { timeout: 10_000, intervals: [100, 250, 500],
+          message: "prefetch RSC aberto tem cada byte inspecionado pelo stream do CDP" }).toEqual([]);
+      }
+
+      await expect.poll(() => semDesfecho()
+        .filter(medida => !medida.prefetchRsc || !medida.streamAtivo || medida.erroStream)
+        .map(medida => medida.caminho), {
+        timeout: 10_000, intervals: [100, 250, 500],
+        message: "toda resposta termina ou permanece como prefetch RSC integralmente inspecionado",
+      }).toEqual([]);
     } finally {
       await test.info().attach("respostas-sem-token", { body: JSON.stringify(medidas), contentType: "application/json" });
       await test.info().attach("ciclo-requisicoes-sem-segredos", { body: JSON.stringify(ciclos), contentType: "application/json" });
     }
-    // Prefetches RSC abortados pela navegação ficam registrados, mas não contam
-    // como corpo entregue/provado. Nenhuma resposta CONCLUÍDA pode perder corpo.
+    // Um prefetch RSC ainda aberto fica registrado como stream inspecionado, não
+    // como concluído. Nenhuma resposta CONCLUÍDA pode perder a leitura integral.
     const concluidas = medidas.filter(medida => medida.concluida);
     expect(concluidas.length, "controle positivo: respostas reais do app foram lidas").toBeGreaterThan(0);
     expect(concluidas.some(medida => medida.erroLeitura), "a prova não ignora corpo concluído que não conseguiu ler").toBe(false);
