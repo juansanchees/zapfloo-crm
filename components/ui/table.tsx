@@ -45,7 +45,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        "bg-[linear-gradient(to_right,transparent,var(--color-border)_48px,var(--color-border)_calc(100%_-_48px),transparent)] bg-[length:100%_1px] bg-bottom bg-no-repeat transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+        "bg-[linear-gradient(to_right,transparent,var(--color-border)_48px,var(--color-border)_calc(100%_-_48px),transparent)] bg-[length:100%_1px] bg-bottom bg-no-repeat transition-colors hover:bg-[linear-gradient(color-mix(in_srgb,var(--color-text)_4%,transparent),color-mix(in_srgb,var(--color-text)_4%,transparent)),linear-gradient(to_right,transparent,var(--color-border)_48px,var(--color-border)_calc(100%_-_48px),transparent)] hover:bg-[length:100%_100%,100%_1px] hover:bg-[position:0_0,0_100%] data-[state=selected]:bg-muted",
         className,
       )}
       {...props}

@@ -16,7 +16,7 @@ export function MetricCard({ label, value, detail, icon, trend, className }: Met
   return (
     <article
       aria-label={label}
-      className={cn("rounded-xl border border-border bg-panel p-4 shadow-xs", className)}
+      className={cn("rounded-md border border-border bg-panel p-4 shadow-xs", className)}
     >
       <div className="flex items-center justify-between gap-3 text-xs font-medium text-text-muted">
         <span>{label}</span>

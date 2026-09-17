@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   [
     "inline-flex items-center justify-center gap-2 whitespace-nowrap",
-    "rounded-lg font-medium",
+    "rounded-md font-medium",
     "transition-[background-color,border-color,color,box-shadow,transform]",
     "duration-fast ease-out",
     "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
@@ -39,7 +39,8 @@ const buttonVariants = cva(
           "border border-border bg-transparent text-text hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] active:bg-[color-mix(in_srgb,var(--color-text)_14%,transparent)]",
         ghost:
           "bg-transparent text-accent hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] active:bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)]",
-        destructive: "bg-error text-white hover:brightness-95 shadow-xs",
+        destructive:
+          "border border-error bg-transparent text-error-fg hover:bg-error-bg active:bg-error-bg active:brightness-90",
         link: "bg-transparent text-accent underline underline-offset-4 decoration-1 hover:decoration-2 h-auto p-0",
       },
       // Alturas de toque: abaixo de `lg` (mesmo corte que o resto da casca
