@@ -37,6 +37,47 @@ function tokensDoTema(seletor: ":root" | '[data-theme="dark"]') {
 }
 
 describe("casca Nocturne nos componentes base", () => {
+  it("mantém as quatro animações dentro da preferência explícita de movimento", () => {
+    const css = fs.readFileSync(path.join(RAIZ, "app/globals.css"), "utf8");
+    const cabecalho = "@media (prefers-reduced-motion: no-preference)";
+    const inicio = css.indexOf(cabecalho);
+    expect(inicio, "não achei o media query que autoriza movimento").toBeGreaterThanOrEqual(0);
+
+    const abre = css.indexOf("{", inicio);
+    let profundidade = 0;
+    let fecha = -1;
+    for (let i = abre; i < css.length; i += 1) {
+      if (css[i] === "{") profundidade += 1;
+      if (css[i] === "}") profundidade -= 1;
+      if (profundidade === 0) {
+        fecha = i;
+        break;
+      }
+    }
+    expect(fecha, "media query de movimento não fecha").toBeGreaterThan(abre);
+
+    const bloco = css.slice(abre + 1, fecha).replace(/\s+/g, " ");
+    expect(bloco).toContain(
+      "@keyframes zfIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }",
+    );
+    expect(bloco).toContain(
+      "@keyframes zfToast { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }",
+    );
+    expect(bloco).toContain(
+      "@keyframes zfPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }",
+    );
+    expect(bloco).toContain(
+      "@keyframes zfSweep { from { transform: translateX(-100%); } to { transform: translateX(300%); } }",
+    );
+
+    const fora = `${css.slice(0, inicio)}${css.slice(fecha + 1)}`;
+    for (const nome of ["zfIn", "zfToast", "zfPulse", "zfSweep"]) {
+      expect(fora, `${nome} escapou da preferência de movimento`).not.toContain(
+        `@keyframes ${nome}`,
+      );
+    }
+  });
+
   it("mantém os botões primários vazados e os estados do manual", () => {
     for (const variante of ["primary", "default"] as const) {
       const classes = buttonVariants({ variant: variante });

@@ -44,7 +44,8 @@
   /* Text (light) */
   --color-text: #1c1d2a;
   --color-text-muted: #5b5c6e;
-  --color-text-subtle: #74758a;
+  /* Texto pequeno/apagado também precisa manter AA sobre as três superfícies. */
+  --color-text-subtle: #5b5c6e;
 
   /* Borders (light) */
   --color-border: #e3e3ee;
@@ -196,8 +197,8 @@
    * equipe. Por isso Telha, Âmbar, Oliva, Turquesa, Azul, Índigo, Violeta,
    * Framboesa: oito palavras diferentes.
    *
-   * A faixa 113-165 é vetada: é onde mora a accent Sage (139 graus). Cor de
-   * PESSOA não pode ser confundida com cor de ESTADO do sistema.
+   * A faixa 113-165 continua vetada para preservar a separação histórica entre
+   * cor de PESSOA e cor de ESTADO do sistema, mesmo com o destaque Nocturne.
    *
    * A luminosidade ALTERNA entre vizinhos, que é o truque da Okabe-Ito para
    * separar o azul-céu do azul — e foi exatamente o que a minha versão
@@ -245,7 +246,7 @@
    As 11 paradas `--color-accent-NNN` ficam DE FORA de propósito. Elas são
    idênticas nos dois blocos do produto, então omiti-las não muda pixel algum
    aqui; e, na instalação que trocou a cor, a subárvore clara passa a herdar a
-   rampa do `<html>` (a do revendedor) em vez de fixar a Sage. Pelo mesmo
+   rampa do `<html>` (a do revendedor) em vez de fixar a cor do produto. Pelo mesmo
    motivo os papéis abaixo mantêm a forma `var(--color-accent-NNN)`.
 
    Buraco conhecido: `--color-accent-fg` é literal `#ffffff` e, numa subárvore
@@ -264,7 +265,8 @@
   --color-overlay: rgba(22, 24, 38, 0.42);
   --color-text: #1c1d2a;
   --color-text-muted: #5b5c6e;
-  --color-text-subtle: #74758a;
+  /* Espelho do :root: subtle converge em muted para preservar contraste AA. */
+  --color-text-subtle: #5b5c6e;
   --color-border: #e3e3ee;
   --color-border-strong: #cbcbdb;
   --color-accent: var(--color-accent-600);
@@ -348,7 +350,8 @@
   /* Text (dark) */
   --color-text: #e9e9ed;
   --color-text-muted: #9a9ba5;
-  --color-text-subtle: #82838f;
+  /* O degrau muted é o primeiro da paleta que mantém AA sobre toda superfície escura. */
+  --color-text-subtle: #9a9ba5;
 
   /* Borders (dark) */
   --color-border: #33353f;
@@ -479,7 +482,7 @@
   --color-text-muted: var(--color-text-muted);
   --color-text-subtle: var(--color-text-subtle);
 
-  /* Accent — Sage */
+  /* Destaque — Nocturne no produto, substituível pela marca */
   --color-accent: var(--color-accent);
   --color-accent-foreground: var(--color-accent-fg);
   --color-accent-soft: var(--color-accent-soft);
@@ -496,7 +499,7 @@
   --color-accent-900: var(--color-accent-900);
   --color-accent-950: var(--color-accent-950);
 
-  /* Neutrals — greige */
+  /* Neutros — rampa azul-cinza do Nocturne */
   --color-neutral-50: var(--color-neutral-50);
   --color-neutral-100: var(--color-neutral-100);
   --color-neutral-200: var(--color-neutral-200);
@@ -749,7 +752,7 @@
     }
   }
 
-  /* Scrollbar — subtle greige */
+  /* Barra de rolagem — neutro discreto do Nocturne */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--color-neutral-300) transparent;
