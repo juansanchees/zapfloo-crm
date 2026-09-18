@@ -60,15 +60,27 @@ function monthInterval(now: Date) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-function bucketValues(rows: LeadValueRow[]): Record<string, number> | undefined {
-  const grouped: Record<string, number> = {};
+function bucketValues(rows: LeadValueRow[]):
+  | {
+      value_by_currency: Record<string, number>;
+      count_by_currency: Record<string, number>;
+    }
+  | undefined {
+  const valueByCurrency: Record<string, number> = {};
+  const countByCurrency: Record<string, number> = {};
+  let completeRows = 0;
   for (const row of rows) {
-    // Um valor nulo não pode virar R$ 0: o agregado deixaria de representar
-    // todo o conjunto consultado. A fonte fica indisponível de forma honesta.
-    if (typeof row.value_cents !== "number" || !row.currency) return undefined;
-    grouped[row.currency] = (grouped[row.currency] ?? 0) + row.value_cents;
+    // Como SUM(value_cents), o agregado considera apenas negócios cujo valor e
+    // moeda foram informados. Ausência não vira zero e não apaga valores reais
+    // de outras oportunidades; os hints da projeção tornam o recorte explícito.
+    if (typeof row.value_cents !== "number" || !row.currency) continue;
+    completeRows += 1;
+    valueByCurrency[row.currency] = (valueByCurrency[row.currency] ?? 0) + row.value_cents;
+    countByCurrency[row.currency] = (countByCurrency[row.currency] ?? 0) + 1;
   }
-  return grouped;
+  return completeRows > 0
+    ? { value_by_currency: valueByCurrency, count_by_currency: countByCurrency }
+    : undefined;
 }
 
 async function readConversationCounts(
@@ -170,19 +182,16 @@ async function readManagerSources(
   const won = wonResult as unknown as RowsResult<LeadValueRow>;
   const openValues = open.error ? undefined : bucketValues(open.data ?? []);
   const wonValues = won.error ? undefined : bucketValues(won.data ?? []);
-  const wonCount = wonValues
-    ? Object.fromEntries(Object.entries(wonValues).map(([currency]) => [currency, 0]))
-    : undefined;
-  if (wonCount && won.data) {
-    for (const row of won.data) {
-      if (row.currency) wonCount[row.currency] = (wonCount[row.currency] ?? 0) + 1;
-    }
-  }
   return {
-    pipeline_open: openValues ? { value_by_currency: openValues } : undefined,
+    pipeline_open: openValues
+      ? { value_by_currency: openValues.value_by_currency }
+      : undefined,
     won_revenue:
-      wonValues && wonCount
-        ? { value_by_currency: wonValues, count_by_currency: wonCount }
+      wonValues
+        ? {
+            value_by_currency: wonValues.value_by_currency,
+            count_by_currency: wonValues.count_by_currency,
+          }
         : undefined,
     attendants,
   };

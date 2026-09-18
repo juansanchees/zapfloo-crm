@@ -19,6 +19,36 @@ let taskDone = false;
 let requests: string[] = [];
 let savedPreferenceBody: unknown = null;
 let summarySurface: "agent" | "manager" | "admin" = "manager";
+let summaryHeroUnavailable = false;
+let summaryHeroValue: string | number | undefined;
+
+const heroBySurface = {
+  agent: {
+    id: "queue",
+    label: "Fila de atendimento",
+    value: 731,
+    variation: "Agora",
+    hint: "Conversas aguardando atendimento.",
+    icon: "chat",
+  },
+  manager: {
+    id: "pipeline",
+    label: "Pipeline aberto",
+    value: "R$ 12.345",
+    variation: "Agora",
+    hint: "Valor informado das oportunidades abertas.",
+    icon: "trend",
+  },
+  admin: {
+    id: "instances",
+    label: "Instâncias online",
+    value: "2/3",
+    variation: "Agora",
+    hint: "Instâncias de canal em funcionamento.",
+    icon: "whatsapp",
+  },
+} as const;
+
 function metricsFixture() {
   return {
     window: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
@@ -102,6 +132,8 @@ beforeEach(() => {
   requests = [];
   savedPreferenceBody = null;
   summarySurface = "manager";
+  summaryHeroUnavailable = false;
+  summaryHeroValue = undefined;
   metrics = metricsFixture();
   agents = agentsFixture();
   vi.stubGlobal(
@@ -114,35 +146,41 @@ beforeEach(() => {
           return new Response(JSON.stringify({ error: { code: "internal_error" } }), {
             status: 500,
           });
+        const baseHero = heroBySurface[summarySurface];
+        const hero = summaryHeroValue === undefined ? baseHero : { ...baseHero, value: summaryHeroValue };
         return Response.json({
           data: {
             role_surface: summarySurface,
-            hero: {
-              id: "pipeline",
-              label: "Pipeline aberto",
-              value: 731,
-              variation: "Agora",
-              hint: "Valor das oportunidades abertas.",
-              icon: "trend",
-            },
-            cards: [
-              {
-                id: "pipeline_value",
-                label: "Pipeline aberto",
-                value: "R$ 12.345",
-                variation: "Agora",
-                hint: "Valor das oportunidades abertas.",
-                icon: "money",
-              },
-              {
-                id: "first_response",
-                label: "Primeira resposta",
-                value: "4m 17s",
-                variation: "No período",
-                hint: "Tempo médio até a primeira resposta humana.",
-                icon: "timer",
-              },
-            ],
+            hero: summaryHeroUnavailable ? { ...hero, value: "—" } : hero,
+            cards:
+              summarySurface === "manager"
+                ? [
+                    {
+                      id: "pipeline_value",
+                      label: "Pipeline aberto",
+                      value: "R$ 12.345",
+                      variation: "Agora",
+                      hint: "Valor informado das oportunidades abertas.",
+                      icon: "money",
+                    },
+                    {
+                      id: "conversations_per_attendant",
+                      label: "Conversas por atendente",
+                      value: 731,
+                      variation: "No período",
+                      hint: "Média entre atendentes que receberam conversas no período.",
+                      icon: "users",
+                    },
+                    {
+                      id: "first_response",
+                      label: "Primeira resposta",
+                      value: "4m 17s",
+                      variation: "No período",
+                      hint: "Tempo médio até a primeira resposta humana.",
+                      icon: "timer",
+                    },
+                  ]
+                : [],
             omitted: [],
           },
         });
@@ -220,7 +258,10 @@ describe("Dashboard operacional", () => {
       summary.querySelectorAll<HTMLElement>("[data-testid^='dashboard-value-']"),
       (element) => element.textContent,
     );
-    expect(renderedValues).toEqual(["731", "R$ 12.345", "4m 17s"]);
+    expect(new Set(renderedValues)).toEqual(new Set(["731", "R$ 12.345", "4m 17s"]));
+    expect(
+      renderedValues.every((value) => ["731", "R$ 12.345", "4m 17s"].includes(value ?? "")),
+    ).toBe(true);
     expect(renderedValues).not.toContain("0");
     expect(renderedValues).not.toContain("R$ 8.941");
     expect(await screen.findByRole("link", { name: /Contato teste/ })).toHaveAttribute(
@@ -230,16 +271,23 @@ describe("Dashboard operacional", () => {
   });
 
   it.each([
-    ["agent", "/app/inbox"],
-    ["manager", "/app/kanban"],
-    ["admin", "/app/connections"],
-  ] as const)("usa CTA %s retornado pelo servidor", async (surface, href) => {
+    ["agent", 947, "947 conversas esperando resposta", "Abrir a fila", "/app/inbox"],
+    ["manager", "R$ 98.765", "Pipeline de R$ 98.765 em jogo", "Revisar funil", "/app/kanban"],
+    ["admin", "4/9", "4 de 9 instâncias conectadas", "Ver instâncias", "/app/connections"],
+  ] as const)("usa título e CTA exatos para %s", async (surface, value, title, cta, href) => {
     summarySurface = surface;
+    summaryHeroValue = value;
     mount();
-    await screen.findByRole("region", { name: "Resumo operacional" });
-    expect(
-      screen.getByRole("link", { name: /Abrir conversas|Abrir funis|Ver conexões/ }),
-    ).toHaveAttribute("href", href);
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeVisible();
+    expect(screen.getByRole("link", { name: cta })).toHaveAttribute("href", href);
+  });
+
+  it("omite a cifra do título quando o hero está indisponível", async () => {
+    summaryHeroUnavailable = true;
+    mount();
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Pipeline em jogo" })).toBeVisible();
+    expect(screen.queryByRole("heading", { level: 1, name: /—|\d/ })).not.toBeInTheDocument();
   });
 
   it("restaura os widgets com funil, conversão e agentes das APIs canônicas", async () => {
@@ -285,7 +333,7 @@ describe("Dashboard operacional", () => {
     mount();
 
     expect(await screen.findByRole("region", { name: "Resumo operacional" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Ver conexões" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ver instâncias" })).toHaveAttribute(
       "href",
       "/app/connections",
     );

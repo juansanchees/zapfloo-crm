@@ -46,6 +46,10 @@ describe("buildRoleSummary", () => {
       "conversations_per_attendant",
     ]);
     expect(JSON.stringify(summary)).not.toContain("8940");
+    expect(summary.hero.hint).toBe("Valor informado das oportunidades abertas.");
+    expect(summary.cards.find((card) => card.id === "pipeline_value")?.hint).toBe(
+      "Valor informado das oportunidades abertas.",
+    );
   });
 
   it("não mostra cobrança para admin sem uma fonte canônica", () => {

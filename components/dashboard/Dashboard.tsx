@@ -7,7 +7,12 @@ import { AiServiceStatus } from "@/components/ai/AiServiceStatus";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/hooks/i18n/useT";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
-import type { DashboardCard, DashboardIcon, DashboardSurface } from "@/lib/dashboard/role-summary";
+import type {
+  DashboardCard,
+  DashboardIcon,
+  DashboardSummary,
+  DashboardSurface,
+} from "@/lib/dashboard/role-summary";
 import type { DashboardWidgetId, DashboardWidgetSize } from "@/lib/dashboard/preferences";
 import { useIdioma } from "@/lib/i18n/IdiomaProvider";
 import {
@@ -136,9 +141,31 @@ function SummaryCard({ metric }: { metric: DashboardCard }) {
 }
 
 function actionFor(surface: DashboardSurface) {
-  if (surface === "manager") return { href: "/app/kanban", label: "Abrir funis" };
-  if (surface === "admin") return { href: "/app/connections", label: "Ver conexões" };
-  return { href: "/app/inbox", label: "Abrir conversas" };
+  if (surface === "manager") return { href: "/app/kanban", label: "Revisar funil" };
+  if (surface === "admin") return { href: "/app/connections", label: "Ver instâncias" };
+  return { href: "/app/inbox", label: "Abrir a fila" };
+}
+
+function headlineFor(
+  summary: DashboardSummary | undefined,
+  t: (text: string) => string,
+): string {
+  if (!summary) return t("Acompanhe sua operação");
+  const value = summary.hero.value;
+  if (value === "—") {
+    if (summary.role_surface === "manager") return t("Pipeline em jogo");
+    if (summary.role_surface === "admin") return t("Instâncias conectadas");
+    return t("Conversas esperando resposta");
+  }
+  if (summary.role_surface === "agent") {
+    return `${value} ${t("conversas esperando resposta")}`;
+  }
+  if (summary.role_surface === "manager") {
+    return `${t("Pipeline de")} ${value} ${t("em jogo")}`;
+  }
+  const [online, total, ...extra] = String(value).split("/");
+  if (!online || !total || extra.length > 0) return t("Instâncias conectadas");
+  return `${online} ${t("de")} ${total} ${t("instâncias conectadas")}`;
 }
 
 export function Dashboard() {
@@ -172,7 +199,7 @@ export function Dashboard() {
   const agents = (d.agents.data ?? [])
     .filter((agent) => agent.is_active && !agent.archived_at)
     .slice(0, 3);
-  const action = actionFor(summary?.role_surface ?? "agent");
+  const action = summary ? actionFor(summary.role_surface) : null;
   const platformViewerSummary = d.isPlatformAdmin && d.activeOrg.role === "viewer";
   const tasks = [...(d.tasks.data ?? [])]
     .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
@@ -195,7 +222,7 @@ export function Dashboard() {
       <header className={styles.greeting}>
         <div>
           <p className={styles.eyebrow}>{t("SEU NEGÓCIO, MAIS PERTO.")}</p>
-          <h1>{t("Vamos fazer o dia render?")}</h1>
+          <h1>{headlineFor(summary, t)}</h1>
           <p className={styles.muted}>{t("Métricas conforme suas permissões.")}</p>
         </div>
         <div className={styles.headerActions}>
@@ -203,12 +230,14 @@ export function Dashboard() {
             <PencilSimple aria-hidden />
             {t("Personalizar painel")}
           </Button>
-          <Button asChild className={styles.pill} size="lg">
-            <Link href={action.href}>
-              {t(action.label)}
-              <ArrowSquareOut aria-hidden />
-            </Link>
-          </Button>
+          {action && (
+            <Button asChild className={styles.pill} size="lg">
+              <Link href={action.href}>
+                {t(action.label)}
+                <ArrowSquareOut aria-hidden />
+              </Link>
+            </Button>
+          )}
         </div>
       </header>
 

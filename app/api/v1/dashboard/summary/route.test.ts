@@ -21,13 +21,16 @@ const state = vi.hoisted(() => ({
     avg_first_response_seconds: number | null;
   }>,
   leads: {
-    open: [{ value_cents: 1_234_500, currency: "BRL" }],
+    open: [{ value_cents: 1_234_500, currency: "BRL" }] as Array<{
+      value_cents: number | null;
+      currency: string | null;
+    }>,
     won: [
       { value_cents: 114_200, currency: "BRL" },
       { value_cents: 114_200, currency: "BRL" },
       { value_cents: 114_200, currency: "BRL" },
       { value_cents: 114_100, currency: "BRL" },
-    ],
+    ] as Array<{ value_cents: number | null; currency: string | null }>,
   },
 }));
 
@@ -240,6 +243,42 @@ describe("GET /api/v1/dashboard/summary", () => {
     expect(response.data.omitted).toContainEqual({
       id: "pipeline_value",
       reason: "multiple_currencies",
+    });
+  });
+
+  it("soma apenas oportunidades com valor e moeda informados", async () => {
+    state.leads.open = [
+      { value_cents: 1_234_500, currency: "BRL" },
+      { value_cents: null, currency: "BRL" },
+      { value_cents: 999_00, currency: null },
+    ];
+    state.leads.won = [
+      { value_cents: 10_000, currency: "BRL" },
+      { value_cents: null, currency: "BRL" },
+    ];
+
+    const response = await body();
+
+    expect(response.data.hero.value).toBe("R$ 12.345");
+    expect(response.data.cards.find((card) => card.id === "won_revenue")?.value).toBe("R$ 100");
+    expect(response.data.cards.find((card) => card.id === "average_ticket")?.value).toBe(
+      "R$ 100",
+    );
+  });
+
+  it("omite o agregado quando nenhuma oportunidade tem valor completo", async () => {
+    state.leads.open = [
+      { value_cents: null, currency: "BRL" },
+      { value_cents: 999_00, currency: null },
+    ];
+
+    const response = await body();
+
+    expect(response.data.hero.value).toBe("—");
+    expect(response.data.cards.map((card) => card.id)).not.toContain("pipeline_value");
+    expect(response.data.omitted).toContainEqual({
+      id: "pipeline_value",
+      reason: "source_unavailable",
     });
   });
 

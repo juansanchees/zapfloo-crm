@@ -198,7 +198,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
         "Pipeline aberto",
         formatCurrency(sources.locale, open.currency, open.value),
         "Agora",
-        "Valor das oportunidades abertas.",
+        "Valor informado das oportunidades abertas.",
         "trend",
       )
     : unavailableHero("manager");
@@ -210,7 +210,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
         "Pipeline aberto",
         formatCurrency(sources.locale, open.currency, open.value),
         "Agora",
-        "Valor das oportunidades abertas.",
+        "Valor informado das oportunidades abertas.",
         "trend",
       ),
     );
@@ -228,7 +228,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
         "Receita ganha",
         formatCurrency(sources.locale, won.currency, won.value),
         "Mês atual",
-        "Negócios ganhos fechados neste mês.",
+        "Valor informado dos negócios ganhos fechados neste mês.",
         "money",
       ),
     );
@@ -246,7 +246,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
         "Ticket médio",
         formatCurrency(sources.locale, won.currency, Math.round(won.value / wonCount.value)),
         "Mês atual",
-        "Receita ganha dividida pelos negócios ganhos.",
+        "Valor informado ganho dividido pelos negócios ganhos com valor informado.",
         "receipt",
       ),
     );
