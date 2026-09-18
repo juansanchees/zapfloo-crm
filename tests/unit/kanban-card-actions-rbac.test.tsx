@@ -27,14 +27,15 @@ describe("ações do card respeitam papel", () => {
     render(<KanbanCardActions lead={lead} pipelineId="p1" onAdvance={vi.fn()} />);
     expect(screen.queryByLabelText("Ações do lead")).not.toBeInTheDocument();
     expect(screen.queryByText("Avançar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ganhar")).not.toBeInTheDocument();
   });
 
   it("agent recebe avanço e ganhar chama a mutation canônica", () => {
     state.canMutate = true;
     const advance = vi.fn();
     render(<KanbanCardActions lead={lead} pipelineId="p1" onAdvance={advance} />);
-    fireEvent.click(screen.getByText("Avançar"));
-    fireEvent.click(screen.getByText("Marcar como ganho"));
+    fireEvent.click(screen.getByRole("button", { name: "Avançar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ganhar" }));
     expect(advance).toHaveBeenCalledOnce();
     expect(state.win).toHaveBeenCalledWith({ leadId: "l1" });
   });
