@@ -5827,6 +5827,7 @@ export const DICIONARIO: Traducoes = {
   "Nenhum lead nesta pipeline ainda.": { es: "Ningún lead en este pipeline todavía." },
   "Ações do lead": { es: "Acciones del lead" },
   "Marcar como ganho": { es: "Marcar como ganado" },
+  "Ganhar": { es: "Ganar" },
   "Marcar como perdido": { es: "Marcar como perdido" },
   "Probabilidade recalculada automaticamente": { es: "Probabilidad recalculada automáticamente" },
   "Dados do negócio": { es: "Datos del negocio" },

@@ -64,7 +64,23 @@ export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardAct
 
   return (
     <>
-      <DropdownMenu>
+      <div className="flex shrink-0 items-center gap-1" onClick={(event) => event.stopPropagation()}>
+        {onAdvance && (
+          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={onAdvance}>
+            {t("Avançar")}
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          disabled={winMutation.isPending}
+          onClick={() => winMutation.mutate({ leadId: lead.id })}
+        >
+          {t("Ganhar")}
+        </Button>
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -87,11 +103,6 @@ export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardAct
           >
             <PencilSimple size={14} className="mr-2" /> {t("Editar")}
           </DropdownMenuItem>
-          {onAdvance && (
-            <DropdownMenuItem onSelect={onAdvance}>
-              {t("Avançar")}
-            </DropdownMenuItem>
-          )}
           {canMutate && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
@@ -136,14 +147,6 @@ export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardAct
             </DropdownMenuSub>
           )}
           <DropdownMenuItem
-            disabled={winMutation.isPending}
-            onSelect={() => {
-              winMutation.mutate({ leadId: lead.id });
-            }}
-          >
-            {t("Marcar como ganho")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
             onSelect={() => {
               setLoseOpen(true);
             }}
@@ -151,7 +154,8 @@ export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardAct
             {t("Marcar como perdido")}
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
 
       <LoseLeadDialog
         open={loseOpen}
