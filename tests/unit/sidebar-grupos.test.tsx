@@ -53,6 +53,7 @@ describe("Sidebar compacto", () => {
       "Funis de vendas",
       "Contatos",
       "Tarefas e agenda",
+      "Metas",
       "Relatórios",
       "Instâncias WhatsApp",
       "Usuários e permissões",

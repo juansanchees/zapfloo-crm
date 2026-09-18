@@ -92,9 +92,9 @@ function unavailableHero(surface: DashboardSurface): DashboardCard {
 }
 
 function formatDuration(seconds: number): string {
-  const rounded = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(rounded / 60);
-  const remainder = rounded % 60;
+  const secondsRounded = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(secondsRounded / 60);
+  const remainder = secondsRounded % 60;
   return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
 }
 
