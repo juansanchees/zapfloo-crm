@@ -119,16 +119,18 @@ export function PipelinePageClient({
             <p><span className="mr-1 text-text-muted">{t("Ganho no mês")}</span><TotaisPorMoeda valores={data?.summary?.won_month_by_currency ?? {}} /></p>
           </div>
         </div>
-        <Button onClick={() => setNewOpen(true)} disabled={!data} className="shrink-0">
-          <Plus size={16} className="mr-2" /> {t("Novo negócio")}
-        </Button>
+        {canMutate && (
+          <Button onClick={() => setNewOpen(true)} disabled={!data} className="shrink-0">
+            <Plus size={16} className="mr-2" /> {t("Novo negócio")}
+          </Button>
+        )}
       </header>
       {seguranca.divergencias > 0 && (
         <p role="status" className="rounded-lg border border-warning/30 bg-warning-bg p-3 text-sm text-warning-fg">
           {t("Uma atualização não chegou em tempo real. Recuperamos os dados pela verificação de segurança; novas alterações podem demorar para aparecer.")}
         </p>
       )}
-      {data && (
+      {canMutate && data && (
         <NewLeadDialog
           open={newOpen}
           onOpenChange={setNewOpen}
