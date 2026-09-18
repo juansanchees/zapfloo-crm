@@ -16,12 +16,14 @@ export function useDashboard() {
   const { user, activeOrg } = useAuth();
   const qc = useQueryClient();
   const enabled = !!activeOrg;
-  const canAct = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "agent"));
-  const canReadSummary = canAct;
-  const canManage =
-    enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "manager"));
-  const canConfigureAiAccess =
-    enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "admin"));
+  // O resumo permite o papel transversal da plataforma. As demais APIs abaixo
+  // mantêm os guards por membership do tenant, portanto não podemos habilitá-
+  // las só porque a pessoa também administra a plataforma.
+  const canReadSummary =
+    enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "agent"));
+  const canAct = enabled && roleAtLeast(activeOrg.role, "agent");
+  const canManage = enabled && roleAtLeast(activeOrg.role, "manager");
+  const canConfigureAiAccess = enabled && roleAtLeast(activeOrg.role, "admin");
   const scope = [
     "dashboard",
     activeOrg?.orgId,
@@ -98,6 +100,7 @@ export function useDashboard() {
 
   return {
     activeOrg,
+    isPlatformAdmin: user.is_platform_admin,
     canAct,
     canReadSummary,
     canManage,

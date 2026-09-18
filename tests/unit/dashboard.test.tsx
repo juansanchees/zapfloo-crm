@@ -19,6 +19,63 @@ let taskDone = false;
 let requests: string[] = [];
 let savedPreferenceBody: unknown = null;
 let summarySurface: "agent" | "manager" | "admin" = "manager";
+function metricsFixture() {
+  return {
+    window: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
+    owner_user_id: null,
+    funnel: [
+      { stage_id: "proposal", stage_name: "Proposta", position: 1, count: 6 },
+      { stage_id: "negotiation", stage_name: "Negociação", position: 2, count: 2 },
+    ],
+    attendants: [
+      {
+        user_id: "user-1",
+        won: 3,
+        lost: 1,
+        conversations_handled: 7,
+        avg_first_response_seconds: 120,
+        name: "Pessoa teste",
+        email: null,
+      },
+    ],
+  };
+}
+function agentsFixture() {
+  return [
+    {
+      id: "agent-1",
+      organization_id: "org-1",
+      name: "Agente teste",
+      description: "Qualifica oportunidades",
+      model: "test-model",
+      system_prompt: "",
+      is_active: true,
+      is_default: false,
+      config: {},
+      guardrails: null,
+      active_kb_version_id: null,
+      created_at: "2026-09-01T00:00:00.000Z",
+      updated_at: "2026-09-01T00:00:00.000Z",
+    },
+    {
+      id: "agent-disabled",
+      organization_id: "org-1",
+      name: "Agente desativado",
+      description: null,
+      model: "test-model",
+      system_prompt: "",
+      is_active: false,
+      is_default: false,
+      config: {},
+      guardrails: null,
+      active_kb_version_id: null,
+      created_at: "2026-09-01T00:00:00.000Z",
+      updated_at: "2026-09-01T00:00:00.000Z",
+    },
+  ];
+}
+let metrics = metricsFixture();
+let agents = agentsFixture();
 const task = {
   id: "task-1",
   organization_id: "org-1",
@@ -45,6 +102,8 @@ beforeEach(() => {
   requests = [];
   savedPreferenceBody = null;
   summarySurface = "manager";
+  metrics = metricsFixture();
+  agents = agentsFixture();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string, init?: RequestInit) => {
@@ -100,47 +159,9 @@ beforeEach(() => {
           ],
         });
       if (url.includes("/metrics/attendants"))
-        return Response.json({
-          data: {
-            window: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
-            owner_user_id: null,
-            funnel: [
-              { stage_id: "proposal", stage_name: "Proposta", position: 1, count: 6 },
-              { stage_id: "negotiation", stage_name: "Negociação", position: 2, count: 2 },
-            ],
-            attendants: [
-              {
-                user_id: "user-1",
-                won: 3,
-                lost: 1,
-                conversations_handled: 7,
-                avg_first_response_seconds: 120,
-                name: "Pessoa teste",
-                email: null,
-              },
-            ],
-          },
-        });
+        return Response.json({ data: metrics });
       if (url.includes("/ai/agents"))
-        return Response.json({
-          data: [
-            {
-              id: "agent-1",
-              organization_id: "org-1",
-              name: "Agente teste",
-              description: "Qualifica oportunidades",
-              model: "test-model",
-              system_prompt: "",
-              is_active: true,
-              is_default: false,
-              config: {},
-              guardrails: null,
-              active_kb_version_id: null,
-              created_at: "2026-09-01T00:00:00.000Z",
-              updated_at: "2026-09-01T00:00:00.000Z",
-            },
-          ],
-        });
+        return Response.json({ data: agents });
       if (url.includes("/tasks/task-1")) {
         taskDone = true;
         return Response.json({ data: { task: { ...task, status: "done" } } });
@@ -218,6 +239,7 @@ describe("Dashboard operacional", () => {
     expect(screen.getByText("8")).toBeVisible();
     expect(screen.getByText("75%")).toBeVisible();
     expect(screen.getByText("Agente teste")).toBeVisible();
+    expect(screen.queryByText("Agente desativado")).not.toBeInTheDocument();
     expect(requests.some((request) => request.includes("/metrics/attendants"))).toBe(true);
     expect(requests.some((request) => request.includes("/ai/agents"))).toBe(true);
   });
@@ -232,6 +254,59 @@ describe("Dashboard operacional", () => {
     expect(screen.queryByRole("region", { name: "Resumo operacional" })).not.toBeInTheDocument();
     expect(screen.queryByText("Não foi possível carregar as métricas do painel.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument();
+    expect(requests.some((request) => request.includes("/metrics/attendants"))).toBe(false);
+    expect(requests.some((request) => request.includes("/ai/agents"))).toBe(false);
+    expect(screen.getByRole("link", { name: /Contato teste/ })).toBeVisible();
+    expect(screen.getByText("Revisar proposta")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    expect(within(dialog).queryByTestId("dashboard-editor-conversation_summary")).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId("dashboard-editor-recent_conversations")).toBeVisible();
+    expect(within(dialog).getByTestId("dashboard-editor-upcoming_work")).toBeVisible();
+  });
+
+  it("mantém resumo administrativo sem chamar APIs do papel viewer", async () => {
+    auth.user.is_platform_admin = true;
+    auth.activeOrg.role = "viewer";
+    summarySurface = "admin";
+    mount();
+
+    expect(await screen.findByRole("region", { name: "Resumo operacional" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Ver conexões" })).toHaveAttribute(
+      "href",
+      "/app/connections",
+    );
+    expect(requests.some((request) => request.includes("/dashboard/summary"))).toBe(true);
+    expect(requests.some((request) => request.includes("/metrics/attendants"))).toBe(false);
+    expect(requests.some((request) => request.includes("/ai/agents"))).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
+    const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
+    expect(within(dialog).queryByTestId("dashboard-editor-conversation_summary")).not.toBeInTheDocument();
+    expect(within(dialog).queryByTestId("dashboard-editor-opportunities_by_stage")).not.toBeInTheDocument();
+    expect(within(dialog).queryByTestId("dashboard-editor-active_agents")).not.toBeInTheDocument();
+  });
+
+  it("não inventa conversão quando não há decisões", async () => {
+    metrics.attendants = [];
+    mount();
+    expect(await screen.findByText("—")).toBeVisible();
+  });
+
+  it("não trata atendentes com 0/0 como conversão zero", async () => {
+    metrics.attendants = [
+      {
+        user_id: "user-1",
+        won: 0,
+        lost: 0,
+        conversations_handled: 0,
+        avg_first_response_seconds: 0,
+        name: "Pessoa teste",
+        email: null,
+      },
+    ];
+    mount();
+    expect(await screen.findByText("—")).toBeVisible();
+    expect(screen.queryByText("0%")).not.toBeInTheDocument();
   });
 
   it("restaura o editor, redimensiona e salva a preferência do painel", async () => {

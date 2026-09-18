@@ -168,9 +168,12 @@ export function Dashboard() {
   const won = metrics?.attendants.reduce((total, attendant) => total + attendant.won, 0);
   const lost = metrics?.attendants.reduce((total, attendant) => total + attendant.lost, 0);
   const decisions = (won ?? 0) + (lost ?? 0);
-  const conversion = decisions > 0 ? Math.round(((won ?? 0) / decisions) * 100) : 0;
-  const agents = (d.agents.data ?? []).filter((agent) => !agent.archived_at).slice(0, 3);
+  const conversion = decisions > 0 ? Math.round(((won ?? 0) / decisions) * 100) : undefined;
+  const agents = (d.agents.data ?? [])
+    .filter((agent) => agent.is_active && !agent.archived_at)
+    .slice(0, 3);
   const action = actionFor(summary?.role_surface ?? "agent");
+  const platformViewerSummary = d.isPlatformAdmin && d.activeOrg.role === "viewer";
   const tasks = [...(d.tasks.data ?? [])]
     .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
     .slice(0, 3);
@@ -233,7 +236,7 @@ export function Dashboard() {
       )}
       <div className={styles.columns}>
         {summary &&
-          place(
+          (place(
             "conversation_summary",
             <section className={styles.summary} aria-label={t("Resumo operacional")}>
               <article className={styles.heroMetric} aria-label={t(summary.hero.label)}>
@@ -252,7 +255,28 @@ export function Dashboard() {
                 ))}
               </div>
             </section>,
-          )}
+          ) ??
+            (platformViewerSummary ? (
+              <WidgetSlot size="full" order={0}>
+                <section className={styles.summary} aria-label={t("Resumo operacional")}>
+                  <article className={styles.heroMetric} aria-label={t(summary.hero.label)}>
+                    <div>
+                      <p className={styles.eyebrow}>{t(summary.hero.variation || "AGORA")}</p>
+                      <h2>{t(summary.hero.label)}</h2>
+                      <p className={styles.muted}>{t(summary.hero.hint)}</p>
+                    </div>
+                    <strong data-testid={`dashboard-value-${summary.hero.id}`}>
+                      {summary.hero.value}
+                    </strong>
+                  </article>
+                  <div className={styles.summaryCards}>
+                    {summary.cards.map((metric) => (
+                      <SummaryCard key={metric.id} metric={metric} />
+                    ))}
+                  </div>
+                </section>
+              </WidgetSlot>
+            ) : null))}
 
         {place(
           "recent_conversations",
@@ -407,7 +431,7 @@ export function Dashboard() {
             "period_conversion",
             <Panel title={t("Conversão do período")}>
               <div className={styles.conversionMetric}>
-                <strong>{metrics ? `${conversion}%` : "—"}</strong>
+                <strong>{conversion === undefined ? "—" : `${conversion}%`}</strong>
                 <span>{t("oportunidades ganhas entre as decisões registradas")}</span>
               </div>
               <QueryState
