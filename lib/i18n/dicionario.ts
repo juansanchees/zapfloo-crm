@@ -8586,6 +8586,41 @@ export const DICIONARIO: Traducoes = {
   "membro": { es: "miembro" },
   "Seu perfil ainda está sem nome.": { es: "Tu perfil todavía no tiene nombre." },
   "Abrir Configurações › Perfil": { es: "Abrir Configuración › Perfil" },
+  Metas: { es: "Metas" },
+  "O que a equipe realizou neste mês em relação aos objetivos definidos.": {
+    es: "Lo que el equipo logró este mes frente a los objetivos definidos.",
+  },
+  "Sem valores": { es: "Sin valores" },
+  "Pipeline aberto": { es: "Pipeline abierto" },
+  "Ganho no mês": { es: "Ganado en el mes" },
+  "Novo negócio": { es: "Nuevo negocio" },
+  "Métricas conforme suas permissões.": { es: "Métricas según tus permisos." },
+  "Carregando métricas…": { es: "Cargando métricas…" },
+  "Não foi possível carregar as métricas do painel.": {
+    es: "No se pudieron cargar las métricas del panel.",
+  },
+  "Resumo operacional": { es: "Resumen operativo" },
+  "Abra a fila para acompanhar conversas aguardando atendimento.": {
+    es: "Abre la cola para acompañar las conversaciones que esperan atención.",
+  },
+  "Oportunidades abertas conforme seu acesso.": {
+    es: "Oportunidades abiertas según tu acceso.",
+  },
+  "Nenhum agente ativo.": { es: "No hay ningún agente activo." },
+  "Sem contato": { es: "Sin contacto" },
+  Avançar: { es: "Avanzar" },
+  "Meta não definida": { es: "Meta no definida" },
+  "Receita mensal": { es: "Ingresos mensuales" },
+  "Deixe em branco o que não deve ter meta neste mês.": {
+    es: "Deja en blanco lo que no deba tener meta este mes.",
+  },
+  "Não foi possível carregar as metas operacionais.": {
+    es: "No se pudieron cargar las metas operativas.",
+  },
+  "Acompanhe o mês pelo que já aconteceu na operação.": {
+    es: "Sigue el mes a partir de lo que ya ocurrió en la operación.",
+  },
+  "Seu resumo": { es: "Tu resumen" },
 };
 
 /**

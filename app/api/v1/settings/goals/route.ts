@@ -106,11 +106,9 @@ export async function PATCH(req: NextRequest): Promise<Response> {
   }
   if (!saved) return fail("conflict", "A configuração mudou enquanto era salva. Tente novamente.", 409, { requestId });
 
-  // A lista canônica de audit actions é mantida fora desta superfície por
-  // ownership da leva. O cast só permite registrar o código já contratado;
-  // metadata não expõe valores ou metas individuais.
+  // Metadata registra a forma da mudança, sem expor valores ou metas individuais.
   void audit({
-    action: "goals.config_changed" as never,
+    action: "goals.config_changed",
     actorUserId: authz.user.id,
     organizationId: authz.org.orgId,
     resourceType: "organization",

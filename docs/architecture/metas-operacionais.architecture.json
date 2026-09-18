@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Metas operacionais",
+    "subtitle": "Objetivo definido pelo dono confrontado com fatos do mês, sem gamificação",
+    "output": "metas-operacionais.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "config", "label": "Configuração" },
+    { "id": "fatos", "label": "Fatos da operação" },
+    { "id": "api", "label": "APIs com escopo" },
+    { "id": "ui", "label": "Tela e porta" },
+    { "id": "audit", "label": "Retorno e trilha" }
+  ],
+  "mainPath": [
+    "nav",
+    "tela",
+    "configroute",
+    "settings",
+    "progressroute",
+    "fatos",
+    "progressroute",
+    "tela"
+  ],
+  "nodes": [
+    {
+      "id": "nav",
+      "lane": "ui",
+      "col": 1,
+      "type": "service",
+      "label": "Menu EQUIPE / Metas",
+      "sublabel": "agent+; antes de Relatórios"
+    },
+    {
+      "id": "tela",
+      "lane": "ui",
+      "col": 2,
+      "type": "frontend",
+      "label": "/app/metas",
+      "sublabel": "agent vê; manager/admin definem objetivos"
+    },
+    {
+      "id": "configroute",
+      "lane": "api",
+      "col": 3,
+      "type": "api",
+      "label": "GET/PATCH /api/v1/settings/goals",
+      "sublabel": "leitura agent+; escrita manager+; CAS preserva settings irmãs"
+    },
+    {
+      "id": "settings",
+      "lane": "config",
+      "col": 4,
+      "type": "table",
+      "label": "organizations.settings.operational_goals",
+      "sublabel": "metas opcionais; membros cifrados; ausência nunca vira zero"
+    },
+    {
+      "id": "progressroute",
+      "lane": "api",
+      "col": 4,
+      "type": "api",
+      "label": "GET /api/v1/goals/progress",
+      "sublabel": "mês UTC semiaberto e recorte por papel"
+    },
+    {
+      "id": "fatos",
+      "lane": "fatos",
+      "col": 5,
+      "type": "table",
+      "label": "crm_leads ganhos + conversations atendidas",
+      "sublabel": "organization_id e owner/assignee; valores separados por moeda"
+    },
+    {
+      "id": "audit",
+      "lane": "audit",
+      "col": 5,
+      "type": "table",
+      "label": "api_audit_log / goals.config_changed",
+      "sublabel": "registra a forma da mudança sem valores individuais"
+    },
+    {
+      "id": "auditui",
+      "lane": "audit",
+      "col": 6,
+      "type": "frontend",
+      "label": "Painel de auditoria da plataforma",
+      "sublabel": "filtro deriva de AUDIT_ACTIONS"
+    }
+  ],
+  "edges": [
+    { "id": "e1", "from": "nav", "to": "tela", "label": "porta visível no grupo EQUIPE" },
+    { "id": "e2", "from": "tela", "to": "nav", "label": "a rota ativa mantém Metas selecionada" },
+    { "id": "e3", "from": "tela", "to": "configroute", "label": "lê objetivos; manager/admin podem salvar" },
+    { "id": "e4", "from": "configroute", "to": "settings", "label": "merge compare-and-swap no settings da organização" },
+    { "id": "e5", "from": "settings", "to": "configroute", "label": "configuração validada e membros decifrados conforme o papel" },
+    { "id": "e6", "from": "tela", "to": "progressroute", "label": "consulta o progresso do mês" },
+    { "id": "e7", "from": "progressroute", "to": "fatos", "label": "lê ganhos e conversas dentro da janela UTC" },
+    { "id": "e8", "from": "fatos", "to": "progressroute", "label": "resultados tenant-scoped, por equipe ou pela própria pessoa" },
+    { "id": "e9", "from": "progressroute", "to": "tela", "label": "realizado versus objetivo, sem ranking" },
+    { "id": "e10", "from": "configroute", "to": "audit", "label": "salvar emite goals.config_changed" },
+    { "id": "e11", "from": "auditui", "to": "audit", "label": "filtro consulta a trilha canônica" },
+    { "id": "e12", "from": "audit", "to": "auditui", "label": "mudança fica visível para auditoria" }
+  ],
+  "non_connections": [
+    "Não cria tabela: objetivos vivem no settings da organização.",
+    "Não usa XP, nível, ranking, medalha, desafio ou ofensiva.",
+    "Não inventa objetivo: campo ausente aparece como meta não definida."
+  ]
+}

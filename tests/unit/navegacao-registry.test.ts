@@ -161,11 +161,29 @@ describe("compactAreas", () => {
       ["operacao", "Funis de vendas", "/app/kanban"],
       ["operacao", "Contatos", "/app/contacts"],
       ["operacao", "Tarefas e agenda", "/app/tasks"],
+      ["equipe", "Metas", "/app/metas"],
       ["equipe", "Relatórios", "/app/metrics"],
       ["administracao", "Instâncias WhatsApp", "/app/connections"],
       ["administracao", "Usuários e permissões", "/app/team"],
       ["administracao", "Plano e pagamentos", "/app/settings/billing"],
     ]);
+  });
+
+  it("abre Metas para agent+ antes de Relatórios e não promete Chat interno", () => {
+    const paraAgent = compactAreas(AGENT.platform, AGENT.role).filter(
+      (area) => area.position === "main" && area.section === "equipe",
+    );
+    const paraViewer = compactAreas(VIEWER.platform, VIEWER.role).filter(
+      (area) => area.position === "main" && area.section === "equipe",
+    );
+
+    expect(paraAgent.map((area) => [area.label, area.href])).toEqual([
+      ["Metas", "/app/metas"],
+      ["Relatórios", "/app/metrics"],
+    ]);
+    expect(paraViewer.map((area) => area.href)).toEqual(["/app/metrics"]);
+    expect(compactAreaForPath("/app/metas", compactAreas(false, "agent"))?.id).toBe("metas");
+    expect(compactAreas(true, null).some((area) => area.label === "Chat interno")).toBe(false);
   });
 
   it("usa o ícone de grupo aprovado para Contatos em todas as projeções", () => {

@@ -97,6 +97,7 @@ export type CompactAreaId =
   | "contatos"
   | "tarefas"
   | "ia"
+  | "metas"
   | "relatorios"
   | "conexoes"
   | "usuarios"
@@ -238,6 +239,16 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
       { href: "/app/tasks", label: "Tarefas" },
       { href: "/app/agenda", label: "Agenda" },
     ],
+  },
+  {
+    id: "metas",
+    label: "Metas",
+    href: "/app/metas",
+    icon: Flag,
+    position: "main",
+    section: "equipe",
+    minRole: "agent",
+    tabs: [],
   },
   {
     id: "relatorios",
@@ -739,6 +750,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   // Sair do menu não é sair do produto — o hub `/app/analise` é INVENTÁRIO e
   // lista as cinco (`hubSections`), então as duas continuam a um clique, com a
   // frase que explica para que servem. O ⌘K também as acha por nome.
+  {
+    href: "/app/metas",
+    label: "Metas",
+    description: "O que a equipe realizou neste mês em relação aos objetivos definidos.",
+    icon: Flag,
+    group: "analise",
+    section: "Os números do período",
+    minRole: "agent",
+  },
   {
     href: "/app/metrics",
     label: "Relatórios",
