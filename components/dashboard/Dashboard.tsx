@@ -383,7 +383,7 @@ export function Dashboard() {
         {place(
           "service_queue",
           <Panel title={t("Fila de atendimento")}>
-            <p className={styles.muted}>{t("Acompanhe a fila no resumo operacional.")}</p>
+            <p className={styles.muted}>{t("Abra a fila para acompanhar conversas aguardando atendimento.")}</p>
             <Jump href="/app/inbox?filter=unassigned">{t("Abrir fila")}</Jump>
           </Panel>,
         )}
@@ -476,7 +476,7 @@ export function Dashboard() {
                     ))}
                   </ul>
                 ) : (
-                  <p className={styles.empty}>{t("Nenhum agente configurado.")}</p>
+                  <p className={styles.empty}>{t("Nenhum agente ativo.")}</p>
                 ))}
               <Jump href="/app/ai/agents">{t("Ver agentes")}</Jump>
             </Panel>,

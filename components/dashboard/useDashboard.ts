@@ -16,14 +16,15 @@ export function useDashboard() {
   const { user, activeOrg } = useAuth();
   const qc = useQueryClient();
   const enabled = !!activeOrg;
-  // O resumo permite o papel transversal da plataforma. As demais APIs abaixo
-  // mantêm os guards por membership do tenant, portanto não podemos habilitá-
-  // las só porque a pessoa também administra a plataforma.
+  // O resumo e a configuração de acesso à IA permitem o papel transversal da
+  // plataforma. Métricas, agentes e ações operacionais mantêm os guards por
+  // membership do tenant, portanto não podemos habilitá-los por esse papel.
   const canReadSummary =
     enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "agent"));
   const canAct = enabled && roleAtLeast(activeOrg.role, "agent");
   const canManage = enabled && roleAtLeast(activeOrg.role, "manager");
-  const canConfigureAiAccess = enabled && roleAtLeast(activeOrg.role, "admin");
+  const canConfigureAiAccess =
+    enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "admin"));
   const scope = [
     "dashboard",
     activeOrg?.orgId,

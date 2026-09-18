@@ -158,6 +158,16 @@ beforeEach(() => {
             },
           ],
         });
+      if (url.includes("/ai/automatico-ativo"))
+        return Response.json({
+          data: {
+            ativo: true,
+            estado: "em_teste",
+            motivo: null,
+            numeros_autorizados: 1,
+            canal_id: "channel-1",
+          },
+        });
       if (url.includes("/metrics/attendants"))
         return Response.json({ data: metrics });
       if (url.includes("/ai/agents"))
@@ -258,6 +268,9 @@ describe("Dashboard operacional", () => {
     expect(requests.some((request) => request.includes("/ai/agents"))).toBe(false);
     expect(screen.getByRole("link", { name: /Contato teste/ })).toBeVisible();
     expect(screen.getByText("Revisar proposta")).toBeVisible();
+    expect(
+      screen.getByText("Abra a fila para acompanhar conversas aguardando atendimento."),
+    ).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
     const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
     expect(within(dialog).queryByTestId("dashboard-editor-conversation_summary")).not.toBeInTheDocument();
@@ -279,11 +292,24 @@ describe("Dashboard operacional", () => {
     expect(requests.some((request) => request.includes("/dashboard/summary"))).toBe(true);
     expect(requests.some((request) => request.includes("/metrics/attendants"))).toBe(false);
     expect(requests.some((request) => request.includes("/ai/agents"))).toBe(false);
+    expect(screen.getByRole("button", { name: "Liberar para todos" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Autorizar números" })).toHaveAttribute(
+      "href",
+      "/app/connections",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Personalizar painel" }));
     const dialog = screen.getByRole("dialog", { name: "Personalizar painel" });
     expect(within(dialog).queryByTestId("dashboard-editor-conversation_summary")).not.toBeInTheDocument();
     expect(within(dialog).queryByTestId("dashboard-editor-opportunities_by_stage")).not.toBeInTheDocument();
     expect(within(dialog).queryByTestId("dashboard-editor-active_agents")).not.toBeInTheDocument();
+  });
+
+  it("informa corretamente quando há somente agentes desativados", async () => {
+    agents = agents.filter((agent) => !agent.is_active);
+    mount();
+
+    expect(await screen.findByText("Nenhum agente ativo.")).toBeVisible();
+    expect(screen.queryByText("Agente desativado")).not.toBeInTheDocument();
   });
 
   it("não inventa conversão quando não há decisões", async () => {
