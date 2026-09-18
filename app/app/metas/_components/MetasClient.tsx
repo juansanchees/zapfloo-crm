@@ -66,7 +66,7 @@ function RevenueBars({ revenue }: { revenue: GoalRevenueProgress[] }) {
   return revenue.map((entry) => (
     <MetricBar
       key={entry.currency}
-      label={`Receita mensal (${entry.currency})`}
+      label={`${t("Receita mensal")} (${entry.currency})`}
       current={entry.current_cents}
       target={entry.target_cents}
       format={(value) => money(value, entry.currency)}
@@ -94,31 +94,31 @@ function GoalsEditor({ initial, members, scope }: { initial: OperationalGoals; m
 
   return (
     <section aria-labelledby="configurar-metas" className="rounded-xl border p-4">
-      <h2 id="configurar-metas" className="text-base font-semibold">Configurar metas</h2>
+      <h2 id="configurar-metas" className="text-base font-semibold">{t("Configurar metas")}</h2>
       <p className="mt-1 text-sm text-muted-foreground">{t("Deixe em branco o que não deve ter meta neste mês.")}</p>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <label className="grid gap-1 text-sm">Moeda da receita
-          <input className="h-9 rounded-md border bg-background px-3" aria-label="Moeda da receita" maxLength={3} value={draft.currency ?? ""} onChange={(event) => setDraft((current) => ({ ...current, currency: (event.target.value.toUpperCase() || undefined) as OperationalGoals["currency"] }))} />
+        <label className="grid gap-1 text-sm">{t("Moeda da receita")}
+          <input className="h-9 rounded-md border bg-background px-3" aria-label={t("Moeda da receita")} maxLength={3} value={draft.currency ?? ""} onChange={(event) => setDraft((current) => ({ ...current, currency: (event.target.value.toUpperCase() || undefined) as OperationalGoals["currency"] }))} />
         </label>
-        <label className="grid gap-1 text-sm">Receita mensal da equipe (centavos)
-          <input className="h-9 rounded-md border bg-background px-3" aria-label="Receita mensal da equipe" inputMode="numeric" value={numberValue(draft.team.monthly_revenue_cents)} onChange={(event) => setTeam("monthly_revenue_cents", event.target.value)} />
+        <label className="grid gap-1 text-sm">{t("Receita mensal da equipe (centavos)")}
+          <input className="h-9 rounded-md border bg-background px-3" aria-label={t("Receita mensal da equipe")} inputMode="numeric" value={numberValue(draft.team.monthly_revenue_cents)} onChange={(event) => setTeam("monthly_revenue_cents", event.target.value)} />
         </label>
-        <label className="grid gap-1 text-sm">Conversas da equipe
-          <input className="h-9 rounded-md border bg-background px-3" aria-label="Conversas da equipe" inputMode="numeric" value={numberValue(draft.team.monthly_conversations)} onChange={(event) => setTeam("monthly_conversations", event.target.value)} />
+        <label className="grid gap-1 text-sm">{t("Conversas da equipe")}
+          <input className="h-9 rounded-md border bg-background px-3" aria-label={t("Conversas da equipe")} inputMode="numeric" value={numberValue(draft.team.monthly_conversations)} onChange={(event) => setTeam("monthly_conversations", event.target.value)} />
         </label>
       </div>
       {members.map((member) => (
         <fieldset key={member.user_id} className="mt-4 grid gap-3 rounded-lg border p-3 md:grid-cols-2">
-          <legend className="px-1 text-sm font-medium">{member.name ?? "Atendente"}</legend>
-          <label className="grid gap-1 text-sm">Receita mensal (centavos)
-            <input className="h-9 rounded-md border bg-background px-3" aria-label={`Receita mensal de ${member.name ?? "atendente"}`} inputMode="numeric" value={numberValue(draft.members[member.user_id]?.monthly_revenue_cents)} onChange={(event) => setMember(member.user_id, "monthly_revenue_cents", event.target.value)} />
+          <legend className="px-1 text-sm font-medium">{member.name ?? t("Atendente")}</legend>
+          <label className="grid gap-1 text-sm">{t("Receita mensal (centavos)")}
+            <input className="h-9 rounded-md border bg-background px-3" aria-label={`${t("Receita mensal de")} ${member.name ?? t("atendente")}`} inputMode="numeric" value={numberValue(draft.members[member.user_id]?.monthly_revenue_cents)} onChange={(event) => setMember(member.user_id, "monthly_revenue_cents", event.target.value)} />
           </label>
-          <label className="grid gap-1 text-sm">Conversas atendidas
-            <input className="h-9 rounded-md border bg-background px-3" aria-label={`Conversas de ${member.name ?? "atendente"}`} inputMode="numeric" value={numberValue(draft.members[member.user_id]?.monthly_conversations)} onChange={(event) => setMember(member.user_id, "monthly_conversations", event.target.value)} />
+          <label className="grid gap-1 text-sm">{t("Conversas atendidas")}
+            <input className="h-9 rounded-md border bg-background px-3" aria-label={`${t("Conversas de")} ${member.name ?? t("atendente")}`} inputMode="numeric" value={numberValue(draft.members[member.user_id]?.monthly_conversations)} onChange={(event) => setMember(member.user_id, "monthly_conversations", event.target.value)} />
           </label>
         </fieldset>
       ))}
-      <Button className="mt-4" onClick={() => updateGoals.mutate(draft)} disabled={updateGoals.isPending}>Salvar metas</Button>
+      <Button className="mt-4" onClick={() => updateGoals.mutate(draft)} disabled={updateGoals.isPending}>{t("Salvar metas")}</Button>
     </section>
   );
 }
@@ -140,29 +140,29 @@ export function MetasClient({ canManage, orgId, userId, role }: { canManage: boo
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Metas operacionais</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("Metas operacionais")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("Acompanhe o mês pelo que já aconteceu na operação.")}</p>
       </header>
 
       <section aria-labelledby="resumo-operacional" className="space-y-3">
         <h2 id="resumo-operacional" className="text-base font-semibold">
-          {progress.scope === "team" ? "Resumo da equipe" : t("Seu resumo")}
+          {progress.scope === "team" ? t("Resumo da equipe") : t("Seu resumo")}
         </h2>
         <div className="grid gap-3 md:grid-cols-2">
           <RevenueBars revenue={progress.team.revenue} />
-          <MetricBar label="Conversas atendidas" current={progress.team.conversations.current} target={progress.team.conversations.target} format={(value) => String(value)} />
+          <MetricBar label={t("Conversas atendidas")} current={progress.team.conversations.current} target={progress.team.conversations.target} format={(value) => String(value)} />
         </div>
       </section>
 
       <section aria-labelledby="pessoas-da-equipe" className="space-y-3">
-        <h2 id="pessoas-da-equipe" className="text-base font-semibold">Pessoas</h2>
+        <h2 id="pessoas-da-equipe" className="text-base font-semibold">{t("Pessoas")}</h2>
         <div className="space-y-3">
           {progress.members.map((member) => (
             <article key={member.user_id} className="rounded-xl border p-4">
-              <h3 className="text-sm font-medium">{member.name ?? "Atendente"}</h3>
+              <h3 className="text-sm font-medium">{member.name ?? t("Atendente")}</h3>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <RevenueBars revenue={member.revenue} />
-                <MetricBar label="Conversas atendidas" current={member.conversations.current} target={member.conversations.target} format={(value) => String(value)} />
+                <MetricBar label={t("Conversas atendidas")} current={member.conversations.current} target={member.conversations.target} format={(value) => String(value)} />
               </div>
             </article>
           ))}

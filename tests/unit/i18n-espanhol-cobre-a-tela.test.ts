@@ -122,6 +122,21 @@ function ehExcecaoDeclarada(arquivo: string, texto: string): boolean {
 const MARCA_DE_PORTUGUES =
   /[çãõêôàáéíóúâ]|(lh|nh)[aeiouáéíóúãõ]|\b(não|você|está|estão|são|também|através|então|aqui|desta|deste|nesta|neste|dele|dela|quem|quando|onde|para|pelo|pela|com|sem|mais|menos|todos|todas|cada|ainda|já|só|muito|entre|sobre|antes|depois|agora|nunca|sempre|seu|sua|isso|este|essa|esse)\b/iu;
 
+/**
+ * Rótulos curtos que expuseram um falso negativo real da heurística acima.
+ *
+ * `Configurar metas` e `Pessoas` não têm marca ortográfica exclusiva do
+ * português; `Gerenciar funis` e o aria-label `Funis` também passaram verdes
+ * sem `t()`. A lista é uma regressão dos casos medidos, não uma exceção: se
+ * qualquer um voltar cru em texto OU atributo acessível, o gate reprova.
+ */
+const REGRESSOES_DE_TEXTO_CURTO = new Set([
+  "Configurar metas",
+  "Pessoas",
+  "Gerenciar funis",
+  "Funis",
+]);
+
 /** Atributos cujo valor chega ao olho — ou ao leitor de tela — de quem usa. */
 const ATRIBUTOS_VISIVEIS = new Set([
   "placeholder",
@@ -426,7 +441,7 @@ describe("toda chave usada na tela tem espanhol", () => {
 describe("nenhuma prosa em português escapa de t()", () => {
   it("toda tela de produto passa o texto por t() antes de renderizar", () => {
     const vazando = textoCruDasTelas()
-      .filter((a) => MARCA_DE_PORTUGUES.test(a.texto))
+      .filter((a) => MARCA_DE_PORTUGUES.test(a.texto) || REGRESSOES_DE_TEXTO_CURTO.has(a.texto))
       .filter((a) => !ehExcecaoDeclarada(a.local.split(":")[0] ?? "", a.texto))
       .map((a) => `${a.local} [${a.origem}] ${JSON.stringify(a.texto.slice(0, 90))}`);
     expect(

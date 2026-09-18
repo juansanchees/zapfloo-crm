@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PipelinePageClient } from "@/app/app/pipelines/[id]/_client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/hooks/i18n/useT";
 import { FunisClient, type FunilDaLista } from "../_client";
 
 interface KanbanWorkspaceProps {
@@ -26,6 +27,7 @@ export function KanbanWorkspace({
   podeImportar,
 }: KanbanWorkspaceProps) {
   const router = useRouter();
+  const t = useT();
   const [funisVivos, setFunisVivos] = useState(funis);
   const [ultimoDoServidor, setUltimoDoServidor] = useState(funis);
   if (funis !== ultimoDoServidor) {
@@ -44,7 +46,7 @@ export function KanbanWorkspace({
   return (
     <div className="flex min-h-0 flex-col gap-6">
       {funisVivos.length > 0 && (
-        <div role="tablist" aria-label="Funis" className="flex gap-2 overflow-x-auto border-b border-border pb-2">
+        <div role="tablist" aria-label={t("Funis")} className="flex gap-2 overflow-x-auto border-b border-border pb-2">
           {funisVivos.map((funil) => {
             const ativo = funil.id === selecionado?.id;
             return (
@@ -69,7 +71,7 @@ export function KanbanWorkspace({
       ) : null}
 
       <details open={funisVivos.length === 0} className="rounded-lg border border-border bg-surface p-4" data-testid="gerenciar-funis">
-        <summary className="cursor-pointer font-medium">Gerenciar funis</summary>
+        <summary className="cursor-pointer font-medium">{t("Gerenciar funis")}</summary>
         <div className="mt-4">
           <FunisClient funis={funisVivos} podeGerenciar={podeGerenciar} podeImportar={podeImportar} onFunisChange={setFunisVivos} />
         </div>

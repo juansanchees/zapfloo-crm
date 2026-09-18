@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
@@ -65,5 +67,19 @@ describe("Metas operacionais", () => {
     expect(screen.getByRole("heading", { name: "Seu resumo" })).toBeVisible();
     expect(screen.getByText("Receita mensal: Meta não definida")).toBeVisible();
     expect(document.body.textContent).not.toContain("R$ 0");
+  });
+
+  it("passa por t os rótulos que a heurística de português não reconhece", () => {
+    const fonte = readFileSync("app/app/metas/_components/MetasClient.tsx", "utf8");
+
+    for (const chave of [
+      "Configurar metas",
+      "Moeda da receita",
+      "Metas operacionais",
+      "Resumo da equipe",
+      "Pessoas",
+    ]) {
+      expect(fonte).toContain(`t("${chave}")`);
+    }
   });
 });

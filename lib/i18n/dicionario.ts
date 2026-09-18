@@ -8621,6 +8621,23 @@ export const DICIONARIO: Traducoes = {
     es: "Sigue el mes a partir de lo que ya ocurrió en la operación.",
   },
   "Seu resumo": { es: "Tu resumen" },
+  "Configurar metas": { es: "Configurar metas" },
+  "Moeda da receita": { es: "Moneda de los ingresos" },
+  "Receita mensal da equipe (centavos)": {
+    es: "Ingresos mensuales del equipo (centavos)",
+  },
+  "Receita mensal da equipe": { es: "Ingresos mensuales del equipo" },
+  "Conversas da equipe": { es: "Conversaciones del equipo" },
+  atendente: { es: "agente" },
+  "Receita mensal (centavos)": { es: "Ingresos mensuales (centavos)" },
+  "Receita mensal de": { es: "Ingresos mensuales de" },
+  "Conversas atendidas": { es: "Conversaciones atendidas" },
+  "Conversas de": { es: "Conversaciones de" },
+  "Salvar metas": { es: "Guardar metas" },
+  "Metas operacionais": { es: "Metas operativas" },
+  "Resumo da equipe": { es: "Resumen del equipo" },
+  Pessoas: { es: "Personas" },
+  "Gerenciar funis": { es: "Gestionar embudos" },
 };
 
 /**

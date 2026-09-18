@@ -17,12 +17,15 @@
   "mainPath": [
     "nav",
     "tela",
-    "configroute",
-    "settings",
     "progressroute",
     "fatos",
     "progressroute",
-    "tela"
+    "tela",
+    "configroute",
+    "settings",
+    "configroute",
+    "audit",
+    "auditui"
   ],
   "nodes": [
     {
