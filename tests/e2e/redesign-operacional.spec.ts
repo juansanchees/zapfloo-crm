@@ -211,6 +211,15 @@ async function capturarPainelPorPapel(page: Page, role: NocturneRole): Promise<v
   };
   expect(payload.data.role_surface).toBe(role);
   await usarTemaClaro(page);
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  });
+  await page.waitForTimeout(1_500);
+  await expect(page.getByText("Carregando...")).toHaveCount(0, { timeout: 30_000 });
 
   const summary = page.getByRole("region", { name: "Resumo operacional" });
   await expect(summary).toBeVisible({ timeout: 30_000 });
@@ -242,12 +251,14 @@ async function capturarPainelPorPapel(page: Page, role: NocturneRole): Promise<v
 
   const measured = await page.evaluate((heroId) => {
     const main = document.querySelector("main");
+    const aside = document.querySelector("aside");
     const heroValue = document.querySelector<HTMLElement>(
       `[data-testid="dashboard-value-${heroId}"]`,
     );
     const heroCard = heroValue?.closest<HTMLElement>("article") ?? null;
     const valueRect = heroValue?.getBoundingClientRect() ?? null;
     const cardRect = heroCard?.getBoundingClientRect() ?? null;
+    const asideBox = aside?.getBoundingClientRect() ?? null;
     return {
       href: location.href,
       theme: document.documentElement.dataset.theme ?? null,
@@ -262,6 +273,15 @@ async function capturarPainelPorPapel(page: Page, role: NocturneRole): Promise<v
       heroCardRect: cardRect
         ? { left: cardRect.left, right: cardRect.right, top: cardRect.top, bottom: cardRect.bottom }
         : null,
+      asideRect: asideBox
+        ? {
+            left: asideBox.left,
+            right: asideBox.right,
+            top: asideBox.top,
+            bottom: asideBox.bottom,
+          }
+        : null,
+      hasLoading: document.body.innerText.includes("Carregando..."),
     };
   }, payload.data.hero.id);
   expect(measured.bodyBackground).toBeTruthy();
@@ -272,6 +292,8 @@ async function capturarPainelPorPapel(page: Page, role: NocturneRole): Promise<v
   expect(measured.heroValueRect!.left).toBeGreaterThanOrEqual(measured.heroCardRect!.left);
   expect(measured.heroValueRect!.right).toBeLessThanOrEqual(measured.heroCardRect!.right + 1);
   expect(measured.heroValueScrollWidth).toBeLessThanOrEqual(measured.heroValueClientWidth! + 1);
+  expect(measured.asideRect).toEqual({ left: 0, right: 240, top: 0, bottom: 900 });
+  expect(measured.hasLoading).toBe(false);
 
   const screenshotPath = path.join(NOCTURNE_EVIDENCE, `dashboard-${role}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });

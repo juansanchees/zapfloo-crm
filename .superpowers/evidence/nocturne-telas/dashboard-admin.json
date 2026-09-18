@@ -1,19 +1,41 @@
 {
   "role": "admin",
-  "screenshot_sha256": "3f1c8f33263cf38e04274b70fa207a0639aafa1152f3c06759adf5ff27aa2bbe",
-  "captured_at": "2026-09-18T02:13:33.083Z",
+  "screenshot_sha256": "f1d3b940935678e4483d2f7f43ea4e91c49b4c6a1524db92206d334d27cd669e",
+  "captured_at": "2026-09-18T20:45:05.245Z",
   "values_from_database": [
     {
       "id": "instances",
-      "value": "0/2"
+      "value": "3/6"
     },
     {
       "id": "active_seats",
-      "value": "5/10"
+      "value": "6/10"
     }
   ],
   "href": "http://localhost:3161/app",
   "theme": "light",
   "bodyBackground": "rgb(247, 247, 251)",
-  "dashboardBackground": "rgb(244, 245, 250)"
+  "dashboardBackground": "rgb(244, 245, 250)",
+  "heroValueWhiteSpace": "nowrap",
+  "heroValueClientWidth": 66,
+  "heroValueScrollWidth": 66,
+  "heroValueRect": {
+    "left": 297,
+    "right": 362.9375,
+    "top": 530.453125,
+    "bottom": 575.8125
+  },
+  "heroCardRect": {
+    "left": 272,
+    "right": 632.671875,
+    "top": 378.109375,
+    "bottom": 600.8125
+  },
+  "asideRect": {
+    "left": 0,
+    "right": 240,
+    "top": 0,
+    "bottom": 900
+  },
+  "hasLoading": false
 }
