@@ -29,10 +29,10 @@ import { Plus } from "@/lib/ui/icons";
 import type { LeadFilters } from "@/lib/kanban/filters";
 import { applyFilters, filtersFromParams, filtersToParams } from "@/lib/kanban/filters";
 import type { CurrencyTotals } from "@/lib/kanban/summary";
-import { usePermission } from "@/hooks/auth/AuthProvider";
 
-function TotaisPorMoeda({ valores }: { valores: CurrencyTotals }) {
+function TotaisPorMoeda({ valores }: { valores: CurrencyTotals | undefined }) {
   const t = useT();
+  if (!valores) return null;
   const entries = Object.entries(valores);
   if (entries.length === 0) return <span className="text-text-muted">{t("Sem valores")}</span>;
   return (
@@ -55,9 +55,11 @@ function TotaisPorMoeda({ valores }: { valores: CurrencyTotals }) {
 export function PipelinePageClient({
   pipelineId,
   initialName,
+  canMutate,
 }: {
   pipelineId: string;
   initialName: string;
+  canMutate: boolean;
 }) {
   const t = useT();
   const { data, isLoading, error, pulses, realtimeStatus, seguranca } = useBoard(pipelineId);
@@ -77,7 +79,6 @@ export function PipelinePageClient({
     },
     [router, pathname, searchParams],
   );
-  const canMutate = usePermission("pipeline.move_card");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newOpen, setNewOpen] = useState(false);
 
@@ -114,10 +115,12 @@ export function PipelinePageClient({
           <h1 className="truncate text-2xl font-semibold tracking-tight">
             {data?.pipeline.name ?? initialName}
           </h1>
-          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs">
-            <p><span className="mr-1 text-text-muted">{t("Pipeline aberto")}</span><TotaisPorMoeda valores={data?.summary?.open_by_currency ?? {}} /></p>
-            <p><span className="mr-1 text-text-muted">{t("Ganho no mês")}</span><TotaisPorMoeda valores={data?.summary?.won_month_by_currency ?? {}} /></p>
-          </div>
+          {data ? (
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+              <p><span className="mr-1 text-text-muted">{t("Pipeline aberto")}</span><TotaisPorMoeda valores={data.summary?.open_by_currency} /></p>
+              <p><span className="mr-1 text-text-muted">{t("Ganho no mês")}</span><TotaisPorMoeda valores={data.summary?.won_month_by_currency} /></p>
+            </div>
+          ) : null}
         </div>
         {canMutate && (
           <Button onClick={() => setNewOpen(true)} disabled={!data} className="shrink-0">
@@ -157,6 +160,7 @@ export function PipelinePageClient({
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           leadInicial={searchParams.get("lead")}
+          canMutate={canMutate}
         />
       )}
       {canMutate && <BulkActionBar

@@ -14,6 +14,7 @@ interface KanbanWorkspaceProps {
   pipelineInicial: string | null;
   podeGerenciar: boolean;
   podeImportar: boolean;
+  podeMover: boolean;
 }
 
 /**
@@ -25,6 +26,7 @@ export function KanbanWorkspace({
   pipelineInicial,
   podeGerenciar,
   podeImportar,
+  podeMover,
 }: KanbanWorkspaceProps) {
   const router = useRouter();
   const t = useT();
@@ -67,7 +69,12 @@ export function KanbanWorkspace({
       )}
 
       {selecionado ? (
-        <PipelinePageClient key={selecionado.id} pipelineId={selecionado.id} initialName={selecionado.name} />
+        <PipelinePageClient
+          key={selecionado.id}
+          pipelineId={selecionado.id}
+          initialName={selecionado.name}
+          canMutate={podeMover}
+        />
       ) : null}
 
       <details open={funisVivos.length === 0} className="rounded-lg border border-border bg-surface p-4" data-testid="gerenciar-funis">

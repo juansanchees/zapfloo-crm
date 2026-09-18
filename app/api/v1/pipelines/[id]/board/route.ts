@@ -35,6 +35,44 @@ interface RouteCtx {
   params: Promise<{ id: string }>;
 }
 
+// PostgREST limita respostas a 1.000 linhas por padrão. O board é um snapshot:
+// parar na primeira página faria os cards, contadores e totais mentirem juntos.
+const BOARD_PAGE_SIZE = 1_000;
+// Menor que max_rows: `.in` nunca aproxima uma resposta truncada silenciosa.
+const IN_CHUNK_SIZE = 500;
+
+function chunks<T>(values: T[], size = IN_CHUNK_SIZE): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    result.push(values.slice(index, index + size));
+  }
+  return result;
+}
+
+async function loadAllBoardLeads(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationId: string,
+  pipelineId: string,
+): Promise<{ leads: Lead[]; error: string | null }> {
+  const leads: Lead[] = [];
+  for (let offset = 0; ; offset += BOARD_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("crm_leads")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .eq("pipeline_id", pipelineId)
+      .neq("status", "archived")
+      // A segunda chave torna a paginação determinística para cards empatados.
+      .order("position_in_stage")
+      .order("id")
+      .range(offset, offset + BOARD_PAGE_SIZE - 1);
+    if (error) return { leads, error: error.message };
+    const page = (data ?? []) as Lead[];
+    leads.push(...page);
+    if (page.length < BOARD_PAGE_SIZE) return { leads, error: null };
+  }
+}
+
 /**
  * Anexa a identidade do agente dono (nome + versão publicada) aos leads que têm
  * `owner_kind='ai'`.
@@ -62,32 +100,36 @@ async function withOwnerAgents(
   ];
   if (agentIds.length === 0) return { leads, error: null };
 
-  const { data: agents, error: agentsErr } = await supabase
-    .from("ai_agents")
-    .select("id, name, published_version_id")
-    .eq("organization_id", organizationId)
-    .in("id", agentIds);
-  if (agentsErr) return { leads, error: agentsErr.message };
-
-  const agentRows = (agents ?? []) as Array<{
+  const agentRows: Array<{
     id: string;
     name: string;
     published_version_id: string | null;
-  }>;
+  }> = [];
+  for (const ids of chunks(agentIds)) {
+    const { data, error } = await supabase
+      .from("ai_agents")
+      .select("id, name, published_version_id")
+      .eq("organization_id", organizationId)
+      .in("id", ids);
+    if (error) return { leads, error: error.message };
+    agentRows.push(...((data ?? []) as typeof agentRows));
+  }
 
   const publishedIds = agentRows
     .map((a) => a.published_version_id)
     .filter((v): v is string => !!v);
   const versionById = new Map<string, number>();
   if (publishedIds.length > 0) {
-    const { data: versions, error: versionsErr } = await supabase
-      .from("ai_agent_versions")
-      .select("id, version_number")
-      .eq("organization_id", organizationId)
-      .in("id", publishedIds);
-    if (versionsErr) return { leads, error: versionsErr.message };
-    for (const v of (versions ?? []) as Array<{ id: string; version_number: number }>) {
-      versionById.set(v.id, v.version_number);
+    for (const ids of chunks(publishedIds)) {
+      const { data: versions, error } = await supabase
+        .from("ai_agent_versions")
+        .select("id, version_number")
+        .eq("organization_id", organizationId)
+        .in("id", ids);
+      if (error) return { leads, error: error.message };
+      for (const v of (versions ?? []) as Array<{ id: string; version_number: number }>) {
+        versionById.set(v.id, v.version_number);
+      }
     }
   }
 
@@ -139,19 +181,24 @@ async function avisaAmbiguas(
 ): Promise<void> {
   if (ambiguas.length === 0) return;
 
-  const { data: jaAbertos } = await supabase
-    .from("agent_inbox_items")
-    .select("ref_id")
-    .eq("organization_id", organizationId)
-    .eq("kind", "next_action_ambiguous")
-    .eq("status", "open")
-    .in(
-      "ref_id",
-      ambiguas.map((a) => a.contact_id),
-    );
-  const abertos = new Set(
-    ((jaAbertos ?? []) as Array<{ ref_id: string }>).map((r) => r.ref_id),
-  );
+  const abertos = new Set<string>();
+  const contactIds = [...new Set(ambiguas.map((a) => a.contact_id))];
+  for (const ids of chunks(contactIds)) {
+    for (let offset = 0; ; offset += BOARD_PAGE_SIZE) {
+      const { data: jaAbertos } = await supabase
+        .from("agent_inbox_items")
+        .select("ref_id")
+        .eq("organization_id", organizationId)
+        .eq("kind", "next_action_ambiguous")
+        .eq("status", "open")
+        .in("ref_id", ids)
+        .order("id")
+        .range(offset, offset + BOARD_PAGE_SIZE - 1);
+      const page = (jaAbertos ?? []) as Array<{ ref_id: string }>;
+      for (const row of page) abertos.add(row.ref_id);
+      if (page.length < BOARD_PAGE_SIZE) break;
+    }
+  }
 
   const novos = ambiguas
     .filter((a) => !abertos.has(a.contact_id))
@@ -167,7 +214,9 @@ async function avisaAmbiguas(
     }));
   if (novos.length === 0) return;
 
-  await supabase.from("agent_inbox_items").insert(novos);
+  for (const rows of chunks(novos)) {
+    await supabase.from("agent_inbox_items").insert(rows);
+  }
 }
 
 /**
@@ -188,40 +237,36 @@ async function withScores(
 ): Promise<{ leads: Lead[]; error: string | null }> {
   if (leads.length === 0) return { leads, error: null };
 
-  const { data, error } = await supabase
-    .from("crm_lead_scores")
-    .select(
-      "lead_id, ai_probability, ai_probability_reason, ai_probability_band, ai_probability_evidence, ai_probability_at",
-    )
-    .eq("organization_id", organizationId)
-    .in(
-      "lead_id",
-      leads.map((l) => l.id),
-    );
-  if (error) return { leads, error: error.message };
-
   const porLead = new Map<string, NonNullable<Lead["score"]>>();
-  for (const row of (data ?? []) as Array<{
-    lead_id: string;
-    ai_probability: number | string | null;
-    ai_probability_reason: string | null;
-    ai_probability_band: string | null;
-    ai_probability_evidence: { factors?: unknown } | null;
-    ai_probability_at: string | null;
-  }>) {
-    // `numeric` chega como string no supabase-js; `null` continua null — e a
-    // diferença entre null e 0 é justamente o que não pode se perder aqui.
-    if (row.ai_probability === null || row.ai_probability_band === null) continue;
-    const factors = Array.isArray(row.ai_probability_evidence?.factors)
-      ? (row.ai_probability_evidence.factors as NonNullable<Lead["score"]>["factors"])
-      : [];
-    porLead.set(row.lead_id, {
-      probability: Number(row.ai_probability),
-      reason: row.ai_probability_reason ?? "",
-      band: row.ai_probability_band as NonNullable<Lead["score"]>["band"],
-      factors,
-      at: row.ai_probability_at,
-    });
+  for (const ids of chunks(leads.map((lead) => lead.id))) {
+    const { data, error } = await supabase
+      .from("crm_lead_scores")
+      .select("lead_id, ai_probability, ai_probability_reason, ai_probability_band, ai_probability_evidence, ai_probability_at")
+      .eq("organization_id", organizationId)
+      .in("lead_id", ids);
+    if (error) return { leads, error: error.message };
+    for (const row of (data ?? []) as Array<{
+      lead_id: string;
+      ai_probability: number | string | null;
+      ai_probability_reason: string | null;
+      ai_probability_band: string | null;
+      ai_probability_evidence: { factors?: unknown } | null;
+      ai_probability_at: string | null;
+    }>) {
+      // `numeric` chega como string no supabase-js; `null` continua null — e a
+      // diferença entre null e 0 é justamente o que não pode se perder aqui.
+      if (row.ai_probability === null || row.ai_probability_band === null) continue;
+      const factors = Array.isArray(row.ai_probability_evidence?.factors)
+        ? (row.ai_probability_evidence.factors as NonNullable<Lead["score"]>["factors"])
+        : [];
+      porLead.set(row.lead_id, {
+        probability: Number(row.ai_probability),
+        reason: row.ai_probability_reason ?? "",
+        band: row.ai_probability_band as NonNullable<Lead["score"]>["band"],
+        factors,
+        at: row.ai_probability_at,
+      });
+    }
   }
 
   return {
@@ -254,30 +299,39 @@ async function withConversas(
   const contactIds = [...new Set(leads.map((l) => l.contact_id).filter((c): c is string => !!c))];
   if (contactIds.length === 0) return { leads, error: null };
 
-  const { data, error } = await supabase
-    .from("conversations")
-    .select("id, contact_id, last_message_preview, last_message_at, unread_count_for_assignee")
-    .eq("organization_id", organizationId)
-    .in("contact_id", contactIds)
-    .order("last_message_at", { ascending: false, nullsFirst: false });
-  if (error) return { leads, error: error.message };
-
   const porContato = new Map<string, NonNullable<Lead["conversa"]>>();
-  for (const row of (data ?? []) as Array<{
-    id: string;
-    contact_id: string;
-    last_message_preview: string | null;
-    last_message_at: string | null;
-    unread_count_for_assignee: number | null;
-  }>) {
-    // Primeira vista vence: a consulta já veio ordenada por atividade.
-    if (porContato.has(row.contact_id)) continue;
-    porContato.set(row.contact_id, {
-      id: row.id,
-      preview: row.last_message_preview,
-      last_message_at: row.last_message_at,
-      unread: row.unread_count_for_assignee ?? 0,
-    });
+  for (const ids of chunks(contactIds)) {
+    for (let offset = 0; ; offset += BOARD_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("id, contact_id, last_message_preview, last_message_at, unread_count_for_assignee")
+        .eq("organization_id", organizationId)
+        .in("contact_id", ids)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        // Empates em `last_message_at` precisam de uma segunda chave para a
+        // fronteira entre páginas não mudar de ordem.
+        .order("id")
+        .range(offset, offset + BOARD_PAGE_SIZE - 1);
+      if (error) return { leads, error: error.message };
+
+      for (const row of (data ?? []) as Array<{
+        id: string;
+        contact_id: string;
+        last_message_preview: string | null;
+        last_message_at: string | null;
+        unread_count_for_assignee: number | null;
+      }>) {
+        // Primeira vista vence: a consulta já veio ordenada por atividade.
+        if (porContato.has(row.contact_id)) continue;
+        porContato.set(row.contact_id, {
+          id: row.id,
+          preview: row.last_message_preview,
+          last_message_at: row.last_message_at,
+          unread: row.unread_count_for_assignee ?? 0,
+        });
+      }
+      if ((data ?? []).length < BOARD_PAGE_SIZE) break;
+    }
   }
 
   return {
@@ -301,16 +355,18 @@ async function withContacts(
   const contactIds = [...new Set(leads.map((lead) => lead.contact_id).filter((id): id is string => !!id))];
   if (contactIds.length === 0) return { leads, error: null };
 
-  const { data, error } = await supabase
-    .from("contacts")
-    .select("id, full_name")
-    .eq("organization_id", organizationId)
-    .in("id", contactIds);
-  if (error) return { leads, error: error.message };
-
-  const byId = new Map(
-    ((data ?? []) as Array<{ id: string; full_name: string | null }>).map((contact) => [contact.id, contact]),
-  );
+  const byId = new Map<string, { id: string; full_name: string | null }>();
+  for (const ids of chunks(contactIds)) {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("id, full_name")
+      .eq("organization_id", organizationId)
+      .in("id", ids);
+    if (error) return { leads, error: error.message };
+    for (const contact of (data ?? []) as Array<{ id: string; full_name: string | null }>) {
+      byId.set(contact.id, contact);
+    }
+  }
   return {
     leads: leads.map((lead) => {
       const contact = lead.contact_id ? byId.get(lead.contact_id) : undefined;
@@ -331,30 +387,54 @@ async function withNextActions(
   ];
   if (contactIds.length === 0) return { leads, error: null };
 
-  const [{ data: estados, error: estadosErr }, { data: candidatos, error: candErr }] =
-    await Promise.all([
-      supabase
+  const estados: EstadoDoContato[] = [];
+  const candidatos: Array<LeadCandidate & { contact_id: string | null }> = [];
+  for (const ids of chunks(contactIds)) {
+    // A chave única de lead_state torna a página normalmente pequena, mas a
+    // paginação ainda impede que uma mudança futura da tabela silencie contatos
+    // depois do max_rows.
+    for (let offset = 0; ; offset += BOARD_PAGE_SIZE) {
+      const { data, error } = await supabase
         .from("lead_state")
         .select("contact_id, next_action, next_action_seq, updated_at")
         .eq("organization_id", organizationId)
-        .in("contact_id", contactIds)
-        .not("next_action", "is", null),
-      supabase
+        .in("contact_id", ids)
+        .not("next_action", "is", null)
+        .order("updated_at", { ascending: false })
+        .order("id")
+        .range(offset, offset + BOARD_PAGE_SIZE - 1);
+      if (error) return { leads, error: error.message };
+      const page = (data ?? []) as EstadoDoContato[];
+      estados.push(...page);
+      if (page.length < BOARD_PAGE_SIZE) break;
+    }
+
+    // Há muitos negócios abertos possíveis para os mesmos 500 contatos; este
+    // é o caso que realmente pode atravessar max_rows dentro de um só chunk.
+    for (let offset = 0; ; offset += BOARD_PAGE_SIZE) {
+      const { data, error } = await supabase
         .from("crm_leads")
         .select(
           "id, organization_id, pipeline_id, status, last_activity_at, created_at, contact_id",
         )
         .eq("organization_id", organizationId)
         .eq("status", "open")
-        .in("contact_id", contactIds),
-    ]);
-  if (estadosErr) return { leads, error: estadosErr.message };
-  if (candErr) return { leads, error: candErr.message };
+        .in("contact_id", ids)
+        .order("last_activity_at", { ascending: false, nullsFirst: false })
+        .order("id")
+        .range(offset, offset + BOARD_PAGE_SIZE - 1);
+      if (error) return { leads, error: error.message };
+      const page = (data ?? []) as Array<LeadCandidate & { contact_id: string | null }>;
+      candidatos.push(...page);
+      if (page.length < BOARD_PAGE_SIZE) break;
+    }
+  }
+
   if (!estados || estados.length === 0) return { leads, error: null };
 
   const { porLead, ambiguas } = roteiaProximasAcoes(
-    estados as EstadoDoContato[],
-    (candidatos ?? []) as Array<LeadCandidate & { contact_id: string | null }>,
+    estados,
+    candidatos,
     { defaultPipelineId },
   );
 
@@ -412,7 +492,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   const organizationId = activeOrg.orgId;
   const [
     { data: stages, error: stagesErr },
-    { data: leads, error: leadsErr },
+    leadsResult,
   ] = await Promise.all([
     supabase
       .from("crm_stages")
@@ -421,22 +501,16 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
       .eq("pipeline_id", pipelineId)
       .eq("is_archived", false)
       .order("position"),
-    supabase
-      .from("crm_leads")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .eq("pipeline_id", pipelineId)
-      .neq("status", "archived")
-      .order("position_in_stage"),
+    loadAllBoardLeads(supabase, organizationId, pipelineId),
   ]);
 
   if (stagesErr) return fail("internal_error", stagesErr.message, 500, { requestId });
-  if (leadsErr) return fail("internal_error", leadsErr.message, 500, { requestId });
+  if (leadsResult.error) return fail("internal_error", leadsResult.error, 500, { requestId });
 
   const leadsWithOwner = await withOwnerAgents(
     supabase,
     organizationId,
-    (leads ?? []) as Lead[],
+    leadsResult.leads,
   );
   if (leadsWithOwner.error) {
     return fail("internal_error", leadsWithOwner.error, 500, { requestId });

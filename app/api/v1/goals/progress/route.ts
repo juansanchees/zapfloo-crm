@@ -18,6 +18,7 @@ import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+const PAGE_SIZE = 1_000;
 
 export function utcMonthWindow(now = new Date()) {
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -53,33 +54,38 @@ export async function GET(): Promise<Response> {
     .order("created_at", { ascending: true });
   if (!managerView) rosterQuery = rosterQuery.eq("user_id", authz.user.id);
 
-  let revenueQuery = supabase
-    .from("crm_leads")
-    .select("owner_user_id, value_cents, currency")
-    .eq("organization_id", authz.org.orgId)
-    .eq("status", "won")
-    .gte("closed_at", from)
-    .lt("closed_at", to);
+  const revenuePage = (offset: number, end: number) => {
+    let query = supabase
+      .from("crm_leads")
+      .select("owner_user_id, value_cents, currency")
+      .eq("organization_id", authz.org.orgId)
+      .eq("status", "won")
+      .gte("closed_at", from)
+      .lt("closed_at", to);
+    if (!managerView) query = query.eq("owner_user_id", authz.user.id);
+    // A ordem fixa evita saltar/repetir linhas entre chunks do PostgREST.
+    return query.order("id", { ascending: true }).range(offset, end);
+  };
   // Atribuir uma conversa não prova atendimento. A fonte canônica é a mensagem
   // outbound com autor humano (`sent_by_user_id`), registrada pelo composer.
-  let conversationsQuery = supabase
-    .from("messages")
-    .select("conversation_id, sent_by_user_id")
-    .eq("organization_id", authz.org.orgId)
-    .eq("direction", "outbound")
-    .not("sent_by_user_id", "is", null)
-    .gte("sent_at", from)
-    .lt("sent_at", to);
-  if (!managerView) {
-    revenueQuery = revenueQuery.eq("owner_user_id", authz.user.id);
-    conversationsQuery = conversationsQuery.eq("sent_by_user_id", authz.user.id);
-  }
+  const conversationsPage = (offset: number, end: number) => {
+    let query = supabase
+      .from("messages")
+      .select("conversation_id, sent_by_user_id")
+      .eq("organization_id", authz.org.orgId)
+      .eq("direction", "outbound")
+      .not("sent_by_user_id", "is", null)
+      .gte("sent_at", from)
+      .lt("sent_at", to);
+    if (!managerView) query = query.eq("sent_by_user_id", authz.user.id);
+    return query.order("id", { ascending: true }).range(offset, end);
+  };
 
   const [settingsRes, rosterRes, revenueRes, conversationsRes] = await Promise.all([
     settingsQuery,
     rosterQuery,
-    revenueQuery,
-    conversationsQuery,
+    fetchEveryPage(revenuePage),
+    fetchEveryPage(conversationsPage),
   ]);
   const error = settingsRes.error ?? rosterRes.error ?? revenueRes.error ?? conversationsRes.error;
   if (error) return fail("internal_error", error.message, 500, { requestId });
@@ -137,4 +143,20 @@ async function readMembers(ciphertext: string | undefined) {
   const plaintext = await decryptWebhookSecret(createAdminClient(), ciphertext);
   if (!plaintext) return null;
   return parseOperationalGoalMembers(plaintext);
+}
+
+type Page<Row> = { data: Row[] | null; error: { message: string } | null };
+
+/** PostgREST limita respostas a `max_rows`; agregação mensal não pode truncar em silêncio. */
+async function fetchEveryPage<Row>(
+  fetchPage: (offset: number, end: number) => PromiseLike<Page<Row>>,
+): Promise<Page<Row>> {
+  const rows: Row[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const page = await fetchPage(offset, offset + PAGE_SIZE - 1);
+    if (page.error) return { data: null, error: page.error };
+    const data = page.data ?? [];
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) return { data: rows, error: null };
+  }
 }

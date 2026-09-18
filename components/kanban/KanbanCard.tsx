@@ -244,7 +244,12 @@ export function KanbanCard({
                 </button>
               </h3>
             </div>
-            <KanbanCardActions lead={lead} pipelineId={pipelineId} onAdvance={onAdvance} />
+            <KanbanCardActions
+              lead={lead}
+              pipelineId={pipelineId}
+              onAdvance={onAdvance}
+              canMutate={canMutate}
+            />
           </div>
 
           {/* ② valor — altura reservada mesmo sem valor, senão o card encolhe. */}

@@ -1,9 +1,11 @@
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ canMutate: false, onDragEnd: undefined as undefined | ((result: unknown) => void), move: vi.fn(), columnProps: [] as Array<{ canMutate?: boolean }>, dragDisabled: undefined as boolean | undefined }));
+const state = vi.hoisted(() => ({ onDragEnd: undefined as undefined | ((result: unknown) => void), move: vi.fn(), columnProps: [] as Array<{ canMutate?: boolean }>, dragDisabled: undefined as boolean | undefined }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (text: string) => text }));
-vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => state.canMutate }));
+// Simula admin de plataforma: o gate global permitiria, mas viewer tenant não
+// pode arrastar porque a rota de movimento exige agent+ na organização.
+vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => true }));
 vi.mock("@/hooks/kanban/useBoard", () => ({ useBoard: () => ({ data: undefined, isLoading: false, isError: false, error: null, pulses: new Map() }) }));
 vi.mock("@/hooks/kanban/useMoveCard", () => ({ useMoveCard: () => ({ mutate: state.move }) }));
 vi.mock("@/hooks/inbox/useAssignableMembers", () => ({ useAssignableMembers: () => ({ data: [] }) }));
@@ -30,11 +32,11 @@ const leads = [{ id: "l1", stage_id: "s1", position_in_stage: 1, updated_at: "20
 const pipeline = { settings: {} } as never;
 const drop = { draggableId: "l1", source: { droppableId: "s1", index: 0 }, destination: { droppableId: "s2", index: 0 } };
 
-beforeEach(() => { state.canMutate = false; state.onDragEnd = undefined; state.move.mockClear(); state.columnProps = []; state.dragDisabled = undefined; });
+beforeEach(() => { state.onDragEnd = undefined; state.move.mockClear(); state.columnProps = []; state.dragDisabled = undefined; });
 
 describe("drag do kanban respeita RBAC", () => {
-  it("viewer recebe coluna sem drag e o drop não muta", () => {
-    render(<KanbanBoard pipelineId="p1" stages={stages} leads={leads} pipeline={pipeline} />);
+  it("admin de plataforma com membership viewer recebe coluna sem drag e o drop não muta", () => {
+    render(<KanbanBoard pipelineId="p1" stages={stages} leads={leads} pipeline={pipeline} canMutate={false} />);
     expect(state.columnProps.every((props) => props.canMutate === false)).toBe(true);
     state.onDragEnd?.(drop);
     expect(state.move).not.toHaveBeenCalled();
@@ -43,8 +45,7 @@ describe("drag do kanban respeita RBAC", () => {
   });
 
   it("agent recebe drag e o drop chama a mutation de move", () => {
-    state.canMutate = true;
-    render(<KanbanBoard pipelineId="p1" stages={stages} leads={leads} pipeline={pipeline} />);
+    render(<KanbanBoard pipelineId="p1" stages={stages} leads={leads} pipeline={pipeline} canMutate />);
     expect(state.columnProps.every((props) => props.canMutate === true)).toBe(true);
     state.onDragEnd?.(drop);
     expect(state.move).toHaveBeenCalledWith(expect.objectContaining({ leadId: "l1", stageId: "s2", expectedUpdatedAt: "2026-09-01T00:00:00Z" }));

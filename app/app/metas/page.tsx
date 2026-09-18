@@ -10,7 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function MetasPage() {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
-  if (!activeOrg || !roleAtLeast(activeOrg.role, "agent")) redirect("/app");
+  if (
+    !activeOrg ||
+    (!user.is_platform_admin && !roleAtLeast(activeOrg.role, "agent"))
+  ) redirect("/app");
 
   return <MetasClient
     canManage={user.is_platform_admin || roleAtLeast(activeOrg.role, "manager")}

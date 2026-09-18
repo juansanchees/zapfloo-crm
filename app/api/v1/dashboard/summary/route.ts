@@ -48,6 +48,21 @@ interface LeadValueRow {
   currency: string | null;
 }
 
+const PAGE_SIZE = 1000;
+
+async function readAllRows<T>(
+  readPage: (from: number, to: number) => Promise<RowsResult<T>>,
+): Promise<RowsResult<T>> {
+  const data: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const page = await readPage(from, from + PAGE_SIZE - 1);
+    if (page.error) return { data: null, error: page.error };
+    if (page.data === null) return { data: null, error: null };
+    data.push(...page.data);
+    if (page.data.length < PAGE_SIZE) return { data, error: null };
+  }
+}
+
 function surfaceFor(role: string, isPlatformAdmin: boolean): DashboardSurface {
   if (isPlatformAdmin || roleAtLeast(role, "admin")) return "admin";
   if (roleAtLeast(role, "manager")) return "manager";
@@ -163,23 +178,31 @@ async function readManagerSources(
   interval: ReturnType<typeof monthInterval>,
 ): Promise<Pick<DashboardSources, "pipeline_open" | "won_revenue" | "attendants">> {
   const [openResult, wonResult, attendants] = await Promise.all([
-    supabase
-      .from("crm_leads")
-      .select("value_cents,currency")
-      .eq("organization_id", organizationId)
-      .eq("status", "open"),
-    supabase
-      .from("crm_leads")
-      .select("value_cents,currency")
-      .eq("organization_id", organizationId)
-      .eq("status", "won")
-      .gte("closed_at", interval.start)
-      .lt("closed_at", interval.end),
+    readAllRows<LeadValueRow>(async (from, to) =>
+      (await supabase
+        .from("crm_leads")
+        .select("id,value_cents,currency")
+        .eq("organization_id", organizationId)
+        .eq("status", "open")
+        .order("id", { ascending: true })
+        .range(from, to)) as unknown as RowsResult<LeadValueRow>,
+    ),
+    readAllRows<LeadValueRow>(async (from, to) =>
+      (await supabase
+        .from("crm_leads")
+        .select("id,value_cents,currency")
+        .eq("organization_id", organizationId)
+        .eq("status", "won")
+        .gte("closed_at", interval.start)
+        .lt("closed_at", interval.end)
+        .order("id", { ascending: true })
+        .range(from, to)) as unknown as RowsResult<LeadValueRow>,
+    ),
     readAttendants(supabase, organizationId, interval, null),
   ]);
 
-  const open = openResult as unknown as RowsResult<LeadValueRow>;
-  const won = wonResult as unknown as RowsResult<LeadValueRow>;
+  const open = openResult;
+  const won = wonResult;
   const openValues = open.error ? undefined : bucketValues(open.data ?? []);
   const wonValues = won.error ? undefined : bucketValues(won.data ?? []);
   return {
@@ -202,13 +225,25 @@ async function readAdminSources(
   organizationId: string,
   interval: ReturnType<typeof monthInterval>,
 ): Promise<Pick<DashboardSources, "channels" | "seats" | "attendants">> {
-  const [channelsResult, membersResult, subscriptionResult, organizationResult, attendants] =
-    await Promise.all([
-      supabase
-        .from("channel_sessions")
-        .select("status")
-        .eq("organization_id", organizationId)
-        .is("archived_at", null),
+  const channelCount = (status?: string) => {
+    let query = supabase
+      .from("channel_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .is("archived_at", null);
+    if (status) query = query.eq("status", status);
+    return query;
+  };
+  const [
+    channelTotalResult,
+    channelOnlineResult,
+    membersResult,
+    subscriptionResult,
+    organizationResult,
+    attendants,
+  ] = await Promise.all([
+      channelCount(),
+      channelCount("WORKING"),
       supabase
         .from("user_organizations")
         .select("id", { count: "exact", head: true })
@@ -222,8 +257,9 @@ async function readAdminSources(
         .maybeSingle(),
       supabase.from("organizations").select("created_at").eq("id", organizationId).maybeSingle(),
       readAttendants(supabase, organizationId, interval, null),
-    ]);
-  const channels = channelsResult as unknown as RowsResult<{ status: string }>;
+  ]);
+  const channelTotal = channelTotalResult as unknown as CountResult;
+  const channelOnline = channelOnlineResult as unknown as CountResult;
   const members = membersResult as unknown as CountResult;
   const subscription = subscriptionResult as unknown as {
     data: { plan_id: string; status: string } | null;
@@ -253,11 +289,14 @@ async function readAdminSources(
 
   return {
     channels:
-      channels.error || channels.data === null
+      channelTotal.error ||
+      channelOnline.error ||
+      channelTotal.count === null ||
+      channelOnline.count === null
         ? undefined
         : {
-            online: (channels.data ?? []).filter((channel) => channel.status === "WORKING").length,
-            total: (channels.data ?? []).length,
+            online: channelOnline.count,
+            total: channelTotal.count,
           },
     seats:
       members.error || members.count === null || seatLimit === null

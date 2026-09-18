@@ -179,8 +179,9 @@ interface CompactAreaSpec extends Omit<CompactArea, "tabs"> {
  * projeção da frequência de uso. O inventário completo continua nos hubs, nas
  * abas contextuais e no ⌘K; por isso reduzir o sidebar não torna rota órfã.
  *
- * Chat interno, Metas e Suporte interno entram somente quando suas telas
- * existirem. Link que aponta para uma promessa não é navegação: é beco sem saída.
+ * Chat interno e Suporte interno entram somente quando suas telas existirem.
+ * Metas já tem rota real nesta projeção. Link que aponta para uma promessa não
+ * é navegação: é beco sem saída.
  */
 const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
   {

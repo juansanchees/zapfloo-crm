@@ -52,6 +52,10 @@ export default async function KanbanPickerPage({
   // Importar planilha é ESCRITA DE OPERAÇÃO, não configuração: quem atende
   // sobe a lista que recebeu. Espelha o `requireRole("agent")` da rota.
   const podeImportar = ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent;
+  // Movimento e ações dos cards têm hoje a mesma régua agent+, mas mantêm um
+  // contrato próprio: mudar a regra de importação no futuro não pode liberar
+  // ou bloquear silenciosamente o quadro.
+  const podeMover = ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent;
   const idioma = user.idioma;
   const t = (texto: string) => traduzir(texto, idioma);
   const query = await searchParams;
@@ -82,6 +86,7 @@ export default async function KanbanPickerPage({
         pipelineInicial={pipelineInicial}
         podeGerenciar={podeGerenciar}
         podeImportar={podeImportar}
+        podeMover={podeMover}
       />
     </OperationalPage>
   );

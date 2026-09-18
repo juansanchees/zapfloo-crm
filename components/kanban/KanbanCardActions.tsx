@@ -16,7 +16,6 @@ import { DotsThree, PencilSimple, Users } from "@/lib/ui/icons";
 import { useWinLead, useEditLead } from "@/hooks/kanban/useUpdateLead";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { useAssignableAgents } from "@/hooks/kanban/useAssignableAgents";
-import { usePermission } from "@/hooks/auth/AuthProvider";
 import { LoseLeadDialog } from "./LoseLeadDialog";
 import { EditLeadDialog } from "./EditLeadDialog";
 import type { Lead } from "@/lib/types/leads";
@@ -26,17 +25,19 @@ interface KanbanCardActionsProps {
   pipelineId: string;
   /** Movimento existente do quadro, já com posição e controle de concorrência. */
   onAdvance?: () => void;
+  /** Papel tenant agent+, deliberadamente sem atalho de admin da plataforma. */
+  canMutate: boolean;
 }
 
-export function KanbanCardActions({ lead, pipelineId, onAdvance }: KanbanCardActionsProps) {
+export function KanbanCardActions({ lead, pipelineId, onAdvance, canMutate }: KanbanCardActionsProps) {
   const t = useT();
   const [loseOpen, setLoseOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const winMutation = useWinLead(pipelineId);
   const editMutation = useEditLead(pipelineId);
-  // spec 13 §4: escrita no funil é agent+ — viewer não reatribui (a rota
-  // PATCH também recusa; aqui é só não oferecer o que seria negado).
-  const canMutate = usePermission("pipeline.move_card");
+  // spec 13 §4: escrita no funil é agent+ na organização ativa — viewer não
+  // reatribui, nem mesmo quando também é admin da plataforma. As rotas não
+  // concedem esse atalho; aqui só não oferecemos o que elas recusariam.
   const { data: members } = useAssignableMembers(canMutate);
   // A rota já devolve só agente ativo e não arquivado — é o picker.
   const { data: agents } = useAssignableAgents(canMutate);

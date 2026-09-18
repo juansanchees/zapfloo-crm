@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ replace: vi.fn(), search: "pipeline=p2&lead=l2", boardIds: [] as Array<string | null>, canMutate: true }));
+const state = vi.hoisted(() => ({ replace: vi.fn(), search: "pipeline=p2&lead=l2", boardIds: [] as Array<string | null>, canMutate: true, boardLoading: false }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: state.replace }), usePathname: () => "/app/kanban", useSearchParams: () => new URLSearchParams(state.search),
@@ -11,7 +11,7 @@ vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (text: string) => text }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => state.canMutate }));
 vi.mock("@/hooks/kanban/useBoard", () => ({ useBoard: (id: string | null) => {
   state.boardIds.push(id);
-  return { data: { pipeline: { id: id ?? "p2", name: "Secundário", vocabulary: {} }, stages: [], leads: [], summary: { open_by_currency: {}, won_month_by_currency: {} } }, isLoading: false, error: null, pulses: new Map(), realtimeStatus: "subscribed", seguranca: { divergencias: 0, ultimaVerificacao: null } };
+  return { data: state.boardLoading ? undefined : { pipeline: { id: id ?? "p2", name: "Secundário", vocabulary: {} }, stages: [], leads: [], summary: { open_by_currency: {}, won_month_by_currency: {} } }, isLoading: state.boardLoading, error: null, pulses: new Map(), realtimeStatus: "subscribed", seguranca: { divergencias: 0, ultimaVerificacao: null } };
 } }));
 vi.mock("@/components/kanban/FilterBar", () => ({ FilterBar: ({ onChange }: { onChange: (next: { status: "won" }) => void }) => <button onClick={() => onChange({ status: "won" })}>Filtrar ganhos</button> }));
 vi.mock("@/components/kanban/KanbanBoard", () => ({ KanbanBoard: () => null }));
@@ -35,28 +35,38 @@ const funis = [
   { id: "p2", name: "Secundário", slug: "p2", description: null, position: 2, is_default: false },
 ];
 
-beforeEach(() => { state.replace.mockClear(); state.boardIds = []; state.search = "pipeline=p2&lead=l2"; state.canMutate = true; });
+beforeEach(() => { state.replace.mockClear(); state.boardIds = []; state.search = "pipeline=p2&lead=l2"; state.canMutate = true; state.boardLoading = false; });
 
 describe("quadro Nocturne", () => {
   it("preserva pipeline e lead ao usar o controle real de filtro", () => {
-    render(<PipelinePageClient pipelineId="p2" initialName="Secundário" />);
+    render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate />);
+    expect(screen.getAllByText("Sem valores")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Filtrar ganhos" }));
     expect(state.replace).toHaveBeenCalledWith("/app/kanban?pipeline=p2&lead=l2&status=won", { scroll: false });
     expect(state.boardIds).toContain("p2");
   });
 
-  it("só agent+ recebe e abre Novo negócio", () => {
-    state.canMutate = false;
-    const { rerender } = render(<PipelinePageClient pipelineId="p2" initialName="Secundário" />);
-    expect(screen.queryByRole("button", { name: "Novo negócio" })).not.toBeInTheDocument();
+  it("não chama carregamento de ausência real de valores", () => {
+    state.boardLoading = true;
+    render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate />);
+
+    expect(screen.getByText("Carregando…")).toBeVisible();
+    expect(screen.queryByText("Pipeline aberto")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ganho no mês")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sem valores")).not.toBeInTheDocument();
+  });
+
+  it("admin de plataforma viewer não recebe Novo negócio; agent+ recebe", () => {
     state.canMutate = true;
-    rerender(<PipelinePageClient pipelineId="p2" initialName="Secundário" />);
+    const { rerender } = render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate={false} />);
+    expect(screen.queryByRole("button", { name: "Novo negócio" })).not.toBeInTheDocument();
+    rerender(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate />);
     fireEvent.click(screen.getByRole("button", { name: "Novo negócio" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Novo negócio aberto");
   });
 
   it("mantém abas e gestão na mesma lista reativa", () => {
-    render(<KanbanWorkspace funis={funis} pipelineInicial="p2" podeGerenciar podeImportar />);
+    render(<KanbanWorkspace funis={funis} pipelineInicial="p2" podeGerenciar podeImportar podeMover />);
     expect(screen.getByRole("tab", { name: "Secundário" })).toHaveAttribute("aria-selected", "true");
     fireEvent.click(screen.getByRole("button", { name: "Arquivar/renomear" }));
     expect(screen.getByRole("tab", { name: "Renomeado" })).toHaveAttribute("aria-selected", "true");

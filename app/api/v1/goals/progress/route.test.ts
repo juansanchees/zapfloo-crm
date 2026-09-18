@@ -25,6 +25,8 @@ beforeEach(() => {
     table: string;
     filters: Array<[string, unknown]>;
     ops: Array<{ op: string; key: string; value: unknown }>;
+    ranges: Array<[number, number]>;
+    orders: Array<string>;
   }> = [];
   const rows: Record<string, Array<Record<string, unknown>>> = {
     organizations: [{ id: "org-a", settings: { operational_goals: { currency: "BRL", team: { monthly_revenue_cents: 500_000 } } } }],
@@ -47,14 +49,16 @@ beforeEach(() => {
   };
   class Q implements PromiseLike<unknown> {
     filters: Array<[string, unknown]> = []; ops: Array<{ op: string; key: string; value: unknown }> = [];
-    constructor(readonly table: string) { calls.push({ table, filters: this.filters, ops: this.ops }); }
+    ranges: Array<[number, number]> = []; orders: string[] = [];
+    constructor(readonly table: string) { calls.push({ table, filters: this.filters, ops: this.ops, ranges: this.ranges, orders: this.orders }); }
     select() { return this; } eq(k: string, v: unknown) { this.filters.push([k, v]); this.ops.push({op:"eq",key:k,value:v}); return this; }
     gte(k: string, v: unknown) { this.filters.push([k, v]); this.ops.push({op:"gte",key:k,value:v}); return this; } lt(k: string, v: unknown) { this.filters.push([k, v]); this.ops.push({op:"lt",key:k,value:v}); return this; }
-    is(k: string, v: unknown) { this.filters.push([k, v]); return this; } not(k: string, operator: string, v: unknown) { this.ops.push({op:`not.${operator}`,key:k,value:v}); return this; } order() { return this; } maybeSingle() { return this; }
-    then<TResult1 = unknown, TResult2 = never>(onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null): PromiseLike<TResult1 | TResult2> { const found = (rows[this.table] ?? []).filter((row) => this.ops.every(({op,key,value}) => op === "eq" ? row[key] === value : op === "gte" ? typeof value === "string" && typeof row[key] === "string" && row[key] >= value : op === "lt" ? typeof value === "string" && typeof row[key] === "string" && row[key] < value : row[key] !== value)); return Promise.resolve({ data: this.table === "organizations" ? (found[0] ?? null) : found, error: null }).then(onfulfilled, onrejected); }
+    is(k: string, v: unknown) { this.filters.push([k, v]); return this; } not(k: string, operator: string, v: unknown) { this.ops.push({op:`not.${operator}`,key:k,value:v}); return this; } order(key: string) { this.orders.push(key); return this; } range(from: number, to: number) { this.ranges.push([from, to]); return this; } maybeSingle() { return this; }
+    then<TResult1 = unknown, TResult2 = never>(onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null): PromiseLike<TResult1 | TResult2> { const found = (rows[this.table] ?? []).filter((row) => this.ops.every(({op,key,value}) => op === "eq" ? row[key] === value : op === "gte" ? typeof value === "string" && typeof row[key] === "string" && row[key] >= value : op === "lt" ? typeof value === "string" && typeof row[key] === "string" && row[key] < value : row[key] !== value)); const [from, to] = this.ranges[0] ?? [0, found.length - 1]; const data = this.table === "organizations" ? (found[0] ?? null) : found.slice(from, to + 1); return Promise.resolve({ data, error: null }).then(onfulfilled, onrejected); }
   }
   vi.mocked(createClient).mockResolvedValue({ from: (table: string) => new Q(table) } as never);
   (globalThis as typeof globalThis & { __goalCalls?: typeof calls }).__goalCalls = calls;
+  (globalThis as typeof globalThis & { __goalRows?: typeof rows }).__goalRows = rows;
 });
 
 describe("progresso mensal das metas", () => {
@@ -81,6 +85,39 @@ describe("progresso mensal das metas", () => {
       { op: "gte", key: "sent_at", value: body.data.window.from },
       { op: "lt", key: "sent_at", value: body.data.window.to },
     ]));
+  });
+  it("pagina leads e respostas humanas além do limite do PostgREST", async () => {
+    const rows = (globalThis as typeof globalThis & { __goalRows: Record<string, Array<Record<string, unknown>>> }).__goalRows;
+    const now = new Date();
+    const inMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 2)).toISOString();
+    rows.crm_leads = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `lead-${index}`,
+      organization_id: "org-a",
+      owner_user_id: A,
+      value_cents: 100,
+      currency: "BRL",
+      status: "won",
+      closed_at: inMonth,
+    }));
+    rows.messages = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `message-${index}`,
+      organization_id: "org-a",
+      direction: "outbound",
+      sent_by_user_id: A,
+      conversation_id: `conversation-${index}`,
+      sent_at: inMonth,
+    }));
+
+    const body = await (await GET()).json() as { data: { members: Array<{ revenue: Array<{ current_cents: number }>; conversations: { current: number } }> } };
+    expect(body.data.members[0]!.revenue[0]!.current_cents).toBe(100_100);
+    expect(body.data.members[0]!.conversations.current).toBe(1_001);
+
+    const calls = (globalThis as typeof globalThis & { __goalCalls: Array<{ table: string; ranges: Array<[number, number]>; orders: string[] }> }).__goalCalls;
+    for (const table of ["crm_leads", "messages"]) {
+      const pages = calls.filter((call) => call.table === table);
+      expect(pages.map((page) => page.ranges)).toEqual([[[0, 999]], [[1_000, 1_999]]]);
+      expect(pages.map((page) => page.orders)).toEqual([["id"], ["id"]]);
+    }
   });
   it("self usa target individual cifrado, nunca o target da equipe", async () => {
     // O fixture anterior não precisa de cifra; aqui forçamos a divergência que

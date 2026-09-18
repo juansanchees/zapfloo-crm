@@ -50,7 +50,13 @@ vi.mock("@/lib/ai/agents/org-tem-automatico", () => ({
   orgTemAutomatico: vi.fn(async () => false),
 }));
 
-function resultFor(table: string, filters: Map<string, unknown>, single: boolean) {
+function resultFor(
+  table: string,
+  filters: Map<string, unknown>,
+  single: boolean,
+  range: { from: number; to: number } | null,
+  countRequested: boolean,
+) {
   const error =
     state.errors.has(table) ||
     (table === "crm_leads" && filters.get("status") === state.failLeadStatus)
@@ -76,7 +82,14 @@ function resultFor(table: string, filters: Map<string, unknown>, single: boolean
     };
   if (table === "user_organizations") return { data: null, count: 4, error };
   if (table === "channel_sessions") {
-    return { data: state.channelData, error };
+    if (state.channelData === null) return { data: null, count: null, error };
+    const status = filters.get("status");
+    const rows = status
+      ? state.channelData.filter((channel) => channel.status === status)
+      : state.channelData;
+    if (countRequested) return { data: null, count: rows.length, error };
+    const paged = range ? rows.slice(range.from, range.to + 1) : rows.slice(0, 1000);
+    return { data: paged, error };
   }
   if (table === "organization_subscriptions") {
     return { data: single ? state.subscription : [state.subscription], error };
@@ -85,7 +98,9 @@ function resultFor(table: string, filters: Map<string, unknown>, single: boolean
     return { data: single ? { created_at: "2026-09-01T00:00:00.000Z" } : [], error };
   if (table === "crm_leads") {
     const status = filters.get("status");
-    return { data: status === "won" ? state.leads.won : state.leads.open, error };
+    const rows = status === "won" ? state.leads.won : state.leads.open;
+    const paged = range ? rows.slice(range.from, range.to + 1) : rows.slice(0, 1000);
+    return { data: paged, error };
   }
   return { data: [], error };
 }
@@ -93,9 +108,13 @@ function resultFor(table: string, filters: Map<string, unknown>, single: boolean
 function query(table: string) {
   const filters = new Map<string, unknown>();
   let single = false;
+  let range: { from: number; to: number } | null = null;
+  let countRequested = false;
   const chain = {
     select: (...args: unknown[]) => {
       state.calls.push({ table, method: "select", value: args[0] });
+      const options = args[1] as { count?: string; head?: boolean } | undefined;
+      countRequested = options?.count === "exact" && options.head === true;
       return chain;
     },
     eq: (column: string, value: unknown) => {
@@ -124,12 +143,21 @@ function query(table: string) {
       state.calls.push({ table, method: "lt", column, value });
       return chain;
     },
+    order: (column: string, value: unknown) => {
+      state.calls.push({ table, method: "order", column, value });
+      return chain;
+    },
+    range: (from: number, to: number) => {
+      range = { from, to };
+      state.calls.push({ table, method: "range", value: range });
+      return chain;
+    },
     maybeSingle: () => {
       single = true;
       return chain;
     },
     then: <T>(onfulfilled: (value: unknown) => T) =>
-      Promise.resolve(resultFor(table, filters, single)).then(onfulfilled),
+      Promise.resolve(resultFor(table, filters, single, range, countRequested)).then(onfulfilled),
   };
   return chain;
 }
@@ -270,6 +298,75 @@ describe("GET /api/v1/dashboard/summary", () => {
     );
   });
 
+  it("pagina todos os leads com ordem estável e considera moeda e nulos após a linha 1000", async () => {
+    state.leads.open = [
+      ...Array.from({ length: 1000 }, () => ({ value_cents: 100, currency: "BRL" })),
+      { value_cents: 500, currency: "USD" },
+      { value_cents: null, currency: "BRL" },
+    ];
+    state.leads.won = [
+      ...Array.from({ length: 1000 }, () => ({ value_cents: 100, currency: "BRL" })),
+      { value_cents: 100, currency: "BRL" },
+      { value_cents: null, currency: "BRL" },
+    ];
+
+    const response = await body();
+
+    expect(response.data.hero.value).toBe("—");
+    expect(response.data.omitted).toContainEqual({
+      id: "pipeline",
+      reason: "multiple_currencies",
+    });
+    expect(response.data.cards.find((card) => card.id === "won_revenue")?.value).toBe(
+      "R$ 1.001",
+    );
+    expect(response.data.cards.find((card) => card.id === "average_ticket")?.value).toBe("R$ 1");
+
+    const leadRanges = state.calls.filter(
+      (call) => call.table === "crm_leads" && call.method === "range",
+    );
+    expect(leadRanges.map((call) => call.value)).toEqual([
+      { from: 0, to: 999 },
+      { from: 0, to: 999 },
+      { from: 1000, to: 1999 },
+      { from: 1000, to: 1999 },
+    ]);
+    const leadOrders = state.calls.filter(
+      (call) => call.table === "crm_leads" && call.method === "order",
+    );
+    expect(leadOrders).toHaveLength(4);
+    expect(leadOrders.every((call) => call.column === "id")).toBe(true);
+    expect(
+      leadOrders.every(
+        (call) => (call.value as { ascending?: boolean } | undefined)?.ascending === true,
+      ),
+    ).toBe(true);
+
+    const leadOrgFilters = state.calls.filter(
+      (call) =>
+        call.table === "crm_leads" &&
+        call.method === "eq" &&
+        call.column === "organization_id",
+    );
+    expect(leadOrgFilters).toHaveLength(4);
+    expect(leadOrgFilters.every((call) => call.value === "org-a")).toBe(true);
+    const leadStatusFilters = state.calls.filter(
+      (call) =>
+        call.table === "crm_leads" && call.method === "eq" && call.column === "status",
+    );
+    expect(leadStatusFilters.map((call) => call.value).sort()).toEqual([
+      "open",
+      "open",
+      "won",
+      "won",
+    ]);
+
+    const wonPeriodFilters = state.calls.filter(
+      (call) => call.table === "crm_leads" && ["gte", "lt"].includes(call.method),
+    );
+    expect(wonPeriodFilters).toHaveLength(4);
+  });
+
   it("omite o agregado quando nenhuma oportunidade tem valor completo", async () => {
     state.leads.open = [
       { value_cents: null, currency: "BRL" },
@@ -361,6 +458,49 @@ describe("GET /api/v1/dashboard/summary", () => {
       id: "instances",
       reason: "source_unavailable",
     });
+  });
+
+  it("conta todas as instâncias sem truncar no limite de linhas do Supabase", async () => {
+    state.role = "admin";
+    state.channelData = [
+      ...Array.from({ length: 1001 }, () => ({ status: "WORKING" })),
+      { status: "FAILED" },
+    ];
+
+    const response = await body();
+
+    expect(response.data.hero.value).toBe("1001/1002");
+    const channelSelects = state.calls.filter(
+      (call) => call.table === "channel_sessions" && call.method === "select",
+    );
+    expect(channelSelects).toHaveLength(2);
+    expect(
+      state.calls.filter(
+        (call) =>
+          call.table === "channel_sessions" &&
+          call.method === "eq" &&
+          call.column === "organization_id" &&
+          call.value === "org-a",
+      ),
+    ).toHaveLength(2);
+    expect(
+      state.calls.filter(
+        (call) =>
+          call.table === "channel_sessions" &&
+          call.method === "is" &&
+          call.column === "archived_at" &&
+          call.value === null,
+      ),
+    ).toHaveLength(2);
+    expect(
+      state.calls.filter(
+        (call) =>
+          call.table === "channel_sessions" &&
+          call.method === "eq" &&
+          call.column === "status" &&
+          call.value === "WORKING",
+      ),
+    ).toHaveLength(1);
   });
 
   it("resolve assentos pelo plano de recursos durante o teste", async () => {

@@ -11,9 +11,6 @@ vi.mock("@/hooks/kanban/useBoard", () => ({ useBoard: () => ({
   isLoading: false, error: null, pulses: new Map(), realtimeStatus: "subscribed",
   seguranca: { divergencias: estado.divergencias, ultimaDivergencia: null, ultimaVerificacao: 1 },
 }) }));
-// Esta suíte mede o aviso de realtime; agent+ só evita que o novo gate de
-// escrita transforme o harness em uma dependência de AuthProvider.
-vi.mock("@/hooks/auth/AuthProvider", () => ({ usePermission: () => true }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
   usePathname: () => "/app/pipelines/funil", useSearchParams: () => new URLSearchParams(),
@@ -24,7 +21,7 @@ vi.mock("@/components/kanban/BulkActionBar", () => ({ BulkActionBar: () => null 
 vi.mock("@/components/kanban/NewLeadDialog", () => ({ NewLeadDialog: () => null }));
 
 function montar(locale: "pt-BR" | "es" = "pt-BR") {
-  return render(<IdiomaProvider locale={locale}><PipelinePageClient pipelineId="funil" initialName="Funil de teste" /></IdiomaProvider>);
+  return render(<IdiomaProvider locale={locale}><PipelinePageClient pipelineId="funil" initialName="Funil de teste" canMutate /></IdiomaProvider>);
 }
 
 describe("aviso de perda detectada no funil", () => {
