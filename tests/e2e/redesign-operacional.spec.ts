@@ -10,9 +10,15 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import { expect, test, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
+import {
+  credenciaisSupabaseDeTeste,
+  destinoEhLocal,
+} from "../../scripts/lib/env-de-teste";
 import { lerCreds, loginComoAdmin, type CredsE2E } from "./helpers/login-admin";
 
 const EVIDENCE = path.join(process.cwd(), ".superpowers", "evidence", "redesign-operacional");
@@ -43,9 +49,97 @@ interface NocturneCreds extends CredsE2E {
 
 let nocturneCreds: NocturneCreds;
 
+interface OperationalGoalsSnapshot {
+  present: boolean;
+  value?: unknown;
+}
+
+let originalOperationalGoals: OperationalGoalsSnapshot | undefined;
+
+function settingsObject(settings: unknown): Record<string, unknown> {
+  return settings !== null && typeof settings === "object" && !Array.isArray(settings)
+    ? (settings as Record<string, unknown>)
+    : {};
+}
+
+function operationalGoalsFromSettings(settings: Record<string, unknown>): OperationalGoalsSnapshot {
+  const present = Object.prototype.hasOwnProperty.call(settings, "operational_goals");
+  return {
+    present,
+    ...(present ? { value: structuredClone(settings.operational_goals) } : {}),
+  };
+}
+
+function adminDoE2E() {
+  const local = credenciaisSupabaseDeTeste();
+  if (!destinoEhLocal(local.url)) {
+    throw new Error(`redesign-operacional recusou Supabase não local: ${new URL(local.url).host}`);
+  }
+  return createClient(local.url, local.serviceRole, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+async function readOperationalGoals(): Promise<OperationalGoalsSnapshot> {
+  const { data, error } = await adminDoE2E()
+    .from("organizations")
+    .select("settings")
+    .eq("id", nocturneCreds.org_id)
+    .maybeSingle();
+  if (error) throw new Error(`não foi possível ler as metas originais: ${error.message}`);
+  if (!data) throw new Error("organização E2E não encontrada ao ler metas originais");
+
+  return operationalGoalsFromSettings(settingsObject(data.settings));
+}
+
+async function restoreOperationalGoals(): Promise<void> {
+  if (!originalOperationalGoals) return;
+
+  const admin = adminDoE2E();
+  let restored = false;
+  for (let attempt = 0; attempt < 3 && !restored; attempt += 1) {
+    const { data, error } = await admin
+      .from("organizations")
+      .select("settings")
+      .eq("id", nocturneCreds.org_id)
+      .maybeSingle();
+    if (error) throw new Error(`não foi possível ler settings para restaurar metas: ${error.message}`);
+    if (!data) throw new Error("organização E2E não encontrada ao restaurar metas");
+
+    const currentSettings = settingsObject(data.settings);
+    if (isDeepStrictEqual(operationalGoalsFromSettings(currentSettings), originalOperationalGoals)) {
+      restored = true;
+      break;
+    }
+    const nextSettings = { ...currentSettings };
+    if (originalOperationalGoals.present) {
+      nextSettings.operational_goals = structuredClone(originalOperationalGoals.value);
+    } else {
+      delete nextSettings.operational_goals;
+    }
+
+    const { data: updated, error: updateError } = await admin
+      .from("organizations")
+      .update({ settings: nextSettings })
+      .eq("id", nocturneCreds.org_id)
+      .eq("settings", JSON.stringify(currentSettings))
+      .select("id");
+    if (updateError) {
+      throw new Error(`não foi possível restaurar metas originais: ${updateError.message}`);
+    }
+    restored = (updated ?? []).length === 1;
+  }
+  if (!restored) throw new Error("settings mudou durante as três tentativas de restaurar metas");
+
+  const after = await readOperationalGoals();
+  expect(after, "operational_goals deve voltar byte a byte ao estado de entrada").toEqual(
+    originalOperationalGoals,
+  );
+}
+
 test.describe.configure({ timeout: 120_000 });
 
-test.beforeAll(() => {
+test.beforeAll(async () => {
   creds = lerCreds();
   for (const script of [
     "scripts/seed-e2e-queue.ts",
@@ -57,15 +151,31 @@ test.beforeAll(() => {
   nocturneCreds = JSON.parse(
     readFileSync(path.join(process.cwd(), ".e2e-creds.json"), "utf8"),
   ) as NocturneCreds;
+  originalOperationalGoals = await readOperationalGoals();
 });
 
-test.afterAll(() => {
-  // A jornada move e ganha um negócio real. O seed é idempotente e devolve o
-  // board ao mesmo estado de entrada para a próxima spec do banco compartilhado.
-  execFileSync("npx", ["tsx", "scripts/seed-crm-vivo.ts"], {
-    stdio: "inherit",
-    env: process.env,
-  });
+test.afterAll(async () => {
+  let restoreError: unknown;
+  try {
+    // Rede de segurança para falha no meio do teste: restaura somente a chave
+    // operational_goals sobre o settings atual, sem apagar branding/routing/etc.
+    await restoreOperationalGoals();
+  } catch (error) {
+    restoreError = error;
+  }
+
+  try {
+    // A jornada move e ganha um negócio real. O seed é idempotente e devolve o
+    // board ao mesmo estado de entrada para a próxima spec do banco compartilhado.
+    execFileSync("npx", ["tsx", "scripts/seed-crm-vivo.ts"], {
+      stdio: "inherit",
+      env: process.env,
+    });
+  } catch (seedError) {
+    if (restoreError) throw new AggregateError([restoreError, seedError], "restaurações E2E falharam");
+    throw seedError;
+  }
+  if (restoreError) throw restoreError;
 });
 
 test.beforeEach(async ({ page }) => {
@@ -475,32 +585,40 @@ test("as abas de funil preservam contexto e os botões avançam e ganham o negó
 });
 
 test("gestor define metas e atendente vê o próprio recorte sem gamificação", async ({ page }) => {
-  await loginComo(page, "manager");
-  await page.goto("/app/metas");
-  await expect(page.getByRole("heading", { name: "Metas operacionais" })).toBeVisible({
-    timeout: 30_000,
-  });
-  await page.getByLabel("Moeda da receita").fill("BRL");
-  await page.getByLabel("Receita mensal da equipe").fill("5000000");
-  await page.getByLabel("Conversas da equipe").fill("80");
-  await page.getByLabel("Receita mensal de E2E Agent").fill("1200000");
-  await page.getByLabel("Conversas de E2E Agent").fill("20");
-  const salvou = page.waitForResponse(
-    (response) =>
-      response.request().method() === "PATCH" &&
-      response.url().includes("/api/v1/settings/goals") &&
-      response.ok(),
-  );
-  await page.getByRole("button", { name: "Salvar metas" }).click();
-  await salvou;
+  try {
+    await loginComo(page, "manager");
+    await page.goto("/app/metas");
+    await expect(page.getByRole("heading", { name: "Metas operacionais" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.getByLabel("Moeda da receita").fill("BRL");
+    await page.getByLabel("Receita mensal da equipe").fill("5000000");
+    await page.getByLabel("Conversas da equipe").fill("80");
+    await page.getByLabel("Receita mensal de E2E Agent").fill("1200000");
+    await page.getByLabel("Conversas de E2E Agent").fill("20");
+    const salvou = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/settings/goals") &&
+        response.ok(),
+    );
+    await page.getByRole("button", { name: "Salvar metas" }).click();
+    await salvou;
 
-  await loginComo(page, "agent");
-  await page.goto("/app/metas");
-  await expect(page.getByRole("heading", { name: "Seu resumo" })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("heading", { name: "Configurar metas" })).toHaveCount(0);
-  await expect(page.getByText(/de R\$\s*12\.000/).first()).toBeVisible();
-  await expect(page.getByText(/0 de 20/).first()).toBeVisible();
-  await expect(page.locator("main")).not.toContainText(
-    /\b(?:XP|nível|ofensiva|desafios?|ranking|medalhas?)\b/i,
-  );
+    await loginComo(page, "agent");
+    await page.goto("/app/metas");
+    await expect(page.getByRole("heading", { name: "Seu resumo" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByRole("heading", { name: "Configurar metas" })).toHaveCount(0);
+    await expect(page.getByText(/de R\$\s*12\.000/).first()).toBeVisible();
+    await expect(page.getByText(/0 de 20/).first()).toBeVisible();
+    await expect(page.locator("main")).not.toContainText(
+      /\b(?:XP|nível|ofensiva|desafios?|ranking|medalhas?)\b/i,
+    );
+  } finally {
+    // `finally` executa também quando uma asserção da jornada falha. O helper
+    // compara o snapshot restaurado e o afterAll repete a operação como cinto.
+    await restoreOperationalGoals();
+  }
 });

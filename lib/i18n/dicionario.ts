@@ -8606,6 +8606,41 @@ export const DICIONARIO: Traducoes = {
   "Sem valores": { es: "Sin valores" },
   "Pipeline aberto": { es: "Pipeline abierto" },
   "Valor do pipeline": { es: "Valor del pipeline" },
+  "Dados indisponíveis no momento.": { es: "Datos no disponibles en este momento." },
+  AGORA: { es: "AHORA" },
+  Agora: { es: "Ahora" },
+  "Primeira resposta": { es: "Primera respuesta" },
+  "No período": { es: "En el período" },
+  "Tempo médio até a primeira resposta humana.": {
+    es: "Tiempo promedio hasta la primera respuesta humana.",
+  },
+  "Conversas aguardando atendimento.": { es: "Conversaciones esperando atención." },
+  "Conversas atribuídas": { es: "Conversaciones asignadas" },
+  "Conversas abertas atribuídas a você.": {
+    es: "Conversaciones abiertas asignadas a ti.",
+  },
+  "Tarefas atrasadas": { es: "Tareas vencidas" },
+  "Tarefas abertas com prazo vencido.": {
+    es: "Tareas abiertas con fecha límite vencida.",
+  },
+  "Receita ganha": { es: "Ingresos ganados" },
+  "Mês atual": { es: "Mes actual" },
+  "Ticket médio": { es: "Ticket promedio" },
+  "Média simples das primeiras respostas dos atendentes.": {
+    es: "Promedio simple de las primeras respuestas de los agentes.",
+  },
+  "Conversas por atendente": { es: "Conversaciones por agente" },
+  "Média entre atendentes que receberam conversas no período.": {
+    es: "Promedio entre agentes que recibieron conversaciones en el período.",
+  },
+  "Instâncias online": { es: "Instancias en línea" },
+  "Instâncias de canal em funcionamento.": {
+    es: "Instancias de canal en funcionamiento.",
+  },
+  "Assentos ativos": { es: "Asientos activos" },
+  "Membros ativos em relação ao limite configurado.": {
+    es: "Miembros activos en relación con el límite configurado.",
+  },
   "Valor informado das oportunidades abertas.": {
     es: "Valor informado de las oportunidades abiertas.",
   },

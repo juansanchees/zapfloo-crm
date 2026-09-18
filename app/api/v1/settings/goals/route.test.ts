@@ -92,14 +92,33 @@ describe("/api/v1/settings/goals", () => {
     expect((await (await GET()).json()).data).toEqual({ team: {}, members: {} });
     expect((await PATCH(request({}))).status).toBe(403);
     expect(updates).toEqual([]);
-    expect(requireRole).toHaveBeenNthCalledWith(1, "agent", expect.any(Object));
-    expect(requireRole).toHaveBeenNthCalledWith(2, "manager", expect.any(Object));
+    expect(requireRole).toHaveBeenNthCalledWith(1, "agent", expect.objectContaining({ allowPlatformAdmin: true }));
+    expect(requireRole).toHaveBeenNthCalledWith(2, "manager", expect.objectContaining({ allowPlatformAdmin: true }));
   });
 
   it("redige B para agent A quando o mapa está cifrado", async () => {
     orgs[ORG_A]!.settings.operational_goals = { members_enc: "cipher" };
     vi.mocked(requireRole).mockResolvedValue({ ok: true, user: { id: MEMBER }, org: { orgId: ORG_A, role: "agent" } } as never);
     expect((await (await GET()).json()).data.members).toEqual({ [MEMBER]: { monthly_conversations: 3 } });
+  });
+
+  it("platform admin com papel agent vê e salva a configuração completa", async () => {
+    orgs[ORG_A]!.settings.operational_goals = { members_enc: "cipher" };
+    vi.mocked(requireRole).mockResolvedValue({
+      ok: true,
+      user: { id: MEMBER, is_platform_admin: true },
+      org: { orgId: ORG_A, role: "agent" },
+    } as never);
+
+    const read = await GET();
+    expect(read.status).toBe(200);
+    expect((await read.json()).data.members).toEqual({
+      [MEMBER]: { monthly_conversations: 3 },
+      [OTHER_MEMBER]: { monthly_conversations: 9 },
+    });
+    expect((await PATCH(request({ team: { monthly_conversations: 3 }, members: {} }))).status).toBe(200);
+    expect(requireRole).toHaveBeenNthCalledWith(1, "agent", expect.objectContaining({ allowPlatformAdmin: true }));
+    expect(requireRole).toHaveBeenNthCalledWith(2, "manager", expect.objectContaining({ allowPlatformAdmin: true }));
   });
 
   it("falha fechada na decifragem sem devolver metas", async () => {

@@ -20,7 +20,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "operational_goals" });
+  const authz = await requireRole("agent", {
+    requestId,
+    resource: "operational_goals",
+    allowPlatformAdmin: true,
+  });
   if (!authz.ok) return authz.response;
 
   const supabase = await createClient();
@@ -52,7 +56,11 @@ export async function GET(): Promise<Response> {
 
 export async function PATCH(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("manager", { requestId, resource: "operational_goals" });
+  const authz = await requireRole("manager", {
+    requestId,
+    resource: "operational_goals",
+    allowPlatformAdmin: true,
+  });
   if (!authz.ok) return authz.response;
 
   let raw: unknown;

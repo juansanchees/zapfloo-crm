@@ -103,7 +103,8 @@ export type RevenueEvent = {
   currency: string | null;
 };
 
-export type ConversationEvent = { user_id: string | null };
+/** Uma conversa só é atendida após uma mensagem outbound atribuída a uma pessoa. */
+export type ConversationEvent = { user_id: string | null; conversation_id: string | null };
 
 export type OperationalProgressRow = {
   user_id: string;
@@ -152,7 +153,7 @@ export function buildOperationalProgress(input: {
   const team = {
     revenue: revenueFor(revenue, null, goals, teamTarget),
     conversations: {
-      current: conversations.filter((event) => Boolean(event.user_id)).length,
+      current: countHandledConversations(conversations),
       target: teamTarget.monthly_conversations ?? null,
     },
   };
@@ -160,7 +161,9 @@ export function buildOperationalProgress(input: {
   // `revenueFor` por user não atende a equipe: a equipe agrega todos os donos.
   const teamTotals = new Map<string, number>();
   for (const event of revenue) {
-    if (!event.user_id || event.value_cents === null || !event.currency) continue;
+    // O total da equipe é o resultado comercial da organização: um negócio
+    // ganho sem dono ainda é receita real. Só a linha individual exige dono.
+    if (event.value_cents === null || !event.currency) continue;
     teamTotals.set(event.currency, (teamTotals.get(event.currency) ?? 0) + event.value_cents);
   }
   if (goals.currency && teamTarget.monthly_revenue_cents !== undefined && !teamTotals.has(goals.currency)) {
@@ -187,10 +190,20 @@ export function buildOperationalProgress(input: {
         name: member.name,
         revenue: revenueFor(revenue, member.user_id, goals, target),
         conversations: {
-          current: conversations.filter((event) => event.user_id === member.user_id).length,
+          current: countHandledConversations(conversations, member.user_id),
           target: target.monthly_conversations ?? null,
         },
       };
     }),
   };
+}
+
+function countHandledConversations(events: ConversationEvent[], userId?: string): number {
+  const conversations = new Set<string>();
+  for (const event of events) {
+    if (!event.conversation_id || !event.user_id) continue;
+    if (userId !== undefined && event.user_id !== userId) continue;
+    conversations.add(event.conversation_id);
+  }
+  return conversations.size;
 }

@@ -6,6 +6,11 @@ import { describe, expect, it } from "vitest";
 
 import { DICIONARIO } from "@/lib/i18n/dicionario";
 import { traduzir } from "@/lib/i18n/dicionario";
+import {
+  buildRoleSummary,
+  type DashboardSources,
+  type DashboardSurface,
+} from "@/lib/dashboard/role-summary";
 import { IDIOMAS } from "@/lib/i18n/idiomas";
 
 /**
@@ -380,6 +385,42 @@ function chavesUsadas(): Map<string, string[]> {
   return usadas;
 }
 
+function chavesDinamicasDoResumo(): string[] {
+  const fontes: DashboardSources = {
+    conversation_counts: { fila: 7, mine: 3, all: 19 },
+    open_tasks: { overdue: 2 },
+    attendants: {
+      first_response_seconds: 257,
+      conversations_handled: 12,
+      attendant_count: 3,
+    },
+    pipeline_open: { value_by_currency: { BRL: 1234500 } },
+    won_revenue: {
+      value_by_currency: { BRL: 456700 },
+      count_by_currency: { BRL: 4 },
+    },
+    channels: { online: 2, total: 3 },
+    seats: { active: 4, limit: 8 },
+  };
+  const papeis: DashboardSurface[] = ["agent", "manager", "admin"];
+  const resumos = [
+    ...papeis.map((papel) => buildRoleSummary(papel, fontes)),
+    ...papeis.map((papel) => buildRoleSummary(papel, {})),
+  ];
+
+  return [
+    ...new Set(
+      resumos.flatMap((resumo) =>
+        [resumo.hero, ...resumo.cards].flatMap((card) => [
+          card.label,
+          card.hint,
+          card.variation || "AGORA",
+        ]),
+      ),
+    ),
+  ];
+}
+
 describe("a chave é o texto em português, e o português não muda", () => {
   it("nenhuma entrada do dicionário declara pt-BR", () => {
     // Se uma entrada trouxesse `"pt-BR": "outra coisa"`, `traduzir()` passaria a
@@ -434,6 +475,14 @@ describe("toda chave usada na tela tem espanhol", () => {
     expect(
       semEspanhol,
       `${semEspanhol.length} chamada(s) t() sem tradução em espanhol: a tela cai no português`,
+    ).toEqual([]);
+  });
+
+  it("cobre também os rótulos dinâmicos emitidos pelo resumo por papel", () => {
+    const semEspanhol = chavesDinamicasDoResumo().filter((chave) => !DICIONARIO[chave]?.es);
+    expect(
+      semEspanhol,
+      `${semEspanhol.length} texto(s) dinâmico(s) do resumo sem tradução em espanhol`,
     ).toEqual([]);
   });
 });

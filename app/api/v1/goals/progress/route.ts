@@ -27,7 +27,11 @@ export function utcMonthWindow(now = new Date()) {
 
 export async function GET(): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "operational_goals" });
+  const authz = await requireRole("agent", {
+    requestId,
+    resource: "operational_goals",
+    allowPlatformAdmin: true,
+  });
   if (!authz.ok) return authz.response;
 
   const managerView = roleAtLeast(authz.org.role, "manager") || authz.user.is_platform_admin;
@@ -56,15 +60,19 @@ export async function GET(): Promise<Response> {
     .eq("status", "won")
     .gte("closed_at", from)
     .lt("closed_at", to);
+  // Atribuir uma conversa não prova atendimento. A fonte canônica é a mensagem
+  // outbound com autor humano (`sent_by_user_id`), registrada pelo composer.
   let conversationsQuery = supabase
-    .from("conversations")
-    .select("assigned_to_user_id")
+    .from("messages")
+    .select("conversation_id, sent_by_user_id")
     .eq("organization_id", authz.org.orgId)
-    .gte("assigned_at", from)
-    .lt("assigned_at", to);
+    .eq("direction", "outbound")
+    .not("sent_by_user_id", "is", null)
+    .gte("sent_at", from)
+    .lt("sent_at", to);
   if (!managerView) {
     revenueQuery = revenueQuery.eq("owner_user_id", authz.user.id);
-    conversationsQuery = conversationsQuery.eq("assigned_to_user_id", authz.user.id);
+    conversationsQuery = conversationsQuery.eq("sent_by_user_id", authz.user.id);
   }
 
   const [settingsRes, rosterRes, revenueRes, conversationsRes] = await Promise.all([
@@ -109,7 +117,8 @@ export async function GET(): Promise<Response> {
       currency: row.currency,
     })) satisfies RevenueEvent[],
     conversations: (conversationsRes.data ?? []).map((row) => ({
-      user_id: row.assigned_to_user_id,
+      user_id: row.sent_by_user_id,
+      conversation_id: row.conversation_id,
     })) satisfies ConversationEvent[],
   });
 
