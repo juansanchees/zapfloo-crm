@@ -12,6 +12,7 @@ const canal = "22222222-2222-4222-8222-222222222222";
 let agents: unknown[];
 let channels: unknown[];
 let balanceIncident: unknown;
+let calls: Array<{ table: string; column: string; value: unknown }>;
 
 function query(table: string) {
   const result = () => ({
@@ -22,7 +23,12 @@ function query(table: string) {
     error: null,
   });
   const q = {
-    select: () => q, eq: () => q, neq: () => q, is: () => q, order: () => q, limit: () => q,
+    select: () => q,
+    eq: (column: string, value: unknown) => {
+      calls.push({ table, column, value });
+      return q;
+    },
+    neq: () => q, is: () => q, order: () => q, limit: () => q,
     maybeSingle: async () => result(),
     then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(result()).then(resolve, reject),
   };
@@ -33,11 +39,34 @@ beforeEach(() => {
   agents = [{ kind: "mcp_agent", is_active: true, published_version_id: "33333333-3333-4333-8333-333333333333", archived_at: null }];
   channels = [{ id: canal, status: "WORKING", archived_at: null, metadata: { ai_gate: "allowlist", ai_gate_mode: "pre_go_live", ai_test_phone_numbers: [] } }];
   balanceIncident = null;
+  calls = [];
   vi.mocked(requireRole).mockResolvedValue({ ok: true, user: { id: org }, org: { orgId: org, role: "agent" } } as Awaited<ReturnType<typeof requireRole>>);
   vi.mocked(createAdminClient).mockReturnValue({ from: query } as unknown as ReturnType<typeof createAdminClient>);
 });
 
 describe("estado visível do atendimento por IA", () => {
+  it("permite platform admin viewer no guard transversal e mantém a leitura na organização ativa", async () => {
+    vi.mocked(requireRole).mockResolvedValue({
+      ok: true,
+      user: { id: "platform-admin", is_platform_admin: true },
+      org: { orgId: org, role: "viewer" },
+    } as Awaited<ReturnType<typeof requireRole>>);
+
+    const response = await GET(new NextRequest("http://localhost/api/v1/ai/automatico-ativo"));
+
+    expect(response.status).toBe(200);
+    expect(requireRole).toHaveBeenCalledWith(
+      "agent",
+      expect.objectContaining({ allowPlatformAdmin: true }),
+    );
+    expect(calls).toContainEqual({ table: "ai_agents", column: "organization_id", value: org });
+    expect(calls).toContainEqual({
+      table: "channel_sessions",
+      column: "organization_id",
+      value: org,
+    });
+  });
+
   it("canal em allowlist sem ninguém autorizado declara o silêncio, não atendimento", async () => {
     const response = await GET(new NextRequest("http://localhost/api/v1/ai/automatico-ativo"));
     expect((await response.json()).data).toEqual({ ativo: true, estado: "em_teste", motivo: null, numeros_autorizados: 0, canal_id: canal });
