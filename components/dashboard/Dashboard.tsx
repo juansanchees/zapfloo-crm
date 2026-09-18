@@ -161,6 +161,15 @@ export function Dashboard() {
     );
 
   const summary = d.summary.isError ? undefined : d.summary.data;
+  const metrics = d.metrics.isError ? undefined : d.metrics.data;
+  const stages = metrics?.funnel ?? [];
+  const totalOpportunities = stages.reduce((total, stage) => total + stage.count, 0);
+  const largestStage = Math.max(1, ...stages.map((stage) => stage.count));
+  const won = metrics?.attendants.reduce((total, attendant) => total + attendant.won, 0);
+  const lost = metrics?.attendants.reduce((total, attendant) => total + attendant.lost, 0);
+  const decisions = (won ?? 0) + (lost ?? 0);
+  const conversion = decisions > 0 ? Math.round(((won ?? 0) / decisions) * 100) : 0;
+  const agents = (d.agents.data ?? []).filter((agent) => !agent.archived_at).slice(0, 3);
   const action = actionFor(summary?.role_surface ?? "agent");
   const tasks = [...(d.tasks.data ?? [])]
     .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
@@ -209,12 +218,12 @@ export function Dashboard() {
           </Button>
         </div>
       )}
-      {d.summary.isLoading && (
+      {d.canReadSummary && d.summary.isLoading && (
         <p role="status" className={styles.muted}>
           {t("Carregando métricas…")}
         </p>
       )}
-      {d.summary.isError && (
+      {d.canReadSummary && d.summary.isError && (
         <div role="alert" className={styles.error}>
           <span>{t("Não foi possível carregar as métricas do painel.")}</span>
           <Button variant="ghost" size="sm" onClick={() => void d.summary.refetch()}>
@@ -354,33 +363,100 @@ export function Dashboard() {
             <Jump href="/app/inbox?filter=unassigned">{t("Abrir fila")}</Jump>
           </Panel>,
         )}
-        {place(
-          "opportunities_by_stage",
-          <Panel title={t("Oportunidades por etapa")}>
-            <p className={styles.muted}>
-              {t("Consulte os valores do funil no resumo operacional.")}
-            </p>
-            <Jump href="/app/kanban">{t("Ver funis")}</Jump>
-          </Panel>,
-        )}
-        {place(
-          "period_conversion",
-          <Panel title={t("Conversão do período")}>
-            <p className={styles.muted}>
-              {t("Consulte os indicadores do período no relatório completo.")}
-            </p>
-            <Jump href="/app/metrics">{t("Abrir relatório completo")}</Jump>
-          </Panel>,
-        )}
-        {place(
-          "active_agents",
-          <Panel title={t("Agentes ativos")}>
-            <p className={styles.muted}>
-              {t("Acompanhe os agentes configurados para a organização.")}
-            </p>
-            <Jump href="/app/ai/agents">{t("Ver agentes")}</Jump>
-          </Panel>,
-        )}
+        {d.canAct &&
+          place(
+            "opportunities_by_stage",
+            <Panel
+              title={t("Oportunidades por etapa")}
+              action={<Jump href="/app/kanban">{t("Ver funis")}</Jump>}
+            >
+              <QueryState
+                loading={d.metrics.isLoading}
+                error={d.metrics.isError}
+                retry={d.metrics.refetch}
+              />
+              {metrics && (
+                <>
+                  <p className={styles.muted}>{t("Oportunidades abertas conforme seu acesso.")}</p>
+                  {stages.length ? (
+                    <ul className={styles.funnel}>
+                      {stages.map((stage) => (
+                        <li key={stage.stage_id}>
+                          <span>{stage.stage_name}</span>
+                          <div className={styles.track} aria-hidden>
+                            <div style={{ width: `${(stage.count / largestStage) * 100}%` }} />
+                          </div>
+                          <strong>{stage.count}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={styles.empty}>{t("Nenhuma etapa configurada.")}</p>
+                  )}
+                  <div className={styles.total}>
+                    <span>{t("Total em aberto")}</span>
+                    <strong>{totalOpportunities}</strong>
+                  </div>
+                  <Jump href="/app/metrics">{t("Desempenho dos últimos 30 dias")}</Jump>
+                </>
+              )}
+            </Panel>,
+          )}
+        {d.canAct &&
+          place(
+            "period_conversion",
+            <Panel title={t("Conversão do período")}>
+              <div className={styles.conversionMetric}>
+                <strong>{metrics ? `${conversion}%` : "—"}</strong>
+                <span>{t("oportunidades ganhas entre as decisões registradas")}</span>
+              </div>
+              <QueryState
+                loading={d.metrics.isLoading}
+                error={d.metrics.isError}
+                retry={d.metrics.refetch}
+              />
+              <Jump href="/app/metrics">{t("Abrir relatório completo")}</Jump>
+            </Panel>,
+          )}
+        {d.canManage &&
+          place(
+            "active_agents",
+            <Panel title={t("Agentes ativos")}>
+              <QueryState
+                loading={d.agents.isLoading}
+                error={d.agents.isError}
+                retry={d.agents.refetch}
+              />
+              {!d.agents.isLoading &&
+                !d.agents.isError &&
+                (agents.length ? (
+                  <ul className={styles.list}>
+                    {agents.map((agent) => (
+                      <li key={agent.id}>
+                        <Link
+                          className={styles.conversation}
+                          href={`/app/ai/agents/${encodeURIComponent(agent.id)}`}
+                        >
+                          <span className={styles.avatar} aria-hidden>
+                            {[...agent.name].slice(0, 2).join("").toUpperCase()}
+                          </span>
+                          <span className={styles.person}>
+                            <strong>{agent.name}</strong>
+                            <span>{agent.description || t("Agente de IA")}</span>
+                          </span>
+                          <span className={styles.badge}>
+                            {agent.is_active ? t("Habilitado") : t("Desativado")}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.empty}>{t("Nenhum agente configurado.")}</p>
+                ))}
+              <Jump href="/app/ai/agents">{t("Ver agentes")}</Jump>
+            </Panel>,
+          )}
         {place(
           "at_risk_clients",
           <Panel title={t("Clientes que precisam de atenção")}>

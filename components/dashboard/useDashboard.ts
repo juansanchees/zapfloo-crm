@@ -6,7 +6,9 @@ import { apiClient } from "@/lib/api/client";
 import { roleAtLeast } from "@/lib/auth/types";
 import type { DashboardSummary } from "@/lib/dashboard/role-summary";
 import { useAuth } from "@/hooks/auth/AuthProvider";
+import type { AgentRow } from "@/hooks/ai/useAgent";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
+import type { AttendantMetrics } from "@/hooks/metrics/useAttendantMetrics";
 import type { Tarefa } from "@/lib/tarefas/tipos";
 
 /** A API decide a superfície; o cliente apenas a identifica e a exibe. */
@@ -15,6 +17,9 @@ export function useDashboard() {
   const qc = useQueryClient();
   const enabled = !!activeOrg;
   const canAct = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "agent"));
+  const canReadSummary = canAct;
+  const canManage =
+    enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "manager"));
   const canConfigureAiAccess =
     enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "admin"));
   const scope = [
@@ -33,6 +38,7 @@ export function useDashboard() {
 
   const summary = useQuery({
     ...common,
+    enabled: canReadSummary,
     queryKey: [...scope, "summary"],
     queryFn: () =>
       apiClient
@@ -47,6 +53,27 @@ export function useDashboard() {
         .get<{ data: ConversationWithContact[] }>(
           "/api/v1/conversations?exclude_finished=true&limit=3",
         )
+        .then((response) => response.data),
+  });
+  // Estes widgets já existiam no painel e continuam consumindo as superfícies
+  // canônicas, com o mesmo escopo do papel ativo. Não são aproximações do
+  // resumo por papel.
+  const metrics = useQuery({
+    ...common,
+    enabled: canAct,
+    queryKey: [...scope, "metrics"],
+    queryFn: () =>
+      apiClient
+        .get<{ data: AttendantMetrics }>("/api/v1/metrics/attendants")
+        .then((response) => response.data),
+  });
+  const agents = useQuery({
+    ...common,
+    enabled: canManage,
+    queryKey: [...scope, "agents"],
+    queryFn: () =>
+      apiClient
+        .get<{ data: AgentRow[] }>("/api/v1/ai/agents")
         .then((response) => response.data),
   });
   const tasks = useQuery({
@@ -69,5 +96,17 @@ export function useDashboard() {
     },
   });
 
-  return { activeOrg, canAct, canConfigureAiAccess, summary, conversations, tasks, complete };
+  return {
+    activeOrg,
+    canAct,
+    canReadSummary,
+    canManage,
+    canConfigureAiAccess,
+    summary,
+    conversations,
+    metrics,
+    agents,
+    tasks,
+    complete,
+  };
 }

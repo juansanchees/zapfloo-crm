@@ -5,6 +5,8 @@ const state = vi.hoisted(() => ({
   idioma: "pt-BR",
   authorized: true,
   requiredRole: "",
+  requireOptions: null as { allowPlatformAdmin?: boolean } | null,
+  isPlatformAdmin: false,
   calls: [] as Array<{ table: string; method: string; column?: string; value?: unknown }>,
   errors: new Set<string>(),
   failLeadStatus: null as "open" | "won" | null,
@@ -30,12 +32,13 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth/require-role", () => ({
-  requireRole: vi.fn(async (min: string) => {
+  requireRole: vi.fn(async (min: string, options?: { allowPlatformAdmin?: boolean }) => {
     state.requiredRole = min;
+    state.requireOptions = options ?? null;
     if (!state.authorized) return { ok: false, response: new Response(null, { status: 403 }) };
     return {
       ok: true,
-      user: { id: "user-a", is_platform_admin: false, idioma: state.idioma },
+      user: { id: "user-a", is_platform_admin: state.isPlatformAdmin, idioma: state.idioma },
       org: { orgId: "org-a", name: "Org A", role: state.role },
     };
   }),
@@ -152,6 +155,8 @@ beforeEach(() => {
   state.idioma = "pt-BR";
   state.authorized = true;
   state.requiredRole = "";
+  state.requireOptions = null;
+  state.isPlatformAdmin = false;
   state.calls = [];
   state.errors = new Set();
   state.failLeadStatus = null;
@@ -256,6 +261,20 @@ describe("GET /api/v1/dashboard/summary", () => {
     expect(response.status).toBe(403);
     expect(state.requiredRole).toBe("agent");
     expect(state.calls).toHaveLength(0);
+  });
+
+  it("permite admin da plataforma como admin mesmo com membership viewer", async () => {
+    state.role = "viewer";
+    state.isPlatformAdmin = true;
+
+    const httpResponse = await GET();
+    const response = (await httpResponse.json()) as Awaited<ReturnType<typeof body>>;
+
+    expect(httpResponse.status).toBe(200);
+    expect(response.data.role_surface).toBe("admin");
+    expect(state.requiredRole).toBe("agent");
+    expect(state.requireOptions).toMatchObject({ allowPlatformAdmin: true });
+    expect(response.data.cards.map((card) => card.id)).toContain("online_instances");
   });
 
   it("mantém zero explícito, mas omite contagens nulas", async () => {

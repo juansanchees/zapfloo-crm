@@ -36,6 +36,8 @@ const task = {
 };
 
 beforeEach(() => {
+  auth.user.is_platform_admin = false;
+  auth.activeOrg.role = "manager";
   failSummary = false;
   failPreferences = false;
   failPreferenceSave = false;
@@ -94,6 +96,48 @@ beforeEach(() => {
               contacts: { display_name: "Contato teste", name: null },
               last_message_preview: "Quero uma proposta",
               last_message_at: "2026-09-01T12:00:00Z",
+            },
+          ],
+        });
+      if (url.includes("/metrics/attendants"))
+        return Response.json({
+          data: {
+            window: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
+            owner_user_id: null,
+            funnel: [
+              { stage_id: "proposal", stage_name: "Proposta", position: 1, count: 6 },
+              { stage_id: "negotiation", stage_name: "Negociação", position: 2, count: 2 },
+            ],
+            attendants: [
+              {
+                user_id: "user-1",
+                won: 3,
+                lost: 1,
+                conversations_handled: 7,
+                avg_first_response_seconds: 120,
+                name: "Pessoa teste",
+                email: null,
+              },
+            ],
+          },
+        });
+      if (url.includes("/ai/agents"))
+        return Response.json({
+          data: [
+            {
+              id: "agent-1",
+              organization_id: "org-1",
+              name: "Agente teste",
+              description: "Qualifica oportunidades",
+              model: "test-model",
+              system_prompt: "",
+              is_active: true,
+              is_default: false,
+              config: {},
+              guardrails: null,
+              active_kb_version_id: null,
+              created_at: "2026-09-01T00:00:00.000Z",
+              updated_at: "2026-09-01T00:00:00.000Z",
             },
           ],
         });
@@ -165,6 +209,29 @@ describe("Dashboard operacional", () => {
     expect(
       screen.getByRole("link", { name: /Abrir conversas|Abrir funis|Ver conexões/ }),
     ).toHaveAttribute("href", href);
+  });
+
+  it("restaura os widgets com funil, conversão e agentes das APIs canônicas", async () => {
+    mount();
+
+    expect(await screen.findByText("Proposta")).toBeVisible();
+    expect(screen.getByText("8")).toBeVisible();
+    expect(screen.getByText("75%")).toBeVisible();
+    expect(screen.getByText("Agente teste")).toBeVisible();
+    expect(requests.some((request) => request.includes("/metrics/attendants"))).toBe(true);
+    expect(requests.some((request) => request.includes("/ai/agents"))).toBe(true);
+  });
+
+  it("não consulta nem oferece retry do resumo para viewer", async () => {
+    auth.activeOrg.role = "viewer";
+    failSummary = true;
+    mount();
+
+    await screen.findByRole("link", { name: /Contato teste/ });
+    expect(requests.some((request) => request.includes("/dashboard/summary"))).toBe(false);
+    expect(screen.queryByRole("region", { name: "Resumo operacional" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Não foi possível carregar as métricas do painel.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument();
   });
 
   it("restaura o editor, redimensiona e salva a preferência do painel", async () => {

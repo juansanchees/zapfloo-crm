@@ -260,7 +260,14 @@ async function readAdminSources(
 
 export async function GET(): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "dashboard_summary" });
+  const authz = await requireRole("agent", {
+    requestId,
+    resource: "dashboard_summary",
+    // O administrador da plataforma é transversal ao papel salvo no tenant.
+    // `surfaceFor` o projeta como admin e o guard canônico precisa permitir a
+    // mesma regra, inclusive quando o membership ativo ainda é viewer.
+    allowPlatformAdmin: true,
+  });
   if (!authz.ok) return authz.response;
 
   const surface = surfaceFor(authz.org.role, authz.user.is_platform_admin);
