@@ -89,9 +89,16 @@ export async function GET(): Promise<Response> {
   const members = await readMembers(storedGoals.members_enc);
   if (members === null) return fail("internal_error", "Não foi possível ler as metas individuais.", 500, { requestId });
   const goals = operationalGoalsFromStored(storedGoals, members);
+  const ownTarget = goals.members[authz.user.id];
   const scopedGoals = managerView
     ? goals
-    : { ...goals, members: goals.members[authz.user.id] ? { [authz.user.id]: goals.members[authz.user.id]! } : {} };
+    : {
+        ...goals,
+        // O card "Seu resumo" é calculado pela mesma meta da linha individual;
+        // meta de equipe não atravessa a fronteira de escopo do agent.
+        team: ownTarget ?? {},
+        members: ownTarget ? { [authz.user.id]: ownTarget } : {},
+      };
 
   const progress = buildOperationalProgress({
     goals: scopedGoals,

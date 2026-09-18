@@ -3,9 +3,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 
 import { MetasClient } from "@/app/app/metas/_components/MetasClient";
 
-const progress = {
+let progress: {
+  window: { from: string; to: string };
+  scope: "team" | "self";
+  team: { revenue: Array<{ currency: string; current_cents: number; target_cents: number | null }>; conversations: { current: number; target: number | null } };
+  members: Array<{ user_id: string; name: string; revenue: Array<{ currency: string; current_cents: number; target_cents: number | null }>; conversations: { current: number; target: number | null } }>;
+} = {
   window: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
-  scope: "team" as const,
+  scope: "team",
   team: {
     revenue: [{ currency: "BRL", current_cents: 125_000, target_cents: 500_000 }],
     conversations: { current: 12, target: null },
@@ -52,5 +57,13 @@ describe("Metas operacionais", () => {
     for (const forbidden of ["xp", "ranking", "troféu", "prêmio", "competição", "nível", "ofensiva", "desafio", "ponto", "medalha"]) {
       expect(text).not.toContain(forbidden);
     }
+  });
+
+  it("mostra self e ausência monetária sem inventar moeda ou zero", () => {
+    progress = { ...progress, scope: "self", team: { revenue: [], conversations: { current: 1, target: 7 } } };
+    render(<MetasClient canManage={false} orgId="org-b" userId="user-a" role="agent" />);
+    expect(screen.getByRole("heading", { name: "Seu resumo" })).toBeVisible();
+    expect(screen.getByText("Receita mensal: Meta não definida")).toBeVisible();
+    expect(document.body.textContent).not.toContain("R$ 0");
   });
 });

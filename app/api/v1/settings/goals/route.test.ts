@@ -16,8 +16,12 @@ vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
 const ORG_A = "11111111-1111-4111-8111-111111111111";
 const ORG_B = "22222222-2222-4222-8222-222222222222";
 const MEMBER = "33333333-3333-4333-8333-333333333333";
+const OTHER_MEMBER = "44444444-4444-4444-8444-444444444444";
 let orgs: Record<string, { settings: Record<string, unknown> }>;
 const updates: Array<{ id: string; settings: Record<string, unknown> }> = [];
+let rpcFails = false;
+let decryptFails = false;
+let zeroUpdates = 0;
 
 function db() {
   return {
@@ -33,6 +37,7 @@ function db() {
           eq: (_column: string, id: string) => ({
             eq: () => ({
               select: async () => {
+                if (zeroUpdates > 0) { zeroUpdates -= 1; orgs[id]!.settings.concurrent = true; return { data: [], error: null }; }
                 if (orgs[id]) orgs[id].settings = settings;
                 updates.push({ id, settings });
                 return { data: [{ id }], error: null };
@@ -42,7 +47,10 @@ function db() {
         }),
       };
     },
-    rpc: async (_name: string, { plaintext }: { plaintext: string }) => ({ data: `\\x${Buffer.from(plaintext).toString("hex")}`, error: null }),
+    rpc: async (name: string, params: { plaintext?: string }) => {
+      if (name === "fn_decrypt_oauth") return decryptFails ? { data: null, error: { message: "cifra inválida" } } : { data: JSON.stringify({ [MEMBER]: { monthly_conversations: 3 }, [OTHER_MEMBER]: { monthly_conversations: 9 } }), error: null };
+      return rpcFails ? ({ data: null, error: { message: "sem chave" } }) : ({ data: `\\x${Buffer.from(params.plaintext ?? "").toString("hex")}`, error: null });
+    },
   };
 }
 
@@ -56,6 +64,9 @@ function request(body: unknown) {
 beforeEach(() => {
   vi.clearAllMocks();
   updates.length = 0;
+  rpcFails = false;
+  decryptFails = false;
+  zeroUpdates = 0;
   orgs = {
     [ORG_A]: { settings: { routing: { max_retries: 3 }, sibling: true } },
     [ORG_B]: { settings: { sibling: "org-b" } },
@@ -80,6 +91,20 @@ describe("/api/v1/settings/goals", () => {
     expect(updates).toEqual([]);
     expect(requireRole).toHaveBeenNthCalledWith(1, "agent", expect.any(Object));
     expect(requireRole).toHaveBeenNthCalledWith(2, "manager", expect.any(Object));
+  });
+
+  it("redige B para agent A quando o mapa está cifrado", async () => {
+    orgs[ORG_A]!.settings.operational_goals = { members_enc: "cipher" };
+    vi.mocked(requireRole).mockResolvedValue({ ok: true, user: { id: MEMBER }, org: { orgId: ORG_A, role: "agent" } } as never);
+    expect((await (await GET()).json()).data.members).toEqual({ [MEMBER]: { monthly_conversations: 3 } });
+  });
+
+  it("falha fechada na decifragem sem devolver metas", async () => {
+    orgs[ORG_A]!.settings.operational_goals = { members_enc: "cipher" };
+    decryptFails = true;
+    const response = await GET();
+    expect(response.status).toBe(500);
+    expect(JSON.stringify(await response.json())).not.toContain(OTHER_MEMBER);
   });
 
   it("manager preserva chaves irmãs e nunca atualiza outra organização", async () => {
@@ -111,5 +136,25 @@ describe("/api/v1/settings/goals", () => {
     await PATCH(request(payload));
     await PATCH(request(payload));
     expect(orgs[ORG_A]!.settings.operational_goals).toEqual({ team: { monthly_conversations: 30 } });
+  });
+
+  it("falha fechada quando a cifra não está disponível", async () => {
+    rpcFails = true;
+    expect((await PATCH(request({ members: { [MEMBER]: { monthly_conversations: 3 } } }))).status).toBe(422);
+    expect(updates).toEqual([]);
+    expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("repete CAS e preserva mudança irmã concorrente", async () => {
+    zeroUpdates = 1;
+    expect((await PATCH(request({ team: { monthly_conversations: 3 }, members: {} }))).status).toBe(200);
+    expect(orgs[ORG_A]!.settings.concurrent).toBe(true);
+    expect(updates).toHaveLength(1);
+  });
+
+  it("devolve conflito após três CAS sem auditar", async () => {
+    zeroUpdates = 3;
+    expect((await PATCH(request({ team: { monthly_conversations: 3 }, members: {} }))).status).toBe(409);
+    expect(audit).not.toHaveBeenCalled();
   });
 });
