@@ -90,4 +90,38 @@ describe("runModelCall — retries físicos por chamada", () => {
 
     expect(vi.mocked(generateText).mock.calls[0]?.[0]).not.toHaveProperty("maxRetries");
   });
+
+  it("combina cancelamento externo com timeout e aborta a chamada física", async () => {
+    const controller = new AbortController();
+    let iniciou!: () => void;
+    const iniciado = new Promise<void>((resolve) => { iniciou = resolve; });
+    vi.mocked(generateText).mockImplementationOnce(async ({ abortSignal }) => {
+      iniciou();
+      await new Promise<never>((_resolve, reject) => {
+        abortSignal?.addEventListener("abort", () => reject(abortSignal.reason), { once: true });
+      });
+      throw new Error("inalcançável");
+    });
+
+    const pending = runModelCall(
+      poolFalso(),
+      cfg,
+      {
+        tenantId: ORG,
+        purpose: "draft_suggestion",
+        messages: [{ role: "user", content: "oi" }],
+        timeoutMs: 30_000,
+        abortSignal: controller.signal,
+      },
+      { registry },
+    );
+    await iniciado;
+    controller.abort(new DOMException("cliente desconectou", "AbortError"));
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(generateText).toHaveBeenCalledTimes(1);
+    const signal = vi.mocked(generateText).mock.calls[0]?.[0].abortSignal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(true);
+  });
 });

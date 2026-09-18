@@ -120,6 +120,21 @@ describe("generateDraftReply", () => {
     expect(runInput.timeoutMs).toBe(30_000);
   });
 
+  it("propaga o AbortSignal ao seam do modelo e para entre as leituras", async () => {
+    const controller = new AbortController();
+    mockLoadAgent.mockResolvedValue(AGENT);
+    mockGetLeadContext.mockResolvedValue(contextResult());
+    mockRunModelCall.mockResolvedValue({
+      result: { text: JSON.stringify({ suggestions: ["Resposta"] }) },
+    } as never);
+
+    await expect(
+      generateDraftReply(db, llmCfg, crmCfg, { ...input, signal: controller.signal }),
+    ).resolves.toEqual({ ok: true, suggestions: ["Resposta"] });
+
+    expect(mockRunModelCall.mock.calls[0]?.[2].abortSignal).toBe(controller.signal);
+  });
+
   it("sem agente publicado → sugestões vazias, sem chamar runModelCall", async () => {
     mockLoadAgent.mockResolvedValue(null);
 

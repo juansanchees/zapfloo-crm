@@ -45,7 +45,13 @@ beforeEach(() => {
     user: { id: "user-1", idioma: "pt-BR" },
     org: { orgId: "org-1", role: "manager", name: "Org" },
   } as never);
-  vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, count: 1, limit: 8, window_sec: 60 });
+  vi.mocked(checkRateLimit).mockResolvedValue({
+    allowed: true,
+    count: 1,
+    limit: 8,
+    window_sec: 60,
+    reset_at: 1_700_000_040,
+  });
   vi.mocked(getRequestPool).mockReturnValue({} as never);
   vi.mocked(generateFollowupDraft).mockResolvedValue(GRAPH as never);
   vi.mocked(createClient).mockResolvedValue({

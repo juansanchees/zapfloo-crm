@@ -65,7 +65,13 @@ beforeEach(() => {
     user: { id: "user-1", idioma: "pt-BR" },
     org: { orgId: ORG_ID, role: "agent" },
   } as never);
-  vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, count: 1, limit: 20, window_sec: 60 });
+  vi.mocked(checkRateLimit).mockResolvedValue({
+    allowed: true,
+    count: 1,
+    limit: 20,
+    window_sec: 60,
+    reset_at: 1_700_000_040,
+  });
   mockConversation();
   vi.mocked(generateDraftReply).mockResolvedValue({ ok: true, suggestions: ["Resposta A"] });
 });
@@ -92,22 +98,54 @@ describe("POST /api/v1/conversations/:id/draft-reply", () => {
   });
 
   it("limita rajadas por organização e pessoa antes de consultar conversa ou modelo", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     vi.mocked(checkRateLimit).mockResolvedValueOnce({
       allowed: false,
       count: 21,
       limit: 20,
       window_sec: 60,
+      reset_at: 1_700_000_040,
     });
     const { POST } = await import("./route");
 
     const response = await POST(request(), context());
 
     expect(response.status).toBe(429);
-    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(response.headers.get("Retry-After")).toBe("40");
+    expect(response.headers.get("X-RateLimit-Limit")).toBe("20");
+    expect(response.headers.get("X-RateLimit-Remaining")).toBe("0");
+    expect(response.headers.get("X-RateLimit-Reset")).toBe("1700000040");
     await expect(response.json()).resolves.toMatchObject({ error: { code: "rate_limited" } });
     expect(checkRateLimit).toHaveBeenCalledWith(`draft_reply:${ORG_ID}:user-1`, 20, 60);
     expect(createClient).not.toHaveBeenCalled();
     expect(generateDraftReply).not.toHaveBeenCalled();
+  });
+
+  it("propaga o cancelamento do cliente até a geração e não inicia outro trabalho", async () => {
+    const controller = new AbortController();
+    let signalRecebido: AbortSignal | undefined;
+    let iniciou!: () => void;
+    const iniciado = new Promise<void>((resolve) => { iniciou = resolve; });
+    vi.mocked(generateDraftReply).mockImplementationOnce(async (_db, _llm, _crm, input) => {
+      signalRecebido = input.signal;
+      iniciou();
+      return await new Promise<never>((_resolve, reject) => {
+        input.signal?.addEventListener("abort", () => reject(input.signal?.reason), { once: true });
+      });
+    });
+    const { POST } = await import("./route");
+    const req = new NextRequest(
+      `http://localhost/api/v1/conversations/${CONVERSATION_ID}/draft-reply`,
+      { method: "POST", signal: controller.signal },
+    );
+
+    const response = POST(req, context());
+    await iniciado;
+    controller.abort(new DOMException("cliente desconectou", "AbortError"));
+
+    await expect(response).rejects.toMatchObject({ name: "AbortError" });
+    expect(signalRecebido?.aborted).toBe(true);
+    expect(generateDraftReply).toHaveBeenCalledTimes(1);
   });
 
   it("entrega até três sugestões sem conteúdo do prompt ou token no corpo", async () => {
@@ -119,6 +157,7 @@ describe("POST /api/v1/conversations/:id/draft-reply", () => {
     const body = await response.json();
     expect(body).toEqual({ data: { suggestions: ["Resposta A", "Resposta B", "Resposta C"] } });
     expect(JSON.stringify(body)).not.toMatch(/prompt|token|secret/i);
+    expect(vi.mocked(generateDraftReply).mock.calls[0]?.[3].signal).toBeInstanceOf(AbortSignal);
   });
 
   it("ausência de agente e credencial recusada são silenciosas: 200 com lista vazia", async () => {

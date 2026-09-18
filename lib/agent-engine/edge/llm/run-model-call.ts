@@ -147,6 +147,12 @@ export interface RunModelCallInput {
   selectionMode?: 'explicit';
   /** Limites técnicos opcionais. Defaults dos consumidores existentes preservados. */
   timeoutMs?: number;
+  /**
+   * Cancelamento externo (ex.: navegador desconectado). Quando há timeoutMs,
+   * os dois sinais são combinados: vence o primeiro, sem alterar os chamadores
+   * que hoje passam apenas o timeout.
+   */
+  abortSignal?: AbortSignal;
   maxOutputTokens?: number;
   /**
    * Tentativas físicas no provider. Ausente preserva o default do AI SDK; quem
@@ -491,6 +497,12 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
   });
 
   const startedAt = Date.now();
+  const timeoutSignal = input.timeoutMs === undefined ? undefined : AbortSignal.timeout(input.timeoutMs);
+  const abortSignal = input.abortSignal === undefined
+    ? timeoutSignal
+    : timeoutSignal === undefined
+      ? input.abortSignal
+      : AbortSignal.any([input.abortSignal, timeoutSignal]);
   let result: Awaited<ReturnType<typeof generateText>>;
   try {
     // `system` aceita SystemModelMessage (com providerOptions de cache) — igual
@@ -510,7 +522,7 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
       maxOutputTokens: input.maxOutputTokens === undefined ? maxOutputTokens
         : Math.min(input.maxOutputTokens, maxOutputTokens ?? input.maxOutputTokens),
       ...(input.maxRetries === undefined ? {} : { maxRetries: input.maxRetries }),
-      ...(input.timeoutMs === undefined ? {} : { abortSignal: AbortSignal.timeout(input.timeoutMs) }),
+      ...(abortSignal === undefined ? {} : { abortSignal }),
     });
   } catch (err) {
     // ─── A LINHA QUE FALTAVA ────────────────────────────────────────────────

@@ -20,6 +20,8 @@ export interface DraftReplyInput {
   leadId: string; // = contact_id
   conversationId: string;
   channelSessionId: string;
+  /** Cancelamento do cliente combinado com o deadline total da rota. */
+  signal?: AbortSignal;
 }
 
 export type DraftReplyResult =
@@ -69,10 +71,13 @@ export async function generateDraftReply(
   input: DraftReplyInput,
 ): Promise<DraftReplyResult> {
   const agent = await loadPublishedAgentConfig(db, input.tenantId, input.channelSessionId);
+  input.signal?.throwIfAborted();
   // Não há configuração publicada para este canal: não é incidente nem impede
   // o atendimento humano. A rota devolve uma lista vazia, sem chamar o modelo.
   if (agent === null) return { ok: true, suggestions: [] };
 
+  const fuso = await fusoDaOrganizacao(db, input.tenantId);
+  input.signal?.throwIfAborted();
   const ctx = await getLeadContext(
     db,
     crmCfg,
@@ -80,13 +85,14 @@ export async function generateDraftReply(
       tenantId: input.tenantId,
       leadId: input.leadId,
       conversationId: input.conversationId,
-      fuso: await fusoDaOrganizacao(db, input.tenantId),
+      fuso,
     },
     // knobs reais da versão publicada — mesmos usados pelo turno completo
     // (inbound-turn.ts), sem número mágico: historyMessageWindow/historyTokenWindow
     // já são exatamente os campos que LeadContextKnobs espera.
     { historyLimit: agent.historyMessageWindow, maxTokens: agent.historyTokenWindow },
   );
+  input.signal?.throwIfAborted();
   // Erro de leitura do CRM (lead_not_found/crm_error/crm_unavailable) é falha
   // técnica → "error" (vira 500 na rota), NÃO "blocked" (que diria ao vendedor
   // "contato bloqueado/anonimizado" — mensagem enganosa para um erro de infra).
@@ -149,6 +155,7 @@ export async function generateDraftReply(
     // O cliente aguarda 45s; o provider recebe 30s e deixa margem para a rota
     // serializar a resposta antes do teto do servidor.
     timeoutMs: 30_000,
+    abortSignal: input.signal,
     // SEM tools, SEM maxSteps → o SDK para no 1º step (default stepCountIs(1)):
     // result.text vem pronto, sem risco do modelo tentar chamar send_message.
   });

@@ -33,6 +33,8 @@ export const maxDuration = 45;
 // inventa uma segunda política e impede rajadas que correm antes do recibo.
 const RATE_LIMIT = 20;
 const RATE_WINDOW_SECONDS = 60;
+// Deixa margem para serializar a resposta antes do teto de 45s da função.
+const SERVER_DEADLINE_MS = 40_000;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -47,35 +49,84 @@ const REASON_TO_RESPONSE: Record<
   error: ["internal_error", "Erro ao gerar rascunho.", 500],
 };
 
-export async function POST(_req: NextRequest, { params }: RouteParams): Promise<Response> {
+/**
+ * Faz o deadline cobrir a rota inteira, inclusive leituras que não aceitam
+ * AbortSignal nativamente. A operação subjacente pode terminar a limpeza/auditoria,
+ * mas nenhum estágio seguinte começa depois que o cliente foi embora.
+ */
+function aguardarComSinal<T>(promise: PromiseLike<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const abortar = () => reject(signal.reason);
+    signal.addEventListener("abort", abortar, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", abortar);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", abortar);
+        reject(error);
+      },
+    );
+  });
+}
+
+function rateLimitHeaders(rate: {
+  count: number;
+  limit: number;
+  window_sec: number;
+  reset_at: number;
+}): Record<string, string> {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return {
+    "Retry-After": String(Math.max(1, rate.reset_at - nowSeconds)),
+    "X-RateLimit-Limit": String(rate.limit),
+    "X-RateLimit-Remaining": String(Math.max(0, rate.limit - rate.count)),
+    "X-RateLimit-Reset": String(rate.reset_at),
+  };
+}
+
+export async function POST(req: NextRequest, { params }: RouteParams): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "conversations" });
+  const deadline = AbortSignal.timeout(SERVER_DEADLINE_MS);
+  const signal = AbortSignal.any([req.signal, deadline]);
+  const authz = await aguardarComSinal(
+    requireRole("agent", { requestId, resource: "conversations" }),
+    signal,
+  );
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { org } = authz;
-  const { id } = await params;
+  const { id } = await aguardarComSinal(params, signal);
 
-  const rate = await checkRateLimit(
-    `draft_reply:${org.orgId}:${authz.user.id}`,
-    RATE_LIMIT,
-    RATE_WINDOW_SECONDS,
+  const rate = await aguardarComSinal(
+    checkRateLimit(
+      `draft_reply:${org.orgId}:${authz.user.id}`,
+      RATE_LIMIT,
+      RATE_WINDOW_SECONDS,
+    ),
+    signal,
   );
   if (!rate.allowed) {
     return fail(
       "rate_limited",
       t("Muitas tentativas. Aguarde um minuto e tente novamente."),
       429,
-      { requestId, headers: { "Retry-After": String(rate.window_sec) } },
+      { requestId, headers: rateLimitHeaders(rate) },
     );
   }
 
-  const supabase = await createClient();
-  const { data: conv } = await supabase
-    .from("conversations")
-    .select("id, organization_id, contact_id, channel_session_id")
-    .eq("id", id)
-    .eq("organization_id", org.orgId)
-    .maybeSingle();
+  const supabase = await aguardarComSinal(createClient(), signal);
+  const { data: conv } = await aguardarComSinal(
+    supabase
+      .from("conversations")
+      .select("id, organization_id, contact_id, channel_session_id")
+      .eq("id", id)
+      .eq("organization_id", org.orgId)
+      .maybeSingle(),
+    signal,
+  );
   if (!conv) return fail("not_found", t("Conversa não encontrada."), 404, { requestId });
   if (!conv.contact_id || !conv.channel_session_id) {
     return fail("unprocessable", t("Conversa sem contato/canal."), 422, { requestId });
@@ -90,19 +141,23 @@ export async function POST(_req: NextRequest, { params }: RouteParams): Promise<
 
   let result: DraftReplyResult;
   try {
-    result = await generateDraftReply(
-      pool,
-      llmEdgeConfigFromEnv(env),
-      crmEdgeConfigFromEnv({
-        SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
-        SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
-      }),
-      {
-        tenantId: org.orgId,
-        leadId: conv.contact_id,
-        conversationId: conv.id,
-        channelSessionId: conv.channel_session_id,
-      },
+    result = await aguardarComSinal(
+      generateDraftReply(
+        pool,
+        llmEdgeConfigFromEnv(env),
+        crmEdgeConfigFromEnv({
+          SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+        }),
+        {
+          tenantId: org.orgId,
+          leadId: conv.contact_id,
+          conversationId: conv.id,
+          channelSessionId: conv.channel_session_id,
+          signal,
+        },
+      ),
+      signal,
     );
   } catch (error) {
     // Configuração ausente ou chave recusada não pode tirar do vendedor o
