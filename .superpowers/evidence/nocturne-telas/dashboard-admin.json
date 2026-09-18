@@ -1,0 +1,19 @@
+{
+  "role": "admin",
+  "screenshot_sha256": "3f1c8f33263cf38e04274b70fa207a0639aafa1152f3c06759adf5ff27aa2bbe",
+  "captured_at": "2026-09-18T02:13:33.083Z",
+  "values_from_database": [
+    {
+      "id": "instances",
+      "value": "0/2"
+    },
+    {
+      "id": "active_seats",
+      "value": "5/10"
+    }
+  ],
+  "href": "http://localhost:3161/app",
+  "theme": "light",
+  "bodyBackground": "rgb(247, 247, 251)",
+  "dashboardBackground": "rgb(244, 245, 250)"
+}

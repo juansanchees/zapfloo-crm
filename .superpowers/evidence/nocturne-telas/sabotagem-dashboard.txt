@@ -1,0 +1,33 @@
+Comando:
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm vitest run tests/unit/dashboard.test.tsx --reporter=verbose
+
+Sabotagem temporaria aplicada:
+components/dashboard/Dashboard.tsx exibiu "R$ 8.940" no lugar de metric.value.
+
+Saida vermelha (exit 1):
+
+RUN  v4.1.11 /Users/juansanches/Documents/ChatGPT/CRM SAAS Deskcomm/.worktrees/nocturne-telas
+
+FAIL  tests/unit/dashboard.test.tsx > Dashboard operacional > renderiza somente as sentinelas da API, sem metricas de demonstracao
+AssertionError: expected [ '731', 'R$ 8.940', 'R$ 8.940' ] to deeply equal [ '731', 'R$ 12.345', '4m 17s' ]
+
+- Expected
++ Received
+
+  [
+    "731",
+-   "R$ 12.345",
+-   "4m 17s",
++   "R$ 8.940",
++   "R$ 8.940",
+  ]
+
+tests/unit/dashboard.test.tsx:223:28
+expect(renderedValues).toEqual(["731", "R$ 12.345", "4m 17s"]);
+
+Test Files  1 failed (1)
+Tests       1 failed | 15 passed (16)
+Duration    3.72s
+
+Estado final:
+A sabotagem foi restaurada para {metric.value} antes dos gates verdes.

@@ -1,0 +1,15 @@
+{
+  "role": "manager",
+  "screenshot_sha256": "d965b0722be97e71c14116ea56a64503a2da897f7902be13862e969a1ecd9bcd",
+  "captured_at": "2026-09-18T02:13:35.385Z",
+  "values_from_database": [
+    {
+      "id": "pipeline",
+      "value": "R$ 296.350"
+    }
+  ],
+  "href": "http://localhost:3161/app",
+  "theme": "light",
+  "bodyBackground": "rgb(247, 247, 251)",
+  "dashboardBackground": "rgb(244, 245, 250)"
+}

@@ -1,0 +1,23 @@
+{
+  "role": "agent",
+  "screenshot_sha256": "7e148c255f22d8fcd53b4e14d424420dc1424c667d02180cdb63959826392d89",
+  "captured_at": "2026-09-18T02:13:37.885Z",
+  "values_from_database": [
+    {
+      "id": "queue",
+      "value": "0"
+    },
+    {
+      "id": "assigned_conversations",
+      "value": "0"
+    },
+    {
+      "id": "overdue_tasks",
+      "value": "0"
+    }
+  ],
+  "href": "http://localhost:3161/app",
+  "theme": "light",
+  "bodyBackground": "rgb(247, 247, 251)",
+  "dashboardBackground": "rgb(244, 245, 250)"
+}
