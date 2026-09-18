@@ -10,7 +10,7 @@ export function useDraftReply() {
       apiClient.post<{ data: { suggestions: string[] } }>(
         `/api/v1/conversations/${conversationId}/draft-reply`,
         {},
-        { retry: false },
+        { retry: false, timeoutMs: 45_000 },
       ),
     onError: showApiError,
   });

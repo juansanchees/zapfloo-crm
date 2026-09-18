@@ -117,6 +117,7 @@ describe("generateDraftReply", () => {
     expect(runInput).not.toHaveProperty("tools");
     expect(runInput).not.toHaveProperty("maxSteps");
     expect(runInput.maxRetries).toBe(0);
+    expect(runInput.timeoutMs).toBe(30_000);
   });
 
   it("sem agente publicado → sugestões vazias, sem chamar runModelCall", async () => {

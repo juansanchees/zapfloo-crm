@@ -34,7 +34,11 @@ describe("DraftReplyButton", () => {
     fireEvent.click(btn);
 
     await waitFor(() =>
-      expect(postMock).toHaveBeenCalledWith("/api/v1/conversations/conv-1/draft-reply", {}, { retry: false }),
+      expect(postMock).toHaveBeenCalledWith(
+        "/api/v1/conversations/conv-1/draft-reply",
+        {},
+        { retry: false, timeoutMs: 45_000 },
+      ),
     );
     await waitFor(() => expect(btn).toBeDisabled());
     expect(btn).toHaveAttribute("aria-busy", "true");

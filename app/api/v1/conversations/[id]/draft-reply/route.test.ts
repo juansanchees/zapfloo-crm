@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { requireRole } from "@/lib/auth/require-role";
 import { generateDraftReply } from "@/lib/agent-engine/agent/draft-reply";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { fail } from "@/lib/api/wrappers";
 import {
@@ -12,6 +13,7 @@ import {
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/agent-engine/agent/draft-reply", () => ({ generateDraftReply: vi.fn() }));
+vi.mock("@/lib/ai/dispatcher/rate-limit", () => ({ checkRateLimit: vi.fn() }));
 vi.mock("@/lib/agent-engine/db/request-pool", () => ({ getRequestPool: vi.fn(() => ({})) }));
 vi.mock("@/lib/agent-engine/edge/crm/mcp-client", () => ({ crmEdgeConfigFromEnv: vi.fn(() => ({})) }));
 vi.mock("@/lib/agent-engine/edge/llm/run-model-call", () => ({
@@ -63,6 +65,7 @@ beforeEach(() => {
     user: { id: "user-1", idioma: "pt-BR" },
     org: { orgId: ORG_ID, role: "agent" },
   } as never);
+  vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, count: 1, limit: 20, window_sec: 60 });
   mockConversation();
   vi.mocked(generateDraftReply).mockResolvedValue({ ok: true, suggestions: ["Resposta A"] });
 });
@@ -85,6 +88,25 @@ describe("POST /api/v1/conversations/:id/draft-reply", () => {
     const response = await POST(request(), context("44444444-4444-4444-8444-444444444444"));
     expect(response.status).toBe(404);
     expect(filters).toEqual({ id: "44444444-4444-4444-8444-444444444444", organization_id: ORG_ID });
+    expect(generateDraftReply).not.toHaveBeenCalled();
+  });
+
+  it("limita rajadas por organização e pessoa antes de consultar conversa ou modelo", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
+      allowed: false,
+      count: 21,
+      limit: 20,
+      window_sec: 60,
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(request(), context());
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "rate_limited" } });
+    expect(checkRateLimit).toHaveBeenCalledWith(`draft_reply:${ORG_ID}:user-1`, 20, 60);
+    expect(createClient).not.toHaveBeenCalled();
     expect(generateDraftReply).not.toHaveBeenCalled();
   });
 

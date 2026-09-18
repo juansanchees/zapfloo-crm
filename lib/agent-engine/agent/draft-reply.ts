@@ -146,6 +146,9 @@ export async function generateDraftReply(
     // Uma sugestão é solicitada sob demanda e revisável: não repita uma
     // geração física que pode ter sido processada pelo provider sem resposta.
     maxRetries: 0,
+    // O cliente aguarda 45s; o provider recebe 30s e deixa margem para a rota
+    // serializar a resposta antes do teto do servidor.
+    timeoutMs: 30_000,
     // SEM tools, SEM maxSteps → o SDK para no 1º step (default stepCountIs(1)):
     // result.text vem pronto, sem risco do modelo tentar chamar send_message.
   });

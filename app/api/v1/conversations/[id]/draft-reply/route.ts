@@ -4,16 +4,15 @@
  *
  * Reusa `generateDraftReply` (agent-engine) via um pool de Postgres próprio
  * do processo Next.js — sem tools, sem guardrails de envio (revisão humana
- * antes de sair). Sem rate-limiter dedicado: o gate de orçamento dentro de
- * `runModelCall` (`aplicarOrcamento`) já limita custo por org — desde a 0159
- * pelo teto que a organização configurou na tela, e não mais por um escalar de
- * jsonb que ninguém editava.
+ * antes de sair). O rate limit por organização + pessoa fecha rajadas
+ * concorrentes antes do modelo; o orçamento continua sendo a segunda camada.
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
 
 import { generateDraftReply, type DraftReplyResult } from "@/lib/agent-engine/agent/draft-reply";
 import { getRequestPool } from "@/lib/agent-engine/db/request-pool";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { crmEdgeConfigFromEnv } from "@/lib/agent-engine/edge/crm/mcp-client";
 import {
   llmEdgeConfigFromEnv,
@@ -27,6 +26,13 @@ import { createClient } from "@/lib/supabase/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 45;
+
+// Mesmo teto do outro ingresso interativo de IA (`/api/v1/ai/ask`): não
+// inventa uma segunda política e impede rajadas que correm antes do recibo.
+const RATE_LIMIT = 20;
+const RATE_WINDOW_SECONDS = 60;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -48,6 +54,20 @@ export async function POST(_req: NextRequest, { params }: RouteParams): Promise<
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { org } = authz;
   const { id } = await params;
+
+  const rate = await checkRateLimit(
+    `draft_reply:${org.orgId}:${authz.user.id}`,
+    RATE_LIMIT,
+    RATE_WINDOW_SECONDS,
+  );
+  if (!rate.allowed) {
+    return fail(
+      "rate_limited",
+      t("Muitas tentativas. Aguarde um minuto e tente novamente."),
+      429,
+      { requestId, headers: { "Retry-After": String(rate.window_sec) } },
+    );
+  }
 
   const supabase = await createClient();
   const { data: conv } = await supabase
