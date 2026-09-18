@@ -543,10 +543,10 @@ describe("GET /api/v1/dashboard/summary", () => {
     ).toBe("12.0");
   });
 
-  it("formata moeda conforme o idioma da pessoa", async () => {
+  it("mantém a convenção da moeda quando a pessoa troca o idioma", async () => {
     state.idioma = "es";
     const response = await body();
-    expect(response.data.hero.value).toBe("12.345 BRL");
+    expect(response.data.hero.value).toBe("R$ 12.345");
   });
 
   it("omite apenas o cartão cuja fonte falhou", async () => {
