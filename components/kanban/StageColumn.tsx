@@ -8,6 +8,7 @@ import type { Stage } from "@/lib/kanban/types";
 import { buildCardInput } from "@/lib/kanban/card-state";
 import { totalsByCurrency } from "@/lib/kanban/summary";
 import { intervaloDaColuna } from "@/lib/kanban/selecao";
+import { formatCentsCompact } from "@/lib/money";
 import { KanbanCard, type GestoDeSelecao } from "./KanbanCard";
 
 interface StageColumnProps {
@@ -38,18 +39,6 @@ interface StageColumnProps {
   nextStageId?: string | null;
   onAdvance?: (lead: Lead, stageId: string) => void;
   canMutate?: boolean;
-}
-
-function formatMoney(cents: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  } catch {
-    return `${(cents / 100).toFixed(0)} ${currency}`;
-  }
 }
 
 export function StageColumn({
@@ -148,7 +137,7 @@ export function StageColumn({
         <div className="border-b border-border px-3 py-1.5 text-[11px] tabular-nums text-text-muted">
           {Object.entries(totals).map(([currency, cents]) => (
             <span key={currency} className="mr-2 last:mr-0">
-              {formatMoney(cents, currency)}
+              {formatCentsCompact(cents, currency)}
             </span>
           ))}
         </div>

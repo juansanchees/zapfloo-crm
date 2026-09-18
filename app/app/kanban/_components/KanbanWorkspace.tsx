@@ -15,6 +15,7 @@ interface KanbanWorkspaceProps {
   podeGerenciar: boolean;
   podeImportar: boolean;
   podeMover: boolean;
+  podeAtribuir: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export function KanbanWorkspace({
   podeGerenciar,
   podeImportar,
   podeMover,
+  podeAtribuir,
 }: KanbanWorkspaceProps) {
   const router = useRouter();
   const t = useT();
@@ -74,6 +76,7 @@ export function KanbanWorkspace({
           pipelineId={selecionado.id}
           initialName={selecionado.name}
           canMutate={podeMover}
+          canAssign={podeAtribuir}
         />
       ) : null}
 

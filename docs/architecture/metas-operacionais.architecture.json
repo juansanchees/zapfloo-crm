@@ -73,8 +73,8 @@
       "lane": "fatos",
       "col": 5,
       "type": "table",
-      "label": "crm_leads ganhos + conversations atendidas",
-      "sublabel": "organization_id e owner/assignee; valores separados por moeda"
+      "label": "crm_leads ganhos + messages humanas enviadas",
+      "sublabel": "organization_id, owner_user_id e sent_by_user_id; valores separados por moeda"
     },
     {
       "id": "audit",

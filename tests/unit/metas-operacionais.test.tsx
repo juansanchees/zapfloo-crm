@@ -61,6 +61,21 @@ describe("Metas operacionais", () => {
     }
   });
 
+  it("formata a meta monetária pela convenção da moeda, não pelo idioma da interface", () => {
+    progress = {
+      ...progress,
+      team: {
+        ...progress.team,
+        revenue: [{ currency: "MXN", current_cents: 24_990, target_cents: 50_000 }],
+      },
+    };
+
+    render(<MetasClient canManage={false} orgId="org-mx" userId="user-a" role="agent" />);
+
+    expect(document.body.textContent?.replaceAll("\u00a0", " ")).toContain("$249.90 de $500.00");
+    expect(document.body.textContent).not.toContain("249,90");
+  });
+
   it("mostra self e ausência monetária sem inventar moeda ou zero", () => {
     progress = { ...progress, scope: "self", team: { revenue: [], conversations: { current: 1, target: 7 } } };
     render(<MetasClient canManage={false} orgId="org-b" userId="user-a" role="agent" />);

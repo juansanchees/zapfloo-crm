@@ -3,6 +3,8 @@
  * consulta banco nem aplica regra de autorização. Assim, uma fonte indisponível
  * não é confundida com uma métrica igual a zero.
  */
+import { formatCentsCompact } from "@/lib/money";
+
 export type DashboardSurface = "agent" | "manager" | "admin";
 
 export type DashboardIcon =
@@ -96,15 +98,6 @@ function formatDuration(seconds: number): string {
   const minutes = Math.floor(secondsRounded / 60);
   const remainder = secondsRounded % 60;
   return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
-}
-
-function formatCurrency(locale: string | undefined, currency: string, cents: number): string {
-  return new Intl.NumberFormat(locale === "es" ? "es-ES" : "pt-BR", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 function singleCurrency(
@@ -204,7 +197,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
     ? card(
         "pipeline",
         "Valor do pipeline",
-        formatCurrency(sources.locale, open.currency, open.value),
+        formatCentsCompact(open.value, open.currency),
         "Agora",
         "Valor informado das oportunidades abertas.",
         "trend",
@@ -223,7 +216,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
       card(
         "won_revenue",
         "Receita ganha",
-        formatCurrency(sources.locale, won.currency, won.value),
+        formatCentsCompact(won.value, won.currency),
         "Mês atual",
         "Valor informado dos negócios ganhos fechados neste mês.",
         "money",
@@ -241,7 +234,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
       card(
         "average_ticket",
         "Ticket médio",
-        formatCurrency(sources.locale, won.currency, Math.round(won.value / wonCount.value)),
+        formatCentsCompact(Math.round(won.value / wonCount.value), won.currency),
         "Mês atual",
         "Valor informado ganho dividido pelos negócios ganhos com valor informado.",
         "receipt",

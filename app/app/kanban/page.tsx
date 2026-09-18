@@ -56,6 +56,9 @@ export default async function KanbanPickerPage({
   // contrato próprio: mudar a regra de importação no futuro não pode liberar
   // ou bloquear silenciosamente o quadro.
   const podeMover = ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent;
+  // Atribuir responsável em lote é manager+ na rota de bulk. Admin da
+  // plataforma não recebe atalho quando seu papel neste tenant é menor.
+  const podeAtribuir = ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
   const idioma = user.idioma;
   const t = (texto: string) => traduzir(texto, idioma);
   const query = await searchParams;
@@ -87,6 +90,7 @@ export default async function KanbanPickerPage({
         podeGerenciar={podeGerenciar}
         podeImportar={podeImportar}
         podeMover={podeMover}
+        podeAtribuir={podeAtribuir}
       />
     </OperationalPage>
   );

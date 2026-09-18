@@ -28,5 +28,13 @@ export default async function PipelinePage({
     .maybeSingle();
   if (!pipeline) notFound();
   const canMutate = ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent;
-  return <PipelinePageClient pipelineId={id} initialName={pipeline.name} canMutate={canMutate} />;
+  const canAssign = ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
+  return (
+    <PipelinePageClient
+      pipelineId={id}
+      initialName={pipeline.name}
+      canMutate={canMutate}
+      canAssign={canAssign}
+    />
+  );
 }

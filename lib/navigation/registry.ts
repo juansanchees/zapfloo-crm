@@ -172,7 +172,7 @@ interface CompactAreaSpec extends Omit<CompactArea, "tabs"> {
 }
 
 /**
- * Nove portas visíveis para o produto inteiro — contrato aprovado pelo proprietário.
+ * Dez portas visíveis para o produto inteiro — contrato aprovado pelo proprietário.
  *
  * Isto NÃO é outro registro de telas: todo `href` abaixo resolve para um
  * `NAV_DESTINATIONS` ou para um hub já declarado em `NAV_GROUPS`. É só a

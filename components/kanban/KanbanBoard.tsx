@@ -313,6 +313,7 @@ export function KanbanBoard({
             data.stages.find((s) => s.id === leadDoDossie.stage_id)?.name ?? "—"
           }
           ownerNames={ownerNames}
+          canMutate={canMutate}
         />
       )}
     </DragDropContext>

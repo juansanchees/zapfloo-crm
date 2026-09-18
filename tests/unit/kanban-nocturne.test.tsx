@@ -39,7 +39,7 @@ beforeEach(() => { state.replace.mockClear(); state.boardIds = []; state.search 
 
 describe("quadro Nocturne", () => {
   it("preserva pipeline e lead ao usar o controle real de filtro", () => {
-    render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate />);
+    render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate canAssign />);
     expect(screen.getAllByText("Sem valores")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Filtrar ganhos" }));
     expect(state.replace).toHaveBeenCalledWith("/app/kanban?pipeline=p2&lead=l2&status=won", { scroll: false });
@@ -48,7 +48,7 @@ describe("quadro Nocturne", () => {
 
   it("não chama carregamento de ausência real de valores", () => {
     state.boardLoading = true;
-    render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate />);
+    render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate canAssign />);
 
     expect(screen.getByText("Carregando…")).toBeVisible();
     expect(screen.queryByText("Pipeline aberto")).not.toBeInTheDocument();
@@ -58,15 +58,15 @@ describe("quadro Nocturne", () => {
 
   it("admin de plataforma viewer não recebe Novo negócio; agent+ recebe", () => {
     state.canMutate = true;
-    const { rerender } = render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate={false} />);
+    const { rerender } = render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate={false} canAssign={false} />);
     expect(screen.queryByRole("button", { name: "Novo negócio" })).not.toBeInTheDocument();
-    rerender(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate />);
+    rerender(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate canAssign={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Novo negócio" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Novo negócio aberto");
   });
 
   it("mantém abas e gestão na mesma lista reativa", () => {
-    render(<KanbanWorkspace funis={funis} pipelineInicial="p2" podeGerenciar podeImportar podeMover />);
+    render(<KanbanWorkspace funis={funis} pipelineInicial="p2" podeGerenciar podeImportar podeMover podeAtribuir />);
     expect(screen.getByRole("tab", { name: "Secundário" })).toHaveAttribute("aria-selected", "true");
     fireEvent.click(screen.getByRole("button", { name: "Arquivar/renomear" }));
     expect(screen.getByRole("tab", { name: "Renomeado" })).toHaveAttribute("aria-selected", "true");

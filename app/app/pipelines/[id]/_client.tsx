@@ -29,6 +29,7 @@ import { Plus } from "@/lib/ui/icons";
 import type { LeadFilters } from "@/lib/kanban/filters";
 import { applyFilters, filtersFromParams, filtersToParams } from "@/lib/kanban/filters";
 import type { CurrencyTotals } from "@/lib/kanban/summary";
+import { formatCentsCompact } from "@/lib/money";
 
 function TotaisPorMoeda({ valores }: { valores: CurrencyTotals | undefined }) {
   const t = useT();
@@ -37,17 +38,9 @@ function TotaisPorMoeda({ valores }: { valores: CurrencyTotals | undefined }) {
   if (entries.length === 0) return <span className="text-text-muted">{t("Sem valores")}</span>;
   return (
     <span className="flex flex-wrap gap-x-2 gap-y-1 tabular-nums">
-      {entries.map(([currency, cents]) => {
-        let valor: string;
-        try {
-          valor = new Intl.NumberFormat("pt-BR", {
-            style: "currency", currency, maximumFractionDigits: 0,
-          }).format(cents / 100);
-        } catch {
-          valor = `${(cents / 100).toFixed(0)} ${currency}`;
-        }
-        return <span key={currency}>{valor}</span>;
-      })}
+      {entries.map(([currency, cents]) => (
+        <span key={currency}>{formatCentsCompact(cents, currency)}</span>
+      ))}
     </span>
   );
 }
@@ -56,10 +49,12 @@ export function PipelinePageClient({
   pipelineId,
   initialName,
   canMutate,
+  canAssign,
 }: {
   pipelineId: string;
   initialName: string;
   canMutate: boolean;
+  canAssign: boolean;
 }) {
   const t = useT();
   const { data, isLoading, error, pulses, realtimeStatus, seguranca } = useBoard(pipelineId);
@@ -169,6 +164,7 @@ export function PipelinePageClient({
         pipelineId={pipelineId}
         vocabulary={data?.pipeline.vocabulary ?? null}
         onClear={() => setSelectedIds([])}
+        canAssign={canAssign}
       />}
     </div>
   );

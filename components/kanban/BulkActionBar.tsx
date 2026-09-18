@@ -20,9 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useActiveOrg, useUser } from "@/hooks/auth/AuthProvider";
+import { useUser } from "@/hooks/auth/AuthProvider";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
-import { ROLE_RANK } from "@/lib/auth/types";
 import { useBulkAction } from "@/hooks/kanban/useBulkAction";
 import { resolveVocabulary } from "@/lib/kanban/vocabulary";
 import type { PipelineVocabulary, Stage } from "@/lib/kanban/types";
@@ -38,6 +37,8 @@ interface BulkActionBarProps {
    */
   vocabulary?: PipelineVocabulary | null;
   onClear: () => void;
+  /** A rota `leads/bulk` exige manager+ tenant para reatribuir responsável. */
+  canAssign: boolean;
 }
 
 export function BulkActionBar({
@@ -46,10 +47,10 @@ export function BulkActionBar({
   pipelineId,
   vocabulary,
   onClear,
+  canAssign,
 }: BulkActionBarProps) {
   const t = useT();
   const user = useUser();
-  const activeOrg = useActiveOrg();
   const vocab = resolveVocabulary(vocabulary);
   const bulk = useBulkAction(pipelineId);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -59,10 +60,7 @@ export function BulkActionBar({
   // barra oferecia "Atribuir a…" para um `agent`, que clicava e recebia 403 —
   // controle decorativo, o pior tipo: parece que o sistema falhou, quando ele
   // só nunca teve permissão de mostrar aquilo.
-  const podeAtribuir = Boolean(
-    user.is_platform_admin || (activeOrg && ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager),
-  );
-  const { data: members } = useAssignableMembers(podeAtribuir);
+  const { data: members } = useAssignableMembers(canAssign);
 
   // Esc to clear selection
   useEffect(() => {
@@ -181,7 +179,7 @@ export function BulkActionBar({
             atendentes. Antes só dava para atribuir a SI MESMO, e "redistribuir
             a carteira" — o caso que faz a ação em lote existir — era o único
             que a barra não atendia. */}
-        {podeAtribuir && (
+        {canAssign && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline" disabled={bulk.isPending}>

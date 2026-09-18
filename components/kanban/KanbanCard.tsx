@@ -117,6 +117,14 @@ export function KanbanCard({
     metaKey: boolean;
     ctrlKey: boolean;
   }): void => {
+    // Viewer abre o dossiê mesmo se estiver segurando um modificador. Seleção
+    // é preparação para mutação em lote; deixá-la ativa sem permissão cria um
+    // estado que a pessoa não consegue concluir e contradiz os checkboxes
+    // desabilitados do próprio card.
+    if (!canMutate) {
+      onOpen?.(card.id);
+      return;
+    }
     if (e.shiftKey) {
       onSelect?.(card.id, "intervalo");
       return;
@@ -270,26 +278,40 @@ export function KanbanCard({
           {/* ③ a linha do agente — um slot, três estados, nunca três blocos. */}
           <div className="mt-1.5 flex h-6 items-center gap-2 text-xs">
             {state.slot.type === "awaiting" && (
-              // A proposta do agente é a ÚNICA linha do card com ação: é o
-              // ponto onde a decisão do humano entra. Sem os botões aqui, o
-              // texto seria só mais um aviso — e a wave existe porque avisar
-              // sem poder decidir é o que já acontecia (o dado ficava no banco).
-              <NextActionSlot
-                label={state.slot.label}
-                leadId={card.id}
-                approvedSeq={lead.next_action?.seq ?? -1}
-                pipelineId={pipelineId}
-              />
+              canMutate ? (
+                // A proposta do agente é a ÚNICA linha do card com ação: é o
+                // ponto onde a decisão do humano entra. Viewer ainda lê o
+                // estado abaixo, mas não recebe botões que a API recusaria.
+                <NextActionSlot
+                  label={state.slot.label}
+                  leadId={card.id}
+                  approvedSeq={lead.next_action?.seq ?? -1}
+                  pipelineId={pipelineId}
+                />
+              ) : (
+                <span className="min-w-0 flex-1 truncate text-accent" title={state.slot.label}>
+                  {t("Propõe:")} {state.slot.label}
+                </span>
+              )
             )}
             {state.slot.type === "reactivation" && (
-              // O negócio parou E aqui está o que fazer. Mesma faixa, mesma
-              // altura: o card não cresce quando o sistema tem algo a propor.
-              <ReactivationSlot
-                leadId={card.id}
-                proposalId={state.slot.proposalId}
-                expiresAt={state.slot.expiresAt}
-                pipelineId={pipelineId}
-              />
+              canMutate ? (
+                // O negócio parou E aqui está o que fazer. Mesma faixa, mesma
+                // altura: o card não cresce quando o sistema tem algo a propor.
+                <ReactivationSlot
+                  leadId={card.id}
+                  proposalId={state.slot.proposalId}
+                  expiresAt={state.slot.expiresAt}
+                  pipelineId={pipelineId}
+                />
+              ) : (
+                <span
+                  className="min-w-0 flex-1 truncate text-warning-fg"
+                  title={t("Este negócio parou de responder")}
+                >
+                  {t("Retomar contato?")}
+                </span>
+              )
             )}
             {state.slot.type === "cooling" && (
               // -fg é a variante de TEXTO do token (o -warning puro dá 3.7:1 em

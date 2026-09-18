@@ -97,8 +97,18 @@ describe("buildRoleSummary", () => {
     });
   });
 
-  it("formata valores em espanhol quando a fonte declara o idioma", () => {
+  it("mantém a convenção da moeda quando o leitor troca o idioma da interface", () => {
     const summary = buildRoleSummary("manager", { ...sources, locale: "es" });
-    expect(summary.hero.value).toBe("12.345 BRL");
+    expect(summary.hero.value).toBe("R$ 12.345");
+  });
+
+  it("formata MXN pela convenção mexicana no painel", () => {
+    const summary = buildRoleSummary("manager", {
+      ...sources,
+      locale: "pt-BR",
+      pipeline_open: { value_by_currency: { MXN: 1_234_500 } },
+    });
+
+    expect(summary.hero.value).toBe("$12,345");
   });
 });

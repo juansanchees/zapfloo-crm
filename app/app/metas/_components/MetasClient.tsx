@@ -7,14 +7,7 @@ import { useGoalProgress, type GoalProgressRow, type GoalRevenueProgress } from 
 import { useGoals, useUpdateGoals, type GoalsCacheScope } from "@/hooks/metas/useGoals";
 import { useT } from "@/lib/i18n/IdiomaProvider";
 import { emptyOperationalGoals, type OperationalGoals } from "@/lib/metas/config";
-
-function money(value: number, currency: string) {
-  try {
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value / 100);
-  } catch {
-    return `${currency} ${(value / 100).toFixed(2)}`;
-  }
-}
+import { formatCents } from "@/lib/money";
 
 function optionalInteger(value: string) {
   const normalized = value.trim();
@@ -69,7 +62,7 @@ function RevenueBars({ revenue }: { revenue: GoalRevenueProgress[] }) {
       label={`${t("Receita mensal")} (${entry.currency})`}
       current={entry.current_cents}
       target={entry.target_cents}
-      format={(value) => money(value, entry.currency)}
+      format={(value) => formatCents(value, entry.currency)}
     />
   ));
 }

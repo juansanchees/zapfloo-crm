@@ -43,13 +43,13 @@ vi.mock("@/components/ui/operational-page", () => ({
   OperationalPage: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/app/app/kanban/_components/KanbanWorkspace", () => ({
-  KanbanWorkspace: ({ podeMover }: { podeMover: boolean }) => (
-    <div data-testid="kanban-workspace" data-can-mutate={String(podeMover)} />
+  KanbanWorkspace: ({ podeMover, podeAtribuir }: { podeMover: boolean; podeAtribuir: boolean }) => (
+    <div data-testid="kanban-workspace" data-can-mutate={String(podeMover)} data-can-assign={String(podeAtribuir)} />
   ),
 }));
 vi.mock("@/app/app/pipelines/[id]/_client", () => ({
-  PipelinePageClient: ({ canMutate }: { canMutate: boolean }) => (
-    <div data-testid="pipeline-client" data-can-mutate={String(canMutate)} />
+  PipelinePageClient: ({ canMutate, canAssign }: { canMutate: boolean; canAssign: boolean }) => (
+    <div data-testid="pipeline-client" data-can-mutate={String(canMutate)} data-can-assign={String(canAssign)} />
   ),
 }));
 
@@ -66,20 +66,36 @@ describe("RBAC do quadro deriva do papel na organização ativa", () => {
   it("admin de plataforma com membership viewer vê o workspace sem escrita", async () => {
     render(await KanbanPickerPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByTestId("kanban-workspace")).toHaveAttribute("data-can-mutate", "false");
+    expect(screen.getByTestId("kanban-workspace")).toHaveAttribute("data-can-assign", "false");
   });
 
   it("a rota direta do funil também preserva viewer como somente leitura", async () => {
     render(await PipelinePage({ params: Promise.resolve({ id: "pipeline-1" }) }));
     expect(screen.getByTestId("pipeline-client")).toHaveAttribute("data-can-mutate", "false");
+    expect(screen.getByTestId("pipeline-client")).toHaveAttribute("data-can-assign", "false");
   });
 
-  it("agent+ recebe escrita nas duas entradas", async () => {
-    state.platformAdmin = false;
+  it("admin de plataforma com membership agent move, mas não atribui responsável", async () => {
+    state.platformAdmin = true;
     state.role = "agent";
     const { unmount } = render(await KanbanPickerPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByTestId("kanban-workspace")).toHaveAttribute("data-can-mutate", "true");
+    expect(screen.getByTestId("kanban-workspace")).toHaveAttribute("data-can-assign", "false");
     unmount();
     render(await PipelinePage({ params: Promise.resolve({ id: "pipeline-1" }) }));
     expect(screen.getByTestId("pipeline-client")).toHaveAttribute("data-can-mutate", "true");
+    expect(screen.getByTestId("pipeline-client")).toHaveAttribute("data-can-assign", "false");
+  });
+
+  it("manager tenant move e atribui nas duas entradas", async () => {
+    state.platformAdmin = false;
+    state.role = "manager";
+    const { unmount } = render(await KanbanPickerPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByTestId("kanban-workspace")).toHaveAttribute("data-can-mutate", "true");
+    expect(screen.getByTestId("kanban-workspace")).toHaveAttribute("data-can-assign", "true");
+    unmount();
+    render(await PipelinePage({ params: Promise.resolve({ id: "pipeline-1" }) }));
+    expect(screen.getByTestId("pipeline-client")).toHaveAttribute("data-can-mutate", "true");
+    expect(screen.getByTestId("pipeline-client")).toHaveAttribute("data-can-assign", "true");
   });
 });

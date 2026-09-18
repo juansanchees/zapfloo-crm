@@ -240,17 +240,38 @@ async function capturarPainelPorPapel(page: Page, role: NocturneRole): Promise<v
   }[role];
   await expect(page.getByRole("link", { name: cta.name })).toHaveAttribute("href", cta.href);
 
-  const measured = await page.evaluate(() => {
+  const measured = await page.evaluate((heroId) => {
     const main = document.querySelector("main");
+    const heroValue = document.querySelector<HTMLElement>(
+      `[data-testid="dashboard-value-${heroId}"]`,
+    );
+    const heroCard = heroValue?.closest<HTMLElement>("article") ?? null;
+    const valueRect = heroValue?.getBoundingClientRect() ?? null;
+    const cardRect = heroCard?.getBoundingClientRect() ?? null;
     return {
       href: location.href,
       theme: document.documentElement.dataset.theme ?? null,
       bodyBackground: getComputedStyle(document.body).backgroundColor,
       dashboardBackground: main ? getComputedStyle(main).backgroundColor : null,
+      heroValueWhiteSpace: heroValue ? getComputedStyle(heroValue).whiteSpace : null,
+      heroValueClientWidth: heroValue?.clientWidth ?? null,
+      heroValueScrollWidth: heroValue?.scrollWidth ?? null,
+      heroValueRect: valueRect
+        ? { left: valueRect.left, right: valueRect.right, top: valueRect.top, bottom: valueRect.bottom }
+        : null,
+      heroCardRect: cardRect
+        ? { left: cardRect.left, right: cardRect.right, top: cardRect.top, bottom: cardRect.bottom }
+        : null,
     };
-  });
+  }, payload.data.hero.id);
   expect(measured.bodyBackground).toBeTruthy();
   expect(measured.dashboardBackground).toBeTruthy();
+  expect(measured.heroValueWhiteSpace).toBe("nowrap");
+  expect(measured.heroValueRect).toBeTruthy();
+  expect(measured.heroCardRect).toBeTruthy();
+  expect(measured.heroValueRect!.left).toBeGreaterThanOrEqual(measured.heroCardRect!.left);
+  expect(measured.heroValueRect!.right).toBeLessThanOrEqual(measured.heroCardRect!.right + 1);
+  expect(measured.heroValueScrollWidth).toBeLessThanOrEqual(measured.heroValueClientWidth! + 1);
 
   const screenshotPath = path.join(NOCTURNE_EVIDENCE, `dashboard-${role}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
