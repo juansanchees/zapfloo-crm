@@ -14,9 +14,10 @@ const scope = { orgId: "org-a", userId: "user-a", role: "manager" };
 
 describe("cache de metas", () => {
   it("muda por organização, pessoa e papel", () => {
-    expect(goalsQueryKey(scope)).not.toEqual(goalsQueryKey({ ...scope, orgId: "org-b" }));
-    expect(goalsQueryKey(scope)).not.toEqual(goalsQueryKey({ ...scope, userId: "user-b" }));
-    expect(GOAL_PROGRESS_QUERY_KEY(scope)).not.toEqual(GOAL_PROGRESS_QUERY_KEY({ ...scope, role: "agent" }));
+    for (const changed of [{ orgId: "org-b" }, { userId: "user-b" }, { role: "agent" }]) {
+      expect(goalsQueryKey(scope)).not.toEqual(goalsQueryKey({ ...scope, ...changed }));
+      expect(GOAL_PROGRESS_QUERY_KEY(scope)).not.toEqual(GOAL_PROGRESS_QUERY_KEY({ ...scope, ...changed }));
+    }
   });
 
   it("salvar invalida configuração e progresso do mesmo escopo", async () => {

@@ -22,6 +22,7 @@ const updates: Array<{ id: string; settings: Record<string, unknown> }> = [];
 let rpcFails = false;
 let decryptFails = false;
 let zeroUpdates = 0;
+const casPredicates: Array<[string, unknown]> = [];
 
 function db() {
   return {
@@ -35,8 +36,9 @@ function db() {
         }),
         update: ({ settings }: { settings: Record<string, unknown> }) => ({
           eq: (_column: string, id: string) => ({
-            eq: () => ({
+            eq: (column: string, value: unknown) => ({
               select: async () => {
+                casPredicates.push([column, value]);
                 if (zeroUpdates > 0) { zeroUpdates -= 1; orgs[id]!.settings.concurrent = true; return { data: [], error: null }; }
                 if (orgs[id]) orgs[id].settings = settings;
                 updates.push({ id, settings });
@@ -67,6 +69,7 @@ beforeEach(() => {
   rpcFails = false;
   decryptFails = false;
   zeroUpdates = 0;
+  casPredicates.length = 0;
   orgs = {
     [ORG_A]: { settings: { routing: { max_retries: 3 }, sibling: true } },
     [ORG_B]: { settings: { sibling: "org-b" } },
@@ -117,6 +120,9 @@ describe("/api/v1/settings/goals", () => {
     expect(response.status).toBe(200);
     expect(orgs[ORG_A]!.settings).toMatchObject({ routing: { max_retries: 3 }, sibling: true });
     expect(orgs[ORG_A]!.settings.operational_goals).toMatchObject({ currency: "BRL" });
+    expect(orgs[ORG_A]!.settings.operational_goals).toMatchObject({ members_enc: expect.any(String) });
+    expect((orgs[ORG_A]!.settings.operational_goals as Record<string, unknown>).members).toBeUndefined();
+    expect(casPredicates).toContainEqual(["settings", JSON.stringify({ routing: { max_retries: 3 }, sibling: true })]);
     expect(orgs[ORG_B]!.settings).toEqual({ sibling: "org-b" });
     expect(updates.map((update) => update.id)).toEqual([ORG_A]);
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({
