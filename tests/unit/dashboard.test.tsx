@@ -25,7 +25,7 @@ let summaryHeroValue: string | number | undefined;
 const heroBySurface = {
   agent: {
     id: "queue",
-    label: "Fila de atendimento",
+    label: "Na fila agora",
     value: 731,
     variation: "Agora",
     hint: "Conversas aguardando atendimento.",
@@ -33,7 +33,7 @@ const heroBySurface = {
   },
   manager: {
     id: "pipeline",
-    label: "Pipeline aberto",
+    label: "Valor do pipeline",
     value: "R$ 12.345",
     variation: "Agora",
     hint: "Valor informado das oportunidades abertas.",
@@ -156,14 +156,6 @@ beforeEach(() => {
               summarySurface === "manager"
                 ? [
                     {
-                      id: "pipeline_value",
-                      label: "Pipeline aberto",
-                      value: "R$ 12.345",
-                      variation: "Agora",
-                      hint: "Valor informado das oportunidades abertas.",
-                      icon: "money",
-                    },
-                    {
                       id: "conversations_per_attendant",
                       label: "Conversas por atendente",
                       value: 731,
@@ -264,6 +256,8 @@ describe("Dashboard operacional", () => {
     ).toBe(true);
     expect(renderedValues).not.toContain("0");
     expect(renderedValues).not.toContain("R$ 8.941");
+    expect(within(summary).getByRole("article", { name: "Valor do pipeline" })).toBeVisible();
+    expect(within(summary).queryByRole("article", { name: "Pipeline aberto" })).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /Contato teste/ })).toHaveAttribute(
       "href",
       "/app/inbox?id=conv-1",

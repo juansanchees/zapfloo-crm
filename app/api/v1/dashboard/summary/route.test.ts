@@ -186,7 +186,7 @@ async function body() {
   return (await (await GET()).json()) as {
     data: {
       role_surface: string;
-      hero: { value: string | number };
+      hero: { id: string; label: string; value: string | number };
       cards: Array<{ id: string; value: string | number }>;
       omitted: Array<{ id: string; reason: string }>;
     };
@@ -198,8 +198,12 @@ describe("GET /api/v1/dashboard/summary", () => {
     const response = await body();
 
     expect(response.data.role_surface).toBe("manager");
+    expect(response.data.hero).toMatchObject({
+      id: "pipeline",
+      label: "Valor do pipeline",
+      value: "R$ 12.345",
+    });
     expect(response.data.cards.map((card) => card.id)).toEqual([
-      "pipeline_value",
       "won_revenue",
       "average_ticket",
       "first_response",
@@ -239,9 +243,9 @@ describe("GET /api/v1/dashboard/summary", () => {
     ];
     const response = await body();
 
-    expect(response.data.cards.map((card) => card.id)).not.toContain("pipeline_value");
+    expect(response.data.hero.value).toBe("—");
     expect(response.data.omitted).toContainEqual({
-      id: "pipeline_value",
+      id: "pipeline",
       reason: "multiple_currencies",
     });
   });
@@ -275,9 +279,8 @@ describe("GET /api/v1/dashboard/summary", () => {
     const response = await body();
 
     expect(response.data.hero.value).toBe("—");
-    expect(response.data.cards.map((card) => card.id)).not.toContain("pipeline_value");
     expect(response.data.omitted).toContainEqual({
-      id: "pipeline_value",
+      id: "pipeline",
       reason: "source_unavailable",
     });
   });
@@ -313,7 +316,12 @@ describe("GET /api/v1/dashboard/summary", () => {
     expect(response.data.role_surface).toBe("admin");
     expect(state.requiredRole).toBe("agent");
     expect(state.requireOptions).toMatchObject({ allowPlatformAdmin: true });
-    expect(response.data.cards.map((card) => card.id)).toContain("online_instances");
+    expect(response.data.hero).toMatchObject({
+      id: "instances",
+      label: "Instâncias online",
+      value: "1/2",
+    });
+    expect(response.data.cards.map((card) => card.id)).not.toContain("online_instances");
   });
 
   it("mantém zero explícito, mas omite contagens nulas", async () => {
@@ -343,11 +351,16 @@ describe("GET /api/v1/dashboard/summary", () => {
     state.role = "admin";
     state.channelData = [];
     const empty = await body();
-    expect(empty.data.cards.find((card) => card.id === "online_instances")?.value).toBe("0/0");
+    expect(empty.data.hero.value).toBe("0/0");
+    expect(empty.data.cards.map((card) => card.id)).not.toContain("online_instances");
 
     state.channelData = null;
     const absent = await body();
-    expect(absent.data.cards.map((card) => card.id)).not.toContain("online_instances");
+    expect(absent.data.hero.value).toBe("—");
+    expect(absent.data.omitted).toContainEqual({
+      id: "instances",
+      reason: "source_unavailable",
+    });
   });
 
   it("resolve assentos pelo plano de recursos durante o teste", async () => {
@@ -370,12 +383,12 @@ describe("GET /api/v1/dashboard/summary", () => {
   it("preserva fonte monetária independente quando a outra falha", async () => {
     state.failLeadStatus = "won";
     const withoutWon = await body();
-    expect(withoutWon.data.cards.map((card) => card.id)).toContain("pipeline_value");
+    expect(withoutWon.data.hero.value).toBe("R$ 12.345");
     expect(withoutWon.data.cards.map((card) => card.id)).not.toContain("won_revenue");
 
     state.failLeadStatus = "open";
     const withoutOpen = await body();
-    expect(withoutOpen.data.cards.map((card) => card.id)).not.toContain("pipeline_value");
+    expect(withoutOpen.data.hero.value).toBe("—");
     expect(withoutOpen.data.cards.map((card) => card.id)).toContain("won_revenue");
   });
 
@@ -393,9 +406,7 @@ describe("GET /api/v1/dashboard/summary", () => {
   it("formata moeda conforme o idioma da pessoa", async () => {
     state.idioma = "es";
     const response = await body();
-    expect(response.data.cards.find((card) => card.id === "pipeline_value")?.value).toBe(
-      "12.345 BRL",
-    );
+    expect(response.data.hero.value).toBe("12.345 BRL");
   });
 
   it("omite apenas o cartão cuja fonte falhou", async () => {

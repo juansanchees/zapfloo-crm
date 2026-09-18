@@ -8209,6 +8209,7 @@ export const DICIONARIO: Traducoes = {
   "Resumo de conversas": { es: "Resumen de conversaciones" },
   "Volume registrado, fila e conversas atribuídas.": { es: "Volumen registrado, cola y conversaciones asignadas." },
   "Fila de atendimento": { es: "Cola de atención" },
+  "Na fila agora": { es: "En la cola ahora" },
   "Conversas esperando pelo próximo atendimento.": { es: "Conversaciones esperando la próxima atención." },
   "Oportunidades por etapa": { es: "Oportunidades por etapa" },
   "Distribuição atual das oportunidades no funil.": { es: "Distribución actual de las oportunidades en el embudo." },
@@ -8604,6 +8605,7 @@ export const DICIONARIO: Traducoes = {
   },
   "Sem valores": { es: "Sin valores" },
   "Pipeline aberto": { es: "Pipeline abierto" },
+  "Valor do pipeline": { es: "Valor del pipeline" },
   "Valor informado das oportunidades abertas.": {
     es: "Valor informado de las oportunidades abiertas.",
   },

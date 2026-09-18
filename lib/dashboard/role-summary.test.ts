@@ -25,6 +25,7 @@ describe("buildRoleSummary", () => {
   it("projeta a superfície do atendente sem meta diária inventada", () => {
     const summary = buildRoleSummary("agent", sources);
 
+    expect(summary.hero.label).toBe("Na fila agora");
     expect(summary.hero.value).toBe(7);
     expect(summary.cards.map((card) => card.id)).toEqual([
       "first_response",
@@ -38,23 +39,25 @@ describe("buildRoleSummary", () => {
     const legacyPayload = { ...sources, billing_cents: 8940 };
     const summary = buildRoleSummary("manager", legacyPayload);
 
+    expect(summary.hero.label).toBe("Valor do pipeline");
+    expect(summary.hero.value).toBe("R$ 12.345");
     expect(summary.cards.map((card) => card.id)).toEqual([
-      "pipeline_value",
       "won_revenue",
       "average_ticket",
       "first_response",
       "conversations_per_attendant",
     ]);
+    expect(summary.cards.map((card) => card.id)).not.toContain("pipeline_value");
     expect(JSON.stringify(summary)).not.toContain("8940");
     expect(summary.hero.hint).toBe("Valor informado das oportunidades abertas.");
-    expect(summary.cards.find((card) => card.id === "pipeline_value")?.hint).toBe(
-      "Valor informado das oportunidades abertas.",
-    );
   });
 
   it("não mostra cobrança para admin sem uma fonte canônica", () => {
     const summary = buildRoleSummary("admin", sources);
 
+    expect(summary.hero.label).toBe("Instâncias online");
+    expect(summary.hero.value).toBe("2/3");
+    expect(summary.cards.map((card) => card.id)).not.toContain("online_instances");
     expect(summary.cards.map((card) => card.id)).not.toContain("billing");
     expect(summary.cards.map((card) => card.id)).not.toContain("usage");
   });
@@ -77,8 +80,8 @@ describe("buildRoleSummary", () => {
       },
     });
 
-    expect(summary.cards.map((card) => card.id)).not.toContain("pipeline_value");
-    expect(summary.omitted).toContainEqual({ id: "pipeline_value", reason: "multiple_currencies" });
+    expect(summary.hero).toMatchObject({ id: "pipeline", label: "Valor do pipeline", value: "—" });
+    expect(summary.omitted).toContainEqual({ id: "pipeline", reason: "multiple_currencies" });
   });
 
   it("não chama bucket vazio de múltiplas moedas", () => {
@@ -87,15 +90,15 @@ describe("buildRoleSummary", () => {
       pipeline_open: { value_by_currency: {} },
     });
 
-    expect(summary.omitted).toContainEqual({ id: "pipeline_value", reason: "source_unavailable" });
+    expect(summary.omitted).toContainEqual({ id: "pipeline", reason: "source_unavailable" });
     expect(summary.omitted).not.toContainEqual({
-      id: "pipeline_value",
+      id: "pipeline",
       reason: "multiple_currencies",
     });
   });
 
   it("formata valores em espanhol quando a fonte declara o idioma", () => {
     const summary = buildRoleSummary("manager", { ...sources, locale: "es" });
-    expect(summary.cards.find((card) => card.id === "pipeline_value")?.value).toBe("12.345 BRL");
+    expect(summary.hero.value).toBe("12.345 BRL");
   });
 });

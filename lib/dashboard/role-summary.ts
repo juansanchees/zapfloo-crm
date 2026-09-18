@@ -75,12 +75,20 @@ function card(
 }
 
 function unavailableHero(surface: DashboardSurface): DashboardCard {
-  const labels: Record<DashboardSurface, string> = {
-    agent: "Fila de atendimento",
-    manager: "Pipeline aberto",
-    admin: "Instâncias online",
+  const definitions: Record<DashboardSurface, Pick<DashboardCard, "id" | "label">> = {
+    agent: { id: "queue", label: "Na fila agora" },
+    manager: { id: "pipeline", label: "Valor do pipeline" },
+    admin: { id: "instances", label: "Instâncias online" },
   };
-  return card("hero", labels[surface], "—", "", "Dados indisponíveis no momento.", "warning");
+  const definition = definitions[surface];
+  return card(
+    definition.id,
+    definition.label,
+    "—",
+    "",
+    "Dados indisponíveis no momento.",
+    "warning",
+  );
 }
 
 function formatDuration(seconds: number): string {
@@ -139,7 +147,7 @@ function buildAgentSummary(sources: DashboardSources): DashboardSummary {
     typeof queue === "number"
       ? card(
           "queue",
-          "Fila de atendimento",
+          "Na fila agora",
           queue,
           "Agora",
           "Conversas aguardando atendimento.",
@@ -195,7 +203,7 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
   const hero = hasOpen
     ? card(
         "pipeline",
-        "Pipeline aberto",
+        "Valor do pipeline",
         formatCurrency(sources.locale, open.currency, open.value),
         "Agora",
         "Valor informado das oportunidades abertas.",
@@ -203,20 +211,9 @@ function buildManagerSummary(sources: DashboardSources): DashboardSummary {
       )
     : unavailableHero("manager");
 
-  if (hasOpen) {
-    cards.push(
-      card(
-        "pipeline_value",
-        "Pipeline aberto",
-        formatCurrency(sources.locale, open.currency, open.value),
-        "Agora",
-        "Valor informado das oportunidades abertas.",
-        "trend",
-      ),
-    );
-  } else {
+  if (!hasOpen) {
     omitted.push({
-      id: "pipeline_value",
+      id: "pipeline",
       reason: open === "multiple" ? "multiple_currencies" : "source_unavailable",
     });
   }
@@ -300,20 +297,7 @@ function buildAdminSummary(sources: DashboardSources): DashboardSummary {
       )
     : unavailableHero("admin");
 
-  if (sources.channels) {
-    cards.push(
-      card(
-        "online_instances",
-        "Instâncias online",
-        `${sources.channels.online}/${sources.channels.total}`,
-        "Agora",
-        "Instâncias de canal em funcionamento.",
-        "whatsapp",
-      ),
-    );
-  } else {
-    omitted.push({ id: "online_instances", reason: "source_unavailable" });
-  }
+  if (!sources.channels) omitted.push({ id: "instances", reason: "source_unavailable" });
 
   if (sources.seats?.limit != null) {
     cards.push(
