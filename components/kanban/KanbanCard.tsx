@@ -43,6 +43,9 @@ interface KanbanCardProps {
   onSelect?: (leadId: string, gesto: GestoDeSelecao) => void;
   /** Abrir o dossiê. Separado de `onSelect`: são gestos e intenções diferentes. */
   onOpen?: (leadId: string) => void;
+  /** Não existe em etapa terminal; o menu não promete uma etapa seguinte. */
+  onAdvance?: () => void;
+  canMutate?: boolean;
 }
 
 function formatBRL(cents: number | null, currency: string | null): string | null {
@@ -80,6 +83,8 @@ export function KanbanCard({
   pulseCount = 0,
   onSelect,
   onOpen,
+  onAdvance,
+  canMutate = false,
 }: KanbanCardProps) {
   const t = useT();
   const value = formatBRL(card.valueCents, card.currency);
@@ -112,6 +117,14 @@ export function KanbanCard({
     metaKey: boolean;
     ctrlKey: boolean;
   }): void => {
+    // Viewer abre o dossiê mesmo se estiver segurando um modificador. Seleção
+    // é preparação para mutação em lote; deixá-la ativa sem permissão cria um
+    // estado que a pessoa não consegue concluir e contradiz os checkboxes
+    // desabilitados do próprio card.
+    if (!canMutate) {
+      onOpen?.(card.id);
+      return;
+    }
     if (e.shiftKey) {
       onSelect?.(card.id, "intervalo");
       return;
@@ -125,7 +138,7 @@ export function KanbanCard({
   const handleClick = (e: MouseEvent<HTMLDivElement>) => decidirClique(e);
 
   return (
-    <Draggable draggableId={card.id} index={index}>
+    <Draggable draggableId={card.id} index={index} isDragDisabled={!canMutate}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
@@ -191,11 +204,12 @@ export function KanbanCard({
                   // O card inteiro tem onClick (abre o dossiê): sem parar a
                   // propagação, marcar a caixa abriria o dossiê por cima.
                   e.stopPropagation();
-                  onSelect?.(card.id, e.shiftKey ? "intervalo" : "alterna");
+                if (canMutate) onSelect?.(card.id, e.shiftKey ? "intervalo" : "alterna");
                 }}
                 onChange={() => {
                   /* estado vem de `isSelected`; quem decide é o onClick acima */
                 }}
+                disabled={!canMutate}
                 className={cn(
                   "mt-1 h-4 w-4 shrink-0 cursor-pointer accent-accent transition-opacity",
                   "focus:opacity-100 focus-visible:outline-2 focus-visible:outline-accent",
@@ -238,7 +252,12 @@ export function KanbanCard({
                 </button>
               </h3>
             </div>
-            <KanbanCardActions lead={lead} pipelineId={pipelineId} />
+            <KanbanCardActions
+              lead={lead}
+              pipelineId={pipelineId}
+              onAdvance={onAdvance}
+              canMutate={canMutate}
+            />
           </div>
 
           {/* ② valor — altura reservada mesmo sem valor, senão o card encolhe. */}
@@ -251,29 +270,48 @@ export function KanbanCard({
             {value ?? "—"}
           </p>
 
+          <p className="h-5 truncate text-[11px] leading-5 text-text-muted">
+            <span>{lead.contact?.full_name ?? t("Sem contato")}</span>
+            {lead.source && <span> · {lead.source}</span>}
+          </p>
+
           {/* ③ a linha do agente — um slot, três estados, nunca três blocos. */}
           <div className="mt-1.5 flex h-6 items-center gap-2 text-xs">
             {state.slot.type === "awaiting" && (
-              // A proposta do agente é a ÚNICA linha do card com ação: é o
-              // ponto onde a decisão do humano entra. Sem os botões aqui, o
-              // texto seria só mais um aviso — e a wave existe porque avisar
-              // sem poder decidir é o que já acontecia (o dado ficava no banco).
-              <NextActionSlot
-                label={state.slot.label}
-                leadId={card.id}
-                approvedSeq={lead.next_action?.seq ?? -1}
-                pipelineId={pipelineId}
-              />
+              canMutate ? (
+                // A proposta do agente é a ÚNICA linha do card com ação: é o
+                // ponto onde a decisão do humano entra. Viewer ainda lê o
+                // estado abaixo, mas não recebe botões que a API recusaria.
+                <NextActionSlot
+                  label={state.slot.label}
+                  leadId={card.id}
+                  approvedSeq={lead.next_action?.seq ?? -1}
+                  pipelineId={pipelineId}
+                />
+              ) : (
+                <span className="min-w-0 flex-1 truncate text-accent" title={state.slot.label}>
+                  {t("Propõe:")} {state.slot.label}
+                </span>
+              )
             )}
             {state.slot.type === "reactivation" && (
-              // O negócio parou E aqui está o que fazer. Mesma faixa, mesma
-              // altura: o card não cresce quando o sistema tem algo a propor.
-              <ReactivationSlot
-                leadId={card.id}
-                proposalId={state.slot.proposalId}
-                expiresAt={state.slot.expiresAt}
-                pipelineId={pipelineId}
-              />
+              canMutate ? (
+                // O negócio parou E aqui está o que fazer. Mesma faixa, mesma
+                // altura: o card não cresce quando o sistema tem algo a propor.
+                <ReactivationSlot
+                  leadId={card.id}
+                  proposalId={state.slot.proposalId}
+                  expiresAt={state.slot.expiresAt}
+                  pipelineId={pipelineId}
+                />
+              ) : (
+                <span
+                  className="min-w-0 flex-1 truncate text-warning-fg"
+                  title={t("Este negócio parou de responder")}
+                >
+                  {t("Retomar contato?")}
+                </span>
+              )
             )}
             {state.slot.type === "cooling" && (
               // -fg é a variante de TEXTO do token (o -warning puro dá 3.7:1 em

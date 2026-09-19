@@ -5,7 +5,8 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { traduzir } from "@/lib/i18n/dicionario";
-import { FunisClient, type FunilDaLista } from "./_client";
+import type { FunilDaLista } from "./_client";
+import { KanbanWorkspace } from "./_components/KanbanWorkspace";
 import { OperationalPage } from "@/components/ui/operational-page";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,11 @@ export const dynamic = "force-dynamic";
  * atalho de platform admin, que as rotas não concedem por padrão): mostrar um
  * botão que o servidor recusaria seria prometer o que não se cumpre.
  */
-export default async function KanbanPickerPage() {
+export default async function KanbanPickerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pipeline?: string | string[] }>;
+}) {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");
@@ -47,8 +52,22 @@ export default async function KanbanPickerPage() {
   // Importar planilha é ESCRITA DE OPERAÇÃO, não configuração: quem atende
   // sobe a lista que recebeu. Espelha o `requireRole("agent")` da rota.
   const podeImportar = ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent;
+  // Movimento e ações dos cards têm hoje a mesma régua agent+, mas mantêm um
+  // contrato próprio: mudar a regra de importação no futuro não pode liberar
+  // ou bloquear silenciosamente o quadro.
+  const podeMover = ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent;
+  // Atribuir responsável em lote é manager+ na rota de bulk. Admin da
+  // plataforma não recebe atalho quando seu papel neste tenant é menor.
+  const podeAtribuir = ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
   const idioma = user.idioma;
   const t = (texto: string) => traduzir(texto, idioma);
+  const query = await searchParams;
+  const requestedPipeline = typeof query.pipeline === "string" ? query.pipeline : null;
+  // Só a lista já filtrada pela organização escolhe a aba: query string nunca
+  // vira autorização para outro tenant, mesmo para usuário multi-organização.
+  const pipelineInicial = funis.some((funil) => funil.id === requestedPipeline)
+    ? requestedPipeline
+    : (funis.find((funil) => funil.is_default)?.id ?? funis[0]?.id ?? null);
 
   return (
     <OperationalPage
@@ -65,7 +84,14 @@ export default async function KanbanPickerPage() {
             era maior do que o comentário contava: são QUATRO assertions em TRÊS
             specs, e `pipelines-gestao.spec.ts` — a spec da própria feature que
             gerou o comentário — é uma delas. Todas atualizadas junto. */}
-      <FunisClient funis={funis} podeGerenciar={podeGerenciar} podeImportar={podeImportar} />
+      <KanbanWorkspace
+        funis={funis}
+        pipelineInicial={pipelineInicial}
+        podeGerenciar={podeGerenciar}
+        podeImportar={podeImportar}
+        podeMover={podeMover}
+        podeAtribuir={podeAtribuir}
+      />
     </OperationalPage>
   );
 }

@@ -130,11 +130,12 @@ test.describe("a conversa vira lead", () => {
     await login(page);
     await page.goto(`/app/pipelines/${creds.nascimento!.pipeline_default_id}`);
 
-    await expect(page.getByText(NOME, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+    const cardsDaDemanda = page.getByRole("group", { name: `Lead: ${NOME}`, exact: true });
+    await expect(cardsDaDemanda.first()).toBeVisible({ timeout: 20_000 });
     // Um lead por DEMANDA, não um por mensagem. Sem esta regra o quadro vira
     // uma lista de mensagens e para de significar qualquer coisa.
     await expect(
-      page.getByText(NOME, { exact: false }),
+      cardsDaDemanda,
       "duas mensagens, um card",
     ).toHaveCount(1);
   });

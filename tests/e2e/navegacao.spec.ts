@@ -82,7 +82,7 @@ async function expectSemOverflowHorizontal(page: Page, contexto: string): Promis
 test.describe.configure({ timeout: 120_000 });
 
 test.describe("navegação compacta", () => {
-  test("visão geral usa dados locais reais e preserva navegação no desktop e celular", async ({
+  test("painel por papel usa dados locais reais e preserva navegação no desktop e celular", async ({
     page,
   }) => {
     // Esta jornada mede o tema escuro; seguir o SO agora exige uma escolha explícita.
@@ -96,15 +96,21 @@ test.describe("navegação compacta", () => {
     // de 5 s do `expect` media a latência do ambiente, não a navegação: o trace
     // mostrou o GET de `/app` correto ainda pendente quando a asserção morreu.
     await page.waitForURL(/\/app$/, { timeout: 30_000 });
-    await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible({
+    const summaryResponse = await page.request.get("/api/v1/dashboard/summary");
+    expect(summaryResponse.ok()).toBe(true);
+    const { data: summary } = (await summaryResponse.json()) as {
+      data: {
+        role_surface: "admin";
+        hero: { id: string; value: string | number };
+      };
+    };
+    expect(summary.role_surface).toBe("admin");
+    const heroValue = String(summary.hero.value);
+    const heroTitle = `${heroValue.replace("/", " de ")} instâncias conectadas`;
+    await expect(page.getByRole("heading", { level: 1, name: heroTitle })).toBeVisible({
       timeout: 30_000,
     });
-    const counts = await page.request.get("/api/v1/conversations/counts");
-    expect(counts.ok()).toBe(true);
-    const { data } = await counts.json();
-    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(
-      String(data.all),
-    );
+    await expect(page.getByTestId(`dashboard-value-${summary.hero.id}`)).toHaveText(heroValue);
     await expect(
       page
         .getByRole("navigation", { name: "Navegação principal" })
@@ -113,32 +119,27 @@ test.describe("navegação compacta", () => {
     await expectSemOverflowHorizontal(page, "dashboard desktop");
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.screenshot({ path: path.join(EVIDENCE, "dashboard-desktop.png"), fullPage: true });
-    await page.getByRole("link", { name: "Abrir fila", exact: true }).click();
-    await expect(page).toHaveURL(/\/app\/inbox\?filter=unassigned$/);
+    await page.getByRole("link", { name: "Ver instâncias", exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/connections$/);
     await expect(
       sidebar(page).getByRole("link", { name: "Painel de controle" }),
     ).not.toHaveAttribute("aria-current");
     await page.goto("/app");
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByRole("heading", { name: "Vamos fazer o dia render?" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: heroTitle })).toBeVisible();
     await expectSemOverflowHorizontal(page, "dashboard mobile");
-    await expect(page.getByRole("article", { name: "Conversas registradas" })).toContainText(
-      String(data.all),
-    );
+    await expect(page.getByTestId(`dashboard-value-${summary.hero.id}`)).toHaveText(heroValue);
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.screenshot({ path: path.join(EVIDENCE, "dashboard-mobile.png"), fullPage: true });
-    await page
-      .getByRole("region", { name: "Seu próximo passo" })
-      .getByRole("link", { name: "Ver tarefas", exact: true })
-      .click();
-    await expect(page).toHaveURL(/\/app\/tasks$/);
+    await page.getByRole("link", { name: "Ver instâncias", exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/connections$/);
   });
 
-  test("o sidebar mostra somente as nove portas aprovadas nos três grupos", async ({ page }) => {
+  test("o sidebar mostra somente as dez portas aprovadas nos três grupos", async ({ page }) => {
     await loginAdmin(page);
 
     const links = sidebar(page).getByRole("link");
-    await expect(links).toHaveCount(9);
+    await expect(links).toHaveCount(10);
     expect(
       await links.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual([
@@ -147,6 +148,7 @@ test.describe("navegação compacta", () => {
       "Funis de vendas",
       "Contatos",
       "Tarefas e agenda",
+      "Metas",
       "Relatórios",
       "Instâncias WhatsApp",
       "Usuários e permissões",
@@ -287,7 +289,7 @@ test.describe("navegação compacta", () => {
    *
    * Medido por ferramenta, nunca a olho.
    */
-  test("as nove portas principais cabem sem scroll em 900px", async ({ page }) => {
+  test("as dez portas principais cabem sem scroll em 900px", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
@@ -300,7 +302,7 @@ test.describe("navegação compacta", () => {
       };
     });
 
-    expect(m.links).toBe(9);
+    expect(m.links).toBe(10);
     expect(m.rola, "em 900px o menu inteiro tem de caber sem scroll").toBe(false);
   });
 

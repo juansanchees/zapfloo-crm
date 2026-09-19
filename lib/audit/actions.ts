@@ -459,6 +459,9 @@ export const AUDIT_ACTIONS = [
   // quantidade de widgets — nunca o conteúdo visual recebido do cliente.
   "dashboard.preferences_updated",
   "dashboard.preferences_reset",
+  // Metas operacionais vivem no settings da organização; mudar a régua
+  // altera como o mês inteiro é lido, portanto a decisão precisa de trilha.
+  "goals.config_changed",
   "copilot.tool_consulted",
 ] as const;
 

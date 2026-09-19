@@ -106,13 +106,17 @@ describe("contador em memória", () => {
 
   it("a janela virada zera a contagem — o contador é de janela FIXA", async () => {
     const { checkRateLimit } = await import("./rate-limit");
+    const primeiroReset = (Math.floor(Date.now() / 60_000) + 1) * 60;
 
-    expect((await checkRateLimit("bucket:vira", 1, 60)).count).toBe(1);
+    const primeiro = await checkRateLimit("bucket:vira", 1, 60);
+    expect(primeiro.count).toBe(1);
+    expect(primeiro.reset_at).toBe(primeiroReset);
     expect((await checkRateLimit("bucket:vira", 1, 60)).allowed).toBe(false);
 
     vi.advanceTimersByTime(60_000);
     const depois = await checkRateLimit("bucket:vira", 1, 60);
     expect(depois.count).toBe(1);
     expect(depois.allowed).toBe(true);
+    expect(depois.reset_at).toBe(primeiroReset + 60);
   });
 });

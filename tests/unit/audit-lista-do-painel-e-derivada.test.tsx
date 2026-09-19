@@ -89,6 +89,7 @@ describe("audit: a lista do painel é derivada do vocabulário", () => {
     // Âncora de conteúdo: se o import trouxesse outro módulo, isto cai.
     expect(AUDIT_ACTIONS).toContain("org.branding_updated");
     expect(AUDIT_ACTIONS).toContain("auth.login_success");
+    expect(AUDIT_ACTIONS).toContain("goals.config_changed");
   });
 
   it("nenhum arquivo do painel voltou a redigitar a lista", () => {

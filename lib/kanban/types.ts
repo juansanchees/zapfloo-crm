@@ -1,4 +1,5 @@
 import type { Lead } from "@/lib/types/leads";
+import type { BoardSummary } from "@/lib/kanban/summary";
 
 export interface PipelineVocabulary {
   lead?: string;
@@ -38,4 +39,6 @@ export interface BoardData {
   pipeline: Pipeline;
   stages: Stage[];
   leads: Lead[];
+  /** Totais de negócio por moeda; nunca mistura BRL, USD ou outra moeda. */
+  summary: BoardSummary;
 }

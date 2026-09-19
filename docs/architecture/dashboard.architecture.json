@@ -2,106 +2,89 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Dashboard de operação",
-    "subtitle": "Visão geral com dados reais e ações canônicas",
+    "title": "Dashboard operacional por papel",
+    "subtitle": "Uma composição para atendente, gestor e admin, somente com fatos do tenant",
     "output": "dashboard.html",
     "quality_profile": "standard"
   },
   "lanes": [
-    {
-      "id": "ui",
-      "label": "Interface"
-    },
-    {
-      "id": "api",
-      "label": "APIs existentes"
-    }
+    { "id": "entrada", "label": "Identidade e fatos" },
+    { "id": "api", "label": "Resumo com escopo" },
+    { "id": "ui", "label": "Decisão e próximo passo" }
   ],
   "mainPath": [
-    "nav",
+    "registro",
     "dashboard",
-    "reads",
+    "summary",
+    "fontes",
+    "summary",
+    "composicao",
     "dashboard",
-    "destinations"
+    "destinos"
   ],
   "nodes": [
     {
-      "id": "nav",
+      "id": "registro",
       "lane": "ui",
       "col": 1,
       "type": "service",
-      "label": "Registro de navegação / Sidebar / busca global"
+      "label": "Registro de navegação / Painel de controle"
     },
     {
       "id": "dashboard",
       "lane": "ui",
       "col": 2,
-      "type": "service",
-      "label": "/app / Dashboard + useDashboard / cache por identidade e tenant"
+      "type": "frontend",
+      "label": "/app / Dashboard + useDashboard",
+      "sublabel": "cache por organização, usuário, papel e admin de plataforma"
     },
     {
-      "id": "reads",
+      "id": "summary",
       "lane": "api",
       "col": 3,
       "type": "api",
-      "label": "counts, conversations, metrics/attendants, tasks, ai/agents; guards e escopo existentes"
+      "label": "GET /api/v1/dashboard/summary",
+      "sublabel": "requireRole(agent) + bypass canônico de admin de plataforma"
     },
     {
-      "id": "destinations",
-      "lane": "ui",
+      "id": "fontes",
+      "lane": "entrada",
       "col": 4,
-      "type": "service",
-      "label": "Inbox, tarefas, agentes, funis, agenda e radar"
+      "type": "table",
+      "label": "conversations, crm_tasks, crm_leads, channel_sessions, membros e assinatura",
+      "sublabel": "organization_id explícito; fn_attendant_metrics respeita o escopo"
     },
     {
-      "id": "complete",
+      "id": "composicao",
       "lane": "api",
-      "col": 4,
-      "type": "api",
-      "label": "PATCH tasks/:id / guard + atualização + audit existentes"
+      "col": 5,
+      "type": "lib",
+      "label": "lib/dashboard/role-summary.ts",
+      "sublabel": "agent / manager / admin; fonte ausente omite o cartão, nunca fabrica zero"
+    },
+    {
+      "id": "destinos",
+      "lane": "ui",
+      "col": 6,
+      "type": "service",
+      "label": "Inbox, Funis e Instâncias WhatsApp",
+      "sublabel": "o CTA muda com o papel e abre a superfície canônica"
     }
   ],
   "edges": [
-    {
-      "id": "e1",
-      "from": "nav",
-      "to": "dashboard",
-      "label": "Visão geral acessível sem remover menus"
-    },
-    {
-      "id": "e2",
-      "from": "dashboard",
-      "to": "reads",
-      "label": "GET com permissões; consulta periódica a cada 30s enquanto visível"
-    },
-    {
-      "id": "e3",
-      "from": "reads",
-      "to": "dashboard",
-      "label": "Dados reais ou erro independente com tentativa manual"
-    },
-    {
-      "id": "e4",
-      "from": "dashboard",
-      "to": "destinations",
-      "label": "Próximo passo explícito e deep link da conversa"
-    },
-    {
-      "id": "e5",
-      "from": "dashboard",
-      "to": "complete",
-      "label": "Checkbox de conclusão somente para agent ou superior"
-    },
-    {
-      "id": "e6",
-      "from": "complete",
-      "to": "dashboard",
-      "label": "Sucesso invalida cache; falha preserva tarefa e mostra erro"
-    }
+    { "id": "e1", "from": "registro", "to": "dashboard", "label": "porta visível no menu e na busca global" },
+    { "id": "e2", "from": "dashboard", "to": "registro", "label": "o papel limita os destinos exibidos pela casca" },
+    { "id": "e3", "from": "dashboard", "to": "summary", "label": "consulta habilitada somente para agent+ ou admin de plataforma" },
+    { "id": "e4", "from": "summary", "to": "fontes", "label": "lê somente fatos autorizados do tenant" },
+    { "id": "e5", "from": "fontes", "to": "summary", "label": "contagens, tempos e valores reais; ausência fica explícita" },
+    { "id": "e6", "from": "summary", "to": "composicao", "label": "projeta hero, cartões e omissões conforme o papel" },
+    { "id": "e7", "from": "composicao", "to": "dashboard", "label": "renderiza apenas métricas com fonte disponível" },
+    { "id": "e8", "from": "dashboard", "to": "destinos", "label": "Abrir a fila / Revisar funil / Ver instâncias" },
+    { "id": "e9", "from": "destinos", "to": "fontes", "label": "a operação nos destinos atualiza as mesmas fontes do resumo" }
   ],
   "non_connections": [
-    "Não envia mensagens nem chama modelos de IA.",
-    "Não cria APIs, migrations ou privilégios; não altera login ou onboarding.",
-    "Não estima receita, conversão ou tempo médio sem fonte. Oportunidades ganhas usa janela existente de 30 dias."
+    "Não estima meta diária, consumo agregado ou faturamento sem fonte canônica.",
+    "Não soma moedas diferentes nem converte valores.",
+    "Não cria papel ou privilégio; usa os papéis existentes e o escopo RLS."
   ]
 }

@@ -50,6 +50,44 @@ const arquivos = fs
  */
 const PLANTA_COM_ORFAOS = new Set(["crm-vivo.architecture.json"]);
 
+/**
+ * Dívida medida ao tornar `mainPath` verificável em 2026-09-17.
+ *
+ * Antes deste gate, 25 transições em 14 mapas antigos citavam dois nodes
+ * consecutivos sem uma aresta dirigida entre eles. Corrigir esses contratos é
+ * trabalho próprio: escolher ou criar a aresta muda o fio condutor do mapa.
+ *
+ * A allowlist é EXATA e só encolhe: par novo reprova; par consertado também
+ * reprova até sua entrada sair daqui. Mapas novos, como Metas operacionais,
+ * entram sem exceção.
+ */
+const MAIN_PATH_SEM_ARESTA_LEGADO: Record<string, string[]> = {
+  "acervo-de-conhecimento.architecture.json": ["chunks->busca"],
+  "atualizacao-self-service.architecture.json": ["systemversion->footer"],
+  "crm-vivo.architecture.json": ["leadstate->atividades", "atividades->slot", "fila->leads"],
+  "escalacao-ciclo-humano.architecture.json": [
+    "chamados->reply",
+    "reply->cabecalho",
+    "cabecalho->retomada",
+    "checkpoints->ritual",
+  ],
+  "followup-dossie.architecture.json": ["enrollments->eventos"],
+  "gestao-funis.architecture.json": ["lista->hooks", "regras->pipelines"],
+  "ia-360-retencao.architecture.json": ["agendar->regra", "regra->cronjobs", "cron->radar"],
+  "marca-propria.architecture.json": ["layout->interface"],
+  "onboarding-ensaio.architecture.json": ["finish->review"],
+  "planos-por-organizacao.architecture.json": ["limites->uso"],
+  "pre-go-live-whatsapp.architecture.json": ["gate->inbox"],
+  "retencao-de-historico.architecture.json": ["fila->trilha"],
+  "teste-legado-isolado.architecture.json": ["bridge->trace"],
+  "teto-de-orcamento.architecture.json": [
+    "card->patch",
+    "budgets->credentials",
+    "credentials->decidir",
+    "runmodel->handoff",
+  ],
+};
+
 describe("mapas de arquitetura — coerência interna", () => {
   it("existe mapa para verificar (guarda de vacuidade)", () => {
     // Sem isto, apagar a pasta faria todos os casos abaixo passarem por não
@@ -89,6 +127,26 @@ describe("mapas de arquitetura — coerência interna", () => {
     const ids = new Set(m.nodes!.map((n) => n.id));
     const mortos = (m.mainPath ?? []).filter((id) => !ids.has(id));
     expect(mortos, `${nome} tem mainPath citando id morto`).toEqual([]);
+  });
+
+  it.each(arquivos)("%s: cada passo do mainPath tem aresta dirigida", (nome) => {
+    const m = JSON.parse(fs.readFileSync(path.join(DIR, nome), "utf8")) as Mapa;
+    const arestas = new Set((m.edges ?? []).map((e) => `${e.from}->${e.to}`));
+    const caminho = m.mainPath ?? [];
+    const semAresta = caminho
+      .slice(0, -1)
+      .map((from, index) => `${from}->${caminho[index + 1]}`)
+      .filter((passo) => !arestas.has(passo));
+
+    expect(
+      semAresta,
+      `${nome} tem passo de mainPath sem aresta. Não acrescente exceção: ` +
+        "corrija o caminho ou declare a aresta real. A allowlist congela somente a dívida medida em 2026-09-17.",
+    ).toEqual(MAIN_PATH_SEM_ARESTA_LEGADO[nome] ?? []);
+  });
+
+  it("a allowlist de mainPath só referencia mapas ainda verificados", () => {
+    expect(Object.keys(MAIN_PATH_SEM_ARESTA_LEGADO).filter((nome) => !arquivos.includes(nome))).toEqual([]);
   });
 
   it.each(arquivos)("%s: nenhuma peça é ilha — o DoD 13 pede ≥1 aresta", (nome) => {

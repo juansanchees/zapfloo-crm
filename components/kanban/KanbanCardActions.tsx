@@ -16,7 +16,6 @@ import { DotsThree, PencilSimple, Users } from "@/lib/ui/icons";
 import { useWinLead, useEditLead } from "@/hooks/kanban/useUpdateLead";
 import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { useAssignableAgents } from "@/hooks/kanban/useAssignableAgents";
-import { usePermission } from "@/hooks/auth/AuthProvider";
 import { LoseLeadDialog } from "./LoseLeadDialog";
 import { EditLeadDialog } from "./EditLeadDialog";
 import type { Lead } from "@/lib/types/leads";
@@ -24,20 +23,24 @@ import type { Lead } from "@/lib/types/leads";
 interface KanbanCardActionsProps {
   lead: Lead;
   pipelineId: string;
+  /** Movimento existente do quadro, já com posição e controle de concorrência. */
+  onAdvance?: () => void;
+  /** Papel tenant agent+, deliberadamente sem atalho de admin da plataforma. */
+  canMutate: boolean;
 }
 
-export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) {
+export function KanbanCardActions({ lead, pipelineId, onAdvance, canMutate }: KanbanCardActionsProps) {
   const t = useT();
   const [loseOpen, setLoseOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const winMutation = useWinLead(pipelineId);
   const editMutation = useEditLead(pipelineId);
-  // spec 13 §4: escrita no funil é agent+ — viewer não reatribui (a rota
-  // PATCH também recusa; aqui é só não oferecer o que seria negado).
-  const canAssign = usePermission("pipeline.move_card");
-  const { data: members } = useAssignableMembers(canAssign);
+  // spec 13 §4: escrita no funil é agent+ na organização ativa — viewer não
+  // reatribui, nem mesmo quando também é admin da plataforma. As rotas não
+  // concedem esse atalho; aqui só não oferecemos o que elas recusariam.
+  const { data: members } = useAssignableMembers(canMutate);
   // A rota já devolve só agente ativo e não arquivado — é o picker.
-  const { data: agents } = useAssignableAgents(canAssign);
+  const { data: agents } = useAssignableAgents(canMutate);
 
   const reassignToUser = (ownerUserId: string | null) => {
     if (ownerUserId === lead.owner_user_id) return;
@@ -58,9 +61,27 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
     });
   };
 
+  if (!canMutate) return null;
+
   return (
     <>
-      <DropdownMenu>
+      <div className="flex shrink-0 items-center gap-1" onClick={(event) => event.stopPropagation()}>
+        {onAdvance && (
+          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={onAdvance}>
+            {t("Avançar")}
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          disabled={winMutation.isPending}
+          onClick={() => winMutation.mutate({ leadId: lead.id })}
+        >
+          {t("Ganhar")}
+        </Button>
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -83,7 +104,7 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
           >
             <PencilSimple size={14} className="mr-2" /> {t("Editar")}
           </DropdownMenuItem>
-          {canAssign && (
+          {canMutate && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Users size={14} className="mr-2" /> {t("Responsável")}
@@ -127,14 +148,6 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
             </DropdownMenuSub>
           )}
           <DropdownMenuItem
-            disabled={winMutation.isPending}
-            onSelect={() => {
-              winMutation.mutate({ leadId: lead.id });
-            }}
-          >
-            {t("Marcar como ganho")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
             onSelect={() => {
               setLoseOpen(true);
             }}
@@ -142,7 +155,8 @@ export function KanbanCardActions({ lead, pipelineId }: KanbanCardActionsProps) 
             {t("Marcar como perdido")}
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
 
       <LoseLeadDialog
         open={loseOpen}

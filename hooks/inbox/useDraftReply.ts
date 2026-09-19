@@ -7,7 +7,11 @@ import { showApiError } from "@/components/feedback/ApiErrorToast";
 export function useDraftReply() {
   return useMutation({
     mutationFn: async (conversationId: string) =>
-      apiClient.post<{ data: { draft: string } }>(`/api/v1/conversations/${conversationId}/draft-reply`, {}),
+      apiClient.post<{ data: { suggestions: string[] } }>(
+        `/api/v1/conversations/${conversationId}/draft-reply`,
+        {},
+        { retry: false, timeoutMs: 45_000 },
+      ),
     onError: showApiError,
   });
 }
