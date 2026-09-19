@@ -4,6 +4,10 @@ import { NextRequest } from "next/server";
 import { audit } from "@/lib/audit";
 import { fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import {
+  decryptOperationalGoalMembers,
+  encryptOperationalGoalMembers,
+} from "@/lib/metas/members-cipher";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { GET, PATCH } from "./route";
@@ -12,6 +16,10 @@ vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
+vi.mock("@/lib/metas/members-cipher", () => ({
+  decryptOperationalGoalMembers: vi.fn(),
+  encryptOperationalGoalMembers: vi.fn(),
+}));
 
 const ORG_A = "11111111-1111-4111-8111-111111111111";
 const ORG_B = "22222222-2222-4222-8222-222222222222";
@@ -19,7 +27,6 @@ const MEMBER = "33333333-3333-4333-8333-333333333333";
 const OTHER_MEMBER = "44444444-4444-4444-8444-444444444444";
 let orgs: Record<string, { settings: Record<string, unknown> }>;
 const updates: Array<{ id: string; settings: Record<string, unknown> }> = [];
-let rpcFails = false;
 let decryptFails = false;
 let zeroUpdates = 0;
 const casPredicates: Array<[string, unknown]> = [];
@@ -49,10 +56,6 @@ function db() {
         }),
       };
     },
-    rpc: async (name: string, params: { plaintext?: string }) => {
-      if (name === "fn_decrypt_oauth") return decryptFails ? { data: null, error: { message: "cifra inválida" } } : { data: JSON.stringify({ [MEMBER]: { monthly_conversations: 3 }, [OTHER_MEMBER]: { monthly_conversations: 9 } }), error: null };
-      return rpcFails ? ({ data: null, error: { message: "sem chave" } }) : ({ data: `\\x${Buffer.from(params.plaintext ?? "").toString("hex")}`, error: null });
-    },
   };
 }
 
@@ -66,7 +69,6 @@ function request(body: unknown) {
 beforeEach(() => {
   vi.clearAllMocks();
   updates.length = 0;
-  rpcFails = false;
   decryptFails = false;
   zeroUpdates = 0;
   casPredicates.length = 0;
@@ -81,6 +83,13 @@ beforeEach(() => {
   } as never);
   vi.mocked(createClient).mockResolvedValue(db() as never);
   vi.mocked(createAdminClient).mockReturnValue(db() as never);
+  vi.mocked(encryptOperationalGoalMembers).mockImplementation((json) => `cipher:${json.length}`);
+  vi.mocked(decryptOperationalGoalMembers).mockImplementation(() => decryptFails
+    ? null
+    : JSON.stringify({
+        [MEMBER]: { monthly_conversations: 3 },
+        [OTHER_MEMBER]: { monthly_conversations: 9 },
+      }));
 });
 
 describe("/api/v1/settings/goals", () => {
@@ -164,7 +173,7 @@ describe("/api/v1/settings/goals", () => {
   });
 
   it("falha fechada quando a cifra não está disponível", async () => {
-    rpcFails = true;
+    vi.mocked(encryptOperationalGoalMembers).mockReturnValue(null);
     expect((await PATCH(request({ members: { [MEMBER]: { monthly_conversations: 3 } } }))).status).toBe(422);
     expect(updates).toEqual([]);
     expect(audit).not.toHaveBeenCalled();

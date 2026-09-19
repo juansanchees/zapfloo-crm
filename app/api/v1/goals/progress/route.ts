@@ -12,10 +12,9 @@ import {
   type ConversationEvent,
   type RevenueEvent,
 } from "@/lib/metas/config";
+import { decryptOperationalGoalMembers } from "@/lib/metas/members-cipher";
 import { createClient } from "@/lib/supabase/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
-import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 1_000;
@@ -140,7 +139,7 @@ export async function GET(): Promise<Response> {
 
 async function readMembers(ciphertext: string | undefined) {
   if (!ciphertext) return {};
-  const plaintext = await decryptWebhookSecret(createAdminClient(), ciphertext);
+  const plaintext = decryptOperationalGoalMembers(ciphertext);
   if (!plaintext) return null;
   return parseOperationalGoalMembers(plaintext);
 }

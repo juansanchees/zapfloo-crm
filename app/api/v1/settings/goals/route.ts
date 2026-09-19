@@ -12,9 +12,12 @@ import {
   parseOperationalGoalMembers,
   storedOperationalGoalsFromSettings,
 } from "@/lib/metas/config";
+import {
+  decryptOperationalGoalMembers,
+  encryptOperationalGoalMembers,
+} from "@/lib/metas/members-cipher";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { decryptWebhookSecret, encryptWebhookSecret } from "@/lib/webhooks/secrets";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +82,7 @@ export async function PATCH(req: NextRequest): Promise<Response> {
 
   const admin = createAdminClient();
   const membersEnc = Object.keys(parsed.data.members).length > 0
-    ? await encryptWebhookSecret(admin, JSON.stringify(parsed.data.members))
+    ? encryptOperationalGoalMembers(JSON.stringify(parsed.data.members))
     : undefined;
   if (Object.keys(parsed.data.members).length > 0 && !membersEnc) {
     return fail("encryption_unavailable", "Não foi possível guardar as metas individuais com segurança.", 422, { requestId });
@@ -134,7 +137,7 @@ export async function PATCH(req: NextRequest): Promise<Response> {
 
 async function readMembers(ciphertext: string | undefined) {
   if (!ciphertext) return {};
-  const plaintext = await decryptWebhookSecret(createAdminClient(), ciphertext);
+  const plaintext = decryptOperationalGoalMembers(ciphertext);
   if (!plaintext) return null;
   return parseOperationalGoalMembers(plaintext);
 }

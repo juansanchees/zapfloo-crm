@@ -1,17 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildOperationalProgress, operationalGoalsSchema } from "@/lib/metas/config";
+import { decryptOperationalGoalMembers } from "@/lib/metas/members-cipher";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
-import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 import { GET, utcMonthWindow } from "./route";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 vi.mock("@/lib/users/nome-do-atendente", () => ({ nomesDosAtendentes: vi.fn(async () => new Map()) }));
-vi.mock("@/lib/webhooks/secrets", () => ({ decryptWebhookSecret: vi.fn() }));
+vi.mock("@/lib/metas/members-cipher", () => ({ decryptOperationalGoalMembers: vi.fn() }));
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
@@ -20,7 +19,7 @@ beforeEach(() => {
   const now = new Date(); const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)); const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   const before = new Date(from.getTime() - 1).toISOString(); const inside = new Date(from.getTime() + 86_400_000).toISOString(); const after = new Date(to.getTime() + 1).toISOString();
   vi.mocked(requireRole).mockResolvedValue({ ok: true, user: { id: A, is_platform_admin: false }, org: { orgId: "org-a", role: "agent" } } as never);
-  vi.mocked(decryptWebhookSecret).mockResolvedValue(null);
+  vi.mocked(decryptOperationalGoalMembers).mockReturnValue(null);
   const calls: Array<{
     table: string;
     filters: Array<[string, unknown]>;
@@ -122,7 +121,7 @@ describe("progresso mensal das metas", () => {
   it("self usa target individual cifrado, nunca o target da equipe", async () => {
     // O fixture anterior não precisa de cifra; aqui forçamos a divergência que
     // uma regressão para goals.team deixaria visível.
-    vi.mocked(decryptWebhookSecret).mockResolvedValue(JSON.stringify({
+    vi.mocked(decryptOperationalGoalMembers).mockReturnValue(JSON.stringify({
       [A]: { monthly_revenue_cents: 100_000, monthly_conversations: 4 },
       [B]: { monthly_revenue_cents: 900_000, monthly_conversations: 99 },
     }));

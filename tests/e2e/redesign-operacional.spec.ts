@@ -642,11 +642,10 @@ test("gestor define metas e atendente vê o próprio recorte sem gamificação",
     const salvou = page.waitForResponse(
       (response) =>
         response.request().method() === "PATCH" &&
-        response.url().includes("/api/v1/settings/goals") &&
-        response.ok(),
+        response.url().includes("/api/v1/settings/goals"),
     );
     await page.getByRole("button", { name: "Salvar metas" }).click();
-    await salvou;
+    expect((await salvou).status()).toBe(200);
 
     await loginComo(page, "agent");
     await page.goto("/app/metas");
