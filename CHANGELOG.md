@@ -8,6 +8,12 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.4.0] — 2026-09-19
+
+### Adicionado
+
+- **As telas Nocturne passam a orientar cada papel da operação** O painel agora destaca fatos e próximos passos conforme o papel, o Inbox oferece sugestões de resposta sempre revisáveis, os funis ganham abas e totais reais, e a equipe pode acompanhar metas operacionais sem gamificação. A atualização não exige configuração manual na VPS.
+
 ## [2.3.0] — 2026-09-17
 
 ### Alterado
@@ -3438,7 +3444,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.3.0...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.0.0...v2.1.0
