@@ -142,7 +142,11 @@ export function PipelinePageClient({
           {t("Não consegui carregar este funil:")} {formatError(error, t)}
         </div>
       ) : isLoading || !data ? (
-        <div className="flex flex-1 animate-pulse items-center justify-center text-muted-foreground">
+        <div
+          role="status"
+          aria-label={t("Carregando…")}
+          className="flex flex-1 items-center justify-center text-muted-foreground"
+        >
           {t("Carregando…")}
         </div>
       ) : (

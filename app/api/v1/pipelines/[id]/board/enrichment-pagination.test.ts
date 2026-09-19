@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   ranges: new Map<string, Array<[number, number]>>(),
   candidateRanges: [] as Array<[number, number]>,
   inCalls: new Map<string, string[][]>(),
+  selections: new Map<string, string[]>(),
 }));
 
 const leads = Array.from({ length: 1_001 }, (_, index) => ({
@@ -47,7 +48,11 @@ vi.mock("@/lib/supabase/server", () => ({
       let inValues: string[] = [];
       const query: Record<string, unknown> = {};
       for (const method of ["eq", "neq", "not", "order", "maybeSingle"]) query[method] = () => query;
-      query.select = (value: string) => { selection = value; return query; };
+      query.select = (value: string) => {
+        selection = value;
+        state.selections.set(table, [...(state.selections.get(table) ?? []), value]);
+        return query;
+      };
       query.in = (_column: string, values: string[]) => {
         inValues = values;
         state.inCalls.set(table, [...(state.inCalls.get(table) ?? []), values]);
@@ -115,7 +120,9 @@ vi.mock("@/lib/supabase/server", () => ({
           return Promise.resolve({ data: rows, error: null }).then(resolve);
         }
         if (table === "contacts") {
-          const rows = inValues.includes("contact-1001") ? [{ id: "contact-1001", full_name: "Contato 1001" }] : [];
+          const rows = inValues.includes("contact-1001")
+            ? [{ id: "contact-1001", display_name: "Contato 1001", name: "Nome legado" }]
+            : [];
           return Promise.resolve({ data: rows, error: null }).then(resolve);
         }
         if (table === "conversations") {
@@ -149,6 +156,7 @@ describe("enriquecimento do board acima de max_rows", () => {
     state.ranges = new Map();
     state.candidateRanges = [];
     state.inCalls = new Map();
+    state.selections = new Map();
   });
 
   it("mantém os dados de dono, score, contato, conversa e ação do card 1001", async () => {
@@ -184,5 +192,7 @@ describe("enriquecimento do board acima de max_rows", () => {
     expect(state.ranges.get("conversations")).toContainEqual([1000, 1999]);
     expect(state.candidateRanges).toContainEqual([1000, 1999]);
     expect(state.ranges.get("agent_inbox_items")).toContainEqual([1000, 1999]);
+    expect(state.selections.get("contacts")?.length).toBeGreaterThan(0);
+    expect(state.selections.get("contacts")?.every((selection) => selection === "id, display_name, name")).toBe(true);
   });
 });

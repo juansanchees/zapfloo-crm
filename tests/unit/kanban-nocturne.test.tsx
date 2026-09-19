@@ -50,7 +50,9 @@ describe("quadro Nocturne", () => {
     state.boardLoading = true;
     render(<PipelinePageClient pipelineId="p2" initialName="Secundário" canMutate canAssign />);
 
-    expect(screen.getByText("Carregando…")).toBeVisible();
+    const carregando = screen.getByRole("status", { name: "Carregando…" });
+    expect(carregando).toBeVisible();
+    expect(carregando).not.toHaveClass("animate-pulse");
     expect(screen.queryByText("Pipeline aberto")).not.toBeInTheDocument();
     expect(screen.queryByText("Ganho no mês")).not.toBeInTheDocument();
     expect(screen.queryByText("Sem valores")).not.toBeInTheDocument();
@@ -68,6 +70,8 @@ describe("quadro Nocturne", () => {
   it("mantém abas e gestão na mesma lista reativa", () => {
     render(<KanbanWorkspace funis={funis} pipelineInicial="p2" podeGerenciar podeImportar podeMover podeAtribuir />);
     expect(screen.getByRole("tab", { name: "Secundário" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("gerenciar-funis")).toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: "Arquivar/renomear" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Arquivar/renomear" }));
     expect(screen.getByRole("tab", { name: "Renomeado" })).toHaveAttribute("aria-selected", "true");
   });

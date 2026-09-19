@@ -80,7 +80,7 @@ export function KanbanWorkspace({
         />
       ) : null}
 
-      <details open={funisVivos.length === 0} className="rounded-lg border border-border bg-surface p-4" data-testid="gerenciar-funis">
+      <details open className="rounded-lg border border-border bg-surface p-4" data-testid="gerenciar-funis">
         <summary className="cursor-pointer font-medium">{t("Gerenciar funis")}</summary>
         <div className="mt-4">
           <FunisClient funis={funisVivos} podeGerenciar={podeGerenciar} podeImportar={podeImportar} onFunisChange={setFunisVivos} />

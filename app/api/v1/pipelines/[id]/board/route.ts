@@ -359,12 +359,19 @@ async function withContacts(
   for (const ids of chunks(contactIds)) {
     const { data, error } = await supabase
       .from("contacts")
-      .select("id, full_name")
+      .select("id, display_name, name")
       .eq("organization_id", organizationId)
       .in("id", ids);
     if (error) return { leads, error: error.message };
-    for (const contact of (data ?? []) as Array<{ id: string; full_name: string | null }>) {
-      byId.set(contact.id, contact);
+    for (const contact of (data ?? []) as Array<{
+      id: string;
+      display_name: string | null;
+      name: string | null;
+    }>) {
+      byId.set(contact.id, {
+        id: contact.id,
+        full_name: contact.display_name ?? contact.name ?? null,
+      });
     }
   }
   return {
