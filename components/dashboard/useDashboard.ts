@@ -1,24 +1,30 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { apiClient } from "@/lib/api/client";
 import { roleAtLeast } from "@/lib/auth/types";
+import type { DashboardSummary } from "@/lib/dashboard/role-summary";
 import { useAuth } from "@/hooks/auth/AuthProvider";
-import type { ConversationCounts } from "@/hooks/inbox/useConversationCounts";
+import type { AgentRow } from "@/hooks/ai/useAgent";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import type { AttendantMetrics } from "@/hooks/metrics/useAttendantMetrics";
-import type { AgentRow } from "@/hooks/ai/useAgent";
 import type { Tarefa } from "@/lib/tarefas/tipos";
 
-/** Só consome as APIs existentes: nenhuma nova regra de escopo ou consulta privilegiada. */
+/** A API decide a superfície; o cliente apenas a identifica e a exibe. */
 export function useDashboard() {
   const { user, activeOrg } = useAuth();
   const qc = useQueryClient();
   const enabled = !!activeOrg;
-  const canAct = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "agent"));
-  const canManage = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "manager"));
-  const canConfigureAiAccess = enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "admin"));
-  // O cache também pertence à identidade e à organização, inclusive após troca de papel.
+  // O resumo e a configuração de acesso à IA permitem o papel transversal da
+  // plataforma. Métricas, agentes e ações operacionais mantêm os guards por
+  // membership do tenant, portanto não podemos habilitá-los por esse papel.
+  const canReadSummary =
+    enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "agent"));
+  const canAct = enabled && roleAtLeast(activeOrg.role, "agent");
+  const canManage = enabled && roleAtLeast(activeOrg.role, "manager");
+  const canConfigureAiAccess =
+    enabled && (user.is_platform_admin || roleAtLeast(activeOrg.role, "admin"));
   const scope = [
     "dashboard",
     activeOrg?.orgId,
@@ -32,13 +38,15 @@ export function useDashboard() {
     refetchOnWindowFocus: true,
     enabled,
   };
-  const counts = useQuery({
+
+  const summary = useQuery({
     ...common,
-    queryKey: [...scope, "counts"],
+    enabled: canReadSummary,
+    queryKey: [...scope, "summary"],
     queryFn: () =>
       apiClient
-        .get<{ data: ConversationCounts }>("/api/v1/conversations/counts")
-        .then((r) => r.data),
+        .get<{ data: DashboardSummary }>("/api/v1/dashboard/summary")
+        .then((response) => response.data),
   });
   const conversations = useQuery({
     ...common,
@@ -48,20 +56,28 @@ export function useDashboard() {
         .get<{ data: ConversationWithContact[] }>(
           "/api/v1/conversations?exclude_finished=true&limit=3",
         )
-        .then((r) => r.data),
+        .then((response) => response.data),
   });
+  // Estes widgets já existiam no painel e continuam consumindo as superfícies
+  // canônicas, com o mesmo escopo do papel ativo. Não são aproximações do
+  // resumo por papel.
   const metrics = useQuery({
     ...common,
     enabled: canAct,
     queryKey: [...scope, "metrics"],
     queryFn: () =>
-      apiClient.get<{ data: AttendantMetrics }>("/api/v1/metrics/attendants").then((r) => r.data),
+      apiClient
+        .get<{ data: AttendantMetrics }>("/api/v1/metrics/attendants")
+        .then((response) => response.data),
   });
   const agents = useQuery({
     ...common,
     enabled: canManage,
     queryKey: [...scope, "agents"],
-    queryFn: () => apiClient.get<{ data: AgentRow[] }>("/api/v1/ai/agents").then((r) => r.data),
+    queryFn: () =>
+      apiClient
+        .get<{ data: AgentRow[] }>("/api/v1/ai/agents")
+        .then((response) => response.data),
   });
   const tasks = useQuery({
     ...common,
@@ -69,7 +85,7 @@ export function useDashboard() {
     queryFn: () =>
       apiClient
         .get<{ data: { tasks: Tarefa[] } }>("/api/v1/tasks?aberto=true")
-        .then((r) => r.data.tasks),
+        .then((response) => response.data.tasks),
   });
   const complete = useMutation({
     mutationFn: (id: string) =>
@@ -78,8 +94,23 @@ export function useDashboard() {
       await Promise.all([
         qc.invalidateQueries({ queryKey: [...scope, "tasks"] }),
         qc.invalidateQueries({ queryKey: ["crm_tasks"] }),
+        qc.invalidateQueries({ queryKey: [...scope, "summary"] }),
       ]);
     },
   });
-  return { counts, conversations, metrics, agents, tasks, complete, canAct, canManage, canConfigureAiAccess, activeOrg };
+
+  return {
+    activeOrg,
+    isPlatformAdmin: user.is_platform_admin,
+    canAct,
+    canReadSummary,
+    canManage,
+    canConfigureAiAccess,
+    summary,
+    conversations,
+    metrics,
+    agents,
+    tasks,
+    complete,
+  };
 }

@@ -97,6 +97,7 @@ export type CompactAreaId =
   | "contatos"
   | "tarefas"
   | "ia"
+  | "metas"
   | "relatorios"
   | "conexoes"
   | "usuarios"
@@ -171,15 +172,16 @@ interface CompactAreaSpec extends Omit<CompactArea, "tabs"> {
 }
 
 /**
- * Nove portas visíveis para o produto inteiro — contrato aprovado pelo proprietário.
+ * Dez portas visíveis para o produto inteiro — contrato aprovado pelo proprietário.
  *
  * Isto NÃO é outro registro de telas: todo `href` abaixo resolve para um
  * `NAV_DESTINATIONS` ou para um hub já declarado em `NAV_GROUPS`. É só a
  * projeção da frequência de uso. O inventário completo continua nos hubs, nas
  * abas contextuais e no ⌘K; por isso reduzir o sidebar não torna rota órfã.
  *
- * Chat interno, Metas e Suporte interno entram somente quando suas telas
- * existirem. Link que aponta para uma promessa não é navegação: é beco sem saída.
+ * Chat interno e Suporte interno entram somente quando suas telas existirem.
+ * Metas já tem rota real nesta projeção. Link que aponta para uma promessa não
+ * é navegação: é beco sem saída.
  */
 const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
   {
@@ -238,6 +240,16 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
       { href: "/app/tasks", label: "Tarefas" },
       { href: "/app/agenda", label: "Agenda" },
     ],
+  },
+  {
+    id: "metas",
+    label: "Metas",
+    href: "/app/metas",
+    icon: Flag,
+    position: "main",
+    section: "equipe",
+    minRole: "agent",
+    tabs: [],
   },
   {
     id: "relatorios",
@@ -739,6 +751,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   // Sair do menu não é sair do produto — o hub `/app/analise` é INVENTÁRIO e
   // lista as cinco (`hubSections`), então as duas continuam a um clique, com a
   // frase que explica para que servem. O ⌘K também as acha por nome.
+  {
+    href: "/app/metas",
+    label: "Metas",
+    description: "O que a equipe realizou neste mês em relação aos objetivos definidos.",
+    icon: Flag,
+    group: "analise",
+    section: "Os números do período",
+    minRole: "agent",
+  },
   {
     href: "/app/metrics",
     label: "Relatórios",

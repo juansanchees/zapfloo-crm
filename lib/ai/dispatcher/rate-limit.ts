@@ -110,6 +110,8 @@ export interface RateLimitResult {
   count: number;
   limit: number;
   window_sec: number;
+  /** Epoch em segundos do fim da mesma janela usada para incrementar. */
+  reset_at: number;
 }
 
 /**
@@ -149,6 +151,7 @@ export async function checkRateLimit(
     count,
     limit,
     window_sec: windowSec,
+    reset_at: (windowStart + 1) * windowSec,
   };
 }
 

@@ -1,0 +1,41 @@
+{
+  "role": "manager",
+  "screenshot_sha256": "cde512bcc8a9fde886007e6cfde13ff2802701a54b92eb97f87085e73d684453",
+  "captured_at": "2026-09-18T20:45:09.616Z",
+  "values_from_database": [
+    {
+      "id": "pipeline",
+      "value": "R$ 296.350"
+    },
+    {
+      "id": "conversations_per_attendant",
+      "value": "1.0"
+    }
+  ],
+  "href": "http://localhost:3161/app",
+  "theme": "light",
+  "bodyBackground": "rgb(247, 247, 251)",
+  "dashboardBackground": "rgb(244, 245, 250)",
+  "heroValueWhiteSpace": "nowrap",
+  "heroValueClientWidth": 217,
+  "heroValueScrollWidth": 217,
+  "heroValueRect": {
+    "left": 297,
+    "right": 514.21875,
+    "top": 530.453125,
+    "bottom": 575.8125
+  },
+  "heroCardRect": {
+    "left": 272,
+    "right": 632.671875,
+    "top": 378.109375,
+    "bottom": 600.8125
+  },
+  "asideRect": {
+    "left": 0,
+    "right": 240,
+    "top": 0,
+    "bottom": 900
+  },
+  "hasLoading": false
+}

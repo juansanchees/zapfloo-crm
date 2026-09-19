@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { parseReaisToCents, formatCentsBRL, formatCents } from "./money";
+import { parseReaisToCents, formatCentsBRL, formatCents, formatCentsCompact } from "./money";
 
 describe("parseReaisToCents", () => {
   it("lê ponto como decimal quando o grupo final não é de milhar", () => {
@@ -107,5 +107,17 @@ describe("formatCents", () => {
 
     // O fallback precisa continuar informativo — o número certo, não "—" nem "".
     expect(formatCents(24990, "")).toContain("249");
+  });
+});
+
+describe("formatCentsCompact", () => {
+  it("resume totais sem impor a convenção brasileira a outras moedas", () => {
+    expect(semNbsp(formatCentsCompact(24_990, "BRL"))).toBe("R$ 250");
+    expect(semNbsp(formatCentsCompact(24_990, "MXN"))).toBe("$250");
+    expect(semNbsp(formatCentsCompact(24_990, "USD"))).toBe("$250");
+  });
+
+  it("preserva a unidade menor nativa de moedas sem centavos", () => {
+    expect(semNbsp(formatCentsCompact(25_000, "JPY"))).toBe("￥25,000");
   });
 });

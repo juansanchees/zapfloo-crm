@@ -21,7 +21,7 @@ vi.mock("@/components/kanban/BulkActionBar", () => ({ BulkActionBar: () => null 
 vi.mock("@/components/kanban/NewLeadDialog", () => ({ NewLeadDialog: () => null }));
 
 function montar(locale: "pt-BR" | "es" = "pt-BR") {
-  return render(<IdiomaProvider locale={locale}><PipelinePageClient pipelineId="funil" initialName="Funil de teste" /></IdiomaProvider>);
+  return render(<IdiomaProvider locale={locale}><PipelinePageClient pipelineId="funil" initialName="Funil de teste" canMutate canAssign /></IdiomaProvider>);
 }
 
 describe("aviso de perda detectada no funil", () => {

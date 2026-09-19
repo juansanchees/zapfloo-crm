@@ -39,7 +39,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "ai_agents" });
+  const authz = await requireRole("agent", {
+    requestId,
+    resource: "ai_agents",
+    allowPlatformAdmin: true,
+  });
   if (!authz.ok) return authz.response;
 
   // A resposta é uma projeção sem prompt, telefone ou segredo. O admin client

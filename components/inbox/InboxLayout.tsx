@@ -433,6 +433,7 @@ export function InboxLayout({ initialSelectedId = null }: InboxLayoutProps = {})
               />
             )}
             <Composer
+              key={selectedConversation.id}
               ref={composerRef}
               conversationId={selectedConversation.id}
               blockedReason={blockedReason}

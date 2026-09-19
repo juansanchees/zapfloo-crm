@@ -2,6 +2,7 @@
 import { useT } from "@/hooks/i18n/useT";
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -75,6 +76,9 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
 ) {
   const t = useT();
   const [text, setText] = useState("");
+  const [draftSuggestions, setDraftSuggestions] = useState<string[]>([]);
+  const latestConversationIdRef = useRef(conversationId);
+  latestConversationIdRef.current = conversationId;
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [menuDismissed, setMenuDismissed] = useState(false);
@@ -86,6 +90,13 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
   const templates = useMessageTemplates();
   const slash = resolveSlash(text);
   const menuOpen = mode === "reply" && slash.open && !menuDismissed;
+
+  // O Composer costuma remontar por conversa no InboxLayout, mas esta guarda
+  // também protege quem o reutilizar na mesma posição: sugestão de A nunca
+  // pode aparecer no campo de B, nem se a resposta da rede chegar tarde.
+  useEffect(() => {
+    setDraftSuggestions([]);
+  }, [conversationId]);
 
   useImperativeHandle(ref, () => ({
     focus: () => taRef.current?.focus(),
@@ -162,10 +173,19 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     // concatena (inserir no cursor grudaria dois textos completos, gerando uma
     // mensagem sem sentido). O vendedor edita/envia a partir daqui.
     setText(draft);
+    setDraftSuggestions([]);
     requestAnimationFrame(() => {
       taRef.current?.focus();
       autoresize();
     });
+  }
+
+  function receiveDraftSuggestions(suggestions: string[]) {
+    // A callback criada em A pode terminar depois que a mesma instância já
+    // recebeu B. Comparar a origem capturada com o id mais recente descarta o
+    // resultado velho antes de ele tocar estado/renderização.
+    if (conversationId !== latestConversationIdRef.current) return;
+    setDraftSuggestions(suggestions);
   }
 
   /**
@@ -278,6 +298,20 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             </button>
           </div>
         )}
+        {mode === "reply" && draftSuggestions.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {draftSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => applyDraft(suggestion)}
+                className="max-w-full rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-left text-xs text-accent-foreground transition-colors hover:bg-accent/20"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-end gap-2">
           {mode === "reply" && (
             <AttachMenu
@@ -287,7 +321,11 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             />
           )}
           {mode === "reply" && (
-            <DraftReplyButton conversationId={conversationId} disabled={isDisabled} onDraft={applyDraft} />
+            <DraftReplyButton
+              conversationId={conversationId}
+              disabled={isDisabled}
+              onSuggestions={receiveDraftSuggestions}
+            />
           )}
           <EmojiButton
             disabled={isDisabled}

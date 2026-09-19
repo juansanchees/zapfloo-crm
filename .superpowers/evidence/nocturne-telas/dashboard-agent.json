@@ -1,0 +1,45 @@
+{
+  "role": "agent",
+  "screenshot_sha256": "3e035753cdc6a7743c9e1cb23a1e30b1f787d4b645541ab8de6fb1ba0c028d29",
+  "captured_at": "2026-09-18T20:45:13.944Z",
+  "values_from_database": [
+    {
+      "id": "queue",
+      "value": "2"
+    },
+    {
+      "id": "assigned_conversations",
+      "value": "0"
+    },
+    {
+      "id": "overdue_tasks",
+      "value": "0"
+    }
+  ],
+  "href": "http://localhost:3161/app",
+  "theme": "light",
+  "bodyBackground": "rgb(247, 247, 251)",
+  "dashboardBackground": "rgb(244, 245, 250)",
+  "heroValueWhiteSpace": "nowrap",
+  "heroValueClientWidth": 25,
+  "heroValueScrollWidth": 25,
+  "heroValueRect": {
+    "left": 297,
+    "right": 321.71875,
+    "top": 530.453125,
+    "bottom": 575.8125
+  },
+  "heroCardRect": {
+    "left": 272,
+    "right": 632.671875,
+    "top": 378.109375,
+    "bottom": 600.8125
+  },
+  "asideRect": {
+    "left": 0,
+    "right": 240,
+    "top": 0,
+    "bottom": 900
+  },
+  "hasLoading": false
+}

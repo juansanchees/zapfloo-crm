@@ -20,11 +20,49 @@ export interface DraftReplyInput {
   leadId: string; // = contact_id
   conversationId: string;
   channelSessionId: string;
+  /** Cancelamento do cliente combinado com o deadline total da rota. */
+  signal?: AbortSignal;
 }
 
 export type DraftReplyResult =
-  | { ok: true; draft: string }
-  | { ok: false; reason: 'no_agent' | 'blocked' | 'empty' | 'error' };
+  | { ok: true; suggestions: string[] }
+  | { ok: false; reason: 'blocked' | 'empty' | 'error' };
+
+/**
+ * A borda do modelo é texto livre, ainda que o prompt peça JSON. Validamos o
+ * contrato inteiro aqui antes de entregá-lo à tela: um valor estranho não pode
+ * virar uma sugestão clicável no composer.
+ */
+function parseSuggestions(text: string | null | undefined): string[] | null {
+  if (!text?.trim()) return null;
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('suggestions' in payload) ||
+    !Array.isArray(payload.suggestions) ||
+    !payload.suggestions.every((suggestion) => typeof suggestion === 'string')
+  ) {
+    return null;
+  }
+
+  const seen = new Set<string>();
+  const suggestions: string[] = [];
+  for (const raw of payload.suggestions) {
+    const suggestion = raw.replace(/\s+/g, ' ').trim();
+    if (!suggestion || seen.has(suggestion)) continue;
+    seen.add(suggestion);
+    suggestions.push(suggestion);
+    if (suggestions.length === 3) break;
+  }
+  return suggestions.length > 0 ? suggestions : null;
+}
 
 export async function generateDraftReply(
   db: pg.Pool,
@@ -33,8 +71,13 @@ export async function generateDraftReply(
   input: DraftReplyInput,
 ): Promise<DraftReplyResult> {
   const agent = await loadPublishedAgentConfig(db, input.tenantId, input.channelSessionId);
-  if (agent === null) return { ok: false, reason: 'no_agent' };
+  input.signal?.throwIfAborted();
+  // Não há configuração publicada para este canal: não é incidente nem impede
+  // o atendimento humano. A rota devolve uma lista vazia, sem chamar o modelo.
+  if (agent === null) return { ok: true, suggestions: [] };
 
+  const fuso = await fusoDaOrganizacao(db, input.tenantId);
+  input.signal?.throwIfAborted();
   const ctx = await getLeadContext(
     db,
     crmCfg,
@@ -42,13 +85,14 @@ export async function generateDraftReply(
       tenantId: input.tenantId,
       leadId: input.leadId,
       conversationId: input.conversationId,
-      fuso: await fusoDaOrganizacao(db, input.tenantId),
+      fuso,
     },
     // knobs reais da versão publicada — mesmos usados pelo turno completo
     // (inbound-turn.ts), sem número mágico: historyMessageWindow/historyTokenWindow
     // já são exatamente os campos que LeadContextKnobs espera.
     { historyLimit: agent.historyMessageWindow, maxTokens: agent.historyTokenWindow },
   );
+  input.signal?.throwIfAborted();
   // Erro de leitura do CRM (lead_not_found/crm_error/crm_unavailable) é falha
   // técnica → "error" (vira 500 na rota), NÃO "blocked" (que diria ao vendedor
   // "contato bloqueado/anonimizado" — mensagem enganosa para um erro de infra).
@@ -82,9 +126,9 @@ export async function generateDraftReply(
 
   const system =
     `${agent.systemPrompt}\n\n` +
-    `[MODO RASCUNHO] Gere UMA resposta pronta para o vendedor humano enviar ao cliente. ` +
+    `[MODO RASCUNHO] Gere de UMA a TRÊS respostas alternativas prontas para o vendedor humano enviar ao cliente. ` +
     `Escreva como o vendedor (NÃO se identifique como assistente/IA, NÃO use disclosure de bot). ` +
-    `Responda só com o texto da mensagem, sem aspas nem comentários.` +
+    `Responda SOMENTE JSON estrito no formato {"suggestions":["resposta 1"]}, sem markdown, aspas externas ou comentários.` +
     blocoDecisao;
 
   const messages: ModelMessage[] = ctx.context.messages.map((m) => ({
@@ -105,11 +149,18 @@ export async function generateDraftReply(
     messages,
     model: agent.model,
     llmOverride: { provider: agent.provider, credentialId: agent.credentialId },
+    // Uma sugestão é solicitada sob demanda e revisável: não repita uma
+    // geração física que pode ter sido processada pelo provider sem resposta.
+    maxRetries: 0,
+    // O cliente aguarda 45s; o provider recebe 30s e deixa margem para a rota
+    // serializar a resposta antes do teto do servidor.
+    timeoutMs: 30_000,
+    abortSignal: input.signal,
     // SEM tools, SEM maxSteps → o SDK para no 1º step (default stepCountIs(1)):
     // result.text vem pronto, sem risco do modelo tentar chamar send_message.
   });
 
-  const draft = (result.text ?? '').trim();
-  if (!draft) return { ok: false, reason: 'empty' };
-  return { ok: true, draft };
+  const suggestions = parseSuggestions(result.text);
+  if (!suggestions) return { ok: false, reason: 'empty' };
+  return { ok: true, suggestions };
 }

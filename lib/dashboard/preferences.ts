@@ -38,7 +38,9 @@ export const WIDGET_CATALOG = {
   conversation_summary: {
     label: "Resumo de conversas",
     description: "Volume registrado, fila e conversas atribuídas.",
-    minRole: "viewer",
+    // Viewer não consulta o resumo por papel; deixá-lo no editor criaria uma
+    // preferência sem efeito visual.
+    minRole: "agent",
     defaultSize: "full",
     allowedSizes: ["wide", "full"],
     periodAware: false,

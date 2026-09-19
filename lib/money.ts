@@ -119,14 +119,13 @@ export function formatCentsUSD(cents: number): string {
  *
  * ─── ⚠️ ESTA É A FONTE. As cópias que existem hoje têm os dois defeitos ─────
  *
- * Não é função nova por falta de uma: o repo já tinha CINCO formatadores locais
+ * Não é função nova por falta de uma: o repo já tinha QUATRO formatadores locais
  * de dinheiro, copiados entre si, e todos carregam exatamente os dois defeitos
  * acima — `Intl.NumberFormat("pt-BR", …)` em duro **recebendo `currency` por
  * parâmetro**, mais o `/100` fixo:
  *
  *   components/kanban/KanbanCard.tsx:34      formatBRL(cents, currency)
  *   components/kanban/LeadDossier.tsx:28     formatBRL(cents, currency)
- *   components/kanban/StageColumn.tsx:31     formatBRL(cents)          (só BRL)
  *   components/inbox/CRMSidePanel.tsx:193    formatMoney(cents, currency)
  *   lib/lgpd/pdf-renderer.tsx:107            fmtMoney(cents, currency) (pior:
  *                                            `${currency} ${v.toFixed(2)}`, sem
@@ -178,7 +177,7 @@ function formatadorDa(moeda: string): Intl.NumberFormat {
  * `null` — mesmo com o CHECK do banco (`^[A-Z]{3}$`) garantindo o formato em
  * toda linha que passa por ele. A função não pode presumir que todo chamador
  * futuro respeita essa garantia: um valor ruim não pode derrubar a lista
- * inteira. As cinco cópias que esta função substitui tinham `try/catch`
+ * inteira. As cópias locais que esta função substitui tinham `try/catch`
  * (ex.: `CRMSidePanel.tsx:201`); esta usa a mesma rede.
  */
 export function formatCents(cents: number, moeda: string): string {
@@ -194,6 +193,33 @@ export function formatCents(cents: number, moeda: string): string {
     // tela. Sem `style: "currency"` porque é justamente o `currency` inválido
     // que lançou — um código de moeda cru é mais honesto que esconder o erro.
     return `${moeda || "?"} ${valor.toFixed(2)}`;
+  }
+}
+
+const formatadoresCompactos = new Map<string, Intl.NumberFormat>();
+
+/**
+ * Mesma conversão canônica de `formatCents`, mas sem casas decimais para
+ * totais compactos de quadro. A unidade menor continua vindo da moeda: JPY
+ * não pode passar pelo `/100` que os formatadores locais antigos usavam.
+ */
+export function formatCentsCompact(cents: number, moeda: string): string {
+  const valor = (cents ?? 0) / 100;
+  try {
+    const base = formatadorDa(moeda);
+    const casas = base.resolvedOptions().maximumFractionDigits ?? 2;
+    let compacto = formatadoresCompactos.get(moeda);
+    if (!compacto) {
+      compacto = new Intl.NumberFormat(base.resolvedOptions().locale, {
+        style: "currency",
+        currency: moeda,
+        maximumFractionDigits: 0,
+      });
+      formatadoresCompactos.set(moeda, compacto);
+    }
+    return compacto.format((cents ?? 0) / 10 ** casas);
+  } catch {
+    return `${moeda || "?"} ${valor.toFixed(0)}`;
   }
 }
 

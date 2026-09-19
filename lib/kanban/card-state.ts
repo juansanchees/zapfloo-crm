@@ -75,6 +75,7 @@ export function buildCardInput(
     | "currency"
     | "tags"
     | "last_activity_at"
+    | "stage_changed_at"
     | "created_at"
     | "owner_kind"
     | "owner_user_id"
@@ -95,11 +96,12 @@ export function buildCardInput(
     now?: Date;
   },
 ): CardInput {
-  const reference = lead.last_activity_at ?? lead.created_at;
+  // A idade aqui é de ETAPA, não de relacionamento: uma mensagem ou edição no
+  // lead não pode rejuvenescer artificialmente um negócio parado em proposta.
+  const reference = lead.stage_changed_at ?? lead.created_at;
   const now = opts.now ?? new Date();
-  // ponytail: "tempo no estágio" é medido pela última ATIVIDADE, não pela
-  // entrada no estágio — crm_leads não tem stage_entered_at. Vira exato quando
-  // a Wave 3 registrar a mudança de estágio como atividade.
+  // `stage_changed_at` é mantido pelo trigger do banco; o fallback é só para
+  // uma linha legada que ainda não recebeu o carimbo na leitura.
   const hoursInStage = reference
     ? Math.max(0, (now.getTime() - new Date(reference).getTime()) / 3_600_000)
     : null;

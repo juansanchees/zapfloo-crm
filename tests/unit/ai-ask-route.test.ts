@@ -53,6 +53,7 @@ beforeEach(() => {
     count: 1,
     limit: 20,
     window_sec: 60,
+    reset_at: 1_700_000_040,
   });
   vi.mocked(runCopilot).mockResolvedValue({
     answer: "Há 3 oportunidades abertas.",
@@ -104,6 +105,7 @@ describe("POST /api/v1/ai/ask", () => {
       count: 21,
       limit: 20,
       window_sec: 60,
+      reset_at: 1_700_000_040,
     });
     const { POST } = await import("@/app/api/v1/ai/ask/route");
     const response = await POST(request({ question: "Resumo da operação", history: [] }));

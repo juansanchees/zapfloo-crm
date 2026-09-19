@@ -48,7 +48,7 @@ test("Leads abre o quadro; Funis permite trocar e gerenciar sem esconder a opera
     await area.getByRole("link", { name: "Leads", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/app/pipelines/${padrao}$`));
     await expect(page.getByRole("heading", { name: "Oportunidades QA", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Novo Lead", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Novo negócio", exact: true })).toBeEnabled();
     await expect(area.getByRole("link", { name: "Leads", exact: true })).toHaveAttribute("aria-current", "page");
     mkdirSync(".superpowers/evidence/leads-navegacao", { recursive: true });
     await page.screenshot({ path: ".superpowers/evidence/leads-navegacao/quadro-desktop.png" });
@@ -57,7 +57,7 @@ test("Leads abre o quadro; Funis permite trocar e gerenciar sem esconder a opera
     await expect(page.getByRole("heading", { name: "Funis", exact: true })).toBeVisible();
     await expect(page.getByTestId("novo-funil")).toBeVisible();
     await page.getByTestId(`abrir-${outroFunil}`).click();
-    await expect(page).toHaveURL(new RegExp(`/app/pipelines/${outroFunil}$`));
+    await expect(page).toHaveURL(new RegExp(`/app/kanban\\?pipeline=${outroFunil}$`));
     await expect(page.getByText("Aguardando QA", { exact: true })).toBeVisible();
 
     for (const width of [768, 390]) {
@@ -70,7 +70,7 @@ test("Leads abre o quadro; Funis permite trocar e gerenciar sem esconder a opera
       await expect(page).toHaveURL(new RegExp(`/app/pipelines/${padrao}$`));
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expect(area.getByRole("link", { name: "Funis de vendas", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Novo Lead", exact: true })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Novo negócio", exact: true })).toBeEnabled();
       await page.screenshot({ path: `.superpowers/evidence/leads-navegacao/quadro-${width}.png` });
     }
 

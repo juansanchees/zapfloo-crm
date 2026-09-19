@@ -153,7 +153,7 @@ test.describe("gestão de funis", () => {
     // O manager é membro de DUAS organizações, e as duas têm um funil "Pedidos".
     // Sem o filtro por organização, apareceriam as duas linhas — indistinguíveis,
     // cada uma levando a um quadro diferente.
-    await expect(page.getByText("Pedidos", { exact: true })).toHaveCount(1);
+    await expect(linhaDoFunil(page, "Pedidos")).toHaveCount(1);
   });
 
   test("cria funil com colunas, edita, e as recusas aparecem explicadas", async ({ page }) => {
@@ -165,8 +165,9 @@ test.describe("gestão de funis", () => {
     await page.screenshot({ path: path.join(EVIDENCIA, "funis-01-criado.png"), fullPage: true });
 
     // ---- o funil nasce com as quatro colunas (senão o quadro é morto) ----
+    const id = await idDoFunil(page, NOME);
     await linhaDoFunil(page, NOME).getByRole("link").click();
-    await page.waitForURL(/\/app\/pipelines\//);
+    await page.waitForURL(new RegExp(`/app/kanban\\?pipeline=${id}$`));
     for (const coluna of ["Novo", "Em andamento", "Ganho", "Perdido"]) {
       await expect(page.getByText(coluna, { exact: true }).first()).toBeVisible();
     }
@@ -175,7 +176,6 @@ test.describe("gestão de funis", () => {
     await page.goto("/app/kanban");
 
     // ---- renomear ----
-    const id = await idDoFunil(page, NOME);
     await page.getByTestId(`renomear-${id}`).click();
     await page.getByTestId(`nome-${id}`).fill(RENOMEADO);
     await page.getByTestId(`salvar-nome-${id}`).click();
@@ -317,7 +317,7 @@ test("quem não pode gerenciar vê a lista sem os controles de escrita", async (
   await login(page, creds.users.agent!.email);
   await page.goto("/app/kanban");
   await expect(page.getByRole("heading", { name: "Funis" })).toBeVisible();
-  await expect(page.getByText("Pedidos", { exact: true })).toHaveCount(1);
+  await expect(linhaDoFunil(page, "Pedidos")).toHaveCount(1);
   await expect(page.getByTestId("novo-funil")).toHaveCount(0);
   await expect(page.locator('[data-testid^="arquivar-"]')).toHaveCount(0);
 });

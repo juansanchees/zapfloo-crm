@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 import type { Lead } from "@/lib/types/leads";
 import type { Stage } from "@/lib/kanban/types";
 import { buildCardInput } from "@/lib/kanban/card-state";
+import { totalsByCurrency } from "@/lib/kanban/summary";
 import { intervaloDaColuna } from "@/lib/kanban/selecao";
+import { formatCentsCompact } from "@/lib/money";
 import { KanbanCard, type GestoDeSelecao } from "./KanbanCard";
 
 interface StageColumnProps {
@@ -33,18 +35,10 @@ interface StageColumnProps {
   onSelectMany?: (leadIds: string[], marcar: boolean) => void;
   /** Abrir o dossiê — atravessa o board até o card, como `pulses`. */
   onOpen?: (leadId: string) => void;
-}
-
-function formatBRL(cents: number): string {
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  } catch {
-    return `R$ ${(cents / 100).toFixed(0)}`;
-  }
+  /** Próxima etapa operacional, calculada pelo board respeitando terminais. */
+  nextStageId?: string | null;
+  onAdvance?: (lead: Lead, stageId: string) => void;
+  canMutate?: boolean;
 }
 
 export function StageColumn({
@@ -59,9 +53,12 @@ export function StageColumn({
   pulses,
   onSelectMany,
   onOpen,
+  nextStageId,
+  onAdvance,
+  canMutate = false,
 }: StageColumnProps) {
   const t = useT();
-  const totalCents = leads.reduce((sum, l) => sum + (l.value_cents ?? 0), 0);
+  const totals = totalsByCurrency(leads);
 
   const idsVisiveis = leads.map((l) => l.id);
   const selecionadosAqui = idsVisiveis.filter((id) => selectedLeadIds?.has(id)).length;
@@ -107,7 +104,7 @@ export function StageColumn({
           ref={(el) => {
             if (el) el.indeterminate = selecionadosAqui > 0 && !todosSelecionados;
           }}
-          disabled={idsVisiveis.length === 0}
+          disabled={idsVisiveis.length === 0 || !canMutate}
           onChange={alternarEtapa}
           aria-label={
             todosSelecionados
@@ -136,9 +133,13 @@ export function StageColumn({
         </span>
       </div>
 
-      {totalCents > 0 && (
+      {Object.keys(totals).length > 0 && (
         <div className="border-b border-border px-3 py-1.5 text-[11px] tabular-nums text-text-muted">
-          {formatBRL(totalCents)}
+          {Object.entries(totals).map(([currency, cents]) => (
+            <span key={currency} className="mr-2 last:mr-0">
+              {formatCentsCompact(cents, currency)}
+            </span>
+          ))}
         </div>
       )}
 
@@ -170,6 +171,8 @@ export function StageColumn({
                 pulseCount={pulses?.get(lead.id) ?? 0}
                 onSelect={aoSelecionar}
                 onOpen={onOpen}
+                onAdvance={nextStageId && onAdvance ? () => onAdvance(lead, nextStageId) : undefined}
+                canMutate={canMutate}
               />
             ))}
             {provided.placeholder}

@@ -28,13 +28,33 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "@/lib/ui/icons";
 import type { LeadFilters } from "@/lib/kanban/filters";
 import { applyFilters, filtersFromParams, filtersToParams } from "@/lib/kanban/filters";
+import type { CurrencyTotals } from "@/lib/kanban/summary";
+import { formatCentsCompact } from "@/lib/money";
+
+function TotaisPorMoeda({ valores }: { valores: CurrencyTotals | undefined }) {
+  const t = useT();
+  if (!valores) return null;
+  const entries = Object.entries(valores);
+  if (entries.length === 0) return <span className="text-text-muted">{t("Sem valores")}</span>;
+  return (
+    <span className="flex flex-wrap gap-x-2 gap-y-1 tabular-nums">
+      {entries.map(([currency, cents]) => (
+        <span key={currency}>{formatCentsCompact(cents, currency)}</span>
+      ))}
+    </span>
+  );
+}
 
 export function PipelinePageClient({
   pipelineId,
   initialName,
+  canMutate,
+  canAssign,
 }: {
   pipelineId: string;
   initialName: string;
+  canMutate: boolean;
+  canAssign: boolean;
 }) {
   const t = useT();
   const { data, isLoading, error, pulses, realtimeStatus, seguranca } = useBoard(pipelineId);
@@ -44,10 +64,15 @@ export function PipelinePageClient({
   const filters = useMemo(() => filtersFromParams(searchParams), [searchParams]);
   const setFilters = useCallback(
     (next: LeadFilters) => {
-      const qs = filtersToParams(next);
+      // `pipeline` e `lead` escolhem contexto do workspace, não são filtros.
+      // Apagá-los ao filtrar trocava silenciosamente a aba ativa pelo default.
+      const params = new URLSearchParams(searchParams.toString());
+      for (const key of ["owner", "status", "tag", "q", "overdue"]) params.delete(key);
+      for (const [key, value] of new URLSearchParams(filtersToParams(next))) params.set(key, value);
+      const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, pathname],
+    [router, pathname, searchParams],
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [newOpen, setNewOpen] = useState(false);
@@ -80,20 +105,30 @@ export function PipelinePageClient({
           limite curto) + botão na mesma linha sem quebra empurrava o botão pra
           fora da viewport em telas estreitas. De `sm:` pra cima volta a ser
           uma linha só, como sempre foi. */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight">
-          {data?.pipeline.name ?? initialName}
-        </h1>
-        <Button onClick={() => setNewOpen(true)} disabled={!data} className="shrink-0">
-          <Plus size={16} className="mr-2" /> {t("Novo Lead")}
-        </Button>
+      <header className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold tracking-tight">
+            {data?.pipeline.name ?? initialName}
+          </h1>
+          {data ? (
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+              <p><span className="mr-1 text-text-muted">{t("Pipeline aberto")}</span><TotaisPorMoeda valores={data.summary?.open_by_currency} /></p>
+              <p><span className="mr-1 text-text-muted">{t("Ganho no mês")}</span><TotaisPorMoeda valores={data.summary?.won_month_by_currency} /></p>
+            </div>
+          ) : null}
+        </div>
+        {canMutate && (
+          <Button onClick={() => setNewOpen(true)} disabled={!data} className="shrink-0">
+            <Plus size={16} className="mr-2" /> {t("Novo negócio")}
+          </Button>
+        )}
       </header>
       {seguranca.divergencias > 0 && (
         <p role="status" className="rounded-lg border border-warning/30 bg-warning-bg p-3 text-sm text-warning-fg">
           {t("Uma atualização não chegou em tempo real. Recuperamos os dados pela verificação de segurança; novas alterações podem demorar para aparecer.")}
         </p>
       )}
-      {data && (
+      {canMutate && data && (
         <NewLeadDialog
           open={newOpen}
           onOpenChange={setNewOpen}
@@ -107,7 +142,11 @@ export function PipelinePageClient({
           {t("Não consegui carregar este funil:")} {formatError(error, t)}
         </div>
       ) : isLoading || !data ? (
-        <div className="flex flex-1 animate-pulse items-center justify-center text-muted-foreground">
+        <div
+          role="status"
+          aria-label={t("Carregando…")}
+          className="flex flex-1 items-center justify-center text-muted-foreground"
+        >
           {t("Carregando…")}
         </div>
       ) : (
@@ -120,15 +159,17 @@ export function PipelinePageClient({
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           leadInicial={searchParams.get("lead")}
+          canMutate={canMutate}
         />
       )}
-      <BulkActionBar
+      {canMutate && <BulkActionBar
         selectedIds={selectedIds}
         stages={data?.stages ?? []}
         pipelineId={pipelineId}
         vocabulary={data?.pipeline.vocabulary ?? null}
         onClear={() => setSelectedIds([])}
-      />
+        canAssign={canAssign}
+      />}
     </div>
   );
 }

@@ -2112,3 +2112,21 @@ Contrato e Living System Checklist em `docs/integracoes/meta-ads-oauth.md`.
 Evidências locais em `.superpowers/evidence/meta-ads-oauth/`. Consentimento,
 token de longa duração, permissões e aprovação de aplicativo contra uma conta
 real do Facebook **não foram medidos** por testes com provedor controlado.
+
+## Nocturne — telas operacionais por papel `[P1]` — 17/set/2026
+
+| Jornada | O que a tela deve provar | Estado medido nesta etapa |
+|---|---|---|
+| Abrir `/app` como atendente, gestor e admin | Cada papel recebe hero, chamada e cartões vindos de fontes reais; fonte ausente omite o cartão | Unitários da rota, da projeção e da UI cobrem os três papéis, moedas separadas, ausência de fonte e cerca contra literal inventado. Playwright mede as três composições; PNG e JSON ficam amarrados pelo SHA-256 em `.superpowers/evidence/nocturne-telas/`. |
+| Pedir sugestões no Inbox | Até três sugestões usam o agente publicado; escolher preenche a caixa e nunca envia | Domínio, rota e componente cobrem uma chamada de modelo, troca de conversa, lista vazia silenciosa e edição antes do envio explícito. Playwright clica a sugestão, confirma o texto editável e prova que nenhuma mensagem foi enviada; provedor externo real não foi chamado. |
+| Alternar funis e agir no quadro | Abas preservam a gestão dos funis; cabeçalho, colunas e cartões usam fatos do tenant; Avançar/Ganhar respeitam RBAC | Testes de rota e UI cobrem tenant, mês UTC, moedas, contato, origem, mais de 1.000 cards, sincronização das abas e ausência de mutação para viewer. Playwright em banco local alterna a aba e executa Avançar/Ganhar pelas rotas canônicas. |
+| Abrir e configurar `/app/metas` | Agent vê o próprio recorte; manager/admin veem a equipe e definem objetivos opcionais | Testes de API, cache e UI cobrem janela UTC, paginação, isolamento por papel, cifra das metas individuais, CAS de `settings` e ausência sem zero fabricado. Playwright salva como gestor, lê como atendente e restaura `operational_goals` ao estado exato de entrada. A porta está no grupo EQUIPE antes de Relatórios; não há XP, nível, ranking, medalha, desafio ou ofensiva. |
+
+Living System Checklist: o painel recebe fatos tenant-scoped e alimenta
+Inbox/Funis/Instâncias; sugestões recebem contexto e alimentam somente o rascunho
+editável; o quadro recebe `crm_pipelines`/negócios e alimenta as mutações
+canônicas; Metas recebe `organizations.settings.operational_goals` e fatos do
+mês, aparece em `/app/metas`, salva por `PATCH /api/v1/settings/goals` e emite
+`goals.config_changed`. Os mapas vivos são
+`docs/architecture/dashboard.architecture.json` e
+`docs/architecture/metas-operacionais.architecture.json`.

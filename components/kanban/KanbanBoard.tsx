@@ -35,6 +35,8 @@ interface KanbanBoardProps {
   onSelectionChange?: (ids: string[]) => void;
   /** Lead a abrir já na montagem (deep link `?lead=` — ver o dossiê abaixo). */
   leadInicial?: string | null;
+  /** Escrita autorizada pelo papel na organização ativa, igual às APIs agent+. */
+  canMutate: boolean;
 }
 
 function groupLeadsByStage(stages: Stage[], leads: Lead[]): Map<string, Lead[]> {
@@ -78,6 +80,7 @@ export function KanbanBoard({
   pulses: pulsesProp,
   onSelectionChange,
   leadInicial,
+  canMutate,
 }: KanbanBoardProps) {
   const t = useT();
   const useExternal = stagesProp !== undefined && leadsProp !== undefined;
@@ -131,13 +134,16 @@ export function KanbanBoard({
     [selectedIds, internalSelected],
   );
 
-  const data = useExternal
-    ? {
-        pipeline: pipelineProp ?? ({} as Pipeline),
-        stages: stagesProp,
-        leads: leadsProp,
-      }
-    : queryResult.data;
+  const data = useMemo(
+    () => useExternal
+      ? {
+          pipeline: pipelineProp ?? ({} as Pipeline),
+          stages: stagesProp,
+          leads: leadsProp,
+        }
+      : queryResult.data,
+    [useExternal, pipelineProp, stagesProp, leadsProp, queryResult.data],
+  );
   const isLoading = useExternal ? false : queryResult.isLoading;
   const isError = useExternal ? false : queryResult.isError;
   const error = useExternal ? null : queryResult.error;
@@ -149,6 +155,18 @@ export function KanbanBoard({
   const grouped = useMemo(() => {
     if (!data) return null;
     return groupLeadsByStage(data.stages, data.leads);
+  }, [data]);
+
+  const nextOperationalStageById = useMemo(() => {
+    const next = new Map<string, string>();
+    if (!data) return next;
+    const operacionais = data.stages.filter((stage) => !stage.is_won && !stage.is_lost);
+    for (let index = 0; index < operacionais.length - 1; index += 1) {
+      const atual = operacionais[index];
+      const seguinte = operacionais[index + 1];
+      if (atual && seguinte) next.set(atual.id, seguinte.id);
+    }
+    return next;
   }, [data]);
 
   // Um conjunto por vez, e não um card por vez: o board recebe o resultado do
@@ -176,6 +194,7 @@ export function KanbanBoard({
 
   const handleDragEnd = useCallback(
     (result: DropResult) => {
+      if (!canMutate) return;
       if (!data || !grouped) return;
       const { source, destination, draggableId } = result;
       if (!destination) return;
@@ -215,7 +234,24 @@ export function KanbanBoard({
         expectedUpdatedAt: lead.updated_at,
       });
     },
-    [data, grouped, moveCard],
+    [canMutate, data, grouped, moveCard],
+  );
+
+  const handleAdvance = useCallback(
+    (lead: Lead, stageId: string) => {
+      if (!canMutate || !grouped) return;
+      const destination = grouped.get(stageId) ?? [];
+      const last = destination.at(-1) ?? null;
+      const positionInStage = midpoint(last?.position_in_stage ?? null, null);
+      if (Number.isNaN(positionInStage)) return;
+      moveCard.mutate({
+        leadId: lead.id,
+        stageId,
+        positionInStage,
+        expectedUpdatedAt: lead.updated_at,
+      });
+    },
+    [canMutate, grouped, moveCard],
   );
 
   if (isLoading) {
@@ -260,6 +296,9 @@ export function KanbanBoard({
             selectedLeadIds={selectedLeadIds}
             onSelectMany={handleSelectMany}
             onOpen={setDossieId}
+            nextStageId={nextOperationalStageById.get(stage.id) ?? null}
+            onAdvance={handleAdvance}
+            canMutate={canMutate}
           />
         ))}
       </div>
@@ -274,6 +313,7 @@ export function KanbanBoard({
             data.stages.find((s) => s.id === leadDoDossie.stage_id)?.name ?? "—"
           }
           ownerNames={ownerNames}
+          canMutate={canMutate}
         />
       )}
     </DragDropContext>

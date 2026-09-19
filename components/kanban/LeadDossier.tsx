@@ -23,6 +23,8 @@ interface Props {
   fieldDefs?: CustomFieldDef[];
   stageName: string;
   ownerNames?: Map<string, string | null>;
+  /** Papel tenant agent+; admin da plataforma não é atalho de escrita. */
+  canMutate: boolean;
 }
 
 function formatBRL(cents: number | null, currency: string | null): string {
@@ -59,6 +61,7 @@ export function LeadDossier({
   fieldDefs = [],
   stageName,
   ownerNames,
+  canMutate,
 }: Props) {
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
@@ -110,13 +113,15 @@ export function LeadDossier({
             />
           )}
 
-          <button
-            type="button"
-            onClick={() => campos.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="ml-auto text-text-muted underline-offset-2 hover:text-text hover:underline"
-          >
-            {t("Editar campos")}
-          </button>
+          {canMutate ? (
+            <button
+              type="button"
+              onClick={() => campos.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="ml-auto text-text-muted underline-offset-2 hover:text-text hover:underline"
+            >
+              {t("Editar campos")}
+            </button>
+          ) : null}
         </div>
 
         {/* O score NÃO aparece na timeline: recálculo é telemetria e não emite
@@ -150,7 +155,44 @@ export function LeadDossier({
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
             {t("Dados do negócio")}
           </h3>
-          <LeadFieldsForm lead={lead} pipelineId={pipelineId} fieldDefs={fieldDefs} />
+          {canMutate ? (
+            <LeadFieldsForm lead={lead} pipelineId={pipelineId} fieldDefs={fieldDefs} />
+          ) : (
+            <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2" data-testid="dados-do-negocio-somente-leitura">
+              <div className="sm:col-span-2">
+                <dt className="text-xs text-text-muted">{t("Descrição")}</dt>
+                <dd className="mt-0.5 whitespace-pre-wrap text-text">
+                  {lead.description?.trim() || "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-text-muted">{t("Fechamento previsto")}</dt>
+                <dd className="mt-0.5 text-text">{lead.expected_close_date || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-text-muted">{t("Tags")}</dt>
+                <dd className="mt-0.5 text-text">{lead.tags.length > 0 ? lead.tags.join(", ") : "—"}</dd>
+              </div>
+              {fieldDefs.map((field) => {
+                const raw = lead.custom_fields?.[field.key];
+                const values = Array.isArray(raw) ? raw : [raw];
+                const display = values
+                  .filter((value) => value !== null && value !== undefined && value !== "")
+                  .map((value) => {
+                    if (typeof value === "boolean") return t(value ? "Sim" : "Não");
+                    const option = field.options?.find((item) => item.value === String(value));
+                    return option?.label ?? String(value);
+                  })
+                  .join(", ");
+                return (
+                  <div key={field.key}>
+                    <dt className="text-xs text-text-muted">{field.label}</dt>
+                    <dd className="mt-0.5 text-text">{display || "—"}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          )}
         </div>
       </SheetContent>
     </Sheet>

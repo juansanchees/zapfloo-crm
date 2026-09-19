@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 
 import { resolveCardState, coolingLabel, stageAgeLabel, type CardInput } from "./card-state";
+import { buildCardInput } from "./card-state";
 
 const base: CardInput = {
   id: "l-1",
@@ -128,6 +129,21 @@ describe("rótulos de tempo", () => {
     expect(stageAgeLabel(5)).toBe("5h");
     expect(stageAgeLabel(0.2)).toBe("agora");
     expect(stageAgeLabel(null)).toBe("");
+  });
+});
+
+describe("idade da etapa", () => {
+  it("usa stage_changed_at, não a última atividade", () => {
+    const card = buildCardInput(
+      {
+        id: "lead-1", title: "Proposta", value_cents: null, currency: null, tags: [],
+        last_activity_at: "2026-09-17T11:00:00Z", stage_changed_at: "2026-09-14T12:00:00Z",
+        created_at: "2026-09-01T12:00:00Z", owner_kind: null, owner_user_id: null,
+        owner_agent_id: null, owner_agent: null, next_action: null, score: null,
+      },
+      { stageName: "Proposta", ownerNames: undefined, now: new Date("2026-09-17T12:00:00Z") },
+    );
+    expect(card.hoursInStage).toBe(72);
   });
 });
 

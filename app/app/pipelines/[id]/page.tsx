@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { PipelinePageClient } from "./_client";
 
@@ -26,5 +27,14 @@ export default async function PipelinePage({
     .eq("id", id)
     .maybeSingle();
   if (!pipeline) notFound();
-  return <PipelinePageClient pipelineId={id} initialName={pipeline.name} />;
+  const canMutate = ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent;
+  const canAssign = ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
+  return (
+    <PipelinePageClient
+      pipelineId={id}
+      initialName={pipeline.name}
+      canMutate={canMutate}
+      canAssign={canAssign}
+    />
+  );
 }
