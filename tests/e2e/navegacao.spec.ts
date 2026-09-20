@@ -8,7 +8,8 @@
  *
  * Pré-requisito: `.e2e-creds.json` (gerado por scripts/seed-e2e-credentials.ts).
  */
-import { mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 
 import { test, expect, type Page } from "@playwright/test";
@@ -18,6 +19,7 @@ import { afirmarAdminDeTenantPuro } from "./utils/precondicao";
 
 let creds = lerCreds();
 const EVIDENCE = path.join(process.cwd(), ".superpowers", "evidence");
+const MENU_EVIDENCE = path.join(EVIDENCE, "menu-telas-sem-porta");
 
 mkdirSync(EVIDENCE, { recursive: true });
 
@@ -70,6 +72,89 @@ async function expectSemOverflowHorizontal(page: Page, contexto: string): Promis
     m.scrollWidth,
     `${contexto}: documentElement.scrollWidth (${m.scrollWidth}) não pode passar do clientWidth (${m.clientWidth})`,
   ).toBeLessThanOrEqual(m.clientWidth + 1);
+}
+
+async function capturarSidebarCompleto(page: Page): Promise<void> {
+  const viewportInicial = page.viewportSize();
+  if (!viewportInicial) throw new Error("viewport ausente na prova do menu");
+
+  const antes = await sidebar(page).evaluate((nav) => {
+    const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
+    const instancias = links.find(
+      (link) => link.getAttribute("aria-label") === "Instâncias WhatsApp",
+    );
+    const plano = links.find((link) => link.getAttribute("aria-label") === "Plano e pagamentos");
+    const navRect = nav.getBoundingClientRect();
+    const visivel = (link: HTMLAnchorElement | undefined) => {
+      const rect = link?.getBoundingClientRect();
+      return Boolean(rect) && rect!.top >= navRect.top && rect!.bottom <= navRect.bottom;
+    };
+
+    return {
+      clientHeight: nav.clientHeight,
+      scrollHeight: nav.scrollHeight,
+      scrollTop: nav.scrollTop,
+      rola: nav.scrollHeight > nav.clientHeight + 1,
+      instancias: { existe: Boolean(instancias), dentro_da_area_visivel: visivel(instancias) },
+      plano_e_pagamentos: { existe: Boolean(plano), dentro_da_area_visivel: visivel(plano) },
+    };
+  });
+  const acrescimo = Math.max(0, antes.scrollHeight - antes.clientHeight) + 8;
+  if (acrescimo > 8) {
+    await page.setViewportSize({
+      width: viewportInicial.width,
+      height: viewportInicial.height + acrescimo,
+    });
+  }
+
+  const medida = await sidebar(page).evaluate(
+    (nav, provaInicial) => {
+      const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
+      const plano = links.find((link) => link.getAttribute("aria-label") === "Plano e pagamentos");
+      const navRect = nav.getBoundingClientRect();
+      const planoRect = plano?.getBoundingClientRect();
+
+      return {
+        viewport_original: provaInicial.viewport,
+        viewport_da_captura: { width: window.innerWidth, height: window.innerHeight },
+        antes_de_ampliar: provaInicial.antes,
+        client_height: nav.clientHeight,
+        scroll_height: nav.scrollHeight,
+        rola: nav.scrollHeight > nav.clientHeight + 1,
+        secoes: [...nav.querySelectorAll("h2")].map((heading) => heading.textContent?.trim()),
+        portas: links.map((link) => link.getAttribute("aria-label")),
+        plano_e_pagamentos: {
+          existe: Boolean(plano),
+          dentro_da_area_visivel:
+            Boolean(planoRect) &&
+            planoRect!.top >= navRect.top &&
+            planoRect!.bottom <= navRect.bottom,
+        },
+      };
+    },
+    { viewport: viewportInicial, antes },
+  );
+
+  expect(medida.rola, "a captura precisa mostrar o menu inteiro, sem parte escondida").toBe(false);
+  expect(medida.plano_e_pagamentos).toEqual({ existe: true, dentro_da_area_visivel: true });
+
+  mkdirSync(MENU_EVIDENCE, { recursive: true });
+  const caminhoPng = path.join(MENU_EVIDENCE, "menu-lateral-completo.png");
+  const captura = await page.locator("aside").first().screenshot();
+  writeFileSync(caminhoPng, captura);
+  const sha256 = createHash("sha256").update(captura).digest("hex");
+  expect(createHash("sha256").update(readFileSync(caminhoPng)).digest("hex")).toBe(sha256);
+
+  const prova = JSON.stringify(
+    { ...medida, captura: { arquivo: path.basename(caminhoPng), sha256 } },
+    null,
+    2,
+  );
+  writeFileSync(path.join(MENU_EVIDENCE, "menu-lateral-completo.json"), prova);
+  await test.info().attach("menu-lateral-completo", {
+    body: prova,
+    contentType: "application/json",
+  });
 }
 
 // `loginComoAdmin` espera a virada da janela TOTP entre logins consecutivos
@@ -135,16 +220,18 @@ test.describe("navegação compacta", () => {
     await expect(page).toHaveURL(/\/app\/connections$/);
   });
 
-  test("o sidebar mostra somente as dez portas aprovadas nos três grupos", async ({ page }) => {
+  test("o sidebar mostra todas as doze portas aprovadas nos três grupos", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
     const links = sidebar(page).getByRole("link");
-    await expect(links).toHaveCount(10);
+    await expect(links).toHaveCount(12);
     expect(
       await links.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual([
       "Painel de controle",
       "Conversas",
+      "Agentes de IA",
       "Funis de vendas",
       "Contatos",
       "Tarefas e agenda",
@@ -153,15 +240,13 @@ test.describe("navegação compacta", () => {
       "Instâncias WhatsApp",
       "Usuários e permissões",
       "Plano e pagamentos",
+      "Configurações",
     ]);
     await expect(sidebar(page).getByRole("heading", { name: "Operação" })).toBeVisible();
     await expect(sidebar(page).getByRole("heading", { name: "Equipe" })).toBeVisible();
     await expect(sidebar(page).getByRole("heading", { name: "Administração" })).toBeVisible();
 
-    await page.screenshot({
-      path: path.join(EVIDENCE, "nav-sidebar-compacto.png"),
-      fullPage: true,
-    });
+    await capturarSidebarCompleto(page);
   });
 
   test("chega nas Etapas do funil pelo CRM, sem passar por Configurações", async ({ page }) => {
@@ -219,10 +304,7 @@ test.describe("navegação compacta", () => {
   test("chega em Conhecimento, que só existia atrás das abas de IA", async ({ page }) => {
     await loginAdmin(page);
 
-    await page.getByRole("link", { name: "Pergunte à IA" }).click();
-    await page.waitForURL(/\/app\/ai\/ask$/);
-    const opcoesDaIa = page.getByRole("navigation", { name: /Agentes de IA.*Opções da área/ });
-    await opcoesDaIa.getByRole("link", { name: "Visão geral" }).click();
+    await sidebar(page).getByRole("link", { name: "Agentes de IA", exact: true }).click();
     await page.waitForURL(/\/app\/ai$/);
 
     // O hub organiza por jornada, não numa grade solta.
@@ -239,10 +321,20 @@ test.describe("navegação compacta", () => {
     await page.waitForURL(/knowledge\/sources/);
   });
 
+  test("chega em Perfil pela porta principal de Configurações", async ({ page }) => {
+    await loginAdmin(page);
+
+    await sidebar(page).getByRole("link", { name: "Configurações", exact: true }).click();
+    await page.waitForURL(/\/app\/settings$/);
+    await expect(page.getByRole("heading", { name: "Configurações", level: 1 })).toBeVisible();
+    await page.getByRole("link", { name: /Perfil/ }).click();
+    await page.waitForURL(/\/app\/settings\/profile$/);
+  });
+
   /**
    * O canal oficial saiu de Configurações no PR #105 e virou aba de Conexões.
-   * A porta, portanto, é Conexões — agora uma opção contextual de
-   * Configurações, em vez de um item primário concorrendo com a rotina.
+   * A porta, portanto, é Instâncias WhatsApp — um item primário da
+   * Administração, em vez de um caminho escondido em Configurações.
    */
   test("chega ao canal oficial por Instâncias WhatsApp", async ({ page }) => {
     await loginAdmin(page);
@@ -289,7 +381,7 @@ test.describe("navegação compacta", () => {
    *
    * Medido por ferramenta, nunca a olho.
    */
-  test("as dez portas principais cabem sem scroll em 900px", async ({ page }) => {
+  test("as doze portas principais cabem sem scroll em 900px", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
@@ -302,8 +394,52 @@ test.describe("navegação compacta", () => {
       };
     });
 
-    expect(m.links).toBe(10);
+    expect(m.links).toBe(12);
     expect(m.rola, "em 900px o menu inteiro tem de caber sem scroll").toBe(false);
+  });
+
+  test("em uma tela curta, Plano e pagamentos existe e aparece ao rolar o menu", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 684 });
+    await loginAdmin(page);
+
+    const medir = () =>
+      sidebar(page).evaluate((nav) => {
+        const navRect = nav.getBoundingClientRect();
+        const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
+        const dados = (rotulo: string) => {
+          const link = links.find((item) => item.getAttribute("aria-label") === rotulo);
+          const rect = link?.getBoundingClientRect();
+          return {
+            existe: Boolean(link),
+            visivel: Boolean(rect) && rect!.top >= navRect.top && rect!.bottom <= navRect.bottom,
+          };
+        };
+
+        return {
+          rola: nav.scrollHeight > nav.clientHeight + 1,
+          instancias: dados("Instâncias WhatsApp"),
+          pagamentos: dados("Plano e pagamentos"),
+        };
+      });
+
+    const antes = await medir();
+    expect(antes.rola).toBe(true);
+    expect(antes.instancias.existe).toBe(true);
+    expect(antes.pagamentos).toEqual({ existe: true, visivel: false });
+
+    await sidebar(page).evaluate((nav) => {
+      const instancias = [...nav.querySelectorAll<HTMLAnchorElement>("a")].find(
+        (item) => item.getAttribute("aria-label") === "Instâncias WhatsApp",
+      );
+      instancias?.scrollIntoView({ block: "nearest" });
+    });
+    await expect.poll(async () => (await medir()).instancias.visivel).toBe(true);
+    expect((await medir()).pagamentos.visivel).toBe(false);
+
+    await sidebar(page).evaluate((nav) => nav.scrollTo({ top: nav.scrollHeight }));
+    await expect.poll(async () => (await medir()).pagamentos.visivel).toBe(true);
   });
 
   test.describe("mobile", () => {

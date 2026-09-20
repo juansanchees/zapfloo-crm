@@ -150,23 +150,74 @@ describe("sidebarGroups", () => {
 });
 
 describe("compactAreas", () => {
-  it("organiza o menu visível em operação, equipe e administração", () => {
-    const areas = compactAreas(ADMIN.platform, ADMIN.role).filter(
-      (area) => area.position === "main",
-    );
+  it.each([
+    [
+      VIEWER,
+      [
+        "home",
+        "conversas",
+        "ia",
+        "funis",
+        "contatos",
+        "tarefas",
+        "relatorios",
+        "usuarios",
+        "configuracoes",
+      ],
+    ],
+    [
+      AGENT,
+      [
+        "home",
+        "conversas",
+        "ia",
+        "funis",
+        "contatos",
+        "tarefas",
+        "metas",
+        "relatorios",
+        "usuarios",
+        "configuracoes",
+      ],
+    ],
+    [
+      MANAGER,
+      [
+        "home",
+        "conversas",
+        "ia",
+        "funis",
+        "contatos",
+        "tarefas",
+        "metas",
+        "relatorios",
+        "usuarios",
+        "configuracoes",
+      ],
+    ],
+    [
+      ADMIN,
+      [
+        "home",
+        "conversas",
+        "ia",
+        "funis",
+        "contatos",
+        "tarefas",
+        "metas",
+        "relatorios",
+        "conexoes",
+        "usuarios",
+        "pagamentos",
+        "configuracoes",
+      ],
+    ],
+  ] as const)("organiza as áreas main para o papel $role", (papel, idsEsperados) => {
+    const ids = compactAreas(papel.platform, papel.role)
+      .filter((area) => area.position === "main")
+      .map((area) => area.id);
 
-    expect(areas.map((area) => [area.section, area.label, area.href])).toEqual([
-      ["operacao", "Painel de controle", "/app"],
-      ["operacao", "Conversas", "/app/inbox"],
-      ["operacao", "Funis de vendas", "/app/kanban"],
-      ["operacao", "Contatos", "/app/contacts"],
-      ["operacao", "Tarefas e agenda", "/app/tasks"],
-      ["equipe", "Metas", "/app/metas"],
-      ["equipe", "Relatórios", "/app/metrics"],
-      ["administracao", "Instâncias WhatsApp", "/app/connections"],
-      ["administracao", "Usuários e permissões", "/app/team"],
-      ["administracao", "Plano e pagamentos", "/app/settings/billing"],
-    ]);
+    expect(ids).toEqual(idsEsperados);
   });
 
   it("abre Metas para agent+ antes de Relatórios e não promete Chat interno", () => {
@@ -223,11 +274,13 @@ describe("compactAreas", () => {
     expect(viewer.filter((area) => area.position === "main").map((area) => area.label)).toEqual([
       "Painel de controle",
       "Conversas",
+      "Agentes de IA",
       "Funis de vendas",
       "Contatos",
       "Tarefas e agenda",
       "Relatórios",
       "Usuários e permissões",
+      "Configurações",
     ]);
     expect(
       viewer.find((area) => area.label === "Configurações")?.tabs.map((tab) => tab.href),
@@ -244,14 +297,19 @@ describe("compactAreas", () => {
     expect(compactAreaForPath("/app/contacts/contato-1", areas)?.id).toBe("contatos");
   });
 
-  it("mantém os hubs secundários como contexto sem mostrá-los no menu", () => {
+  it("mantém IA e Configurações como hubs alcançáveis pelo menu", () => {
     const areas = compactAreas(ADMIN.platform, ADMIN.role);
-    const contextuais = areas.filter((area) => area.position === "contextual");
+    const principais = areas.filter((area) => area.position === "main");
 
-    expect(contextuais.map((area) => [area.label, area.href])).toEqual([
-      ["Agentes de IA", "/app/ai"],
-      ["Configurações", "/app/settings"],
+    expect(principais.map((area) => [area.label, area.href])).toContainEqual([
+      "Agentes de IA",
+      "/app/ai",
     ]);
+    expect(principais.at(-1)).toMatchObject({
+      label: "Configurações",
+      href: "/app/settings",
+      section: "administracao",
+    });
     expect(compactAreaForPath("/app/ai/knowledge/sources", areas)?.label).toBe("Agentes de IA");
     expect(compactAreaForPath("/app/settings/profile", areas)?.label).toBe("Configurações");
   });
