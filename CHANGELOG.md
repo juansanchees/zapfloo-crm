@@ -8,6 +8,12 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.4.2] — 2026-09-22
+
+### Corrigido
+
+- **Configurações sempre visíveis e metas no mês local** Configurações volta a ficar fixa no rodapé do menu lateral, sem depender da barra de rolagem do computador. O progresso das metas também passa a respeitar o mês no fuso da organização, com Brasília como padrão.
+
 ## [2.4.1] — 2026-09-22
 
 ### Corrigido
@@ -3450,7 +3456,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.1...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.2...HEAD
+[2.4.2]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.2.0...v2.3.0
