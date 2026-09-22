@@ -11,11 +11,13 @@
 
 Sistema operacional de vendas open source com agentes de IA nativos, multi-nicho,
 WhatsApp como canal primário (via WAHA). Multi-tenant com RLS desde o dia 1, LGPD
-nativa. Monetização = self-host em VPS, não assinatura. Posicionamento: [`VISION.md`](VISION.md).
+nativa. Monetização = assinatura do serviço multi-tenant operado; self-host em VPS
+continua suportado. Posicionamento: [`VISION.md`](VISION.md).
 
-**Consequência que muda como você trabalha:** o produto é distribuído como código.
-Quem instala numa VPS **é** o usuário. Uma mudança que funciona na máquina do dev e
-quebra no clone fresco é um bug de produto, não um detalhe de ambiente.
+**Consequência que muda como você trabalha:** o produto atende dois caminhos — serviço
+operado e código distribuído. Quem assina o serviço e quem instala numa VPS **são**
+usuários. Uma mudança que funciona na máquina do dev e quebra no clone fresco é um bug
+de produto, não um detalhe de ambiente.
 
 ## Stack (CONFIRMADO em `package.json`)
 
@@ -196,8 +198,8 @@ Medido em 2026-08-14 @ `741c4ec8`, com o comando ao lado de cada número:
 
 - **1 das 46 specs E2E segue fora do CI** (`vps-fresh-onboarding`), e o `e2e` **é** check
   obrigatório desde 2026-08-08. Ou seja: um PR que quebre o `e2e` não entra — mas a jornada de
-  instalação fresca, que é o produto que se vende, continua sem gate. Se você mexeu nela, a
-  prova é sua. *(Corrigido em 2026-08-14; a redação anterior — "4 das 32, não-obrigatório" —
+  instalação fresca, que continua sendo uma forma suportada de adoção e distribuição,
+  segue sem gate. Se você mexeu nela, a prova é sua. *(Corrigido em 2026-08-14; a redação anterior — "4 das 32, não-obrigatório" —
   mudava a régua de qualquer triagem que a lesse.)*
 - Rate limit HTTP: `lib/auth/rate-limit.ts` cobre **login, signup, recuperação de senha e
   aceite de convite** (contando por IP **e** por identificador hasheado); `checkRateLimit` cobre
