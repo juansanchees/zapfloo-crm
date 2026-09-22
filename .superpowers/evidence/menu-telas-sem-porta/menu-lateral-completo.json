@@ -1,0 +1,54 @@
+{
+  "viewport_original": {
+    "width": 1280,
+    "height": 900
+  },
+  "viewport_da_captura": {
+    "width": 1280,
+    "height": 900
+  },
+  "antes_de_ampliar": {
+    "clientHeight": 630,
+    "scrollHeight": 630,
+    "scrollTop": 0,
+    "rola": false,
+    "instancias": {
+      "existe": true,
+      "dentro_da_area_visivel": true
+    },
+    "plano_e_pagamentos": {
+      "existe": true,
+      "dentro_da_area_visivel": true
+    }
+  },
+  "client_height": 630,
+  "scroll_height": 630,
+  "rola": false,
+  "secoes": [
+    "Operação",
+    "Equipe",
+    "Administração"
+  ],
+  "portas": [
+    "Painel de controle",
+    "Conversas",
+    "Agentes de IA",
+    "Funis de vendas",
+    "Contatos",
+    "Tarefas e agenda",
+    "Metas",
+    "Relatórios",
+    "Instâncias WhatsApp",
+    "Usuários e permissões",
+    "Plano e pagamentos",
+    "Configurações"
+  ],
+  "plano_e_pagamentos": {
+    "existe": true,
+    "dentro_da_area_visivel": true
+  },
+  "captura": {
+    "arquivo": "menu-lateral-completo.png",
+    "sha256": "20cdf163446e47f5f4a686770945950271202b16f04c2a9cb17f708d739d02ab"
+  }
+}

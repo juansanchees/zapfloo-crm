@@ -50,6 +50,7 @@ describe("Sidebar compacto", () => {
     expect(Array.from(nav.querySelectorAll("a")).map((link) => link.textContent?.trim())).toEqual([
       "Painel de controle",
       "Conversas7",
+      "Agentes de IA",
       "Funis de vendas",
       "Contatos",
       "Tarefas e agenda",
@@ -58,6 +59,7 @@ describe("Sidebar compacto", () => {
       "Instâncias WhatsApp",
       "Usuários e permissões",
       "Plano e pagamentos",
+      "Configurações",
     ]);
     expect(screen.getByText("Operação")).toBeVisible();
     expect(screen.getByText("Equipe")).toBeVisible();
@@ -80,7 +82,7 @@ describe("Sidebar compacto", () => {
     );
   });
 
-  it("destaca Pergunte à IA como ação global, sem criar uma décima porta", () => {
+  it("destaca Pergunte à IA como ação global, fora das portas agrupadas", () => {
     comoPapel("agent");
     render(<Sidebar collapsed={false} />);
 
@@ -150,6 +152,8 @@ describe("Sidebar compacto", () => {
     expect(screen.queryByRole("link", { name: "Instâncias WhatsApp" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Plano e pagamentos" })).toBeNull();
     expect(screen.getByRole("link", { name: "Usuários e permissões" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Agentes de IA" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Configurações" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Conversas" })).toBeVisible();
   });
 

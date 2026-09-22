@@ -24,7 +24,7 @@ interface SidebarContentProps {
 }
 
 /**
- * Nove portas visíveis para o produto inteiro.
+ * Portas visíveis para o produto inteiro.
  *
  * O componente só desenha a projeção de `compactAreas()`: permissões, rotas e
  * ordem continuam decididas no registro canônico. As telas secundárias ficam

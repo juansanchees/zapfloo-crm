@@ -116,8 +116,7 @@ export interface CompactArea {
   label: string;
   href: string;
   icon: PhosphorIcon;
-  /** `contextual` conserva hubs e abas sem acrescentar uma porta ao menu. */
-  position: "main" | "contextual";
+  position: "main";
   section: CompactAreaSection;
   tabs: CompactAreaTab[];
   /** Propaga a saúde de um destino secundário crítico para a porta compacta. */
@@ -172,7 +171,7 @@ interface CompactAreaSpec extends Omit<CompactArea, "tabs"> {
 }
 
 /**
- * Dez portas visíveis para o produto inteiro — contrato aprovado pelo proprietário.
+ * Portas visíveis para o produto inteiro — contrato aprovado pelo proprietário.
  *
  * Isto NÃO é outro registro de telas: todo `href` abaixo resolve para um
  * `NAV_DESTINATIONS` ou para um hub já declarado em `NAV_GROUPS`. É só a
@@ -204,6 +203,22 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
       { href: "/app/inbox", label: "Conversas" },
       { href: "/app/radar", label: "Precisam de atenção" },
       { href: "/app/templates" },
+    ],
+  },
+  {
+    id: "ia",
+    label: "Agentes de IA",
+    href: "/app/ai",
+    icon: Robot,
+    position: "main",
+    section: "operacao",
+    tabs: [
+      { href: "/app/ai", label: "Visão geral" },
+      { href: "/app/ai/agents" },
+      { href: "/app/ai/followups", label: "Fluxos e follow-ups" },
+      { href: "/app/ai/knowledge/sources" },
+      { href: "/app/ai/routers", label: "Distribuição" },
+      { href: "/app/ai/providers", label: "Avançado" },
     ],
   },
   {
@@ -303,28 +318,11 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     tabs: [{ href: "/app/settings/billing", label: "Plano e pagamentos" }],
   },
   {
-    id: "ia",
-    label: "Agentes de IA",
-    href: "/app/ai",
-    icon: Robot,
-    position: "contextual",
-    section: "operacao",
-    minRole: "manager",
-    tabs: [
-      { href: "/app/ai", label: "Visão geral" },
-      { href: "/app/ai/agents" },
-      { href: "/app/ai/followups", label: "Fluxos e follow-ups" },
-      { href: "/app/ai/knowledge/sources" },
-      { href: "/app/ai/routers", label: "Distribuição" },
-      { href: "/app/ai/providers", label: "Avançado" },
-    ],
-  },
-  {
     id: "configuracoes",
     label: "Configurações",
     href: "/app/settings",
     icon: Gear,
-    position: "contextual",
+    position: "main",
     section: "administracao",
     tabs: [
       { href: "/app/settings", label: "Visão geral" },
