@@ -59,8 +59,10 @@ describe("Sidebar compacto", () => {
       "Instâncias WhatsApp",
       "Usuários e permissões",
       "Plano e pagamentos",
-      "Configurações",
     ]);
+    expect(screen.getByTestId("sidebar-persistent-footer")).toContainElement(
+      screen.getByRole("link", { name: "Configurações" }),
+    );
     expect(screen.getByText("Operação")).toBeVisible();
     expect(screen.getByText("Equipe")).toBeVisible();
     expect(screen.getByText("Administração")).toBeVisible();
@@ -97,12 +99,16 @@ describe("Sidebar compacto", () => {
     expect(nav.contains(chamada)).toBe(false);
   });
 
-  it("mantém o controle de recolher no rodapé fora da área rolável", () => {
+  it("mantém Configurações e o controle de recolher no rodapé fora da área rolável", () => {
     comoPapel("admin");
     render(<Sidebar collapsed={false} />);
 
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
     expect(nav.contains(screen.getByRole("link", { name: "Plano e pagamentos" }))).toBe(true);
+    expect(nav.contains(screen.getByRole("link", { name: "Configurações" }))).toBe(false);
+    expect(screen.getByTestId("sidebar-persistent-footer")).toContainElement(
+      screen.getByRole("link", { name: "Configurações" }),
+    );
     expect(nav.contains(screen.getByRole("button", { name: "Recolher sidebar" }))).toBe(false);
     expect(screen.getByRole("button", { name: "Recolher sidebar" })).toHaveTextContent(
       "Recolher menu",

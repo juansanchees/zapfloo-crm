@@ -151,20 +151,7 @@ describe("sidebarGroups", () => {
 
 describe("compactAreas", () => {
   it.each([
-    [
-      VIEWER,
-      [
-        "home",
-        "conversas",
-        "ia",
-        "funis",
-        "contatos",
-        "tarefas",
-        "relatorios",
-        "usuarios",
-        "configuracoes",
-      ],
-    ],
+    [VIEWER, ["home", "conversas", "ia", "funis", "contatos", "tarefas", "relatorios", "usuarios"]],
     [
       AGENT,
       [
@@ -177,7 +164,6 @@ describe("compactAreas", () => {
         "metas",
         "relatorios",
         "usuarios",
-        "configuracoes",
       ],
     ],
     [
@@ -192,7 +178,6 @@ describe("compactAreas", () => {
         "metas",
         "relatorios",
         "usuarios",
-        "configuracoes",
       ],
     ],
     [
@@ -209,7 +194,6 @@ describe("compactAreas", () => {
         "conexoes",
         "usuarios",
         "pagamentos",
-        "configuracoes",
       ],
     ],
   ] as const)("organiza as áreas main para o papel $role", (papel, idsEsperados) => {
@@ -280,6 +264,8 @@ describe("compactAreas", () => {
       "Tarefas e agenda",
       "Relatórios",
       "Usuários e permissões",
+    ]);
+    expect(viewer.filter((area) => area.position === "footer").map((area) => area.label)).toEqual([
       "Configurações",
     ]);
     expect(
@@ -297,7 +283,7 @@ describe("compactAreas", () => {
     expect(compactAreaForPath("/app/contacts/contato-1", areas)?.id).toBe("contatos");
   });
 
-  it("mantém IA e Configurações como hubs alcançáveis pelo menu", () => {
+  it("mantém IA na lista e Configurações no rodapé, ambos alcançáveis pelo menu", () => {
     const areas = compactAreas(ADMIN.platform, ADMIN.role);
     const principais = areas.filter((area) => area.position === "main");
 
@@ -305,7 +291,7 @@ describe("compactAreas", () => {
       "Agentes de IA",
       "/app/ai",
     ]);
-    expect(principais.at(-1)).toMatchObject({
+    expect(areas.find((area) => area.position === "footer")).toMatchObject({
       label: "Configurações",
       href: "/app/settings",
       section: "administracao",

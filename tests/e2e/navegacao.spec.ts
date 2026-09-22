@@ -20,6 +20,7 @@ import { afirmarAdminDeTenantPuro } from "./utils/precondicao";
 let creds = lerCreds();
 const EVIDENCE = path.join(process.cwd(), ".superpowers", "evidence");
 const MENU_EVIDENCE = path.join(EVIDENCE, "menu-telas-sem-porta");
+const FOOTER_EVIDENCE = path.join(EVIDENCE, "rodape-e-mes-de-brasilia");
 
 mkdirSync(EVIDENCE, { recursive: true });
 
@@ -52,6 +53,65 @@ async function loginAdmin(page: Page): Promise<void> {
 }
 
 const sidebar = (page: Page) => page.getByRole("navigation", { name: "Navegação principal" });
+const rodapeFixo = (page: Page) => page.getByTestId("sidebar-persistent-footer");
+
+async function capturarRodapeFixo(page: Page, width: 1280 | 1366) {
+  await page.setViewportSize({ width, height: 768 });
+
+  const medida = await page
+    .locator("aside")
+    .first()
+    .evaluate((aside) => {
+      const nav = aside.querySelector<HTMLElement>('nav[aria-label="Navegação principal"]')!;
+      const footer = aside.querySelector<HTMLElement>('[data-testid="sidebar-persistent-footer"]')!;
+      const config = footer.querySelector<HTMLAnchorElement>('a[aria-label="Configurações"]')!;
+      const navRect = nav.getBoundingClientRect();
+      const footerRect = footer.getBoundingClientRect();
+      const configRect = config.getBoundingClientRect();
+      const itens = [...nav.querySelectorAll<HTMLAnchorElement>("a[aria-label]")].map((link) => {
+        const rect = link.getBoundingClientRect();
+        return {
+          nome: link.getAttribute("aria-label"),
+          visivel_sem_rolar: rect.top >= navRect.top && rect.bottom <= navRect.bottom,
+        };
+      });
+
+      return {
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        menu_rolavel: {
+          client_height: nav.clientHeight,
+          scroll_height: nav.scrollHeight,
+          itens_abaixo_da_dobra: itens
+            .filter((item) => !item.visivel_sem_rolar)
+            .map((item) => item.nome),
+        },
+        configuracoes: {
+          fora_da_area_rolavel: !nav.contains(config),
+          dentro_do_rodape_fixo: footer.contains(config),
+          visivel_na_viewport: configRect.top >= 0 && configRect.bottom <= window.innerHeight,
+        },
+        rodape: { top: footerRect.top, bottom: footerRect.bottom },
+      };
+    });
+
+  expect(medida.configuracoes).toEqual({
+    fora_da_area_rolavel: true,
+    dentro_do_rodape_fixo: true,
+    visivel_na_viewport: true,
+  });
+
+  mkdirSync(FOOTER_EVIDENCE, { recursive: true });
+  const nome = `menu-${width}x768.png`;
+  const captura = await page.locator("aside").first().screenshot();
+  const caminho = path.join(FOOTER_EVIDENCE, nome);
+  writeFileSync(caminho, captura);
+  const sha256 = createHash("sha256").update(captura).digest("hex");
+  expect(createHash("sha256").update(readFileSync(caminho)).digest("hex")).toBe(sha256);
+  const prova = JSON.stringify({ ...medida, captura: { arquivo: nome, sha256 } }, null, 2);
+  writeFileSync(path.join(FOOTER_EVIDENCE, `menu-${width}x768.json`), prova);
+  console.info(`[menu-dobra ${width}x768] ${prova}`);
+  await test.info().attach(`menu-${width}x768`, { body: prova, contentType: "application/json" });
+}
 
 async function expectSemOverflowHorizontal(page: Page, contexto: string): Promise<void> {
   const m = await page.evaluate(() => ({
@@ -220,12 +280,12 @@ test.describe("navegação compacta", () => {
     await expect(page).toHaveURL(/\/app\/connections$/);
   });
 
-  test("o sidebar mostra todas as doze portas aprovadas nos três grupos", async ({ page }) => {
+  test("o sidebar mostra onze portas roláveis e Configurações no rodapé fixo", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
     const links = sidebar(page).getByRole("link");
-    await expect(links).toHaveCount(12);
+    await expect(links).toHaveCount(11);
     expect(
       await links.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual([
@@ -240,8 +300,8 @@ test.describe("navegação compacta", () => {
       "Instâncias WhatsApp",
       "Usuários e permissões",
       "Plano e pagamentos",
-      "Configurações",
     ]);
+    await expect(rodapeFixo(page).getByRole("link", { name: "Configurações" })).toBeVisible();
     await expect(sidebar(page).getByRole("heading", { name: "Operação" })).toBeVisible();
     await expect(sidebar(page).getByRole("heading", { name: "Equipe" })).toBeVisible();
     await expect(sidebar(page).getByRole("heading", { name: "Administração" })).toBeVisible();
@@ -324,7 +384,7 @@ test.describe("navegação compacta", () => {
   test("chega em Perfil pela porta principal de Configurações", async ({ page }) => {
     await loginAdmin(page);
 
-    await sidebar(page).getByRole("link", { name: "Configurações", exact: true }).click();
+    await rodapeFixo(page).getByRole("link", { name: "Configurações", exact: true }).click();
     await page.waitForURL(/\/app\/settings$/);
     await expect(page.getByRole("heading", { name: "Configurações", level: 1 })).toBeVisible();
     await page.getByRole("link", { name: /Perfil/ }).click();
@@ -381,7 +441,7 @@ test.describe("navegação compacta", () => {
    *
    * Medido por ferramenta, nunca a olho.
    */
-  test("as doze portas principais cabem sem scroll em 900px", async ({ page }) => {
+  test("as onze portas roláveis cabem sem scroll em 900px", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
@@ -394,7 +454,7 @@ test.describe("navegação compacta", () => {
       };
     });
 
-    expect(m.links).toBe(12);
+    expect(m.links).toBe(11);
     expect(m.rola, "em 900px o menu inteiro tem de caber sem scroll").toBe(false);
   });
 
@@ -474,11 +534,15 @@ test.describe("navegação compacta", () => {
     });
   });
 
-  test("Recolher menu fica fixo no rodapé, fora da área que rola", async ({ page }) => {
+  test("Configurações e Recolher menu ficam fixos no rodapé, fora da área que rola", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 768 });
     await loginAdmin(page);
 
     const recolher = page.getByRole("button", { name: "Recolher sidebar" });
+    const configuracoes = rodapeFixo(page).getByRole("link", { name: "Configurações" });
+    await expect(configuracoes).toBeVisible();
     await expect(recolher).toBeVisible();
     await expect(recolher).toContainText("Recolher menu");
 
@@ -487,9 +551,19 @@ test.describe("navegação compacta", () => {
       const botao = [...document.querySelectorAll("button")].find(
         (item) => item.getAttribute("aria-label") === "Recolher sidebar",
       );
-      return nav.contains(botao!);
+      const config = document.querySelector('a[aria-label="Configurações"]')!;
+      return { botao: nav.contains(botao!), configuracoes: nav.contains(config) };
     });
-    expect(dentroDaNav, "Recolher menu não pode depender de scroll para aparecer").toBe(false);
+    expect(dentroDaNav, "o rodapé fixo não pode depender de scroll para aparecer").toEqual({
+      botao: false,
+      configuracoes: false,
+    });
+  });
+
+  test("mede a dobra e amarra o rodapé fixo à evidência visual", async ({ page }) => {
+    await loginAdmin(page);
+    await capturarRodapeFixo(page, 1280);
+    await capturarRodapeFixo(page, 1366);
   });
 
   test("um agent não vê as portas administrativas acima de seu papel", async ({ page }) => {

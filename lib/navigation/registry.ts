@@ -116,7 +116,7 @@ export interface CompactArea {
   label: string;
   href: string;
   icon: PhosphorIcon;
-  position: "main";
+  position: "main" | "footer";
   section: CompactAreaSection;
   tabs: CompactAreaTab[];
   /** Propaga a saúde de um destino secundário crítico para a porta compacta. */
@@ -157,11 +157,12 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 /**
- * Compatibilidade da projeção antiga `sidebarGroups`.
+ * Grupo cujo hub vive no RODAPÉ fixo do sidebar, fora da área que rola.
  *
- * O menu compacto Nocturne não usa este grupo no rodapé: o inventário completo
- * de Organização continua no hub de Configurações e no ⌘K, enquanto o rodapé
- * visível fica reservado à versão e ao controle "Recolher menu".
+ * Medido em tela (1280×768, o notebook comum): Configurações ficava abaixo
+ * da dobra quando dependia da lista rolável. É o item que mais se procura
+ * quando algo não foi encontrado; deixá-lo depender de scroll recria o
+ * problema que esta projeção veio resolver.
  */
 export const GRUPO_NO_RODAPE: NavGroupId = "organizacao";
 
@@ -322,7 +323,7 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     label: "Configurações",
     href: "/app/settings",
     icon: Gear,
-    position: "main",
+    position: "footer",
     section: "administracao",
     tabs: [
       { href: "/app/settings", label: "Visão geral" },
