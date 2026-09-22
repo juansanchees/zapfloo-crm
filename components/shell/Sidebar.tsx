@@ -43,6 +43,7 @@ export function SidebarContent({
   const areas = compactAreas(user.is_platform_admin, activeOrg?.role ?? null);
   const areaAtiva = compactAreaForPath(pathname, areas);
   const principais = areas.filter((area) => area.position === "main");
+  const rodape = areas.filter((area) => area.position === "footer");
   const secoes = [
     { id: "operacao" as const, label: "Operação" },
     { id: "equipe" as const, label: "Equipe" },
@@ -188,7 +189,11 @@ export function SidebarContent({
         })}
       </nav>
 
-      <div className="border-divider shrink-0 border-t px-3 pt-2.5 pb-3.5">
+      <div
+        data-testid="sidebar-persistent-footer"
+        className="border-divider shrink-0 border-t px-3 pt-2.5 pb-3.5"
+      >
+        <div className="mb-1 space-y-0.5">{rodape.map(linkDaArea)}</div>
         <VersionFooter collapsed={collapsed} onNavigate={onNavigate} />
         {showCollapseControl && (
           <button

@@ -1,4 +1,4 @@
-/** Progresso do mês UTC para metas operacionais; não há ranking nesta rota. */
+/** Progresso do mês civil da organização para metas operacionais; não há ranking nesta rota. */
 import { randomUUID } from "node:crypto";
 
 import { fail, ok } from "@/lib/api/wrappers";
@@ -14,15 +14,78 @@ import {
 } from "@/lib/metas/config";
 import { decryptOperationalGoalMembers } from "@/lib/metas/members-cipher";
 import { createClient } from "@/lib/supabase/server";
+import { FUSO_PADRAO, fusoValido } from "@/lib/tempo/fusos";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 1_000;
 
-export function utcMonthWindow(now = new Date()) {
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  return { from: from.toISOString(), to: to.toISOString() };
+type CalendarParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+function calendarParts(date: Date, timeZone: string): CalendarParts {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const values = Object.fromEntries(
+    formatter
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)]),
+  );
+  return values as CalendarParts;
+}
+
+/** Converte meia-noite civil no fuso para o instante UTC correspondente. */
+function localMidnightUtc(year: number, month: number, timeZone: string): Date {
+  const desiredWallClock = Date.UTC(year, month - 1, 1, 0, 0, 0);
+  let instant = desiredWallClock;
+
+  // O offset pode mudar perto da fronteira. Recalcular pelo próprio `Intl`
+  // converge sem supor que todo fuso é um múltiplo inteiro de hora.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const observed = calendarParts(new Date(instant), timeZone);
+    const observedWallClock = Date.UTC(
+      observed.year,
+      observed.month - 1,
+      observed.day,
+      observed.hour,
+      observed.minute,
+      observed.second,
+    );
+    const correction = desiredWallClock - observedWallClock;
+    if (correction === 0) return new Date(instant);
+    instant += correction;
+  }
+
+  return new Date(instant);
+}
+
+export function monthWindowInTimeZone(now = new Date(), requestedTimeZone?: string | null) {
+  const timeZone =
+    requestedTimeZone && fusoValido(requestedTimeZone) ? requestedTimeZone : FUSO_PADRAO;
+  const current = calendarParts(now, timeZone);
+  const nextMonth =
+    current.month === 12
+      ? { year: current.year + 1, month: 1 }
+      : { year: current.year, month: current.month + 1 };
+  return {
+    from: localMidnightUtc(current.year, current.month, timeZone).toISOString(),
+    to: localMidnightUtc(nextMonth.year, nextMonth.month, timeZone).toISOString(),
+  };
 }
 
 export async function GET(): Promise<Response> {
@@ -34,15 +97,18 @@ export async function GET(): Promise<Response> {
   });
   if (!authz.ok) return authz.response;
 
-  const managerView = roleAtLeast(authz.org.role, "manager") || authz.user.is_platform_admin;
-  const { from, to } = utcMonthWindow();
   const supabase = await createClient();
 
-  const settingsQuery = supabase
+  const settingsRes = await supabase
     .from("organizations")
-    .select("settings")
+    .select("settings, timezone")
     .eq("id", authz.org.orgId)
     .maybeSingle();
+  if (settingsRes.error)
+    return fail("internal_error", settingsRes.error.message, 500, { requestId });
+
+  const managerView = roleAtLeast(authz.org.role, "manager") || authz.user.is_platform_admin;
+  const { from, to } = monthWindowInTimeZone(new Date(), settingsRes.data?.timezone);
 
   let rosterQuery = supabase
     .from("user_organizations")
@@ -80,19 +146,20 @@ export async function GET(): Promise<Response> {
     return query.order("id", { ascending: true }).range(offset, end);
   };
 
-  const [settingsRes, rosterRes, revenueRes, conversationsRes] = await Promise.all([
-    settingsQuery,
+  const [rosterRes, revenueRes, conversationsRes] = await Promise.all([
     rosterQuery,
     fetchEveryPage(revenuePage),
     fetchEveryPage(conversationsPage),
   ]);
-  const error = settingsRes.error ?? rosterRes.error ?? revenueRes.error ?? conversationsRes.error;
+  const error = rosterRes.error ?? revenueRes.error ?? conversationsRes.error;
   if (error) return fail("internal_error", error.message, 500, { requestId });
 
   const rosterIds = (rosterRes.data ?? []).map((row) => row.user_id);
   // Não há "outros" no payload de agent. Para manager, o nome vem da fonte
   // autorizada e mínima (`full_name`), nunca de dados de contato.
-  const names = managerView ? await nomesDosAtendentes(rosterIds) : new Map<string, string | null>();
+  const names = managerView
+    ? await nomesDosAtendentes(rosterIds)
+    : new Map<string, string | null>();
   const roster = rosterIds.map((user_id) => ({
     user_id,
     name: managerView ? (names.get(user_id) ?? null) : null,
@@ -100,7 +167,8 @@ export async function GET(): Promise<Response> {
 
   const storedGoals = storedOperationalGoalsFromSettings(settingsRes.data?.settings);
   const members = await readMembers(storedGoals.members_enc);
-  if (members === null) return fail("internal_error", "Não foi possível ler as metas individuais.", 500, { requestId });
+  if (members === null)
+    return fail("internal_error", "Não foi possível ler as metas individuais.", 500, { requestId });
   const goals = operationalGoalsFromStored(storedGoals, members);
   const ownTarget = goals.members[authz.user.id];
   const scopedGoals = managerView

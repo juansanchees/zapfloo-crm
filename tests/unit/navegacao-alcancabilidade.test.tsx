@@ -51,7 +51,8 @@ function caminhosPorClique(role: Role): Set<string> {
 
   const sidebar = render(<SidebarContent collapsed={false} />);
   const navPrincipal = sidebar.getByRole("navigation", { name: "Navegação principal" });
-  const alcançados = new Set(hrefs(navPrincipal));
+  const rodapeFixo = sidebar.getByTestId("sidebar-persistent-footer");
+  const alcançados = new Set([...hrefs(navPrincipal), ...hrefs(rodapeFixo)]);
   sidebar.unmount();
 
   // Cada porta principal pode desenhar uma segunda camada de links.
