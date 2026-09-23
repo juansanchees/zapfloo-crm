@@ -14,7 +14,7 @@
 
 ## Visão (1 parágrafo)
 
-DeskcommCRM é um sistema operacional de vendas open source com agentes de IA nativos — multi-nicho (e-commerce, clínicas, imobiliárias, infoprodutos, serviços), com WhatsApp como canal primário (via WAHA). Agentes com RAG por tenant atendem, qualificam e movem o funil junto com humanos; CRM inteiro exposto via MCP. Monetização = self-host em VPS (parceria HostGator), não assinatura. Arquitetura multi-tenant com RLS desde o dia 1; LGPD nativa. Posicionamento completo: `VISION.md`.
+DeskcommCRM é um sistema operacional de vendas open source com agentes de IA nativos — multi-nicho (e-commerce, clínicas, imobiliárias, infoprodutos, serviços), com WhatsApp como canal primário (via WAHA). Agentes com RAG por tenant atendem, qualificam e movem o funil junto com humanos; CRM inteiro exposto via MCP. Monetização = assinatura do serviço multi-tenant operado; a instalação self-host em VPS continua suportada. Arquitetura multi-tenant com RLS desde o dia 1; LGPD nativa. Posicionamento completo: `VISION.md`.
 
 ---
 
@@ -347,7 +347,7 @@ Checks **obrigatórios** na branch protection da `main` (verificado na configura
     python3 -c "import sys,re; y=sys.stdin.read(); print(sorted({s for _,c in re.findall(r'(FORA_DO_CI):\s*>-\n((?:[ ]{8,}.*\n)+)',y) for s in re.findall(r'[a-z0-9-]+\.spec\.ts',c)}))"
   ```
 
-  Esta frase já dizia "a **única** de fora é `vps-fresh-onboarding`" e estava errada: em 2026-09-04 a variável listava **duas** (`inbox-tempo-real` entrou depois). É o mesmo defeito que o parágrafo acima descreve — afirmação de estado que envelhece —, cometido na frase seguinte à que o denuncia. O que continua verdade e é o que importa: `vps-fresh-onboarding` é a **P0** da doutrina de QA Visual, então `e2e` verde **não** prova a jornada de instalação fresca, que é o produto que se vende.
+  Esta frase já dizia "a **única** de fora é `vps-fresh-onboarding`" e estava errada: em 2026-09-04 a variável listava **duas** (`inbox-tempo-real` entrou depois). É o mesmo defeito que o parágrafo acima descreve — afirmação de estado que envelhece —, cometido na frase seguinte à que o denuncia. O que continua verdade e é o que importa: `vps-fresh-onboarding` é a **P0** da doutrina de QA Visual, então `e2e` verde **não** prova a jornada de instalação fresca, que continua sendo uma forma suportada de adoção e distribuição.
 
   **Não confie em `grep` no arquivo inteiro.** `grep -oE '[a-z0-9-]+\.spec\.ts' .github/workflows/e2e.yml | sort -u | wc -l` conta quem é CITADO, não quem é INVOCADO: a `FORA_DO_CI` é uma variável YAML como as outras e entra na conta. (Até 2026-08-14 este parágrafo culpava "menções em comentários", e isso é falso — medido, o conjunto de specs citadas fora de variável é **vazio**.) O que roda são as `SPECS_PARTE_*`:
 
@@ -381,9 +381,9 @@ Ao mexer em schema, RLS, RBAC, atribuição, escopo, roteamento, follow-up, webh
 
 ---
 
-## QA Visual com Recursos Reais — DOUTRINA (produto self-host)
+## QA Visual com Recursos Reais — DOUTRINA (serviço operado e self-host)
 
-**O DeskcommCRM é distribuído open-source: a experiência de quem instala numa VPS É o produto.** Toda feature nova (ou fix de comportamento visível) DEVE ser provada como um **usuário leigo a usaria de verdade** — pelo frontend, num ambiente que imita a instalação fresca — antes de "pronto". Não é opcional; é critério de aceite de toda sessão que toca UI ou fluxo de usuário.
+**O DeskcommCRM é oferecido como serviço multi-tenant operado e também distribuído open source: a experiência de quem assina o serviço e de quem instala numa VPS É o produto.** Toda feature nova (ou fix de comportamento visível) DEVE ser provada como um **usuário leigo a usaria de verdade** — pelo frontend, num ambiente que imita a instalação fresca — antes de "pronto". Não é opcional; é critério de aceite de toda sessão que toca UI ou fluxo de usuário.
 
 **O que "recurso real" significa (e o que NÃO conta):**
 - **Conta.** Prova pela tela, dirigindo o browser (Playwright), logando com conta de teste real. `curl`/chamada de API **não** provam UX — validam o backend, mas não o que o usuário vê, clica e entende. Use curl só como diagnóstico.
