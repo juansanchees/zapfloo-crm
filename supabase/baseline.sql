@@ -21309,6 +21309,59 @@ comment on column public.calendar_event_types.catalog_product_id is
 
 notify pgrst, 'reload schema';
 
+-- ---- auditoria append-only no schema + search_path fixo (migration 0238) ----
+--
+-- Idempotente: REVOKE/GRANT/COMMENT e ALTER FUNCTION SET podem ser reaplicados.
+-- O bloco fica no baseline porque install.sh e update.sh aplicam este arquivo,
+-- não a cadeia histórica de migrations.
+--
+-- PUBLIC fecha a origem herdada por todos os papéis; anon/authenticated fecham
+-- os grants nominais e, principalmente, TRUNCATE (fora da RLS); service_role
+-- fecha o caminho real de UPDATE/DELETE porque BYPASSRLS ignora policies.
+-- SELECT/INSERT continuam explícitos. A retenção usa a função SECURITY DEFINER,
+-- que executa como dona da tabela e conserva piso de 90 dias/default de 5 anos.
+revoke delete, update, truncate on table public.api_audit_log from public;
+revoke delete, update, truncate on table public.api_audit_log from anon;
+revoke delete, update, truncate on table public.api_audit_log from authenticated;
+revoke delete, update, truncate on table public.api_audit_log from service_role;
+
+grant select, insert on table public.api_audit_log to authenticated;
+grant select, insert on table public.api_audit_log to service_role;
+
+comment on table public.api_audit_log is
+  'Trilha append-only: UPDATE/DELETE/TRUNCATE revogados de PUBLIC, anon, authenticated '
+  'e service_role pela migration 0238. Remoção somente por '
+  'fn_expurgar_auditoria_vencida (SECURITY DEFINER, piso 90 dias, default 5 anos).';
+
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'fn_agent_versions_immutable'
+  ) then
+    alter function public.fn_agent_versions_immutable()
+      set search_path = public, pg_temp;
+  end if;
+
+  if exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'fn_ai_agent_version_content_immutable'
+  ) then
+    alter function public.fn_ai_agent_version_content_immutable()
+      set search_path = public, pg_temp;
+  end if;
+
+  if exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname = 'fn_contato_anonimizado_limpa_campos_personalizados'
+  ) then
+    alter function public.fn_contato_anonimizado_limpa_campos_personalizados()
+      set search_path = public, pg_temp;
+  end if;
+end
+$$;
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES
