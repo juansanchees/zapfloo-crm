@@ -28,6 +28,7 @@
 
 {$DOMAIN} {
 	encode gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
 	# `route` é obrigatório aqui: fora dele o Caddy reordena as diretivas pela
 	# ordem padrão dele, na qual `respond` vem DEPOIS de `reverse_proxy` — o

@@ -59,6 +59,12 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
+      - name: Vulnerabilidade conhecida em dependência
+        # Até 2026-09-22 nenhum job obrigatório consultava advisories. O nível
+        # high bloqueia falha grave conhecida sem transformar toda advisory
+        # moderada sem correção disponível em alarme que o time aprende a ignorar.
+        run: pnpm audit --audit-level=high
+
 
       # Scripts do kit self-host num repo git descartável (docker/crontab
       # dublados). É o único gate que exercita o update.sh — um erro aqui
