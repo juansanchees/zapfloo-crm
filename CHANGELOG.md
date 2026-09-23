@@ -8,6 +8,14 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.4.3] — 2026-09-23
+
+### Corrigido
+
+- **Doutrina alinhada ao serviço por assinatura** A documentação de produto agora descreve a assinatura do serviço multi-tenant como modelo principal e preserva a instalação self-host como opção suportada. Nenhum comportamento do sistema mudou.
+
+- **HTTPS cobre subdomínios e a auditoria não aceita alteração direta** O proxy passa a exigir HTTPS também nos subdomínios, sem aderir à lista preload. No banco, a trilha de auditoria recusa alteração, remoção e esvaziamento diretos; o expurgo automático por retenção continua funcionando pelo caminho controlado já existente. O CI também passa a bloquear dependências com vulnerabilidade conhecida de nível alto.
+
 ## [2.4.2] — 2026-09-22
 
 ### Corrigido
@@ -3456,7 +3464,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.2...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.3...HEAD
+[2.4.3]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.3.0...v2.4.0
