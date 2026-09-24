@@ -123,3 +123,48 @@ As duas proteções foram restauradas. A última rodada focada, feita após a co
 ### Ajuste histórico do baseline
 
 O texto original permaneceu no bloco histórico 0234 do baseline. A semântica atual de `pausado` aparece somente no apêndice 0239, em paridade com a migration 0239, e por estar depois substitui o comentário antigo ao instalar ou atualizar. A prova focada posterior terminou com `1 file passed`, `10 tests passed`, `install ok` e `update ok`.
+
+## Integração — vínculo atômico de `pending_match`
+
+- A própria migration ainda não publicada `0239` ganhou `fn_vincular_evento_monetizze(uuid, uuid, uuid, text)`; não foi criado um `0240` artificial para corrigir código ainda não lançado.
+- A RPC aceita somente IDs internos e motivo de auditoria. Plano, status, cobrança, datas e IDs externos vêm do evento já normalizado no ledger; nenhum alias ou campo cru da Monetizze entrou no contrato.
+- O evento pendente é reivindicado com `FOR UPDATE`; a organização e a assinatura também são bloqueadas antes da projeção. Assim, chamadas concorrentes não criam duas assinaturas nem duas auditorias, inclusive quando a organização ainda não tem assinatura.
+- Ausente, não pendente, organização ausente, evento inválido e evento fora de ordem retornam estados explícitos. Uma segunda chamada para o mesmo vínculo retorna `already_linked`, sem repetir projeção ou auditoria.
+- O vínculo atualiza a própria linha existente do ledger, respeita a mesma monotonicidade por relógio/parcela, projeta a assinatura e grava `billing.event_linked` com `before`/`after`. IDs externos permanecem apenas em metadata segura; `resource_id` é o UUID do evento.
+- A RPC é executável somente por `service_role`; `public`, `anon` e `authenticated` foram revogados explicitamente.
+- O bloco de `lib/database.types.ts` foi gerado pela Supabase CLI 2.83.0 contra Postgres 15 efêmero com o baseline aplicado. O bloco transplantado foi comparado byte a byte com a saída oficial.
+
+### RED e sabotagem do claim
+
+Antes da implementação, os cinco casos novos falharam porque a função não existia. Depois do GREEN, removi somente o `FOR UPDATE` que reivindica o evento. A barreira determinística em duas sessões reais expôs a corrida:
+
+```text
+FAIL claim do vínculo é concorrente, idempotente e produz uma única projeção/auditoria
+expected [ "already_linked", "linked" ]
+received [ "ignored_out_of_order", "linked" ]
+Test Files 1 failed (1)
+Tests 1 failed | 12 passed (13)
+```
+
+O lock foi restaurado antes das provas finais.
+
+### Provas finais da integração
+
+```text
+Foco: cobranca-monetizze + rls-isolation + rls-completude-varredura
+install ok; update ok
+Test Files 3 passed (3)
+Tests 94 passed (94)
+test:db verde
+
+Suíte completa:
+Test Files 177 passed (177)
+Tests 1471 passed | 1 skipped (1472)
+Duration 270.57s
+test:db verde
+
+corepack pnpm typecheck — exit 0
+eslint dos três invariantes focados — exit 0
+corepack pnpm lint — exit 0 (305 warnings preexistentes, 0 erros)
+git diff --check — exit 0
+```

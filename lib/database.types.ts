@@ -7947,6 +7947,15 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_vincular_evento_monetizze: {
+        Args: {
+          p_actor_user_id: string
+          p_event_id: string
+          p_organization_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       midpoint: { Args: { p_next: number; p_prev: number }; Returns: number }
       retrieve_top_k_chunks: {
         Args: {

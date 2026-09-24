@@ -21621,6 +21621,183 @@ grant execute on function public.fn_processar_evento_monetizze(
   text,text,text,text,timestamptz,integer,text,text,text,text,uuid,text,text,
   timestamptz,timestamptz,timestamptz,text,text
 ) to service_role;
+
+create or replace function public.fn_vincular_evento_monetizze(
+  p_event_id uuid,
+  p_organization_id uuid,
+  p_actor_user_id uuid,
+  p_reason text
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_event public.billing_provider_events%rowtype;
+  v_before_subscription public.organization_subscriptions%rowtype;
+  v_after_subscription public.organization_subscriptions%rowtype;
+  v_has_subscription boolean := false;
+  v_outcome text;
+  v_now timestamptz := clock_timestamp();
+  v_before jsonb;
+  v_after jsonb;
+begin
+  if p_event_id is null
+     or p_organization_id is null
+     or p_actor_user_id is null
+     or nullif(btrim(p_reason), '') is null
+     or length(p_reason) > 500
+     or p_reason ~ E'[\\r\\n]'
+  then
+    return jsonb_build_object('status', 'invalid_request');
+  end if;
+
+  -- O lock é o claim: duas conciliações do mesmo evento nunca observam
+  -- pending_match ao mesmo tempo nem duplicam projeção/auditoria.
+  select e.* into v_event
+    from public.billing_provider_events e
+   where e.id = p_event_id
+   for update;
+
+  if not found then
+    return jsonb_build_object('status', 'not_found');
+  end if;
+  if v_event.outcome <> 'pending_match' then
+    if v_event.outcome = 'applied' and v_event.organization_id = p_organization_id then
+      return jsonb_build_object('status', 'already_linked', 'event_id', v_event.id);
+    end if;
+    return jsonb_build_object('status', 'not_pending', 'event_id', v_event.id);
+  end if;
+  if v_event.plan_id is null or v_event.target_status is null then
+    return jsonb_build_object('status', 'invalid_event', 'event_id', v_event.id);
+  end if;
+
+  -- Serializa também eventos diferentes destinados à mesma organização,
+  -- inclusive antes de existir organization_subscriptions.
+  perform 1
+    from public.organizations o
+   where o.id = p_organization_id
+   for update;
+  if not found then
+    return jsonb_build_object('status', 'organization_not_found', 'event_id', v_event.id);
+  end if;
+
+  select s.* into v_before_subscription
+    from public.organization_subscriptions s
+   where s.organization_id = p_organization_id
+   for update;
+  v_has_subscription := found;
+
+  v_before := jsonb_build_object(
+    'event_outcome', v_event.outcome,
+    'event_organization_id', v_event.organization_id,
+    'subscription_plan_id', v_before_subscription.plan_id,
+    'subscription_status', v_before_subscription.status,
+    'subscription_last_billing_event_at', v_before_subscription.last_billing_event_at,
+    'subscription_last_billing_installment', v_before_subscription.last_billing_installment
+  );
+
+  if v_has_subscription and v_before_subscription.last_billing_event_at is not null and (
+    v_event.event_at < v_before_subscription.last_billing_event_at
+    or (
+      v_event.event_at = v_before_subscription.last_billing_event_at
+      and coalesce(v_event.installment_number, 0)
+        <= coalesce(v_before_subscription.last_billing_installment, 0)
+    )
+  ) then
+    v_outcome := 'ignored_out_of_order';
+  else
+    insert into public.organization_subscriptions(
+      organization_id, plan_id, status, billing_provider,
+      external_subscription_id, last_sale_code, last_payment_at,
+      paid_through, access_until, last_billing_event_at,
+      last_billing_installment, updated_by
+    ) values (
+      p_organization_id, v_event.plan_id, v_event.target_status, 'monetizze',
+      v_event.subscription_code, v_event.sale_code, v_event.payment_confirmed_at,
+      v_event.paid_through, v_event.access_until, v_event.event_at,
+      v_event.installment_number, null
+    )
+    on conflict (organization_id) do update set
+      plan_id = excluded.plan_id,
+      status = excluded.status,
+      billing_provider = excluded.billing_provider,
+      external_subscription_id = coalesce(
+        excluded.external_subscription_id,
+        public.organization_subscriptions.external_subscription_id
+      ),
+      last_sale_code = excluded.last_sale_code,
+      last_payment_at = coalesce(
+        excluded.last_payment_at,
+        public.organization_subscriptions.last_payment_at
+      ),
+      paid_through = coalesce(excluded.paid_through, public.organization_subscriptions.paid_through),
+      access_until = coalesce(excluded.access_until, public.organization_subscriptions.access_until),
+      last_billing_event_at = excluded.last_billing_event_at,
+      last_billing_installment = coalesce(
+        excluded.last_billing_installment,
+        public.organization_subscriptions.last_billing_installment
+      ),
+      updated_by = null;
+    v_outcome := 'applied';
+  end if;
+
+  update public.billing_provider_events
+     set organization_id = p_organization_id,
+         outcome = v_outcome,
+         error_code = null,
+         processed_at = v_now
+   where id = v_event.id;
+
+  select s.* into v_after_subscription
+    from public.organization_subscriptions s
+   where s.organization_id = p_organization_id;
+
+  v_after := jsonb_build_object(
+    'event_outcome', v_outcome,
+    'event_organization_id', p_organization_id,
+    'subscription_plan_id', v_after_subscription.plan_id,
+    'subscription_status', v_after_subscription.status,
+    'subscription_last_billing_event_at', v_after_subscription.last_billing_event_at,
+    'subscription_last_billing_installment', v_after_subscription.last_billing_installment
+  );
+
+  insert into public.api_audit_log(
+    organization_id, actor_user_id, action, resource_type, resource_id,
+    acting_as_platform_admin, bypassed_rls, metadata
+  ) values (
+    p_organization_id, p_actor_user_id, 'billing.event_linked',
+    'billing_provider_event', v_event.id, true, true,
+    jsonb_build_object(
+      'reason', btrim(p_reason),
+      'before', v_before,
+      'after', v_after,
+      'external', jsonb_build_object(
+        'provider', v_event.provider,
+        'webhook_id', v_event.webhook_id,
+        'sale_code', v_event.sale_code,
+        'sale_status', v_event.sale_status,
+        'subscription_code', v_event.subscription_code,
+        'event_at', v_event.event_at,
+        'installment_number', v_event.installment_number
+      )
+    )
+  );
+
+  return jsonb_build_object(
+    'status', case when v_outcome = 'applied' then 'linked' else v_outcome end,
+    'event_id', v_event.id
+  );
+end;
+$$;
+
+comment on function public.fn_vincular_evento_monetizze(uuid, uuid, uuid, text) is
+  'Vincula um pending_match à organização e projeta assinatura/auditoria na mesma transação. Usa somente os campos normalizados já persistidos no ledger.';
+
+revoke execute on function public.fn_vincular_evento_monetizze(uuid, uuid, uuid, text)
+  from public, anon, authenticated;
+grant execute on function public.fn_vincular_evento_monetizze(uuid, uuid, uuid, text)
+  to service_role;
 notify pgrst, 'reload schema';
 
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----

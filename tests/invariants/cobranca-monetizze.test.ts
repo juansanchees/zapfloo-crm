@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { GOV_ORG, lastLine, seedGov, sql } from "./gov-helpers";
+import { GOV_ADMIN, GOV_ORG, lastLine, seedGov, sql } from "./gov-helpers";
 
 const containerFromEnv = process.env.TEST_DB_CONTAINER;
 if (!containerFromEnv) throw new Error("Rode por corepack pnpm test:db.");
@@ -110,6 +110,53 @@ function processar(sobrescritas: {
       p_access_until => ${literal(accessUntil)},
       p_outcome => 'applied',
       p_error_code => null
+    );
+  `);
+  return JSON.parse(lastLine(out)) as { status: string; event_id?: string };
+}
+
+function criarEventoPendente(sobrescritas: {
+  webhookId?: string;
+  saleCode?: string;
+  saleStatus?: string;
+  eventAt?: string;
+  installment?: number | null;
+  planId?: string | null;
+  targetStatus?: string | null;
+} = {}) {
+  const literal = (value: string | null) => value === null ? "null" : `'${value}'`;
+  const out = sql(`
+    insert into public.billing_provider_events(
+      webhook_id, sale_code, sale_status, event_kind, event_at,
+      installment_number, product_code, subscription_code,
+      buyer_email_hash, buyer_email_masked, plan_id, target_status,
+      payment_confirmed_at, paid_through, access_until, outcome
+    ) values (
+      '${sobrescritas.webhookId ?? "wh-link-1"}',
+      '${sobrescritas.saleCode ?? "sale-link-1"}',
+      '${sobrescritas.saleStatus ?? "approved"}',
+      'subscription', '${sobrescritas.eventAt ?? "2026-09-24T12:00:00Z"}',
+      ${sobrescritas.installment === null ? "null" : sobrescritas.installment ?? 1},
+      'product-schema', 'subscription-link', repeat('c', 64), 'c***@example.test',
+      ${literal(sobrescritas.planId === undefined ? "completo" : sobrescritas.planId)},
+      ${literal(sobrescritas.targetStatus === undefined ? "ativo" : sobrescritas.targetStatus)},
+      '2026-09-24T12:00:00Z', '2026-10-24T12:00:00Z', '2026-10-27T12:00:00Z',
+      'pending_match'
+    ) returning id;
+  `);
+  const eventId = out.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)?.[0];
+  if (!eventId) throw new Error(`insert não devolveu UUID: ${out}`);
+  return eventId;
+}
+
+function vincular(eventId: string, organizationId = GOV_ORG) {
+  const out = sql(`
+    set role service_role;
+    select public.fn_vincular_evento_monetizze(
+      p_event_id => '${eventId}',
+      p_organization_id => '${organizationId}',
+      p_actor_user_id => '${GOV_ADMIN}',
+      p_reason => 'Conciliação manual do teste'
     );
   `);
   return JSON.parse(lastLine(out)) as { status: string; event_id?: string };
@@ -331,12 +378,136 @@ describe("0239 — cobrança Monetizze nasce fechada e idempotente", () => {
     }
   }, 15_000);
 
+  it("vincula pendência existente, projeta os campos normalizados e audita before/after uma vez", () => {
+    const eventId = criarEventoPendente();
+    expect(vincular(eventId)).toMatchObject({ status: "linked", event_id: eventId });
+    expect(sql(`
+      select outcome || ':' || organization_id || ':' || (processed_at is not null)::text
+        from public.billing_provider_events where id = '${eventId}'
+    `)).toBe(`applied:${GOV_ORG}:true`);
+    expect(sql(`
+      select plan_id || ':' || status || ':' || last_sale_code || ':' || external_subscription_id
+        from public.organization_subscriptions where organization_id = '${GOV_ORG}'
+    `)).toBe("completo:ativo:sale-link-1:subscription-link");
+    expect(sql(`
+      select actor_user_id || ':' || resource_id || ':' ||
+             (metadata->'before'->>'event_outcome') || ':' ||
+             (metadata->'after'->>'event_outcome') || ':' ||
+             (metadata->'external'->>'sale_code') || ':' ||
+             (metadata->>'reason')
+        from public.api_audit_log
+       where action = 'billing.event_linked' and resource_id = '${eventId}'
+    `)).toBe(`${GOV_ADMIN}:${eventId}:pending_match:applied:sale-link-1:Conciliação manual do teste`);
+
+    expect(vincular(eventId)).toMatchObject({ status: "already_linked", event_id: eventId });
+    expect(sql(`select count(*) from public.api_audit_log where action = 'billing.event_linked' and resource_id = '${eventId}'`))
+      .toBe("1");
+  });
+
+  it("vínculo recusa ausente/não pendente e preserva monotonicidade de assinatura mais nova", () => {
+    expect(vincular("ffffffff-ffff-4fff-8fff-ffffffffffff")).toMatchObject({ status: "not_found" });
+
+    const naoPendente = criarEventoPendente({ webhookId: "wh-link-ignored", saleCode: "sale-link-ignored" });
+    sql(`update public.billing_provider_events set outcome = 'ignored_event', processed_at = now() where id = '${naoPendente}';`);
+    expect(vincular(naoPendente)).toMatchObject({ status: "not_pending", event_id: naoPendente });
+
+    sql(`
+      update public.organization_subscriptions
+         set plan_id = 'basico', status = 'ativo', last_sale_code = 'sale-current-newer',
+             last_billing_event_at = '2026-09-25T12:00:00Z', last_billing_installment = 2
+       where organization_id = '${GOV_ORG}';
+    `);
+    const antigo = criarEventoPendente({
+      webhookId: "wh-link-old", saleCode: "sale-link-old", saleStatus: "cancelled",
+      eventAt: "2026-09-24T12:00:00Z", installment: 1, planId: "completo", targetStatus: "cancelado",
+    });
+    expect(vincular(antigo)).toMatchObject({ status: "ignored_out_of_order", event_id: antigo });
+    expect(sql(`select plan_id || ':' || status || ':' || last_sale_code from public.organization_subscriptions where organization_id = '${GOV_ORG}'`))
+      .toBe("basico:ativo:sale-current-newer");
+    expect(sql(`select outcome || ':' || organization_id from public.billing_provider_events where id = '${antigo}'`))
+      .toBe(`ignored_out_of_order:${GOV_ORG}`);
+  });
+
+  it("claim do vínculo é concorrente, idempotente e produz uma única projeção/auditoria", async () => {
+    sql(`delete from public.organization_subscriptions where organization_id = '${GOV_ORG}';`);
+    const eventId = criarEventoPendente({ webhookId: "wh-link-race", saleCode: "sale-link-race" });
+    sql(`
+      create table if not exists public.billing_link_test_barrier (released boolean not null);
+      truncate table public.billing_link_test_barrier;
+      insert into public.billing_link_test_barrier(released) values (false);
+      create or replace function public.fn_billing_link_test_pause_first()
+      returns trigger language plpgsql set search_path = '' as $test$
+      begin
+        if new.last_sale_code = 'sale-link-race' then
+          while not (select b.released from public.billing_link_test_barrier b limit 1) loop
+            perform pg_sleep(0.02);
+          end loop;
+        end if;
+        return new;
+      end;
+      $test$;
+      drop trigger if exists trg_billing_link_test_pause_first on public.organization_subscriptions;
+      create trigger trg_billing_link_test_pause_first
+      before insert on public.organization_subscriptions
+      for each row execute function public.fn_billing_link_test_pause_first();
+    `);
+    const chamada = `
+      set role service_role;
+      select public.fn_vincular_evento_monetizze(
+        '${eventId}', '${GOV_ORG}', '${GOV_ADMIN}', 'Conciliação concorrente do teste'
+      );
+    `;
+    let primeiro: ProcessoSql | null = null;
+    let segundo: ProcessoSql | null = null;
+    try {
+      primeiro = sqlAssincrono(chamada, "monetizze-link-first");
+      expect(await esperarAtividade(
+        "monetizze-link-first", "wait_event_type = 'Timeout' and wait_event = 'PgSleep'", primeiro,
+      )).toBe(true);
+      segundo = sqlAssincrono(chamada, "monetizze-link-second");
+      expect(await esperarAtividade("monetizze-link-second", "wait_event_type = 'Lock'", segundo)).toBe(true);
+
+      sql(`update public.billing_link_test_barrier set released = true;`);
+      const [r1, r2] = await Promise.all([primeiro.concluido, segundo.concluido]);
+      expect(r1, r1.stderr).toMatchObject({ code: 0 });
+      expect(r2, r2.stderr).toMatchObject({ code: 0 });
+      const status = [
+        JSON.parse(lastLine(r1.stdout.trim())).status,
+        JSON.parse(lastLine(r2.stdout.trim())).status,
+      ].sort();
+      expect(status).toEqual(["already_linked", "linked"]);
+      expect(sql(`select outcome || ':' || organization_id from public.billing_provider_events where id = '${eventId}'`))
+        .toBe(`applied:${GOV_ORG}`);
+      expect(sql(`select count(*) from public.organization_subscriptions where organization_id = '${GOV_ORG}'`)).toBe("1");
+      expect(sql(`select count(*) from public.api_audit_log where action = 'billing.event_linked' and resource_id = '${eventId}'`))
+        .toBe("1");
+    } finally {
+      sql(`update public.billing_link_test_barrier set released = true;`);
+      if (primeiro && !primeiro.resultado) await primeiro.concluido;
+      if (segundo && !segundo.resultado) await segundo.concluido;
+      sql(`
+        drop trigger if exists trg_billing_link_test_pause_first on public.organization_subscriptions;
+        drop function if exists public.fn_billing_link_test_pause_first();
+        drop table if exists public.billing_link_test_barrier;
+        insert into public.organization_subscriptions(organization_id, plan_id, status)
+        values ('${GOV_ORG}', 'completo', 'ativo')
+        on conflict (organization_id) do nothing;
+      `);
+    }
+  }, 15_000);
+
   it("revoga a RPC de public/anon/authenticated e a concede somente ao servidor", () => {
     const signature = `public.fn_processar_evento_monetizze(text,text,text,text,timestamp with time zone,integer,text,text,text,text,uuid,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,text,text)`;
     expect(sql(`select has_function_privilege('public', '${signature}', 'EXECUTE')`)).toBe("f");
     expect(sql(`select has_function_privilege('anon', '${signature}', 'EXECUTE')`)).toBe("f");
     expect(sql(`select has_function_privilege('authenticated', '${signature}', 'EXECUTE')`)).toBe("f");
     expect(sql(`select has_function_privilege('service_role', '${signature}', 'EXECUTE')`)).toBe("t");
+
+    const vincularSignature = "public.fn_vincular_evento_monetizze(uuid,uuid,uuid,text)";
+    expect(sql(`select has_function_privilege('public', '${vincularSignature}', 'EXECUTE')`)).toBe("f");
+    expect(sql(`select has_function_privilege('anon', '${vincularSignature}', 'EXECUTE')`)).toBe("f");
+    expect(sql(`select has_function_privilege('authenticated', '${vincularSignature}', 'EXECUTE')`)).toBe("f");
+    expect(sql(`select has_function_privilege('service_role', '${vincularSignature}', 'EXECUTE')`)).toBe("t");
   });
 
   it("não cria coluna para payload bruto nem altera a assinatura anterior ao reaplicar", () => {
