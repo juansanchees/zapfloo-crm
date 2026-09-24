@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { requirePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
@@ -28,11 +28,14 @@ function ledgerBuilder(rows: Array<Record<string, unknown>>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("INTERNAL_SECRET", "segredo-ficticio-de-cursor-com-32-bytes");
   vi.mocked(requirePlatformAdmin).mockResolvedValue({
     user: { id: ADMIN_ID },
     platformAdmin: { user_id: ADMIN_ID, scope: "full", mfa_required: false },
   } as never);
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("GET /api/v1/admin/billing/unmatched", () => {
   it("é exclusivo de admin da plataforma", async () => {
@@ -92,9 +95,48 @@ describe("GET /api/v1/admin/billing/unmatched", () => {
   });
 
   it("recusa cursor adulterado antes de consultar", async () => {
+    const rows = [
+      {
+        id: "22222222-2222-4222-8222-222222222221",
+        provider: "monetizze",
+        event_kind: "subscription",
+        event_at: "2026-09-24T12:00:00.000Z",
+        product_code: "produto-normalizado",
+        plan_id: "completo",
+        target_status: "ativo",
+        buyer_email_masked: "a***@example.test",
+        received_at: "2026-09-24T12:01:00.000Z",
+      },
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        provider: "monetizze",
+        event_kind: "subscription",
+        event_at: "2026-09-24T11:00:00.000Z",
+        product_code: "produto-normalizado",
+        plan_id: "basico",
+        target_status: "ativo",
+        buyer_email_masked: null,
+        received_at: "2026-09-24T11:01:00.000Z",
+      },
+    ];
+    const { builder } = ledgerBuilder(rows);
+    vi.mocked(createAdminClient).mockReturnValue({ from: () => builder } as never);
     const { GET } = await import("./route");
+    const first = await GET(new NextRequest("http://localhost/api/v1/admin/billing/unmatched?limit=1"));
+    const firstBody = await first.json() as { meta: { cursor: string } };
+    const cursor = firstBody.meta.cursor;
+    const [encoded, signature] = cursor.split(".");
+    const decoded = JSON.parse(Buffer.from(encoded!, "base64url").toString("utf8")) as {
+      received_at: string;
+      id: string;
+    };
+    decoded.id = "99999999-9999-4999-8999-999999999999";
+    const changedPayload = Buffer.from(JSON.stringify(decoded), "utf8").toString("base64url");
+    const tampered = signature ? `${changedPayload}.${signature}` : changedPayload;
+    vi.mocked(createAdminClient).mockClear();
+
     const response = await GET(new NextRequest(
-      "http://localhost/api/v1/admin/billing/unmatched?cursor=nao-e-cursor",
+      `http://localhost/api/v1/admin/billing/unmatched?cursor=${encodeURIComponent(tampered)}`,
     ));
     expect(response.status).toBe(400);
     expect(createAdminClient).not.toHaveBeenCalled();

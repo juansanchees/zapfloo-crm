@@ -59,6 +59,19 @@ describe("POST /api/v1/admin/billing/unmatched/[id]/link", () => {
     expect(createAdminClient).not.toHaveBeenCalled();
   });
 
+  it("scope support_readonly não pode conciliar cobrança nem abrir client service-role", async () => {
+    vi.mocked(requirePlatformAdmin).mockResolvedValueOnce({
+      user: { id: ADMIN_ID },
+      platformAdmin: { user_id: ADMIN_ID, scope: "support_readonly", mfa_required: false },
+    } as never);
+    const { POST } = await import("./route");
+    const response = await POST(request({ organization_id: ORG_ID, reason: "Conciliação confirmada" }), {
+      params: Promise.resolve({ id: EVENT_ID }),
+    });
+    expect(response.status).toBe(403);
+    expect(createAdminClient).not.toHaveBeenCalled();
+  });
+
   it("valida a organização e usa somente a RPC atômica para vincular e projetar", async () => {
     const { stub, rpc, filters } = adminStub();
     vi.mocked(createAdminClient).mockReturnValue(stub as never);

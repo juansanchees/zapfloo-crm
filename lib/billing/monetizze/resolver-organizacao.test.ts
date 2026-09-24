@@ -143,4 +143,74 @@ describe("resolução segura de organização para evento normalizado", () => {
     expect(calls).toContainEqual(["member.not", "accepted_at", "is", null]);
     expect(calls).toContainEqual(["member.is", "revoked_at", null]);
   });
+
+  it("não associa automaticamente quando a página 50 vem cheia e não prova exaustão", async () => {
+    const targetId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const filler = { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", email: "outro@example.test" };
+    const fullPage = Array.from({ length: 1000 }, () => filler);
+    const listUsers = vi.fn(async ({ page }: { page: number }) => ({
+      data: {
+        users: page === 1
+          ? [{ id: targetId, email: "admin@example.test" }, ...fullPage.slice(1)]
+          : fullPage,
+      },
+      error: null,
+    }));
+    const from = vi.fn(() => { throw new Error("não deve consultar membership sem prova de exaustão"); });
+    const dependencies = createOrganizationResolutionDependencies({
+      auth: { admin: { listUsers } },
+      from,
+    } as never);
+
+    await expect(dependencies.findAcceptedAdminOrganizationIdsByEmail("admin@example.test"))
+      .resolves.toEqual([]);
+    expect(listUsers).toHaveBeenCalledTimes(50);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("página curta prova exaustão e permite usar o único admin encontrado", async () => {
+    const targetId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const membershipBuilder = {
+      select: () => membershipBuilder,
+      eq: () => membershipBuilder,
+      not: () => membershipBuilder,
+      is: () => membershipBuilder,
+      then(resolve: (value: unknown) => unknown) {
+        return Promise.resolve({ data: [{ organization_id: ORG_EMAIL }], error: null }).then(resolve);
+      },
+    };
+    const dependencies = createOrganizationResolutionDependencies({
+      auth: { admin: { listUsers: vi.fn(async () => ({
+        data: { users: [{ id: targetId, email: "admin@example.test" }] },
+        error: null,
+      })) } },
+      from: () => membershipBuilder,
+    } as never);
+
+    await expect(dependencies.findAcceptedAdminOrganizationIdsByEmail("admin@example.test"))
+      .resolves.toEqual([ORG_EMAIL]);
+  });
+
+  it("múltiplos usuários com o mesmo e-mail continuam pendentes", async () => {
+    const filler = Array.from({ length: 999 }, (_, index) => ({
+      id: `bbbbbbbb-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      email: `outro${index}@example.test`,
+    }));
+    const listUsers = vi.fn(async ({ page }: { page: number }) => ({
+      data: {
+        users: page === 1
+          ? [{ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", email: "admin@example.test" }, ...filler]
+          : [{ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2", email: "admin@example.test" }],
+      },
+      error: null,
+    }));
+    const dependencies = createOrganizationResolutionDependencies({
+      auth: { admin: { listUsers } },
+      from: vi.fn(() => { throw new Error("ambiguidade não consulta membership"); }),
+    } as never);
+
+    await expect(dependencies.findAcceptedAdminOrganizationIdsByEmail("admin@example.test"))
+      .resolves.toEqual([]);
+    expect(listUsers).toHaveBeenCalledTimes(2);
+  });
 });

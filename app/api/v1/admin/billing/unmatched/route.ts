@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { fail, ok } from "@/lib/api/wrappers";
 import { requirePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { env } from "@/lib/env";
 
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(30),
@@ -19,13 +20,43 @@ const cursorSchema = z.object({
 
 type Cursor = z.infer<typeof cursorSchema>;
 
-function encodeCursor(cursor: Cursor): string {
-  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+const CURSOR_CONTEXT = "zapfloo:admin:billing-unmatched-cursor:v1";
+
+function cursorKey(): Buffer | null {
+  const secret = env.INTERNAL_SECRET.trim();
+  if (secret.length < 16) return null;
+  return createHmac("sha256", secret).update(`derive\0${CURSOR_CONTEXT}`, "utf8").digest();
+}
+
+function signCursorPayload(encoded: string): Buffer | null {
+  const key = cursorKey();
+  if (!key) return null;
+  return createHmac("sha256", key)
+    .update(`${CURSOR_CONTEXT}\0${encoded}`, "utf8")
+    .digest();
+}
+
+function encodeCursor(cursor: Cursor): string | null {
+  const encoded = Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+  const signature = signCursorPayload(encoded);
+  return signature ? `${encoded}.${signature.toString("base64url")}` : null;
 }
 
 function decodeCursor(encoded: string): Cursor | null {
+  const parts = encoded.split(".");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  const [payload, signatureText] = parts;
+  const expected = signCursorPayload(payload);
+  if (!expected) return null;
+  let received: Buffer;
   try {
-    const raw = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    received = Buffer.from(signatureText, "base64url");
+  } catch {
+    return null;
+  }
+  if (received.length !== expected.length || !timingSafeEqual(received, expected)) return null;
+  try {
+    const raw = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     const parsed = cursorSchema.safeParse(raw);
     return parsed.success ? parsed.data : null;
   } catch {
@@ -83,6 +114,9 @@ export async function GET(request: NextRequest) {
   const nextCursor = hasMore && last
     ? encodeCursor({ received_at: last.received_at, id: last.id })
     : null;
+  if (hasMore && !nextCursor) {
+    return fail("internal_error", "Pagination cursor signing is unavailable", 503, { requestId });
+  }
 
   void audit({
     action: "platform_admin.billing_unmatched_listed",

@@ -36,6 +36,9 @@ export async function POST(
   } catch {
     return fail("forbidden", "Platform admin required", 403, { requestId });
   }
+  if (adminContext.platformAdmin.scope !== "full") {
+    return fail("forbidden", "Full platform admin scope required", 403, { requestId });
+  }
 
   let rawBody: unknown;
   try {

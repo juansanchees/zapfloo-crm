@@ -71,6 +71,7 @@ export function createOrganizationResolutionDependencies(
       if (!normalized) return [];
 
       let matchingUserId: string | null = null;
+      let directoryExhausted = false;
       for (let page = 1; page <= MAX_AUTH_PAGES; page += 1) {
         const { data, error } = await admin.auth.admin.listUsers({ page, perPage: USERS_PER_PAGE });
         if (error) throw new Error(`Falha ao consultar diretório de usuários: ${error.message}`);
@@ -78,9 +79,15 @@ export function createOrganizationResolutionDependencies(
         const matches = users.filter((user) => user.email?.trim().toLowerCase() === normalized);
         if (matches.length > 1 || (matchingUserId && matches.length > 0)) return [];
         if (matches[0]) matchingUserId = matches[0].id;
-        if (users.length < USERS_PER_PAGE) break;
+        if (users.length < USERS_PER_PAGE) {
+          directoryExhausted = true;
+          break;
+        }
       }
-      if (!matchingUserId) return [];
+      // Página cheia no teto não prova que o diretório acabou. Associar nesse
+      // estado seria fail-open: outro usuário com o mesmo e-mail pode existir
+      // na página 51. A compra fica pendente para conciliação humana.
+      if (!directoryExhausted || !matchingUserId) return [];
 
       const { data, error } = await admin
         .from("user_organizations")
