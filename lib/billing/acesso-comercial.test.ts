@@ -112,6 +112,76 @@ describe("decisão comercial única", () => {
       });
     }
   });
+
+  it("recusa data civil impossível em paidThrough, mesmo com o interruptor desligado", () => {
+    expect(decidir("cancelado", "2026-03-04T12:00:00.000Z", {
+      paidThrough: "2026-02-30T12:00:00.000Z",
+      enforcementEnabled: false,
+    })).toEqual({
+      allowed: false,
+      reason: "invalid_billing_data",
+      accessUntil: null,
+      enforcementEnabled: false,
+    });
+  });
+
+  it("recusa timestamps sem fuso no cadastro ou no fim pago", () => {
+    expect(decidir("teste", "2026-09-18T12:00:00.000Z", {
+      organizationCreatedAt: "2026-09-14T12:00:00",
+    })).toMatchObject({ allowed: false, reason: "invalid_billing_data", accessUntil: null });
+    expect(decidir("ativo", "2026-09-18T12:00:00.000Z", {
+      paidThrough: "2026-10-14T12:00:00",
+    })).toMatchObject({ allowed: false, reason: "invalid_billing_data", accessUntil: null });
+  });
+
+  it("não confunde período pago vazio com assinatura ativa legada", () => {
+    expect(decidir("ativo", "2026-09-18T12:00:00.000Z", { paidThrough: "" }))
+      .toMatchObject({ allowed: false, reason: "invalid_billing_data", accessUntil: null });
+  });
+
+  it("não ignora timestamps inválidos em campos secundários do veredito", () => {
+    expect(decidir("ativo", "2026-09-18T12:00:00.000Z", {
+      organizationCreatedAt: "2026-02-30T12:00:00.000Z",
+      paidThrough: null,
+      enforcementEnabled: false,
+    })).toMatchObject({ allowed: false, reason: "invalid_billing_data", accessUntil: null });
+    expect(decidir("teste", "2026-09-18T12:00:00.000Z", {
+      paidThrough: "2026-02-30T12:00:00.000Z",
+      enforcementEnabled: false,
+    })).toMatchObject({ allowed: false, reason: "invalid_billing_data", accessUntil: null });
+  });
+
+  it("recusa relógio inválido antes de liberar ativo legado", () => {
+    expect(decidir("ativo", "2026-09-18T12:00:00.000Z", {
+      paidThrough: null,
+      enforcementEnabled: false,
+      now: new Date(NaN),
+    })).toEqual({
+      allowed: false,
+      reason: "invalid_billing_data",
+      accessUntil: null,
+      enforcementEnabled: false,
+    });
+  });
+
+  it("recusa status desconhecido em runtime, mesmo com pagamento futuro e interruptor desligado", () => {
+    expect(decidir("invalido" as SituacaoComercialDaAssinatura, "2026-09-18T12:00:00.000Z", {
+      enforcementEnabled: false,
+    })).toEqual({
+      allowed: false,
+      reason: "unknown_status",
+      accessUntil: null,
+      enforcementEnabled: false,
+    });
+  });
+
+  it("administrador da plataforma passa mesmo com dados comerciais inválidos", () => {
+    expect(decidir("invalido" as SituacaoComercialDaAssinatura, "2026-09-18T12:00:00.000Z", {
+      paidThrough: "2026-02-30T12:00:00.000Z",
+      now: new Date(NaN),
+      isPlatformAdmin: true,
+    })).toMatchObject({ allowed: true, reason: "platform_admin" });
+  });
 });
 
 describe("período mensal pago", () => {
@@ -121,5 +191,15 @@ describe("período mensal pago", () => {
     ["2026-08-31T23:45:00.000Z", "2026-09-30T23:45:00.000Z"],
   ])("avança um mês-calendário UTC de %s até %s", (pagamento, esperado) => {
     expect(fimDoPeriodoPago(pagamento)).toBe(esperado);
+  });
+
+  it("recusa data impossível ou timestamp sem fuso antes de projetar o mês", () => {
+    expect(fimDoPeriodoPago("2026-02-30T12:00:00.000Z")).toBeNull();
+    expect(fimDoPeriodoPago("2026-01-31T23:45:00")).toBeNull();
+    expect(fimDoPeriodoPago(["2026-01-31T23:45:00.000Z"] as unknown as string)).toBeNull();
+  });
+
+  it("aceita instante RFC3339 com offset e preserva o horário absoluto", () => {
+    expect(fimDoPeriodoPago("2026-01-31T20:45:00.000-03:00")).toBe("2026-02-28T23:45:00.000Z");
   });
 });
