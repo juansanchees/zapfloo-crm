@@ -8696,6 +8696,75 @@ export const DICIONARIO: Traducoes = {
   "Resumo da equipe": { es: "Resumen del equipo" },
   Pessoas: { es: "Personas" },
   "Gerenciar funis": { es: "Gestionar embudos" },
+  // ─── Admin da plataforma: operação de cobrança ───
+  Cobrança: { es: "Cobros" },
+  "Operação financeira": { es: "Operación financiera" },
+  "Revise o impacto, concilie compras e controle o bloqueio comercial.": {
+    es: "Revisa el impacto, concilia compras y controla el bloqueo comercial.",
+  },
+  "Interruptor global": { es: "Interruptor global" },
+  "Aplicar bloqueio comercial": { es: "Aplicar bloqueo comercial" },
+  "Quando ligado, organizações vencidas deixam de produzir saídas. Mensagens recebidas continuam guardadas.": {
+    es: "Cuando está activado, las organizaciones vencidas dejan de producir salidas. Los mensajes recibidos se siguen guardando.",
+  },
+  "Bloqueio ligado": { es: "Bloqueo activado" },
+  "Bloqueio desligado": { es: "Bloqueo desactivado" },
+  Conciliação: { es: "Conciliación" },
+  "Compras sem organização": { es: "Compras sin organización" },
+  "Escolha a organização correta. O vínculo projeta a assinatura em uma única operação.": {
+    es: "Elige la organización correcta. El vínculo proyecta la suscripción en una sola operación.",
+  },
+  "Nenhuma compra pendente.": { es: "No hay compras pendientes." },
+  "Comprador não identificado": { es: "Comprador no identificado" },
+  "Organização para vincular": { es: "Organización para vincular" },
+  "Selecione uma organização": { es: "Selecciona una organización" },
+  "Vinculando…": { es: "Vinculando…" },
+  "Vincular compra": { es: "Vincular compra" },
+  "Organizações e assinaturas": { es: "Organizaciones y suscripciones" },
+  "Datas ausentes ficam visíveis como legado e nunca são tratadas como pagamento confirmado.": {
+    es: "Las fechas ausentes quedan visibles como legado y nunca se tratan como pago confirmado.",
+  },
+  "Último pagamento": { es: "Último pago" },
+  "Acesso até": { es: "Acceso hasta" },
+  "Sem plano registrado": { es: "Sin plan registrado" },
+  "Revisão necessária": { es: "Revisión necesaria" },
+  Conferida: { es: "Revisada" },
+  "Ativar bloqueio comercial?": { es: "¿Activar el bloqueo comercial?" },
+  "Desativar bloqueio comercial?": { es: "¿Desactivar el bloqueo comercial?" },
+  "Esta confirmação não altera nenhuma assinatura.": {
+    es: "Esta confirmación no modifica ninguna suscripción.",
+  },
+  "organizações vencidas": { es: "organizaciones vencidas" },
+  "organização vencida": { es: "organización vencida" },
+  "organizações legadas": { es: "organizaciones heredadas" },
+  "organização legada": { es: "organización heredada" },
+  "organizações pausadas": { es: "organizaciones pausadas" },
+  "organização pausada": { es: "organización pausada" },
+  "compras pendentes": { es: "compras pendientes" },
+  "compra pendente": { es: "compra pendiente" },
+  "Confirmar e ativar": { es: "Confirmar y activar" },
+  "Confirmar e desativar": { es: "Confirmar y desactivar" },
+  "Não foi possível carregar a operação de cobrança.": {
+    es: "No se pudo cargar la operación de cobros.",
+  },
+  "Não foi possível alterar o bloqueio comercial.": {
+    es: "No se pudo cambiar el bloqueo comercial.",
+  },
+  "Esta compra já foi conciliada por outra ação.": {
+    es: "Esta compra ya fue conciliada por otra acción.",
+  },
+  "Não foi possível vincular esta compra.": {
+    es: "No se pudo vincular esta compra.",
+  },
+  "Compra vinculada e assinatura atualizada.": {
+    es: "Compra vinculada y suscripción actualizada.",
+  },
+  "Carregando cobrança": { es: "Cargando cobros" },
+  "Cobrança indisponível.": { es: "Cobros no disponibles." },
+  Cadastro: { es: "Registro" },
+  "Pago até": { es: "Pagado hasta" },
+  "Carregar mais compras": { es: "Cargar más compras" },
+  "Carregar mais organizações": { es: "Cargar más organizaciones" },
 };
 
 /**
