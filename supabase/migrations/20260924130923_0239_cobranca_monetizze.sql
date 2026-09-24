@@ -21,6 +21,9 @@ alter table public.organization_subscriptions
   add constraint organization_subscriptions_status_check
   check (status in ('teste', 'ativo', 'recusado', 'cancelado', 'pausado'));
 
+comment on column public.organization_subscriptions.status is
+  'teste usa recursos do Completo por 168h desde organizations.created_at; ativo usa o plano; pausado bloqueia o produto mesmo com enforcement_enabled desligado; recusado e cancelado seguem a política comercial.';
+
 do $$
 begin
   if not exists (
@@ -124,7 +127,12 @@ create table if not exists public.billing_provider_events (
     buyer_email_hash is null or buyer_email_hash ~ '^[a-f0-9]{64}$'
   ),
   constraint billing_provider_events_email_masked_check check (
-    buyer_email_masked is null or (length(buyer_email_masked) <= 320 and buyer_email_masked !~ E'[\\r\\n]')
+    buyer_email_masked is null or (
+      length(buyer_email_masked) <= 320
+      and buyer_email_masked !~ E'[\\r\\n]'
+      and buyer_email_masked ~ '^[^@]+@[^@]+$'
+      and position('*' in split_part(buyer_email_masked, '@', 1)) > 0
+    )
   ),
   constraint billing_provider_events_error_code_check check (
     error_code is null or (length(error_code) between 1 and 120 and error_code ~ '^[a-z0-9._:-]+$')

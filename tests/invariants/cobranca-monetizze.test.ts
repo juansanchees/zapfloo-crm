@@ -1,12 +1,13 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { GOV_ORG, lastLine, seedGov, sql } from "./gov-helpers";
 
-const container = process.env.TEST_DB_CONTAINER;
-if (!container) throw new Error("Rode por corepack pnpm test:db.");
+const containerFromEnv = process.env.TEST_DB_CONTAINER;
+if (!containerFromEnv) throw new Error("Rode por corepack pnpm test:db.");
+const container: string = containerFromEnv;
 
 function foiRecusado(script: string, trecho: string): boolean {
   try {
@@ -16,6 +17,44 @@ function foiRecusado(script: string, trecho: string): boolean {
     const stderr = (error as { stderr?: string }).stderr ?? "";
     return stderr.includes(trecho);
   }
+}
+
+type ProcessoSql = {
+  concluido: Promise<{ code: number | null; stdout: string; stderr: string }>;
+  resultado: { code: number | null; stdout: string; stderr: string } | null;
+};
+
+function sqlAssincrono(script: string, applicationName: string): ProcessoSql {
+  let resolver!: (resultado: { code: number | null; stdout: string; stderr: string }) => void;
+  const concluido = new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) => {
+    resolver = resolve;
+  });
+  const processo: ProcessoSql = { resultado: null, concluido };
+  execFile("docker", [
+    "exec", "-e", `PGAPPNAME=${applicationName}`, container,
+    "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atqc", script,
+  ], { encoding: "utf8" }, (error, stdout, stderr) => {
+    const code = error && "code" in error && typeof error.code === "number" ? error.code : error ? 1 : 0;
+    processo.resultado = { code, stdout, stderr };
+    resolver(processo.resultado);
+  });
+  return processo;
+}
+
+async function esperarAtividade(applicationName: string, predicadoSql: string, processo?: ProcessoSql) {
+  const limite = Date.now() + 5_000;
+  while (Date.now() < limite) {
+    if (processo?.resultado) return false;
+    const encontrou = sql(`
+      select exists(
+        select 1 from pg_stat_activity
+         where application_name = '${applicationName}' and (${predicadoSql})
+      )
+    `);
+    if (encontrou === "t") return true;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return false;
 }
 
 function processar(sobrescritas: {
@@ -28,6 +67,7 @@ function processar(sobrescritas: {
   paymentConfirmedAt?: string | null;
   paidThrough?: string | null;
   accessUntil?: string | null;
+  buyerEmailMasked?: string | null;
 } = {}) {
   const webhookId = sobrescritas.webhookId ?? "wh-schema-1";
   const saleCode = sobrescritas.saleCode ?? "sale-schema-1";
@@ -44,6 +84,9 @@ function processar(sobrescritas: {
   const accessUntil = sobrescritas.accessUntil === undefined
     ? "2026-10-27T12:00:00.000Z"
     : sobrescritas.accessUntil;
+  const buyerEmailMasked = sobrescritas.buyerEmailMasked === undefined
+    ? "c***@example.test"
+    : sobrescritas.buyerEmailMasked;
   const literal = (value: string | null) => value === null ? "null" : `'${value}'`;
 
   const out = sql(`
@@ -58,7 +101,7 @@ function processar(sobrescritas: {
       p_product_code => 'product-schema',
       p_subscription_code => 'subscription-schema',
       p_buyer_email_hash => repeat('a', 64),
-      p_buyer_email_masked => 'c***@example.test',
+      p_buyer_email_masked => ${literal(buyerEmailMasked)},
       p_organization_id => '${GOV_ORG}',
       p_plan_id => 'completo',
       p_target_status => ${literal(targetStatus)},
@@ -99,6 +142,11 @@ describe("0239 — cobrança Monetizze nasce fechada e idempotente", () => {
       `update public.organization_subscriptions set status = 'invalido' where organization_id = '${GOV_ORG}';`,
       "organization_subscriptions_status_check",
     )).toBe(true);
+    expect(sql(`
+      select col_description('public.organization_subscriptions'::regclass, a.attnum)
+        from pg_attribute a
+       where a.attrelid = 'public.organization_subscriptions'::regclass and a.attname = 'status'
+    `)).toContain("pausado bloqueia o produto mesmo com enforcement_enabled desligado");
   });
 
   it("cria singleton de rollout desligado e não o liga ao reaplicar", () => {
@@ -137,6 +185,18 @@ describe("0239 — cobrança Monetizze nasce fechada e idempotente", () => {
         .toBe("t");
       expect(sql(`select relrowsecurity from pg_class where oid = 'public.${table}'::regclass`)).toBe("t");
     }
+  });
+
+  it("aceita local mascarado e recusa e-mail aberto no ledger", () => {
+    expect(processar({ buyerEmailMasked: "c***@example.test" })).toMatchObject({ status: "applied" });
+    expect(foiRecusado(`
+      insert into public.billing_provider_events
+        (webhook_id, sale_code, sale_status, event_kind, event_at, product_code,
+         buyer_email_hash, buyer_email_masked, outcome)
+      values
+        ('wh-email-aberto', 'sale-email-aberto', 'approved', 'sale', now(), 'product-schema',
+         repeat('b', 64), 'cliente@example.com', 'pending_match');
+    `, "billing_provider_events_email_masked_check")).toBe(true);
   });
 
   it("reivindica e projeta um evento como service_role, com audit em UUID e IDs externos no metadata", () => {
@@ -192,6 +252,84 @@ describe("0239 — cobrança Monetizze nasce fechada e idempotente", () => {
     expect(sql(`select outcome from public.billing_provider_events where webhook_id = 'wh-schema-old'`))
       .toBe("ignored_out_of_order");
   });
+
+  it("serializa duas primeiras assinaturas concorrentes e mantém o evento mais novo", async () => {
+    sql(`
+      delete from public.organization_subscriptions where organization_id = '${GOV_ORG}';
+      create table if not exists public.billing_test_barrier (released boolean not null);
+      truncate table public.billing_test_barrier;
+      insert into public.billing_test_barrier(released) values (false);
+      create or replace function public.fn_billing_test_pause_old()
+      returns trigger language plpgsql set search_path = '' as $test$
+      begin
+        if new.last_sale_code = 'sale-race-old' then
+          while not (select b.released from public.billing_test_barrier b limit 1) loop
+            perform pg_sleep(0.02);
+          end loop;
+        end if;
+        return new;
+      end;
+      $test$;
+      drop trigger if exists trg_billing_test_pause_old on public.organization_subscriptions;
+      create trigger trg_billing_test_pause_old
+      before insert on public.organization_subscriptions
+      for each row execute function public.fn_billing_test_pause_old();
+    `);
+
+    const chamada = (webhookId: string, saleCode: string, saleStatus: string, eventAt: string) => `
+      set role service_role;
+      select public.fn_processar_evento_monetizze(
+        '${webhookId}', '${saleCode}', '${saleStatus}', 'subscription', '${eventAt}', 1,
+        'product-schema', 'subscription-schema', repeat('a', 64), 'c***@example.test',
+        '${GOV_ORG}', 'completo', 'ativo', '${eventAt}', '2026-10-24T12:00:00Z',
+        '2026-10-27T12:00:00Z', 'applied', null
+      );
+    `;
+
+    let antigo: ProcessoSql | null = null;
+    let novo: ProcessoSql | null = null;
+    try {
+      antigo = sqlAssincrono(
+        chamada("wh-race-old", "sale-race-old", "approved-old", "2026-09-24T11:00:00Z"),
+        "monetizze-race-old",
+      );
+      expect(await esperarAtividade(
+        "monetizze-race-old",
+        "wait_event_type = 'Timeout' and wait_event = 'PgSleep'",
+        antigo,
+      ), "o evento antigo chegou à barreira depois de ler a ausência da assinatura").toBe(true);
+
+      novo = sqlAssincrono(
+        chamada("wh-race-new", "sale-race-new", "approved-new", "2026-09-24T12:00:00Z"),
+        "monetizze-race-new",
+      );
+      expect(await esperarAtividade(
+        "monetizze-race-new",
+        "wait_event_type = 'Lock'",
+        novo,
+      ), "o evento novo esperou o lock da organização em vez de projetar em paralelo").toBe(true);
+
+      sql(`update public.billing_test_barrier set released = true;`);
+      const [resultadoAntigo, resultadoNovo] = await Promise.all([antigo.concluido, novo.concluido]);
+      expect(resultadoAntigo, resultadoAntigo.stderr).toMatchObject({ code: 0 });
+      expect(resultadoNovo, resultadoNovo.stderr).toMatchObject({ code: 0 });
+      expect(sql(`
+        select count(*) || ':' || last_sale_code || ':' || last_billing_event_at
+          from public.organization_subscriptions
+         where organization_id = '${GOV_ORG}'
+         group by last_sale_code, last_billing_event_at
+      `)).toBe("1:sale-race-new:2026-09-24 12:00:00+00");
+    } finally {
+      sql(`update public.billing_test_barrier set released = true;`);
+      if (antigo && !antigo.resultado) await antigo.concluido;
+      if (novo && !novo.resultado) await novo.concluido;
+      sql(`
+        drop trigger if exists trg_billing_test_pause_old on public.organization_subscriptions;
+        drop function if exists public.fn_billing_test_pause_old();
+        drop table if exists public.billing_test_barrier;
+      `);
+    }
+  }, 15_000);
 
   it("revoga a RPC de public/anon/authenticated e a concede somente ao servidor", () => {
     const signature = `public.fn_processar_evento_monetizze(text,text,text,text,timestamp with time zone,integer,text,text,text,text,uuid,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,text,text)`;

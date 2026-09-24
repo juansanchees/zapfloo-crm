@@ -65,8 +65,8 @@ Suíte completa de banco:
 
 ```text
 Test Files  177 passed (177)
-Tests       1466 passed | 1 skipped (1467)
-Duration    381.82s
+Tests       1468 passed | 1 skipped (1469)
+Duration    378.80s
 test:db verde
 ```
 
@@ -88,3 +88,34 @@ Não foi necessária para esta tarefa. O schema e a RPC usam exclusivamente o co
 - Receptor público e captura do postback real: fora do escopo desta tarefa.
 - UI, bloqueio comercial e mudança do interruptor em produção: não implementados nem acionados aqui.
 - E2E de navegador: esta tarefa muda apenas schema/RLS/RPC; a prova executada foi a suíte completa `test:db`.
+
+## Correções após revisão independente
+
+- `buyer_email_masked` agora exige um único formato de e-mail e pelo menos um `*` antes de `@`. O banco aceita `c***@example.test` e recusa `cliente@example.com`; a garantia de não guardar e-mail aberto deixou de depender somente do parser futuro.
+- A monotonicidade da primeira assinatura ganhou uma prova real com duas sessões. Uma barreira de teste pausa o evento antigo depois de ele ler a ausência da projeção; a segunda sessão precisa aparecer bloqueada em `pg_stat_activity` pelo lock da organização. Depois da liberação, existe uma única assinatura e o evento mais novo vence.
+- O comentário canônico de `organization_subscriptions.status` agora registra que `pausado` bloqueia o produto mesmo com `enforcement_enabled` desligado, tanto na migration 0239 quanto no baseline de instalação fresca. A migration antiga 0234 permaneceu intocada.
+
+### RED de e-mail aberto
+
+Antes do novo CHECK — e novamente na sabotagem que o enfraqueceu — o teste mostrou:
+
+```text
+FAIL aceita local mascarado e recusa e-mail aberto no ledger
+expected false to be true
+Test Files 1 failed (1)
+Tests 1 failed | 9 passed (10)
+```
+
+### Sabotagem do lock de primeira assinatura
+
+Ao remover somente o `FOR UPDATE` da organização no baseline, a segunda sessão terminou em vez de esperar a primeira:
+
+```text
+FAIL serializa duas primeiras assinaturas concorrentes e mantém o evento mais novo
+o evento novo esperou o lock da organização em vez de projetar em paralelo
+expected false to be true
+Test Files 1 failed (1)
+Tests 1 failed | 9 passed (10)
+```
+
+As duas proteções foram restauradas. A última rodada focada, feita após a correção tipada do helper assíncrono, terminou com `3 files passed` e `91 tests passed`; instalação e reaplicação do baseline ficaram verdes.
