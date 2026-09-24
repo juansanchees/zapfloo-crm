@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -17,16 +18,27 @@ type StubOptions = {
   organizations?: Array<{ id: string; created_at: string }>;
   subscriptions?: Array<Record<string, unknown>>;
   pendingCount?: number;
+  organizationsFailFrom?: number;
 };
 
-function queryResult<T>(data: T, count: number | null = null) {
+function queryResult<T>(data: T[], count: number | null = data.length, failFrom?: number) {
+  let from = 0;
+  let to = Number.POSITIVE_INFINITY;
   const builder = {
     select: () => builder,
     eq: () => builder,
+    order: () => builder,
+    range: (nextFrom: number, nextTo: number) => {
+      from = nextFrom;
+      to = nextTo;
+      return builder;
+    },
     maybeSingle: async () => ({ data, error: null, count }),
     single: async () => ({ data, error: null, count }),
     then(resolve: (value: unknown) => unknown) {
-      return Promise.resolve({ data, error: null, count }).then(resolve);
+      return Promise.resolve(from === failFrom
+        ? { data: null, error: { message: "page_failed" }, count }
+        : { data: data.slice(from, to + 1), error: null, count }).then(resolve);
     },
   };
   return builder;
@@ -56,7 +68,10 @@ function adminStub(options: StubOptions = {}) {
     client: {
       from(table: string) {
         if (table === "platform_billing_settings") return settingQuery;
-        if (table === "organizations") return queryResult(options.organizations ?? []);
+        if (table === "organizations") {
+          const rows = options.organizations ?? [];
+          return queryResult(rows, rows.length, options.organizationsFailFrom);
+        }
         if (table === "organization_subscriptions") return queryResult(options.subscriptions ?? []);
         if (table === "billing_provider_events") return queryResult([], options.pendingCount ?? 0);
         throw new Error(`unexpected table ${table}`);
@@ -130,6 +145,45 @@ describe("/api/v1/admin/billing/settings", () => {
     const { GET } = await import("./route");
     const body = await (await GET()).json();
     expect(body.data.enforcement_enabled).toBe(false);
+  });
+
+  it("percorre todas as páginas antes de calcular o impacto global", async () => {
+    const organizations = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      created_at: "2026-01-01T00:00:00.000Z",
+    }));
+    const subscriptions = organizations.map((organization) => ({
+      organization_id: organization.id,
+      status: "pausado",
+      paid_through: null,
+    }));
+    const { client } = adminStub({ organizations, subscriptions });
+    vi.mocked(createAdminClient).mockReturnValue(client as never);
+    const { GET } = await import("./route");
+    const body = await (await GET()).json();
+
+    expect(body.data.review).toMatchObject({
+      total_organizations: 1_001,
+      paused_count: 1_001,
+    });
+  });
+
+  it("falha fechado quando uma página global não pode ser lida", async () => {
+    const organizations = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      created_at: "2026-01-01T00:00:00.000Z",
+    }));
+    const { client } = adminStub({ organizations, organizationsFailFrom: 1_000 });
+    vi.mocked(createAdminClient).mockReturnValue(client as never);
+    const { GET } = await import("./route");
+
+    expect((await GET()).status).toBe(500);
+  });
+
+  it("usa resultado discriminado em vez de instanceof entre realms", () => {
+    const source = readFileSync("app/api/v1/admin/billing/settings/route.ts", "utf8");
+    expect(source).not.toContain("instanceof Response");
+    expect(source).toContain("if (!authorization.ok) return authorization.response");
   });
 
   it("support_readonly pode revisar, mas nunca mudar o interruptor", async () => {

@@ -122,6 +122,35 @@ describe("GET /api/v1/admin/billing/organizations", () => {
     expect(createAdminClient).not.toHaveBeenCalled();
   });
 
+  it("expõe organização sem projeção como sem assinatura, não como ativa", async () => {
+    const orgs = builder([
+      { id: "10000000-0000-4000-8000-000000000001", display_name: "Clínica sem assinatura", created_at: "2026-01-01T00:00:00.000Z" },
+    ]);
+    const subscriptions = builder([]);
+    const settings = builder([{ enforcement_enabled: true }]);
+    vi.mocked(createAdminClient).mockReturnValue({
+      from(table: string) {
+        if (table === "organizations") return orgs.q;
+        if (table === "organization_subscriptions") return subscriptions.q;
+        if (table === "platform_billing_settings") return settings.q;
+        throw new Error(`unexpected table ${table}`);
+      },
+    } as never);
+
+    const { GET } = await import("./route");
+    const response = await GET(new NextRequest("http://localhost/api/v1/admin/billing/organizations"));
+    const body = await response.json() as { data: Array<Record<string, unknown>> };
+
+    expect(body.data[0]).toMatchObject({
+      organization_name: "Clínica sem assinatura",
+      plan_id: null,
+      status: null,
+      access_allowed: true,
+      access_reason: "legacy_unreviewed",
+      review_required: true,
+    });
+  });
+
   it("recusa cursor assinado adulterado antes de abrir service role", async () => {
     const orgs = builder([
       { id: "10000000-0000-4000-8000-000000000002", display_name: "B", created_at: "2026-02-01T00:00:00.000Z" },

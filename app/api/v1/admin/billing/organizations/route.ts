@@ -112,21 +112,25 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const rows = page.map((organization) => {
     const subscription = byOrganization.get(organization.id);
-    const status = (subscription?.status ?? "ativo") as SituacaoComercialDaAssinatura;
-    const decision = decidirAcessoComercial({
-      status,
-      organizationCreatedAt: organization.created_at,
-      paidThrough: subscription?.paid_through ?? null,
-      enforcementEnabled: setting?.enforcement_enabled === true,
-      isPlatformAdmin: false,
-      now,
-    });
+    const status = subscription?.status as SituacaoComercialDaAssinatura | undefined;
+    // Organização anterior à projeção de assinaturas é legado para revisão,
+    // não uma assinatura `ativo` inventada pelo painel.
+    const decision = subscription === undefined
+      ? { allowed: true, reason: "legacy_unreviewed" as const, accessUntil: null }
+      : decidirAcessoComercial({
+          status: subscription.status as SituacaoComercialDaAssinatura,
+          organizationCreatedAt: organization.created_at,
+          paidThrough: subscription.paid_through,
+          enforcementEnabled: setting?.enforcement_enabled === true,
+          isPlatformAdmin: false,
+          now,
+        });
     return {
       organization_id: organization.id,
       organization_name: organization.display_name,
       organization_created_at: organization.created_at,
       plan_id: subscription?.plan_id ?? null,
-      status,
+      status: status ?? null,
       billing_provider: subscription?.billing_provider ?? null,
       last_payment_at: subscription?.last_payment_at ?? null,
       paid_through: subscription?.paid_through ?? null,

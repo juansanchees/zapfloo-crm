@@ -7,6 +7,8 @@ const RAIZ = "app/api/v1";
 const METODOS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 const EXCECOES_EXATAS: Record<string, string> = {
+  "app/api/v1/admin/billing/settings/route.ts": "plataforma: interruptor global restrito a platform admin full",
+  "app/api/v1/admin/billing/unmatched/[id]/link/route.ts": "plataforma: conciliação manual restrita a platform admin full",
   "app/api/v1/admin/impersonate/end/route.ts": "plataforma: encerra impersonação",
   "app/api/v1/admin/incidents/[id]/resolve/route.ts": "plataforma: incidente global",
   "app/api/v1/admin/platform-admins/route.ts": "plataforma: concessão/revogação de platform admin",

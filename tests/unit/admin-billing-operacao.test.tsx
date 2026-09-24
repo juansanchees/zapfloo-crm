@@ -19,21 +19,38 @@ const SETTINGS = {
   },
 };
 const ORGANIZATIONS = {
-  data: [{
-    organization_id: "10000000-0000-4000-8000-000000000001",
-    organization_name: "Clínica Aurora",
-    organization_created_at: "2026-01-01T00:00:00.000Z",
-    plan_id: "completo",
-    status: "ativo",
-    billing_provider: "monetizze",
-    last_payment_at: "2026-09-01T00:00:00.000Z",
-    paid_through: "2026-10-01T00:00:00.000Z",
-    access_until: "2026-10-04T00:00:00.000Z",
-    subscription_updated_at: "2026-09-01T00:00:00.000Z",
-    access_allowed: true,
-    access_reason: "subscription_active",
-    review_required: false,
-  }],
+  data: [
+    {
+      organization_id: "10000000-0000-4000-8000-000000000001",
+      organization_name: "Clínica Aurora",
+      organization_created_at: "2026-01-01T00:00:00.000Z",
+      plan_id: "completo",
+      status: "ativo",
+      billing_provider: "monetizze",
+      last_payment_at: "2026-09-01T00:00:00.000Z",
+      paid_through: "2026-10-01T00:00:00.000Z",
+      access_until: "2026-10-04T00:00:00.000Z",
+      subscription_updated_at: "2026-09-01T00:00:00.000Z",
+      access_allowed: true,
+      access_reason: "subscription_active",
+      review_required: false,
+    },
+    {
+      organization_id: "10000000-0000-4000-8000-000000000002",
+      organization_name: "Clínica Legada",
+      organization_created_at: "2026-01-01T00:00:00.000Z",
+      plan_id: null,
+      status: null,
+      billing_provider: null,
+      last_payment_at: null,
+      paid_through: null,
+      access_until: null,
+      subscription_updated_at: null,
+      access_allowed: true,
+      access_reason: "legacy_unreviewed",
+      review_required: true,
+    },
+  ],
   meta: { has_more: false, cursor: null },
 };
 const UNMATCHED = {
@@ -61,6 +78,7 @@ function response(body: unknown, status = 200) {
 
 function installFetch(options: { readonly?: boolean; linkStatus?: number } = {}) {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
+  let linked = false;
   const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     calls.push({ url, init });
@@ -68,13 +86,21 @@ function installFetch(options: { readonly?: boolean; linkStatus?: number } = {})
       return response({ data: { enforcement_enabled: true } });
     }
     if (url.includes("/settings")) {
-      return response({ data: { ...SETTINGS.data, can_mutate: !options.readonly } });
+      return response({
+        data: {
+          ...SETTINGS.data,
+          can_mutate: !options.readonly,
+          review: { ...SETTINGS.data.review, pending_count: linked ? 0 : 1 },
+        },
+      });
     }
     if (url.includes("/organizations")) return response(ORGANIZATIONS);
     if (url.includes("/unmatched/") && init?.method === "POST") {
-      return options.linkStatus === 409
-        ? response({ error: { code: "state_conflict", message: "no longer pending" } }, 409)
-        : response({ data: { status: "linked" } });
+      if (options.linkStatus === 409) {
+        return response({ error: { code: "state_conflict", message: "no longer pending" } }, 409);
+      }
+      linked = true;
+      return response({ data: { status: "linked" } });
     }
     if (url.includes("/unmatched")) return response(UNMATCHED);
     throw new Error(`unexpected fetch ${url}`);
@@ -96,6 +122,7 @@ describe("painel de cobrança da plataforma", () => {
     const toggle = await screen.findByRole("switch", { name: "Aplicar bloqueio comercial" });
     expect(toggle).toBeDisabled();
     expect((await screen.findAllByText("Clínica Aurora")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Sem assinatura")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Vincular compra" })).toBeDisabled();
   });
 
@@ -151,5 +178,8 @@ describe("painel de cobrança da plataforma", () => {
     expect(await screen.findByText("Compra vinculada e assinatura atualizada.")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("j***@example.test")).not.toBeInTheDocument());
     expect(calls.filter((call) => call.url.includes("/organizations"))).toHaveLength(2);
+    expect(calls.filter((call) => call.url.includes("/settings"))).toHaveLength(2);
+    fireEvent.click(screen.getByRole("switch", { name: "Aplicar bloqueio comercial" }));
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent("0 compras pendentes");
   });
 });

@@ -8709,6 +8709,8 @@ export const DICIONARIO: Traducoes = {
   },
   "Bloqueio ligado": { es: "Bloqueo activado" },
   "Bloqueio desligado": { es: "Bloqueo desactivado" },
+  "Bloqueio comercial ativado.": { es: "Bloqueo comercial activado." },
+  "Bloqueio comercial desativado.": { es: "Bloqueo comercial desactivado." },
   Conciliação: { es: "Conciliación" },
   "Compras sem organização": { es: "Compras sin organización" },
   "Escolha a organização correta. O vínculo projeta a assinatura em uma única operação.": {
@@ -8727,6 +8729,7 @@ export const DICIONARIO: Traducoes = {
   "Último pagamento": { es: "Último pago" },
   "Acesso até": { es: "Acceso hasta" },
   "Sem plano registrado": { es: "Sin plan registrado" },
+  "Sem assinatura": { es: "Sin suscripción" },
   "Revisão necessária": { es: "Revisión necesaria" },
   Conferida: { es: "Revisada" },
   "Ativar bloqueio comercial?": { es: "¿Activar el bloqueo comercial?" },

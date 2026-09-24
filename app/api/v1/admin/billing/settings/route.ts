@@ -21,34 +21,80 @@ const updateSchema = z.object({
   }
 });
 
+const REVIEW_PAGE_SIZE = 1_000;
+
+type ReviewError = { message: string };
+type OrganizationReviewRow = { id: string; created_at: string };
+type SubscriptionReviewRow = {
+  organization_id: string;
+  status: string;
+  paid_through: string | null;
+};
+
+async function readAllPages<T>(
+  readPage: (from: number, to: number) => Promise<{
+    data: T[] | null;
+    error: ReviewError | null;
+    count: number | null;
+  }>,
+): Promise<{ data: T[]; error: null } | { data: null; error: ReviewError }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from = rows.length) {
+    const page = await readPage(from, from + REVIEW_PAGE_SIZE - 1);
+    if (page.error) return { data: null, error: page.error };
+    if (page.count === null) {
+      return { data: null, error: { message: "Exact count unavailable for billing review" } };
+    }
+    const current = page.data ?? [];
+    rows.push(...current);
+    if (rows.length === page.count) return { data: rows, error: null };
+    if (current.length === 0 || rows.length > page.count) {
+      return { data: null, error: { message: "Incomplete billing review pagination" } };
+    }
+  }
+}
+
 async function requireAdmin(requestId: string) {
   try {
-    return await requirePlatformAdmin();
+    return { ok: true as const, context: await requirePlatformAdmin() };
   } catch {
-    return fail("forbidden", "Platform admin required", 403, { requestId });
+    return {
+      ok: false as const,
+      response: fail("forbidden", "Platform admin required", 403, { requestId }),
+    };
   }
 }
 
 async function readReview() {
   const admin = createAdminClient();
-  const [settingResult, organizationsResult, subscriptionsResult, pendingResult] = await Promise.all([
+  const [settingResult, pendingResult, organizationsResult, subscriptionsResult] = await Promise.all([
     admin
       .from("platform_billing_settings")
       .select("enforcement_enabled,updated_at,updated_by")
       .eq("singleton", true)
       .maybeSingle(),
-    admin.from("organizations").select("id,created_at"),
-    admin.from("organization_subscriptions").select("organization_id,status,paid_through"),
     admin
       .from("billing_provider_events")
       .select("id", { count: "exact", head: true })
       .eq("outcome", "pending_match"),
+    readAllPages<OrganizationReviewRow>(async (from, to) => admin
+      .from("organizations")
+      .select("id,created_at", { count: "exact" })
+      .order("id", { ascending: true })
+      .range(from, to)),
+    readAllPages<SubscriptionReviewRow>(async (from, to) => admin
+      .from("organization_subscriptions")
+      .select("organization_id,status,paid_through", { count: "exact" })
+      .order("organization_id", { ascending: true })
+      .range(from, to)),
   ]);
   const error = settingResult.error ?? organizationsResult.error ?? subscriptionsResult.error ?? pendingResult.error;
   if (error) return { error } as const;
 
   const byOrganization = new Map(
-    (subscriptionsResult.data ?? []).map((row) => [row.organization_id, row]),
+    organizationsResult.data === null || subscriptionsResult.data === null
+      ? []
+      : subscriptionsResult.data.map((row) => [row.organization_id, row] as const),
   );
   let expiredCount = 0;
   let legacyCount = 0;
@@ -56,10 +102,14 @@ async function readReview() {
   const now = new Date();
   for (const organization of organizationsResult.data ?? []) {
     const subscription = byOrganization.get(organization.id);
+    if (!subscription) {
+      legacyCount += 1;
+      continue;
+    }
     const decision = decidirAcessoComercial({
-      status: (subscription?.status ?? "ativo") as SituacaoComercialDaAssinatura,
+      status: subscription.status as SituacaoComercialDaAssinatura,
       organizationCreatedAt: organization.created_at,
-      paidThrough: subscription?.paid_through ?? null,
+      paidThrough: subscription.paid_through,
       enforcementEnabled: true,
       isPlatformAdmin: false,
       now,
@@ -88,7 +138,7 @@ async function readReview() {
 export async function GET() {
   const requestId = randomUUID();
   const authorization = await requireAdmin(requestId);
-  if (authorization instanceof Response) return authorization;
+  if (!authorization.ok) return authorization.response;
 
   const review = await readReview();
   if ("error" in review) {
@@ -96,15 +146,15 @@ export async function GET() {
   }
   return ok({
     ...review.data,
-    can_mutate: authorization.platformAdmin.scope === "full",
+    can_mutate: authorization.context.platformAdmin.scope === "full",
   }, { requestId });
 }
 
 export async function PATCH(request: NextRequest) {
   const requestId = randomUUID();
   const authorization = await requireAdmin(requestId);
-  if (authorization instanceof Response) return authorization;
-  if (authorization.platformAdmin.scope !== "full") {
+  if (!authorization.ok) return authorization.response;
+  if (authorization.context.platformAdmin.scope !== "full") {
     return fail("forbidden", "Full platform admin scope required", 403, { requestId });
   }
 
@@ -139,7 +189,7 @@ export async function PATCH(request: NextRequest) {
     .update({
       enforcement_enabled: parsed.data.enforcement_enabled,
       updated_at: now,
-      updated_by: authorization.user.id,
+      updated_by: authorization.context.user.id,
     })
     .eq("singleton", true)
     .select("enforcement_enabled,updated_at,updated_by")
@@ -153,7 +203,7 @@ export async function PATCH(request: NextRequest) {
   // "ativado" enquanto o escritor ainda nem tentou registrar o ator.
   await audit({
     action: "platform_admin.billing_enforcement_changed",
-    actorUserId: authorization.user.id,
+    actorUserId: authorization.context.user.id,
     actingAsPlatformAdmin: true,
     bypassedRls: true,
     requestId,

@@ -40,7 +40,7 @@ type Organization = {
   organization_name: string;
   organization_created_at: string;
   plan_id: string | null;
-  status: string;
+  status: string | null;
   billing_provider: string | null;
   last_payment_at: string | null;
   paid_through: string | null;
@@ -118,8 +118,8 @@ export function BillingAdminClient() {
   }, [t]);
 
   const sortedOrganizations = useMemo(
-    () => [...organizations].sort((a, b) => a.organization_name.localeCompare(b.organization_name, "pt-BR")),
-    [organizations],
+    () => [...organizations].sort((a, b) => a.organization_name.localeCompare(b.organization_name, locale)),
+    [locale, organizations],
   );
 
   function requestToggle(enabled: boolean) {
@@ -168,9 +168,15 @@ export function BillingAdminClient() {
       });
       setUnmatched((current) => current.filter((item) => item.id !== eventId));
       setNotice(t("Compra vinculada e assinatura atualizada."));
-      const refreshed = await readJson<Envelope<Organization[]>>("/api/v1/admin/billing/organizations?limit=100");
-      setOrganizations(refreshed.data);
-      setOrganizationsCursor(refreshed.meta?.has_more ? refreshed.meta.cursor ?? null : null);
+      const [refreshedSettings, refreshedOrganizations] = await Promise.all([
+        readJson<Envelope<Settings>>("/api/v1/admin/billing/settings"),
+        readJson<Envelope<Organization[]>>("/api/v1/admin/billing/organizations?limit=100"),
+      ]);
+      setSettings(refreshedSettings.data);
+      setOrganizations(refreshedOrganizations.data);
+      setOrganizationsCursor(refreshedOrganizations.meta?.has_more
+        ? refreshedOrganizations.meta.cursor ?? null
+        : null);
     } catch (cause) {
       const status = cause instanceof Error && "status" in cause
         ? (cause as Error & { status?: number }).status
@@ -262,7 +268,7 @@ export function BillingAdminClient() {
         <CardContent><Table><TableHeader><TableRow>
           <TableHead>{t("Organização")}</TableHead><TableHead>{t("Plano")}</TableHead><TableHead>{t("Status")}</TableHead><TableHead>{t("Cadastro")}</TableHead><TableHead>{t("Último pagamento")}</TableHead><TableHead>{t("Pago até")}</TableHead><TableHead>{t("Acesso até")}</TableHead><TableHead>{t("Revisão")}</TableHead>
         </TableRow></TableHeader><TableBody>{organizations.map((organization) => <TableRow key={organization.organization_id}>
-          <TableCell className="font-medium">{organization.organization_name}</TableCell><TableCell>{organization.plan_id ?? t("Sem plano registrado")}</TableCell><TableCell>{organization.status}</TableCell><TableCell>{dateLabel(organization.organization_created_at, locale)}</TableCell><TableCell>{dateLabel(organization.last_payment_at, locale)}</TableCell><TableCell>{dateLabel(organization.paid_through, locale)}</TableCell><TableCell>{dateLabel(organization.access_until, locale)}</TableCell><TableCell>{organization.review_required ? <Badge variant="warning">{t("Revisão necessária")}</Badge> : <Badge variant="success">{t("Conferida")}</Badge>}</TableCell>
+          <TableCell className="font-medium">{organization.organization_name}</TableCell><TableCell>{organization.plan_id ?? t("Sem plano registrado")}</TableCell><TableCell>{organization.status ?? t("Sem assinatura")}</TableCell><TableCell>{dateLabel(organization.organization_created_at, locale)}</TableCell><TableCell>{dateLabel(organization.last_payment_at, locale)}</TableCell><TableCell>{dateLabel(organization.paid_through, locale)}</TableCell><TableCell>{dateLabel(organization.access_until, locale)}</TableCell><TableCell>{organization.review_required ? <Badge variant="warning">{t("Revisão necessária")}</Badge> : <Badge variant="success">{t("Conferida")}</Badge>}</TableCell>
         </TableRow>)}</TableBody></Table></CardContent>
         {organizationsCursor ? <div className="px-6 pb-6"><Button variant="outline" onClick={() => void loadMoreOrganizations()}>{t("Carregar mais organizações")}</Button></div> : null}
       </Card>
