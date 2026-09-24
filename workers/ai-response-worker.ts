@@ -55,6 +55,10 @@ import type { EventRow } from "@/lib/event-log/dispatcher";
 import { resolverModeloDoPonto } from "@/lib/ai/gateway-binding";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
 
 const RECENT_MESSAGES_LIMIT = 20;
 const RAG_TOP_K = 5;
@@ -73,6 +77,18 @@ export interface ProcessResult {
 }
 
 export async function processMessageReceived(row: EventRow): Promise<ProcessResult> {
+  try {
+    await exigirAcessoComercial(row.organization_id);
+  } catch (erro) {
+    if (erro instanceof AcessoComercialBloqueadoError) {
+      return { status: "skipped", reason: erro.code };
+    }
+    return {
+      status: "error",
+      reason: "commercial_access_unavailable",
+      detail: erro instanceof Error ? erro.message : String(erro),
+    };
+  }
   // Cheap pre-check before doing any DB work.
   if (!isAiGatewayConfigured()) {
     return { status: "skipped", reason: "ai_gateway_key_missing" };

@@ -25,6 +25,10 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
 import { generateText, stepCountIs, type LanguageModel, type StopCondition, type ToolSet } from "ai";
 
 // Fonte única do endpoint — a mesma constante que o registry de produção usa.
@@ -223,6 +227,24 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     run.status === "handoff"
   ) {
     return { run_id: run.id, status: "skipped" };
+  }
+
+  try {
+    await exigirAcessoComercial(run.organization_id);
+  } catch (erro) {
+    if (erro instanceof AcessoComercialBloqueadoError) {
+      return {
+        run_id: run.id,
+        status: "skipped",
+        abort_reason: erro.code,
+      };
+    }
+    return failFast(
+      run,
+      "commercial_access_unavailable",
+      erro instanceof Error ? erro.message : String(erro),
+      startedAt,
+    );
   }
 
   // 2) Promote to running. For non-dry-run rows, the partial unique index

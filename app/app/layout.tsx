@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { isMfaEnrolled, loadAuthUser, requiresMfa, resolveActiveOrg } from "@/lib/auth/server";
 import { DEFAULT_VISIBILITY_MODE, type VisibilityMode } from "@/lib/auth/types";
 import { AuthProvider } from "@/hooks/auth/AuthProvider";
@@ -31,6 +32,10 @@ import { instanteDoServidor } from "@/lib/billing/relogio-servidor";
 import { assinaturaDaOrganizacao } from "@/lib/billing/assinatura";
 import type { AcessoResolvido } from "@/lib/billing/planos";
 import { PlanoProvider } from "@/components/billing/PlanoProvider";
+import {
+  avaliarAcessoComercial,
+  rotaPermitidaDuranteBloqueioComercial,
+} from "@/lib/billing/acesso-server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
@@ -38,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   let activeOrg = await resolveActiveOrg(user);
   const store = await cookies();
+  const pathname = (await headers()).get("x-pathname") ?? "/app";
   let onboardingPendente = false;
   let fimDoTeste: string | null = null;
   let acessoDoPlano: AcessoResolvido | null = null;
@@ -64,6 +70,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (orgRow?.status === "suspended") redirect("/account-suspended");
     fimDoTeste = fimDoPeriodoDeTeste(orgRow?.created_at);
     acessoDoPlano = (await assinaturaDaOrganizacao(activeOrg.orgId)).acesso;
+    const acessoComercial = await avaliarAcessoComercial(activeOrg.orgId, {
+      isPlatformAdmin: user.is_platform_admin,
+    });
+    if (!acessoComercial.allowed && !rotaPermitidaDuranteBloqueioComercial(pathname)) {
+      redirect("/app/settings/billing");
+    }
     // A configuração é administrativa: membros convidados não podem concluí-la
     // e não devem ficar presos entre o CRM e o wizard.
     onboardingPendente = Boolean(orgRow && !orgRow.onboarded_at && activeOrg.role === "admin");

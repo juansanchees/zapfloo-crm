@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { vi } from "vitest";
 
 /**
  * Remove um par de aspas (simples ou duplas) que envolva o valor inteiro —
@@ -68,6 +69,32 @@ const PLACEHOLDERS: Record<string, string> = {
 for (const [chave, valor] of Object.entries(PLACEHOLDERS)) {
   process.env[chave] ??= valor;
 }
+
+/**
+ * Estado comercial canônico das unidades antigas: instalação com o interruptor
+ * desligado, portanto acesso permitido. Os testes de cobrança substituem este
+ * dublê explicitamente para provar pausado, vencido e platform admin.
+ *
+ * Sem um estado comercial declarado, os fakes históricos de Postgres/Supabase
+ * respondem linhas de outros domínios à consulta nova e fazem centenas de
+ * cenários legítimos parecerem bloqueados. A produção continua fail-closed;
+ * somente o ambiente unitário ganha esta projeção padrão explícita.
+ */
+vi.mock("@/lib/billing/acesso-server", async (importOriginal) => {
+  const atual = await importOriginal<Record<string, unknown>>();
+  const permitido = async () => ({
+    allowed: true as const,
+    reason: "enforcement_disabled" as const,
+    accessUntil: null,
+    enforcementEnabled: false,
+  });
+  return {
+    ...atual,
+    avaliarAcessoComercial: vi.fn(permitido),
+    exigirAcessoComercial: vi.fn(permitido),
+    exigirAcessoComercialViaPg: vi.fn(permitido),
+  };
+});
 
 import "@testing-library/jest-dom/vitest";
 

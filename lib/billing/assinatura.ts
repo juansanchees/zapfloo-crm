@@ -8,7 +8,7 @@ import {
   type LimiteDoPlano,
   type PlanoId,
   type RecursoDoPlano,
-  type SituacaoDaAssinatura,
+  type SituacaoComercialDaAssinatura,
   limiteDoPlano,
   planoMinimoParaLimite,
   planoMinimoParaRecurso,
@@ -18,7 +18,8 @@ import {
 export type LinhaDeAssinatura = {
   organization_id: string;
   plan_id: PlanoId;
-  status: SituacaoDaAssinatura;
+  status: SituacaoComercialDaAssinatura;
+  paid_through: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -34,7 +35,7 @@ export async function assinaturaDaOrganizacao(orgId: string): Promise<Assinatura
   const [assinaturaRes, orgRes] = await Promise.all([
     admin
       .from("organization_subscriptions")
-      .select("organization_id,plan_id,status,created_at,updated_at,updated_by")
+      .select("organization_id,plan_id,status,paid_through,created_at,updated_at,updated_by")
       .eq("organization_id", orgId)
       .maybeSingle(),
     admin.from("organizations").select("created_at").eq("id", orgId).maybeSingle(),
@@ -56,7 +57,16 @@ export async function assinaturaDaOrganizacao(orgId: string): Promise<Assinatura
     ? null
     : ((assinaturaRes.data as LinhaDeAssinatura | null) ?? null);
   const base: AssinaturaDaOrganizacao = linha
-    ? { plano: linha.plan_id, situacao: linha.status, organizacaoCriadaEm: criadaEm }
+    ? {
+        plano: linha.plan_id,
+        // Recusado/cancelado preservam os recursos do plano até o gate
+        // comercial decidir o fim do período pago. Não são um quarto plano.
+        situacao:
+          linha.status === "recusado" || linha.status === "cancelado"
+            ? "ativo"
+            : linha.status,
+        organizacaoCriadaEm: criadaEm,
+      }
     : {
         plano: PLANO_PADRAO_DE_ORGANIZACAO_EXISTENTE,
         situacao: "ativo",

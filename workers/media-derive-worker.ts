@@ -19,6 +19,10 @@ import { deriveVideoText } from "@/lib/messaging/media/video-derive";
 import { apiTranscriptionProvider } from "@/lib/messaging/media/transcription";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercialViaPg,
+} from "@/lib/billing/acesso-server";
 
 export const MEDIA_DERIVE_CONSUMER_KEY = "media_derive_v1";
 const DRAIN_MAX_ATTEMPTS = 5; // espelho de lib/event-log/drain.ts
@@ -63,6 +67,21 @@ export async function deriveMessageMedia(row: EventRow): Promise<HandlerResult> 
   if (!msg?.media_storage_path) return { consumer_key, status: "skipped", detail: "no media" };
   if (msg.media_derived_status === "ready") return { consumer_key, status: "skipped", detail: "already derived" };
   if (!TIPOS_DERIVAVEIS.has(msg.type)) return { consumer_key, status: "skipped", detail: `type ${msg.type}` };
+
+  // A mídia já foi persistida pelo worker anterior. Daqui em diante começa o
+  // custo (download, transcrição/visão e modelo), por isso o gate fica aqui.
+  try {
+    await exigirAcessoComercialViaPg(derivePool(), row.organization_id);
+  } catch (erro) {
+    if (erro instanceof AcessoComercialBloqueadoError) {
+      return { consumer_key, status: "skipped", detail: erro.code };
+    }
+    return {
+      consumer_key,
+      status: "error",
+      detail: erro instanceof Error ? erro.message : "commercial_access_unavailable",
+    };
+  }
   // Vídeo é opt-in (custo: ffmpeg + N chamadas de visão): só deriva se algum agente
   // publicado da org tem video_frames_enabled=true (flag da migration 0058).
   if (msg.type === "video") {

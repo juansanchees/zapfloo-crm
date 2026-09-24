@@ -29,9 +29,19 @@ const WAHA_BASE = 'http://localhost:3030';
 
 // A URL assinada do Storage é montada com o admin client; ele valida env no
 // import, e o desfecho de mídia precisa controlar sucesso E falha da assinatura.
-const signedUrl = vi.fn<() => Promise<{ data: { signedUrl: string } | null; error: { message: string } | null }>>(
-  async () => ({ data: { signedUrl: 'https://signed.example/a.jpg' }, error: null }),
-);
+const { signedUrl, exigirAcessoComercialMock, insertMessageMock } = vi.hoisted(() => ({
+  signedUrl: vi.fn<() => Promise<{ data: { signedUrl: string } | null; error: { message: string } | null }>>(
+    async () => ({ data: { signedUrl: 'https://signed.example/a.jpg' }, error: null }),
+  ),
+  exigirAcessoComercialMock: vi.fn(async () => ({ allowed: true })),
+  insertMessageMock: vi.fn(),
+}));
+vi.mock('@/lib/billing/acesso-server', async () => {
+  const real = await vi.importActual<Record<string, unknown>>(
+    '@/lib/billing/acesso-server',
+  );
+  return { ...real, exigirAcessoComercial: exigirAcessoComercialMock };
+});
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({ storage: { from: () => ({ createSignedUrl: signedUrl }) } }),
 }));
@@ -142,6 +152,7 @@ function makeSupabase(
       if (table === 'messages') {
         return {
           insert: (row: Row) => {
+            insertMessageMock(row);
             state.message = {
               id: 'msg-1',
               external_id: null,
@@ -201,9 +212,36 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   signedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.example/a.jpg' }, error: null });
+  exigirAcessoComercialMock.mockReset().mockResolvedValue({ allowed: true });
+  insertMessageMock.mockReset();
 });
 
 describe('sendMessageHandler — os 6 desfechos do envio', () => {
+  it('bloqueio comercial recusa humano antes de criar queued ou chamar o canal', async () => {
+    const { AcessoComercialBloqueadoError } = await import('@/lib/billing/acesso-server');
+    exigirAcessoComercialMock.mockRejectedValueOnce(new AcessoComercialBloqueadoError({
+      allowed: false,
+      reason: 'subscription_expired',
+      accessUntil: '2026-09-01T00:00:00.000Z',
+      enforcementEnabled: true,
+    }));
+    wahaConfigured(true);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(sendMessageHandler(makeSupabase(conversationRow()), ctx, textInput()))
+      .rejects.toMatchObject({
+        status: 402,
+        code: 'commercial_access_blocked',
+        details: {
+          reason: 'subscription_expired',
+          access_until: '2026-09-01T00:00:00.000Z',
+          enforcement_enabled: true,
+        },
+      });
+    expect(insertMessageMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   it("revalida a lista no sink, inclusive para automação, sem transformar teste em opt-out", async () => {
     wahaConfigured(true);
     const fetchMock = vi.fn();

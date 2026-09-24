@@ -1,5 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 
+const { acessoComercialMock } = vi.hoisted(() => ({
+  acessoComercialMock: vi.fn(async () => ({ allowed: true })),
+}));
+vi.mock("@/lib/billing/acesso-server", async () => {
+  const real = await vi.importActual<Record<string, unknown>>(
+    "@/lib/billing/acesso-server",
+  );
+  return { ...real, exigirAcessoComercialViaPg: acessoComercialMock };
+});
+
 vi.mock("@/lib/crypto/aes_gcm", () => ({
   byteaToBuffer: () => Buffer.from(""),
   decryptKey: () => "chave-byok-da-org",
@@ -26,6 +36,21 @@ function poolFake(settingsLlm: unknown, credenciais: unknown[]) {
 const SEM_BYOK: unknown[] = [];
 
 describe("resolveOrgLlmConfig — chave de plataforma por provider", () => {
+  it("não consulta credencial nem devolve provider quando a cobrança bloqueia", async () => {
+    const { AcessoComercialBloqueadoError } = await import("@/lib/billing/acesso-server");
+    acessoComercialMock.mockRejectedValueOnce(new AcessoComercialBloqueadoError({
+      allowed: false,
+      reason: "paused",
+      accessUntil: null,
+      enforcementEnabled: false,
+    }));
+    const query = vi.fn();
+
+    await expect(resolveOrgLlmConfig({ query } as never, {
+      openaiApiKey: "nao-deve-ser-lida",
+    }, "org-1")).rejects.toMatchObject({ code: "commercial_access_blocked" });
+    expect(query).not.toHaveBeenCalled();
+  });
   it("usa a chave OpenAI do ambiente quando a org não tem BYOK", async () => {
     // O defeito de origem: existia fallback de env só para a Anthropic. A
     // transcrição de áudio chama o Whisper (OpenAI), e numa org que usa

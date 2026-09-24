@@ -20,6 +20,7 @@ import {
   type PontoDeEmbedding,
 } from "@/lib/ai/embeddings/chave";
 import { gatewayHeaders, type ModelId } from "@/lib/ai/gateway";
+import { exigirAcessoComercial } from "@/lib/billing/acesso-server";
 
 export interface EmbedOptions {
   organizationId: string;
@@ -60,6 +61,7 @@ export async function embedText(
   content: string,
   opts: EmbedOptions,
 ): Promise<EmbedResult> {
+  await exigirAcessoComercial(opts.organizationId);
   const chave =
     opts.chave ?? (await resolverChaveDeEmbedding(opts.organizationId, opts.ponto));
   if (!chave) {
