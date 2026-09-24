@@ -150,6 +150,8 @@ export const AUDIT_ACTIONS = [
   "platform_admin.users_listed",
   "platform_admin.user_viewed",
   "platform_admin.platform_admins_listed",
+  "platform_admin.billing_unmatched_listed",
+  "billing.event_linked",
   "mcp.tool_called",
   "ai.credential_created",
   "ai.credential_deleted",
