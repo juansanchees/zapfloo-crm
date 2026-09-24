@@ -124,8 +124,26 @@ test.describe("rbac role matrix (spec 13 §4)", () => {
     await expectNoBlockingA11y(page);
 
     await page.goto("/app/settings/billing");
-    await expect(page.getByRole("heading", { name: "Billing" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Plano e pagamentos" })).toBeVisible();
+    await expect(page.getByText("Compra indisponível nesta instalação")).toHaveCount(3);
     await expectNoBlockingA11y(page);
+
+    for (const width of [1280, 1366]) {
+      await page.setViewportSize({ width, height: 768 });
+      const billing = page.getByRole("link", { name: "Plano e pagamentos" });
+      await expect(billing).toBeVisible();
+      const box = await billing.boundingBox();
+      expect(box, `Plano e pagamentos precisa ficar mensurável em ${width}×768`).not.toBeNull();
+      expect(box!.y + box!.height).toBeLessThanOrEqual(768);
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/settings/billing");
+    const largura = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      conteudo: document.documentElement.scrollWidth,
+    }));
+    expect(largura.conteudo).toBeLessThanOrEqual(largura.viewport);
   });
 
   test("agent vê inbox e kanban", async ({ page }) => {

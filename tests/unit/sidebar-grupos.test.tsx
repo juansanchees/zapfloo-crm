@@ -58,10 +58,12 @@ describe("Sidebar compacto", () => {
       "Relatórios",
       "Instâncias WhatsApp",
       "Usuários e permissões",
-      "Plano e pagamentos",
     ]);
     expect(screen.getByTestId("sidebar-persistent-footer")).toContainElement(
       screen.getByRole("link", { name: "Configurações" }),
+    );
+    expect(screen.getByTestId("sidebar-persistent-footer")).toContainElement(
+      screen.getByRole("link", { name: "Plano e pagamentos" }),
     );
     expect(screen.getByText("Operação")).toBeVisible();
     expect(screen.getByText("Equipe")).toBeVisible();
@@ -104,10 +106,13 @@ describe("Sidebar compacto", () => {
     render(<Sidebar collapsed={false} />);
 
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
-    expect(nav.contains(screen.getByRole("link", { name: "Plano e pagamentos" }))).toBe(true);
+    expect(nav.contains(screen.getByRole("link", { name: "Plano e pagamentos" }))).toBe(false);
     expect(nav.contains(screen.getByRole("link", { name: "Configurações" }))).toBe(false);
     expect(screen.getByTestId("sidebar-persistent-footer")).toContainElement(
       screen.getByRole("link", { name: "Configurações" }),
+    );
+    expect(screen.getByTestId("sidebar-persistent-footer")).toContainElement(
+      screen.getByRole("link", { name: "Plano e pagamentos" }),
     );
     expect(nav.contains(screen.getByRole("button", { name: "Recolher sidebar" }))).toBe(false);
     expect(screen.getByRole("button", { name: "Recolher sidebar" })).toHaveTextContent(

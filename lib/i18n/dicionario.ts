@@ -8771,6 +8771,76 @@ export const DICIONARIO: Traducoes = {
   "Pago até": { es: "Pagado hasta" },
   "Carregar mais compras": { es: "Cargar más compras" },
   "Carregar mais organizações": { es: "Cargar más organizaciones" },
+  // ─── Plano e pagamentos do cliente ───
+  Assinatura: { es: "Suscripción" },
+  "Veja o plano da sua empresa, a validade do acesso e as opções para contratar ou trocar.": {
+    es: "Consulta el plan de tu empresa, la vigencia del acceso y las opciones para contratar o cambiar.",
+  },
+  "Plano atual": { es: "Plan actual" },
+  "Período pago até": { es: "Período pagado hasta" },
+  "Limites do plano atual": { es: "Límites del plan actual" },
+  "Data limite": { es: "Fecha límite" },
+  "A compra é concluída com segurança no checkout da Monetizze.": {
+    es: "La compra se completa de forma segura en el checkout de Monetizze.",
+  },
+  Escolher: { es: "Elegir" },
+  "Escolher plano": { es: "Elegir plan" },
+  "Checkout do plano": { es: "Checkout del plan" },
+  "Checkout indisponível": { es: "Checkout no disponible" },
+  "Compra indisponível nesta instalação": { es: "Compra no disponible en esta instalación" },
+  "Não informado": { es: "No informado" },
+  "Sem limite": { es: "Sin límite" },
+  "Em teste": { es: "En prueba" },
+  "Pagamento recusado": { es: "Pago rechazado" },
+  "Acesso de administrador da plataforma": { es: "Acceso de administrador de la plataforma" },
+  "Acesso mantido pela plataforma": { es: "Acceso mantenido por la plataforma" },
+  "Teste ativo": { es: "Prueba activa" },
+  "Acesso bloqueado": { es: "Acceso bloqueado" },
+  "Assinatura em dia": { es: "Suscripción al día" },
+  "Pagamento pendente": { es: "Pago pendiente" },
+  "Assinatura aguardando conferência": { es: "Suscripción pendiente de revisión" },
+  "Situação da assinatura indisponível": { es: "Situación de la suscripción no disponible" },
+  "Administradores da plataforma mantêm acesso para operar o serviço.": {
+    es: "Los administradores de la plataforma mantienen el acceso para operar el servicio.",
+  },
+  "A cobrança ainda não está aplicando bloqueios nesta instalação.": {
+    es: "Los cobros todavía no están aplicando bloqueos en esta instalación.",
+  },
+  "Todos os recursos do plano Completo estão liberados durante o teste.": {
+    es: "Todos los recursos del plan Completo están disponibles durante la prueba.",
+  },
+  "O período de teste terminou. Escolha um plano para continuar usando o produto.": {
+    es: "El período de prueba terminó. Elige un plan para seguir usando el producto.",
+  },
+  "O pagamento está confirmado e o acesso segue liberado.": {
+    es: "El pago está confirmado y el acceso sigue habilitado.",
+  },
+  "O período pago terminou, mas o acesso continua durante a tolerância.": {
+    es: "El período pagado terminó, pero el acceso continúa durante el período de tolerancia.",
+  },
+  "O período pago e a tolerância terminaram. Escolha um plano para regularizar.": {
+    es: "El período pagado y la tolerancia terminaron. Elige un plan para regularizar.",
+  },
+  "A assinatura foi pausada pela plataforma. Fale com o suporte para regularizar.": {
+    es: "La suscripción fue pausada por la plataforma. Habla con soporte para regularizar.",
+  },
+  "Esta assinatura existente ainda precisa de conferência pela plataforma.": {
+    es: "Esta suscripción existente todavía debe ser revisada por la plataforma.",
+  },
+  "Não foi possível confirmar os dados comerciais agora. Tente novamente mais tarde.": {
+    es: "No fue posible confirmar los datos comerciales ahora. Inténtalo de nuevo más tarde.",
+  },
+  "A plataforma precisa revisar a situação desta assinatura.": {
+    es: "La plataforma debe revisar la situación de esta suscripción.",
+  },
+  WhatsApp: { es: "WhatsApp" },
+  WhatsApps: { es: "WhatsApps" },
+  "atendente de IA": { es: "agente de IA" },
+  "atendentes de IA": { es: "agentes de IA" },
+  "pessoa da equipe": { es: "persona del equipo" },
+  "pessoas da equipe": { es: "personas del equipo" },
+  "funil de vendas": { es: "embudo de ventas" },
+  "funis de vendas": { es: "embudos de ventas" },
 };
 
 /**

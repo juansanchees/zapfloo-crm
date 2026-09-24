@@ -193,7 +193,6 @@ describe("compactAreas", () => {
         "relatorios",
         "conexoes",
         "usuarios",
-        "pagamentos",
       ],
     ],
   ] as const)("organiza as áreas main para o papel $role", (papel, idsEsperados) => {
@@ -291,11 +290,10 @@ describe("compactAreas", () => {
       "Agentes de IA",
       "/app/ai",
     ]);
-    expect(areas.find((area) => area.position === "footer")).toMatchObject({
-      label: "Configurações",
-      href: "/app/settings",
-      section: "administracao",
-    });
+    expect(areas.filter((area) => area.position === "footer").map((area) => area.label)).toEqual([
+      "Plano e pagamentos",
+      "Configurações",
+    ]);
     expect(compactAreaForPath("/app/ai/knowledge/sources", areas)?.label).toBe("Agentes de IA");
     expect(compactAreaForPath("/app/settings/profile", areas)?.label).toBe("Configurações");
   });

@@ -336,6 +336,13 @@ const schema = z.object({
   // esconde o botão e nunca inventa um contato comercial.
   SALES_WHATSAPP_NUMBER: z.string().optional().default(""),
 
+  // Cobrança Monetizze — todas server-only e opcionais no boot. Sem o par
+  // segredo + checkout válido, a tela continua informativa e não produz link.
+  MONETIZZE_CHAVE_UNICA: z.string().optional().default(""),
+  MONETIZZE_CHECKOUT_BASICO: z.string().optional().default(""),
+  MONETIZZE_CHECKOUT_ESSENCIAL: z.string().optional().default(""),
+  MONETIZZE_CHECKOUT_COMPLETO: z.string().optional().default(""),
+
   // Marca da instalação (white-label) — ver lib/branding.ts.
   // Sem prefixo NEXT_PUBLIC_ de propósito: essas seriam queimadas no bundle
   // durante o build da imagem, e o self-hoster roda uma imagem pré-buildada.
