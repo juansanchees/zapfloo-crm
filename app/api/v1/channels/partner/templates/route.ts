@@ -42,6 +42,7 @@ import { traduzir } from "@/lib/i18n/dicionario";
 import type { Idioma } from "@/lib/i18n/idiomas";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recusaComercialDaMutacao } from "@/lib/billing/acesso-server";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,8 @@ interface Contexto {
   sessionRef: string;
   provider: ChannelProvider;
   idioma: Idioma;
+  userId: string;
+  isPlatformAdmin: boolean;
 }
 
 /**
@@ -97,7 +100,15 @@ async function contexto(
 
   return {
     ok: true,
-    ctx: { orgId: org.orgId, sessionId: sessao.id, sessionRef, provider, idioma: user.idioma },
+    ctx: {
+      orgId: org.orgId,
+      sessionId: sessao.id,
+      sessionRef,
+      provider,
+      idioma: user.idioma,
+      userId: user.id,
+      isPlatformAdmin: user.is_platform_admin,
+    },
   };
 }
 
@@ -147,6 +158,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
   const r = await contexto(requestId);
   if (!r.ok) return r.res;
+  const recusaComercial = await recusaComercialDaMutacao(r.ctx.orgId, {
+    requestId,
+    actorUserId: r.ctx.userId,
+    isPlatformAdmin: r.ctx.isPlatformAdmin,
+  });
+  if (recusaComercial) return recusaComercial;
   const t = (texto: string) => traduzir(texto, r.ctx.idioma);
 
   const adapter = getAdapter(r.ctx.provider);

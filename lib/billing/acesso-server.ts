@@ -1,4 +1,5 @@
 import type pg from "pg";
+import type { NextResponse } from "next/server";
 
 import {
   decidirAcessoComercial,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/billing/acesso-comercial";
 import type { SituacaoComercialDaAssinatura } from "@/lib/billing/planos";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fail, type ApiError } from "@/lib/api/wrappers";
 
 export type ProjecaoComercial = {
   status: SituacaoComercialDaAssinatura;
@@ -61,14 +63,15 @@ export function rotaPermitidaDuranteBloqueioComercial(pathname: string): boolean
 }
 
 /** Exceções explícitas da borda de API. Inbound público não passa por `requireRole`. */
-export function rotaApiPermitidaDuranteBloqueioComercial(pathname: string): boolean {
-  return [
-    "/api/v1/billing",
-    "/api/v1/auth/logout",
-    "/api/v1/webhooks/",
-    "/api/v1/postbacks/",
-    "/api/v1/monetizze/",
-  ].some((prefixo) => pathname === prefixo.replace(/\/$/, "") || pathname.startsWith(prefixo));
+export function rotaApiPermitidaDuranteBloqueioComercial(
+  pathname: string,
+  method: string,
+): boolean {
+  const chave = `${method.toUpperCase()} ${pathname}`;
+  return new Set([
+    "POST /api/v1/billing/checkout",
+    "POST /api/v1/auth/logout",
+  ]).has(chave);
 }
 
 async function lerProjecaoComercialViaSupabase(
@@ -174,6 +177,35 @@ export async function exigirAcessoComercial(
   const decisao = await avaliarAcessoComercial(organizationId, opcoes);
   if (!decisao.allowed) throw new AcessoComercialBloqueadoError(decisao);
   return decisao;
+}
+
+/** Resposta HTTP compartilhada para rotas tenant mutáveis que não usam `requireRole`. */
+export async function recusaComercialDaMutacao(
+  organizationId: string | null,
+  opcoes: OpcoesDeAcessoComercial & { requestId?: string } = {},
+): Promise<NextResponse<ApiError> | null> {
+  try {
+    // O id vazio só é aceito pelo bypass explícito de platform admin e nunca
+    // chega ao leitor. Sem bypass, ausência de org falha fechada como 503.
+    if (!organizationId && opcoes.isPlatformAdmin !== true) {
+      throw new EstadoComercialIndisponivelError("Organização ausente na mutação comercial.");
+    }
+    await exigirAcessoComercial(organizationId ?? "", opcoes);
+    return null;
+  } catch (erro) {
+    if (erro instanceof AcessoComercialBloqueadoError) {
+      return fail("commercial_access_blocked", erro.message, 402, {
+        requestId: opcoes.requestId,
+        details: serializarBloqueioComercial(erro),
+      });
+    }
+    if (erro instanceof EstadoComercialIndisponivelError) {
+      return fail("commercial_access_unavailable", erro.message, 503, {
+        requestId: opcoes.requestId,
+      });
+    }
+    throw erro;
+  }
 }
 
 async function lerProjecaoComercialViaPg(

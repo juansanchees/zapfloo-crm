@@ -24,6 +24,7 @@
     { "id": "mediapersist", "lane": "entrada", "col": 3, "type": "service", "label": "media-persist-worker", "sublabel": "bytes recebidos continuam persistidos e idempotentes" },
     { "id": "layout", "lane": "saida", "col": 3, "type": "frontend", "label": "app/app/layout.tsx", "sublabel": "bloqueado navega somente em Plano e pagamentos; logout continua no shell" },
     { "id": "apimutavel", "lane": "saida", "col": 3, "type": "api", "label": "requireRole + método confiável do proxy", "sublabel": "POST/PUT/PATCH/DELETE tenant retornam 402 tipado; billing, logout e inbound são exceções explícitas" },
+    { "id": "apicustom", "lane": "saida", "col": 3, "type": "api", "label": "rotas tenant custom-auth", "sublabel": "templates parceiro, mídia e logo chamam recusaComercialDaMutacao antes de transporte, Storage ou DB" },
     { "id": "messages", "lane": "saida", "col": 3, "type": "api", "label": "POST /api/v1/messages", "sublabel": "nega humano/automação/IA antes de criar outbound queued" },
     { "id": "webhookout", "lane": "saida", "col": 3, "type": "service", "label": "call_webhook + resend", "sublabel": "nega antes de DNS, decifrar segredo ou fetch" },
     { "id": "conversao", "lane": "saida", "col": 3, "type": "service", "label": "conversão de anúncio Meta", "sublabel": "nega antes de ler credencial ou chamar o transporte" },
@@ -46,6 +47,7 @@
     { "id": "e6", "from": "wahawebhook", "to": "mediapersist", "label": "persiste sem gate comercial" },
     { "id": "e7", "from": "decidir", "to": "messages", "label": "nega antes do queued" },
     { "id": "e7a", "from": "decidir", "to": "apimutavel", "label": "nega mutação direta" },
+    { "id": "e7aa", "from": "decidir", "to": "apicustom", "label": "nega custom-auth" },
     { "id": "e7b", "from": "decidir", "to": "webhookout", "label": "nega automação" },
     { "id": "e7c", "from": "decidir", "to": "conversao", "label": "nega Meta" },
     { "id": "e7d", "from": "decidir", "to": "typing", "label": "nega presença" },
@@ -84,6 +86,9 @@
     { "sink": "automation webhook fetch", "path": "lib/automation/actions/call-webhook.ts", "guard": "exigirAcessoComercial antes de DNS, decrypt e fetch; resend reutiliza o executor" },
     { "sink": "Meta conversion transport", "path": "lib/conversoes/envio.handler.ts", "guard": "exigirAcessoComercial antes do admin client, credencial e transporte" },
     { "sink": "WAHA setPresence", "path": "lib/agent-engine/agent/inbound-turn.ts", "guard": "antesDeDigitar exige acesso antes de comPresencaDeDigitacao tocar o adapter" },
-    { "sink": "tenant mutable API", "path": "lib/auth/require-role.ts", "guard": "proxy sobrescreve método/path; requireRole recusa mutações com 402 tipado" }
+    { "sink": "tenant mutable API", "path": "lib/auth/require-role.ts", "guard": "proxy sobrescreve método/path; requireRole recusa mutações com 402 tipado" },
+    { "sink": "partner template remote + mirror", "path": "app/api/v1/channels/partner/templates/route.ts", "guard": "recusaComercialDaMutacao antes do adapter e upsert" },
+    { "sink": "partner template media Storage", "path": "app/api/v1/channels/partner/templates/media/route.ts", "guard": "recusaComercialDaMutacao antes de ler bytes e upload" },
+    { "sink": "tenant branding Storage + DB", "path": "app/api/v1/marca/logo/route.ts", "guard": "recusaComercialDaMutacao antes do rate limit, Storage e RPC; instalação usa bypass platform admin" }
   ]
 }

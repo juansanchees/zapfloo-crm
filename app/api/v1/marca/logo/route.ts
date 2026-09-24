@@ -73,6 +73,7 @@ import { extensaoDe, farejarTipo, pareceSvg, podeApagar } from "@/lib/branding/l
 import { marcaDaOrganizacaoDeSettings } from "@/lib/branding/organizacao";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recusaComercialDaMutacao } from "@/lib/billing/acesso-server";
 
 export const dynamic = "force-dynamic";
 
@@ -368,6 +369,15 @@ export async function POST(req: NextRequest): Promise<Response> {
     return fail(aberto.recusa.codigo, aberto.recusa.mensagem, aberto.recusa.status, { requestId });
   }
   const ctx = aberto.ctx;
+  const recusaComercial = await recusaComercialDaMutacao(
+    ctx.escopo === "organizacao" ? ctx.orgId : null,
+    {
+      requestId,
+      actorUserId: ctx.userId,
+      isPlatformAdmin: ctx.escopo === "instalacao",
+    },
+  );
+  if (recusaComercial) return recusaComercial;
 
   const limite = await checkRateLimit(
     `marca-logo:${ctx.userId}`,
@@ -465,6 +475,15 @@ export async function DELETE(req: NextRequest): Promise<Response> {
     return fail(aberto.recusa.codigo, aberto.recusa.mensagem, aberto.recusa.status, { requestId });
   }
   const ctx = aberto.ctx;
+  const recusaComercial = await recusaComercialDaMutacao(
+    ctx.escopo === "organizacao" ? ctx.orgId : null,
+    {
+      requestId,
+      actorUserId: ctx.userId,
+      isPlatformAdmin: ctx.escopo === "instalacao",
+    },
+  );
+  if (recusaComercial) return recusaComercial;
 
   const limite = await checkRateLimit(
     `marca-logo:${ctx.userId}`,

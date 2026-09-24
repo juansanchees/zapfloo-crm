@@ -63,7 +63,7 @@ async function deveCobrarAcessoComercial(modo: RequireRoleOpts["commercialAccess
     const metodo = cabecalhos.get("x-request-method")?.toUpperCase();
     const pathname = cabecalhos.get("x-pathname") ?? "";
     return ["POST", "PUT", "PATCH", "DELETE"].includes(metodo ?? "")
-      && !rotaApiPermitidaDuranteBloqueioComercial(pathname);
+      && !rotaApiPermitidaDuranteBloqueioComercial(pathname, metodo ?? "");
   } catch {
     // Chamadores internos sem contexto HTTP preservam o contrato anterior.
     return false;

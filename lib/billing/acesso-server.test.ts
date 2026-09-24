@@ -10,7 +10,9 @@ import {
   avaliarAcessoComercial,
   destinoComercialDoShell,
   exigirAcessoComercial,
+  recusaComercialDaMutacao,
   rotaPermitidaDuranteBloqueioComercial,
+  rotaApiPermitidaDuranteBloqueioComercial,
   serializarBloqueioComercial,
   type LeitorDaProjecaoComercial,
 } from "@/lib/billing/acesso-server";
@@ -51,6 +53,13 @@ describe("adapter server-side da cobrança", () => {
     expect(rotaPermitidaDuranteBloqueioComercial("/app")).toBe(false);
     expect(rotaPermitidaDuranteBloqueioComercial("/app/inbox")).toBe(false);
   });
+  it("na API, libera somente endpoint+método exatos; prefixos públicos não viram bypass", () => {
+    expect(rotaApiPermitidaDuranteBloqueioComercial("/api/v1/billing/checkout", "POST")).toBe(true);
+    expect(rotaApiPermitidaDuranteBloqueioComercial("/api/v1/billing/checkout", "DELETE")).toBe(false);
+    expect(rotaApiPermitidaDuranteBloqueioComercial("/api/v1/billing/outro", "POST")).toBe(false);
+    expect(rotaApiPermitidaDuranteBloqueioComercial("/api/v1/webhooks/admin", "POST")).toBe(false);
+    expect(rotaApiPermitidaDuranteBloqueioComercial("/api/v1/monetizze/admin", "POST")).toBe(false);
+  });
   it("usa a decisão única e bloqueia vencido quando o interruptor está ligado", async () => {
     const decisao = await avaliarAcessoComercial("org-1", {
       now: AGORA,
@@ -81,6 +90,11 @@ describe("adapter server-side da cobrança", () => {
       now: AGORA,
       leitor: leitor({ status: "pausado", isPlatformAdmin: true }),
     })).resolves.toMatchObject({ allowed: true, reason: "platform_admin" });
+  });
+
+  it("mutação da marca da instalação preserva o bypass explícito do platform admin", async () => {
+    await expect(recusaComercialDaMutacao(null, { isPlatformAdmin: true, requestId: "req" }))
+      .resolves.toBeNull();
   });
 
   it("lança erro tipado antes do sink e serializa detalhes snake_case na API", async () => {
