@@ -20700,7 +20700,7 @@ comment on table public.organization_subscriptions is
 comment on column public.organization_subscriptions.plan_id is
   'basico, essencial ou completo. Recursos e preços vivem em lib/billing/planos.ts.';
 comment on column public.organization_subscriptions.status is
-  'teste usa recursos do Completo por 168h desde organizations.created_at; ativo usa o plano; pausado bloqueia o produto mesmo com enforcement_enabled desligado; recusado e cancelado seguem a política comercial.';
+  'teste usa recursos do Completo por 168h desde organizations.created_at; ativo usa o plano; pausado interrompe somente a IA.';
 
 insert into public.organization_subscriptions (organization_id, plan_id, status)
 select o.id, 'completo', 'ativo'

@@ -93,7 +93,7 @@ Não foi necessária para esta tarefa. O schema e a RPC usam exclusivamente o co
 
 - `buyer_email_masked` agora exige um único formato de e-mail e pelo menos um `*` antes de `@`. O banco aceita `c***@example.test` e recusa `cliente@example.com`; a garantia de não guardar e-mail aberto deixou de depender somente do parser futuro.
 - A monotonicidade da primeira assinatura ganhou uma prova real com duas sessões. Uma barreira de teste pausa o evento antigo depois de ele ler a ausência da projeção; a segunda sessão precisa aparecer bloqueada em `pg_stat_activity` pelo lock da organização. Depois da liberação, existe uma única assinatura e o evento mais novo vence.
-- O comentário canônico de `organization_subscriptions.status` agora registra que `pausado` bloqueia o produto mesmo com `enforcement_enabled` desligado, tanto na migration 0239 quanto no baseline de instalação fresca. A migration antiga 0234 permaneceu intocada.
+- O comentário canônico de `organization_subscriptions.status` agora registra que `pausado` bloqueia o produto mesmo com `enforcement_enabled` desligado na migration 0239 e no apêndice 0239 do baseline. O bloco histórico 0234 do baseline e a migration antiga 0234 permanecem intactos; numa instalação fresca, o comentário 0239 posterior sobrescreve corretamente o texto histórico.
 
 ### RED de e-mail aberto
 
@@ -119,3 +119,7 @@ Tests 1 failed | 9 passed (10)
 ```
 
 As duas proteções foram restauradas. A última rodada focada, feita após a correção tipada do helper assíncrono, terminou com `3 files passed` e `91 tests passed`; instalação e reaplicação do baseline ficaram verdes.
+
+### Ajuste histórico do baseline
+
+O texto original permaneceu no bloco histórico 0234 do baseline. A semântica atual de `pausado` aparece somente no apêndice 0239, em paridade com a migration 0239, e por estar depois substitui o comentário antigo ao instalar ou atualizar. A prova focada posterior terminou com `1 file passed`, `10 tests passed`, `install ok` e `update ok`.
