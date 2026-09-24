@@ -53,6 +53,7 @@ export const PLANOS = {
 
 export type PlanoId = keyof typeof PLANOS;
 export type SituacaoDaAssinatura = "teste" | "ativo" | "pausado";
+export type SituacaoComercialDaAssinatura = SituacaoDaAssinatura | "recusado" | "cancelado";
 export type LimiteDoPlano = keyof (typeof PLANOS)[PlanoId]["limites"];
 export type RecursoDoPlano = keyof (typeof PLANOS)[PlanoId]["recursos"];
 export type EstadoDoAcessoIa = "liberado" | "teste_vencido" | "plano_pausado";
@@ -77,6 +78,7 @@ export type AcessoResolvido = {
   tetoIaMensalUsdCents: number;
 };
 
+/** Compatibilidade do gate de IA legado; novos estados comerciais usam decidirAcessoComercial. */
 export function resolverAcessoDaAssinatura(
   assinatura: AssinaturaDaOrganizacao,
   agora = new Date(),
