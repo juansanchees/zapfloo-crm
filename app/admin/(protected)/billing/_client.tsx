@@ -166,8 +166,22 @@ export function BillingAdminClient() {
           reason: "Conciliação manual pelo painel de cobrança",
         }),
       });
-      setUnmatched((current) => current.filter((item) => item.id !== eventId));
-      setNotice(t("Compra vinculada e assinatura atualizada."));
+    } catch (cause) {
+      const status = cause instanceof Error && "status" in cause
+        ? (cause as Error & { status?: number }).status
+        : undefined;
+      setError(t(status === 409
+        ? "Esta compra já foi conciliada por outra ação."
+        : "Não foi possível vincular esta compra."));
+      setLinking(null);
+      return;
+    }
+
+    // Daqui em diante a mutação atômica já confirmou o vínculo. Uma falha de
+    // refresh não pode dizer que a compra falhou e induzir uma segunda tentativa.
+    setUnmatched((current) => current.filter((item) => item.id !== eventId));
+    setNotice(t("Compra vinculada e assinatura atualizada."));
+    try {
       const [refreshedSettings, refreshedOrganizations] = await Promise.all([
         readJson<Envelope<Settings>>("/api/v1/admin/billing/settings"),
         readJson<Envelope<Organization[]>>("/api/v1/admin/billing/organizations?limit=100"),
@@ -177,13 +191,8 @@ export function BillingAdminClient() {
       setOrganizationsCursor(refreshedOrganizations.meta?.has_more
         ? refreshedOrganizations.meta.cursor ?? null
         : null);
-    } catch (cause) {
-      const status = cause instanceof Error && "status" in cause
-        ? (cause as Error & { status?: number }).status
-        : undefined;
-      setError(t(status === 409
-        ? "Esta compra já foi conciliada por outra ação."
-        : "Não foi possível vincular esta compra."));
+    } catch {
+      setError(t("Compra vinculada; não foi possível atualizar a revisão."));
     } finally {
       setLinking(null);
     }

@@ -76,7 +76,7 @@ function response(body: unknown, status = 200) {
   }));
 }
 
-function installFetch(options: { readonly?: boolean; linkStatus?: number } = {}) {
+function installFetch(options: { readonly?: boolean; linkStatus?: number; refreshFails?: boolean } = {}) {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   let linked = false;
   const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -86,6 +86,9 @@ function installFetch(options: { readonly?: boolean; linkStatus?: number } = {})
       return response({ data: { enforcement_enabled: true } });
     }
     if (url.includes("/settings")) {
+      if (linked && options.refreshFails) {
+        return response({ error: { code: "refresh_failed" } }, 503);
+      }
       return response({
         data: {
           ...SETTINGS.data,
@@ -94,7 +97,11 @@ function installFetch(options: { readonly?: boolean; linkStatus?: number } = {})
         },
       });
     }
-    if (url.includes("/organizations")) return response(ORGANIZATIONS);
+    if (url.includes("/organizations")) {
+      return linked && options.refreshFails
+        ? response({ error: { code: "refresh_failed" } }, 503)
+        : response(ORGANIZATIONS);
+    }
     if (url.includes("/unmatched/") && init?.method === "POST") {
       if (options.linkStatus === 409) {
         return response({ error: { code: "state_conflict", message: "no longer pending" } }, 409);
@@ -181,5 +188,21 @@ describe("painel de cobrança da plataforma", () => {
     expect(calls.filter((call) => call.url.includes("/settings"))).toHaveLength(2);
     fireEvent.click(screen.getByRole("switch", { name: "Aplicar bloqueio comercial" }));
     expect(await screen.findByRole("alertdialog")).toHaveTextContent("0 compras pendentes");
+  });
+
+  it("mantém o sucesso inequívoco quando só o refresh posterior falha", async () => {
+    const { calls } = installFetch({ refreshFails: true });
+    render(<BillingAdminClient />);
+    await screen.findByText("j***@example.test");
+    fireEvent.change(screen.getByLabelText("Organização para vincular"), {
+      target: { value: "10000000-0000-4000-8000-000000000001" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Vincular compra" }));
+
+    expect(await screen.findByText("Compra vinculada e assinatura atualizada.")).toBeInTheDocument();
+    expect(await screen.findByText("Compra vinculada; não foi possível atualizar a revisão.")).toBeInTheDocument();
+    expect(screen.queryByText("Não foi possível vincular esta compra.")).not.toBeInTheDocument();
+    expect(screen.queryByText("j***@example.test")).not.toBeInTheDocument();
+    expect(calls.filter((call) => call.url.includes("/unmatched/") && call.init?.method === "POST")).toHaveLength(1);
   });
 });

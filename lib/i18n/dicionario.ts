@@ -8762,6 +8762,9 @@ export const DICIONARIO: Traducoes = {
   "Compra vinculada e assinatura atualizada.": {
     es: "Compra vinculada y suscripción actualizada.",
   },
+  "Compra vinculada; não foi possível atualizar a revisão.": {
+    es: "Compra vinculada; no fue posible actualizar la revisión.",
+  },
   "Carregando cobrança": { es: "Cargando cobros" },
   "Cobrança indisponível.": { es: "Cobros no disponibles." },
   Cadastro: { es: "Registro" },
