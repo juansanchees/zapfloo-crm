@@ -8788,6 +8788,9 @@ export const DICIONARIO: Traducoes = {
   "Checkout do plano": { es: "Checkout del plan" },
   "Checkout indisponível": { es: "Checkout no disponible" },
   "Compra indisponível nesta instalação": { es: "Compra no disponible en esta instalación" },
+  "Peça a um administrador da empresa para contratar ou trocar o plano.": {
+    es: "Pide a un administrador de la empresa que contrate o cambie el plan.",
+  },
   "Não informado": { es: "No informado" },
   "Sem limite": { es: "Sin límite" },
   "Em teste": { es: "En prueba" },

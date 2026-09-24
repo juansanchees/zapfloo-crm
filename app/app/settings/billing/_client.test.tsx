@@ -17,6 +17,7 @@ const base: BillingClientProps = {
     accessUntil: "2026-10-27T12:00:00.000Z",
     enforcementEnabled: true,
   },
+  podeComprar: true,
   checkouts: {
     basico: "https://app.monetizze.com.br/checkout/BASICO?email=dona%40example.com&src=opaco.assinado",
     essencial: "https://app.monetizze.com.br/checkout/ESSENCIAL?email=dona%40example.com&src=opaco.assinado",
@@ -77,6 +78,21 @@ describe("Plano e pagamentos", () => {
     expect(screen.queryByRole("link", { name: "Escolher Completo" })).toBeNull();
     expect(screen.getByRole("button", { name: "Checkout do plano Completo indisponível" })).toBeDisabled();
     expect(screen.getByText("Compra indisponível nesta instalação")).toBeVisible();
+  });
+
+  it("mostra a situação para um membro sem expor checkout reservado ao administrador", () => {
+    const { container } = render(
+      <BillingClient
+        {...base}
+        podeComprar={false}
+        checkouts={{ basico: null, essencial: null, completo: null }}
+      />,
+    );
+
+    expect(screen.getByText("Peça a um administrador da empresa para contratar ou trocar o plano.")).toBeVisible();
+    expect(screen.queryByRole("link", { name: /Escolher/ })).toBeNull();
+    expect(container.innerHTML).not.toContain("email=");
+    expect(container.innerHTML).not.toContain("src=");
   });
 
   it("não renderiza UUID nem segredo no HTML", () => {

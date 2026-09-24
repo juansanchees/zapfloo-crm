@@ -72,7 +72,9 @@ describe("porta do cliente para cobrança", () => {
     const props = clientProps.mock.calls[0]?.[0] as {
       checkouts: Record<string, string>;
       assinatura: Record<string, string>;
+      podeComprar: boolean;
     };
+    expect(props.podeComprar).toBe(true);
     expect(props.assinatura).toMatchObject({ plan_id: "essencial", status: "ativo" });
     expect(new URL(props.checkouts.basico!).searchParams.get("email")).toBe("dona@example.com");
     expect(new URL(props.checkouts.completo!).searchParams.get("src")).toBeTruthy();
@@ -88,8 +90,27 @@ describe("porta do cliente para cobrança", () => {
     });
   });
 
-  it.each(["viewer", "agent", "manager"])("mantém cobrança administrativa fechada para %s", async (role) => {
-    org.mockResolvedValueOnce({ orgId: "org-1", role });
+  it.each(["viewer", "agent", "manager"])("deixa %s consultar o bloqueio sem receber checkout", async (role) => {
+    org.mockResolvedValueOnce({
+      orgId: "11111111-1111-4111-8111-111111111111",
+      role,
+    });
+
+    render(await BillingPage());
+
+    const props = clientProps.mock.calls[0]?.[0] as {
+      checkouts: Record<string, string | null>;
+      podeComprar: boolean;
+    };
+    expect(props.podeComprar).toBe(false);
+    expect(props.checkouts).toEqual({ basico: null, essencial: null, completo: null });
+    expect(JSON.stringify(props)).not.toContain("email=");
+    expect(JSON.stringify(props)).not.toContain("src=");
+    expect(maybeSingle).toHaveBeenCalledOnce();
+  });
+
+  it("continua recusando usuário sem organização ativa", async () => {
+    org.mockResolvedValueOnce(null);
     await expect(BillingPage()).rejects.toThrow("redirect:/403");
     expect(maybeSingle).not.toHaveBeenCalled();
   });

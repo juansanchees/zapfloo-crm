@@ -7,7 +7,7 @@ const SECRET = "segredo-monetizze-com-tamanho-suficiente";
 
 describe("checkout da Monetizze", () => {
   it.each([
-    ["basico", "https://app.monetizze.com.br/checkout/BASICO"],
+    ["basico", "https://app.monetizze.com.br:443/checkout/BASICO"],
     ["essencial", "https://app.monetizze.com.br/checkout/ESSENCIAL"],
     ["completo", "https://app.monetizze.com.br/checkout/COMPLETO"],
   ] as const)("monta o link de %s com email e src assinado", (plano, checkout) => {
@@ -33,6 +33,7 @@ describe("checkout da Monetizze", () => {
   it.each([
     "",
     "http://app.monetizze.com.br/checkout/BASICO",
+    "https://app.monetizze.com.br:444/checkout/BASICO",
     "https://monetizze.example/checkout/BASICO",
     "javascript:alert(1)",
     "não-é-url",

@@ -1,8 +1,8 @@
 /**
  * G2-04 — E2E da matriz role×recurso (spec 13 §4) com usuários seed reais.
  *
- * Papéis: agent bloqueado em /app/settings/api-tokens e /app/settings/billing;
- * admin (com MFA TOTP — secret conhecido do seed) acessa ambas; agent vê inbox
+ * Papéis: agent bloqueado em /app/settings/api-tokens e com billing somente leitura;
+ * admin (com MFA TOTP — secret conhecido do seed) acessa ambas e pode comprar; agent vê inbox
  * e kanban; viewer não consegue enviar mensagem (403 server-side).
  *
  * Pré-requisito: `npx tsx scripts/seed-e2e-credentials.ts` (o spec roda o seed
@@ -101,7 +101,7 @@ async function expectNoBlockingA11y(page: Page, excludeSelector?: string): Promi
 }
 
 test.describe("rbac role matrix (spec 13 §4)", () => {
-  test("agent é bloqueado em api-tokens e billing (403)", async ({ page }) => {
+  test("agent é bloqueado em api-tokens e consulta billing sem poder comprar", async ({ page }) => {
     await login(page, creds.users.agent!.email);
 
     await page.goto("/app/settings/api-tokens");
@@ -109,8 +109,9 @@ test.describe("rbac role matrix (spec 13 §4)", () => {
     await expect(page.getByRole("heading", { name: /403 — Sem permissão/ })).toBeVisible();
 
     await page.goto("/app/settings/billing");
-    await page.waitForURL(/\/403/);
-    await expect(page.getByRole("heading", { name: /403 — Sem permissão/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Plano e pagamentos" })).toBeVisible();
+    await expect(page.getByText("Peça a um administrador da empresa para contratar ou trocar o plano.")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Escolher/ })).toHaveCount(0);
 
     await expectNoBlockingA11y(page);
   });

@@ -21,6 +21,7 @@ export type BillingClientProps = {
   idioma: Idioma;
   assinatura: AssinaturaVisivel;
   acesso: AccessDecision;
+  podeComprar: boolean;
   checkouts: Record<PlanoId, string | null>;
 };
 
@@ -83,7 +84,7 @@ function limite(quantidade: number | null, singular: string, plural: string, idi
   return `${quantidade} ${traduzir(quantidade === 1 ? singular : plural, idioma)}`;
 }
 
-export function BillingClient({ idioma, assinatura, acesso, checkouts }: BillingClientProps) {
+export function BillingClient({ idioma, assinatura, acesso, podeComprar, checkouts }: BillingClientProps) {
   const t = (texto: string) => traduzir(texto, idioma);
   const planoAtual = assinatura.plan_id ? PLANOS[assinatura.plan_id] : null;
 
@@ -152,6 +153,11 @@ export function BillingClient({ idioma, assinatura, acesso, checkouts }: Billing
         <div>
           <h2 id="billing-plans-title" className="text-[17px] font-medium text-text">{t("Escolha o plano do tamanho do seu negócio")}</h2>
           <p className="mt-1 text-sm text-text-muted">{t("A compra é concluída com segurança no checkout da Monetizze.")}</p>
+          {!podeComprar && (
+            <p role="status" className="mt-2 text-sm text-text-muted">
+              {t("Peça a um administrador da empresa para contratar ou trocar o plano.")}
+            </p>
+          )}
         </div>
         <div data-testid="billing-plan-grid" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {PLANOS_IDS.map((planoId) => {
@@ -174,7 +180,7 @@ export function BillingClient({ idioma, assinatura, acesso, checkouts }: Billing
                     <li>{limite(plano.limites.usuarios, "pessoa da equipe", "pessoas da equipe", idioma)}</li>
                     <li>{limite(plano.limites.funis, "funil de vendas", "funis de vendas", idioma)}</li>
                   </ul>
-                  {checkout ? (
+                  {!podeComprar ? null : checkout ? (
                     <Button asChild className="w-full">
                       <a href={checkout} target="_blank" rel="noreferrer noopener" aria-label={`${t("Escolher")} ${plano.nome}`}>
                         {t("Escolher plano")}

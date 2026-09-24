@@ -46,9 +46,10 @@ const ACESSO_INDISPONIVEL: AccessDecision = {
 export default async function BillingPage() {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
-  if (!activeOrg || ROLE_RANK[activeOrg.role] < ROLE_RANK.admin) {
+  if (!activeOrg) {
     redirect("/403");
   }
+  const podeComprar = ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin;
 
   const admin = createAdminClient();
   const [assinaturaResult, acessoResult] = await Promise.allSettled([
@@ -80,24 +81,27 @@ export default async function BillingPage() {
     essencial: env.MONETIZZE_CHECKOUT_ESSENCIAL,
     completo: env.MONETIZZE_CHECKOUT_COMPLETO,
   };
-  const checkouts = Object.fromEntries(
-    (Object.keys(PLANOS) as PlanoId[]).map((plano) => [
-      plano,
-      construirCheckoutMonetizze({
-        plano,
-        email: user.email,
-        organizationId: activeOrg.orgId,
-        secret: env.MONETIZZE_CHAVE_UNICA,
-        checkoutUrls,
-      }),
-    ]),
-  ) as Record<PlanoId, string | null>;
+  const checkouts = podeComprar
+    ? Object.fromEntries(
+        (Object.keys(PLANOS) as PlanoId[]).map((plano) => [
+          plano,
+          construirCheckoutMonetizze({
+            plano,
+            email: user.email,
+            organizationId: activeOrg.orgId,
+            secret: env.MONETIZZE_CHAVE_UNICA,
+            checkoutUrls,
+          }),
+        ]),
+      ) as Record<PlanoId, string | null>
+    : { basico: null, essencial: null, completo: null };
 
   return (
     <BillingClient
       idioma={user.idioma}
       assinatura={assinatura}
       acesso={acesso}
+      podeComprar={podeComprar}
       checkouts={checkouts}
     />
   );
