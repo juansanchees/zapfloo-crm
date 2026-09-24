@@ -10,6 +10,10 @@ import type { ActionCtx, ActionResultDetail } from "@/lib/automation/types";
 import { assertDestinoResolvidoSeguro } from "@/lib/automation/outbound-ip";
 import { assertSafeOutboundUrl } from "@/lib/automation/outbound-url";
 import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
 
 const TIMEOUT_MS = 10_000;
 const RETRY_DELAYS_MS = [1_000, 5_000]; // total 3 tentativas
@@ -65,6 +69,15 @@ export async function executeCallWebhook(
 ): Promise<ActionResultDetail> {
   const url = typeof config.url === "string" ? config.url : null;
   if (!url) return { type: "call_webhook", status: "failed", error: "missing_url" };
+  try {
+    await exigirAcessoComercial(ctx.organizationId);
+  } catch (erro) {
+    return {
+      type: "call_webhook",
+      status: erro instanceof AcessoComercialBloqueadoError ? "skipped" : "failed",
+      error: erro instanceof Error ? erro.name : "commercial_access_unavailable",
+    };
+  }
   if (!opts.skipUrlCheck) {
     try {
       assertSafeOutboundUrl(url);

@@ -17,12 +17,22 @@ import { requireRole } from "@/lib/auth/require-role";
 import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import type { AuthUser, Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
 
 vi.mock("@/lib/auth/server", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/auth/server")>();
   return { ...real, loadAuthUser: vi.fn(), resolveActiveOrg: vi.fn() };
 });
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: vi.fn() }));
+vi.mock("@/lib/billing/acesso-server", async (importOriginal) => {
+  const real = await importOriginal<Record<string, unknown>>();
+  return { ...real, exigirAcessoComercial: vi.fn(async () => undefined) };
+});
 vi.mock("@/lib/audit", () => ({
   audit: vi.fn(async () => undefined),
   isServiceRoleConfigured: () => false,
@@ -74,6 +84,55 @@ function preparar(cenario: Cenario): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(headers).mockResolvedValue(new Headers() as never);
+  vi.mocked(exigirAcessoComercial).mockResolvedValue(undefined as never);
+});
+
+describe("requireRole — borda comercial canônica das APIs mutáveis", () => {
+  it("recusa um POST não relacionado a mensagens com 402 e detalhes snake_case", async () => {
+    preparar({ role: "manager", temFator: false, aal: "aal1" });
+    vi.mocked(headers).mockResolvedValue(new Headers({
+      "x-request-method": "POST",
+      "x-pathname": "/api/v1/automation-rules",
+    }) as never);
+    vi.mocked(exigirAcessoComercial).mockRejectedValueOnce(
+      new AcessoComercialBloqueadoError({
+        allowed: false,
+        reason: "paused",
+        accessUntil: null,
+        enforcementEnabled: false,
+      }),
+    );
+
+    const r = await requireRole("manager", { requestId: "req-commercial", resource: "automation_rules" });
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.response.status).toBe(402);
+      expect(await r.response.json()).toEqual({
+        error: {
+          code: "commercial_access_blocked",
+          message: "O acesso desta organização está bloqueado pela situação da assinatura.",
+          details: { reason: "paused", access_until: null, enforcement_enabled: false },
+        },
+      });
+    }
+  });
+
+  it("não aplica o bloqueio a leitura nem à exceção explícita de billing", async () => {
+    preparar({ role: "manager", temFator: false, aal: "aal1" });
+    for (const [method, pathname] of [
+      ["GET", "/api/v1/automation-rules"],
+      ["POST", "/api/v1/billing/checkout"],
+    ] as const) {
+      vi.mocked(headers).mockResolvedValue(new Headers({
+        "x-request-method": method,
+        "x-pathname": pathname,
+      }) as never);
+      expect((await requireRole("manager")).ok).toBe(true);
+    }
+    expect(exigirAcessoComercial).not.toHaveBeenCalled();
+  });
 });
 
 describe("requireRole — MFA é política de sessão, não de cadastro", () => {

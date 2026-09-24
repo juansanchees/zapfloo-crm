@@ -6,7 +6,9 @@ vi.unmock("@/lib/billing/acesso-server");
 
 import {
   AcessoComercialBloqueadoError,
+  EstadoComercialIndisponivelError,
   avaliarAcessoComercial,
+  destinoComercialDoShell,
   exigirAcessoComercial,
   rotaPermitidaDuranteBloqueioComercial,
   serializarBloqueioComercial,
@@ -27,6 +29,22 @@ function leitor(overrides: Partial<Awaited<ReturnType<LeitorDaProjecaoComercial>
 }
 
 describe("adapter server-side da cobrança", () => {
+  it("no shell, falha do leitor mantém billing acessível e fecha as demais telas", async () => {
+    const leitorComFalha = vi.fn<LeitorDaProjecaoComercial>(async () => {
+      throw new EstadoComercialIndisponivelError("banco indisponível");
+    });
+    await expect(destinoComercialDoShell("org-1", "/app/inbox", { leitor: leitorComFalha }))
+      .resolves.toBe("billing");
+    await expect(destinoComercialDoShell("org-1", "/app/settings/billing", { leitor: leitorComFalha }))
+      .resolves.toBe("permitir");
+  });
+
+  it("no shell, bloqueio confirmado também redireciona fora de billing", async () => {
+    await expect(destinoComercialDoShell("org-1", "/app", { now: AGORA, leitor: leitor() }))
+      .resolves.toBe("billing");
+    await expect(destinoComercialDoShell("org-1", "/app/settings/billing", { now: AGORA, leitor: leitor() }))
+      .resolves.toBe("permitir");
+  });
   it("mantém somente Plano e pagamentos navegável para que a pessoa possa regularizar e sair", () => {
     expect(rotaPermitidaDuranteBloqueioComercial("/app/settings/billing")).toBe(true);
     expect(rotaPermitidaDuranteBloqueioComercial("/app/settings/billing/checkout")).toBe(true);

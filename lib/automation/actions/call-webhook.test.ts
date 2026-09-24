@@ -1,8 +1,19 @@
 import { createHmac } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { executeCallWebhook } from "@/lib/automation/actions/call-webhook";
 import type { ActionCtx } from "@/lib/automation/types";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
+import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
+
+vi.mock("@/lib/billing/acesso-server", async (importOriginal) => {
+  const real = await importOriginal<Record<string, unknown>>();
+  return { ...real, exigirAcessoComercial: vi.fn(async () => undefined) };
+});
+vi.mock("@/lib/webhooks/secrets", () => ({ decryptWebhookSecret: vi.fn(async () => "segredo") }));
 
 function baseCtx(overrides: Partial<ActionCtx["event"]> = {}): ActionCtx {
   return {
@@ -41,10 +52,34 @@ describe("executeCallWebhook", () => {
   let server: Server | undefined;
 
   afterEach(async () => {
+    vi.mocked(exigirAcessoComercial).mockResolvedValue(undefined as never);
+    vi.mocked(decryptWebhookSecret).mockClear();
     if (server) {
       await new Promise<void>((resolve) => server!.close(() => resolve()));
       server = undefined;
     }
+  });
+
+  it("bloqueado não decifra segredo nem toca a rede (inclusive no executor usado pelo reenvio)", async () => {
+    vi.mocked(exigirAcessoComercial).mockRejectedValueOnce(
+      new AcessoComercialBloqueadoError({
+        allowed: false,
+        reason: "paused",
+        accessUntil: null,
+        enforcementEnabled: false,
+      }),
+    );
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const result = await executeCallWebhook(
+      baseCtx(),
+      { url: "https://hooks.example.test/x", secret_enc: "deadbeef" },
+      { skipUrlCheck: true },
+    );
+
+    expect(result).toMatchObject({ status: "skipped", error: "commercial_access_blocked" });
+    expect(decryptWebhookSecret).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("sucesso: envia envelope correto, sem assinatura, sem organization_id", async () => {

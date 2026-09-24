@@ -60,6 +60,17 @@ export function rotaPermitidaDuranteBloqueioComercial(pathname: string): boolean
   return pathname === "/app/settings/billing" || pathname.startsWith("/app/settings/billing/");
 }
 
+/** Exceções explícitas da borda de API. Inbound público não passa por `requireRole`. */
+export function rotaApiPermitidaDuranteBloqueioComercial(pathname: string): boolean {
+  return [
+    "/api/v1/billing",
+    "/api/v1/auth/logout",
+    "/api/v1/webhooks/",
+    "/api/v1/postbacks/",
+    "/api/v1/monetizze/",
+  ].some((prefixo) => pathname === prefixo.replace(/\/$/, "") || pathname.startsWith(prefixo));
+}
+
 async function lerProjecaoComercialViaSupabase(
   organizationId: string,
   contexto: ContextoDaLeituraComercial,
@@ -112,6 +123,24 @@ export type OpcoesDeAcessoComercial = {
   actorUserId?: string | null;
   isPlatformAdmin?: boolean;
 };
+
+export async function destinoComercialDoShell(
+  organizationId: string,
+  pathname: string,
+  opcoes: OpcoesDeAcessoComercial = {},
+): Promise<"permitir" | "billing"> {
+  try {
+    const decisao = await avaliarAcessoComercial(organizationId, opcoes);
+    return decisao.allowed || rotaPermitidaDuranteBloqueioComercial(pathname)
+      ? "permitir"
+      : "billing";
+  } catch (erro) {
+    if (!(erro instanceof EstadoComercialIndisponivelError)) throw erro;
+    // Degradação segura: nunca abre o app, mas também não transforma a tela de
+    // regularização em 500/loop durante uma falha transitória do leitor.
+    return rotaPermitidaDuranteBloqueioComercial(pathname) ? "permitir" : "billing";
+  }
+}
 
 /** Adapter único do veredito comercial para app, APIs e workers Supabase. */
 export async function avaliarAcessoComercial(

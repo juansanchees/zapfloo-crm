@@ -33,8 +33,7 @@ import { assinaturaDaOrganizacao } from "@/lib/billing/assinatura";
 import type { AcessoResolvido } from "@/lib/billing/planos";
 import { PlanoProvider } from "@/components/billing/PlanoProvider";
 import {
-  avaliarAcessoComercial,
-  rotaPermitidaDuranteBloqueioComercial,
+  destinoComercialDoShell,
 } from "@/lib/billing/acesso-server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -70,10 +69,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (orgRow?.status === "suspended") redirect("/account-suspended");
     fimDoTeste = fimDoPeriodoDeTeste(orgRow?.created_at);
     acessoDoPlano = (await assinaturaDaOrganizacao(activeOrg.orgId)).acesso;
-    const acessoComercial = await avaliarAcessoComercial(activeOrg.orgId, {
+    if (await destinoComercialDoShell(activeOrg.orgId, pathname, {
       isPlatformAdmin: user.is_platform_admin,
-    });
-    if (!acessoComercial.allowed && !rotaPermitidaDuranteBloqueioComercial(pathname)) {
+    }) === "billing") {
       redirect("/app/settings/billing");
     }
     // A configuração é administrativa: membros convidados não podem concluí-la

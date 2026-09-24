@@ -140,6 +140,7 @@ import { renderAgora } from '@/lib/tempo/agora';
 import { decidirElegibilidadeDaConversa } from '@/lib/ai/elegibilidade/consulta-pg';
 import { avisarAudioIlegivel, ultimoInboundEhAudioComFalha } from './aviso-de-audio-ilegivel';
 import { comPresencaDeDigitacao } from './presenca-de-digitacao';
+import { exigirAcessoComercialViaPg } from '@/lib/billing/acesso-server';
 
 /**
  * Superfície ESTÁTICA das tools do agente (description + inputSchema) — parte do
@@ -3033,7 +3034,10 @@ async function executarTurnoDoAgente(
       },
       { registry: deps.registry, log: runLog },
     ),
-    { log: runLog },
+    {
+      log: runLog,
+      antesDeDigitar: () => exigirAcessoComercialViaPg(pool, tenantId).then(() => undefined),
+    },
   );
 
   // F4-04: correlação dos dois sinais do MESMO turno — jailbreak ALTO + tentativa de

@@ -23,7 +23,11 @@
     { "id": "wahawebhook", "lane": "entrada", "col": 2, "type": "api", "label": "webhook WAHA + lib/waha/ingest", "sublabel": "raw, conversa e mensagem persistem; não consulta cobrança" },
     { "id": "mediapersist", "lane": "entrada", "col": 3, "type": "service", "label": "media-persist-worker", "sublabel": "bytes recebidos continuam persistidos e idempotentes" },
     { "id": "layout", "lane": "saida", "col": 3, "type": "frontend", "label": "app/app/layout.tsx", "sublabel": "bloqueado navega somente em Plano e pagamentos; logout continua no shell" },
+    { "id": "apimutavel", "lane": "saida", "col": 3, "type": "api", "label": "requireRole + método confiável do proxy", "sublabel": "POST/PUT/PATCH/DELETE tenant retornam 402 tipado; billing, logout e inbound são exceções explícitas" },
     { "id": "messages", "lane": "saida", "col": 3, "type": "api", "label": "POST /api/v1/messages", "sublabel": "nega humano/automação/IA antes de criar outbound queued" },
+    { "id": "webhookout", "lane": "saida", "col": 3, "type": "service", "label": "call_webhook + resend", "sublabel": "nega antes de DNS, decifrar segredo ou fetch" },
+    { "id": "conversao", "lane": "saida", "col": 3, "type": "service", "label": "conversão de anúncio Meta", "sublabel": "nega antes de ler credencial ou chamar o transporte" },
+    { "id": "typing", "lane": "saida", "col": 3, "type": "service", "label": "presença digitando do agente", "sublabel": "preflight comercial antes de setTyping no WAHA" },
     { "id": "media", "lane": "saida", "col": 3, "type": "service", "label": "media-derive-worker", "sublabel": "nega antes de download, transcrição ou visão paga" },
     { "id": "credentials", "lane": "saida", "col": 3, "type": "service", "label": "resolveOrgLlmConfig", "sublabel": "nega antes de buscar/decriptar chave ou escolher provider" },
     { "id": "embed", "lane": "saida", "col": 3, "type": "service", "label": "lib/ai/embed.ts", "sublabel": "cobre busca/indexação RAG antes de embed()" },
@@ -41,6 +45,10 @@
     { "id": "e5", "from": "layout", "to": "billing", "label": "redireciona com saída de logout" },
     { "id": "e6", "from": "wahawebhook", "to": "mediapersist", "label": "persiste sem gate comercial" },
     { "id": "e7", "from": "decidir", "to": "messages", "label": "nega antes do queued" },
+    { "id": "e7a", "from": "decidir", "to": "apimutavel", "label": "nega mutação direta" },
+    { "id": "e7b", "from": "decidir", "to": "webhookout", "label": "nega automação" },
+    { "id": "e7c", "from": "decidir", "to": "conversao", "label": "nega Meta" },
+    { "id": "e7d", "from": "decidir", "to": "typing", "label": "nega presença" },
     { "id": "e8", "from": "decidir", "to": "media", "label": "nega antes do custo" },
     { "id": "e9", "from": "decidir", "to": "credentials", "label": "nega antes da credencial" },
     { "id": "e10", "from": "decidir", "to": "embed", "label": "nega antes do embedding" },
@@ -53,7 +61,10 @@
     { "id": "e17", "from": "embed", "to": "transportes", "label": "somente quando permitido" },
     { "id": "e18", "from": "workersai", "to": "transportes", "label": "somente quando permitido" },
     { "id": "e19", "from": "runtime", "to": "transportes", "label": "somente quando permitido" },
-    { "id": "e20", "from": "redrive", "to": "transportes", "label": "somente quando permitido" }
+    { "id": "e20", "from": "redrive", "to": "transportes", "label": "somente quando permitido" },
+    { "id": "e21", "from": "webhookout", "to": "transportes", "label": "somente quando permitido" },
+    { "id": "e22", "from": "conversao", "to": "transportes", "label": "somente quando permitido" },
+    { "id": "e23", "from": "typing", "to": "transportes", "label": "somente quando permitido" }
   ],
   "inventory": [
     { "sink": "generateText", "path": "workers/media-derive-worker.ts", "guard": "exigirAcessoComercialViaPg antes de download e credencial" },
@@ -69,6 +80,10 @@
     { "sink": "transcribe", "path": "lib/messaging/media/video-derive.ts", "guard": "chamado pelo media-derive-worker já vetado" },
     { "sink": "sendMessage", "path": "lib/waha/send.ts", "guard": "helper sem chamador de produção; mantido no inventário" },
     { "sink": "redrive transport", "path": "lib/agent-engine/edge/crm/session-reconciler.ts", "guard": "exigirAcessoComercialViaPg antes de fetch" },
-    { "sink": "owner alert transport", "path": "workers/handoff-owner-alert-worker.ts", "guard": "exigirAcessoComercialViaPg antes do adapter" }
+    { "sink": "owner alert transport", "path": "workers/handoff-owner-alert-worker.ts", "guard": "exigirAcessoComercialViaPg antes do adapter" },
+    { "sink": "automation webhook fetch", "path": "lib/automation/actions/call-webhook.ts", "guard": "exigirAcessoComercial antes de DNS, decrypt e fetch; resend reutiliza o executor" },
+    { "sink": "Meta conversion transport", "path": "lib/conversoes/envio.handler.ts", "guard": "exigirAcessoComercial antes do admin client, credencial e transporte" },
+    { "sink": "WAHA setPresence", "path": "lib/agent-engine/agent/inbound-turn.ts", "guard": "antesDeDigitar exige acesso antes de comPresencaDeDigitacao tocar o adapter" },
+    { "sink": "tenant mutable API", "path": "lib/auth/require-role.ts", "guard": "proxy sobrescreve método/path; requireRole recusa mutações com 402 tipado" }
   ]
 }

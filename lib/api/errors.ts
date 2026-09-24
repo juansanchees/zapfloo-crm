@@ -79,6 +79,10 @@ export const ApiErrorCodes = {
   // 429
   rate_limited: "rate_limited",
 
+  // 402 / 503 — cobrança comercial tenant (detalhes públicos em snake_case).
+  commercial_access_blocked: "commercial_access_blocked",
+  commercial_access_unavailable: "commercial_access_unavailable",
+
   // ─── ANÚNCIOS, eixo de LEITURA (0214) ───
   //
   // Declarados aqui pelo mesmo motivo que os da Agenda: `fail()` aceita
