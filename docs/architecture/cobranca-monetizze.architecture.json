@@ -20,7 +20,7 @@
     { "id": "ledger", "lane": "estado", "col": 1, "type": "database", "label": "billing_provider_events + RPC transacional", "sublabel": "idempotência, ordem, hash do e-mail e fila para conciliação" },
     { "id": "assinatura", "lane": "estado", "col": 0, "type": "database", "label": "organization_subscriptions + platform_billing_settings", "sublabel": "status, paid_through e interruptor; nenhuma borda reimplementa datas" },
     { "id": "platformadmin", "lane": "estado", "col": 0, "type": "database", "label": "platform_admins", "sublabel": "bypass explícito somente com revoked_at nulo" },
-    { "id": "adapter", "lane": "decisao", "col": 1, "type": "service", "label": "lib/billing/acesso-server.ts", "sublabel": "mesma projeção via Supabase ou pg; erro commercial_access_blocked tipado" },
+    { "id": "adapter", "lane": "decisao", "col": 1, "type": "service", "label": "lib/billing/acesso-server.ts", "sublabel": "mesma projeção via Supabase ou pg; bloqueio confirmado fecha, leitura indisponível abre e alerta a plataforma" },
     { "id": "decidir", "lane": "decisao", "col": 2, "type": "service", "label": "decidirAcessoComercial", "sublabel": "pausado bloqueia mesmo com switch off; switch off libera os demais vencidos" },
     { "id": "wahawebhook", "lane": "entrada", "col": 2, "type": "api", "label": "webhook WAHA + lib/waha/ingest", "sublabel": "raw, conversa e mensagem persistem; não consulta cobrança" },
     { "id": "mediapersist", "lane": "entrada", "col": 3, "type": "service", "label": "media-persist-worker", "sublabel": "bytes recebidos continuam persistidos e idempotentes" },

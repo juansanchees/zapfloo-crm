@@ -166,6 +166,7 @@ beforeEach(() => {
   seedGov();
   sql(`
     truncate table public.billing_provider_events;
+    delete from public.incidents where type = 'billing_verification_unavailable';
     update public.platform_billing_settings
        set enforcement_enabled = false, updated_by = null;
     update public.organization_subscriptions
@@ -179,6 +180,36 @@ beforeEach(() => {
 });
 
 describe("0239 — cobrança Monetizze nasce fechada e idempotente", () => {
+  it("mantém no máximo um incidente global aberto de verificação indisponível", () => {
+    expect(sql(`
+      select count(*) from pg_indexes
+       where schemaname = 'public'
+         and indexname = 'incidents_billing_verification_open_unique'
+    `)).toBe("1");
+
+    sql(`
+      insert into public.incidents(organization_id, type, severity, payload)
+      select null, 'billing_verification_unavailable', 'critical', '{}'::jsonb
+        from generate_series(1, 10)
+      on conflict do nothing;
+    `);
+    expect(sql(`
+      select count(*) from public.incidents
+       where type = 'billing_verification_unavailable' and status <> 'resolved'
+    `)).toBe("1");
+
+    sql(`
+      update public.incidents set status = 'resolved', resolved_at = now()
+       where type = 'billing_verification_unavailable';
+      insert into public.incidents(organization_id, type, severity, payload)
+      values(null, 'billing_verification_unavailable', 'critical', '{}'::jsonb);
+    `);
+    expect(sql(`
+      select count(*) from public.incidents
+       where type = 'billing_verification_unavailable' and status <> 'resolved'
+    `)).toBe("1");
+  });
+
   it("aceita os cinco estados comerciais e rejeita vocabulário desconhecido", () => {
     for (const status of ["teste", "ativo", "recusado", "cancelado", "pausado"]) {
       sql(`update public.organization_subscriptions set status = '${status}' where organization_id = '${GOV_ORG}';`);

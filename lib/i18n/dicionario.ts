@@ -8797,6 +8797,7 @@ export const DICIONARIO: Traducoes = {
   "Pagamento recusado": { es: "Pago rechazado" },
   "Acesso de administrador da plataforma": { es: "Acceso de administrador de la plataforma" },
   "Acesso mantido pela plataforma": { es: "Acceso mantenido por la plataforma" },
+  "Acesso mantido temporariamente": { es: "Acceso mantenido temporalmente" },
   "Teste ativo": { es: "Prueba activa" },
   "Acesso bloqueado": { es: "Acceso bloqueado" },
   "Assinatura em dia": { es: "Suscripción al día" },
@@ -8808,6 +8809,9 @@ export const DICIONARIO: Traducoes = {
   },
   "A cobrança ainda não está aplicando bloqueios nesta instalação.": {
     es: "Los cobros todavía no están aplicando bloqueos en esta instalación.",
+  },
+  "Não foi possível verificar a cobrança agora. Você pode continuar trabalhando; a plataforma já foi avisada.": {
+    es: "No fue posible verificar el cobro ahora. Puedes seguir trabajando; la plataforma ya fue avisada.",
   },
   "Todos os recursos do plano Completo estão liberados durante o teste.": {
     es: "Todos los recursos del plan Completo están disponibles durante la prueba.",

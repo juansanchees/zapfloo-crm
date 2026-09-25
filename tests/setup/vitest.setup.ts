@@ -77,7 +77,8 @@ for (const [chave, valor] of Object.entries(PLACEHOLDERS)) {
  *
  * Sem um estado comercial declarado, os fakes históricos de Postgres/Supabase
  * respondem linhas de outros domínios à consulta nova e fazem centenas de
- * cenários legítimos parecerem bloqueados. A produção continua fail-closed;
+ * cenários legítimos parecerem bloqueados. A produção bloqueia estado comercial
+ * confirmado e organização inexistente, mas libera quando a leitura falha;
  * somente o ambiente unitário ganha esta projeção padrão explícita.
  */
 vi.mock("@/lib/billing/acesso-server", async (importOriginal) => {

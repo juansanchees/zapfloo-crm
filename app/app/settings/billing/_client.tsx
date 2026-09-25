@@ -47,6 +47,7 @@ function varianteStatus(status: SituacaoComercialDaAssinatura | null) {
 const TITULO_DO_ACESSO: Record<AccessDecisionReason, string> = {
   platform_admin: "Acesso de administrador da plataforma",
   enforcement_disabled: "Acesso mantido pela plataforma",
+  billing_check_unavailable: "Acesso mantido temporariamente",
   trial_active: "Teste ativo",
   trial_expired: "Acesso bloqueado",
   subscription_active: "Assinatura em dia",
@@ -61,6 +62,7 @@ const TITULO_DO_ACESSO: Record<AccessDecisionReason, string> = {
 const DESCRICAO_DO_ACESSO: Record<AccessDecisionReason, string> = {
   platform_admin: "Administradores da plataforma mantêm acesso para operar o serviço.",
   enforcement_disabled: "A cobrança ainda não está aplicando bloqueios nesta instalação.",
+  billing_check_unavailable: "Não foi possível verificar a cobrança agora. Você pode continuar trabalhando; a plataforma já foi avisada.",
   trial_active: "Todos os recursos do plano Completo estão liberados durante o teste.",
   trial_expired: "O período de teste terminou. Escolha um plano para continuar usando o produto.",
   subscription_active: "O pagamento está confirmado e o acesso segue liberado.",

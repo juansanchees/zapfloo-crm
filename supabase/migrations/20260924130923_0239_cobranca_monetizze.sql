@@ -1,4 +1,5 @@
--- 0239 — cobrança Monetizze com rollout desligado e ledger server-only.
+-- 0239 — cobrança Monetizze com rollout desligado, ledger server-only e
+-- incidente global deduplicado quando a verificação comercial fica indisponível.
 --
 -- EXPAND forward-only: não atualiza nenhuma assinatura existente. Os campos
 -- externos são nullable e a única linha criada é a configuração global com o
@@ -87,6 +88,15 @@ for each row execute function public.fn_set_updated_at();
 alter table public.platform_billing_settings enable row level security;
 revoke all on table public.platform_billing_settings from public, anon, authenticated;
 grant select, insert, update, delete on table public.platform_billing_settings to service_role;
+
+-- Durante uma queda do leitor, cada processo pode tentar avisar. Este índice é
+-- a contenção global e atômica: só um incidente fica aberto; depois de
+-- resolvido, uma indisponibilidade futura pode abrir outro.
+create unique index if not exists incidents_billing_verification_open_unique
+  on public.incidents ((type))
+  where organization_id is null
+    and type = 'billing_verification_unavailable'
+    and status <> 'resolved';
 
 create table if not exists public.billing_provider_events (
   id uuid primary key default gen_random_uuid(),

@@ -6,6 +6,7 @@ const TOLERANCIA_MS = 3 * 24 * 60 * 60 * 1000;
 export type AccessDecisionReason =
   | "platform_admin"
   | "enforcement_disabled"
+  | "billing_check_unavailable"
   | "trial_active"
   | "trial_expired"
   | "subscription_active"
