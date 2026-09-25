@@ -14,8 +14,10 @@
     { "id": "saida", "label": "Saída e custo bloqueados" },
     { "id": "retorno", "label": "Laço visível" }
   ],
-  "mainPath": ["assinatura", "adapter", "decidir", "layout", "billing"],
+  "mainPath": ["postback", "ledger", "assinatura", "adapter", "decidir", "layout", "billing"],
   "nodes": [
+    { "id": "postback", "lane": "entrada", "col": 0, "type": "api", "label": "POST /api/v1/webhooks/monetizze", "sublabel": "chave em tempo constante, rate limit, JSON/form e nenhuma PII em log ou resposta" },
+    { "id": "ledger", "lane": "estado", "col": 1, "type": "database", "label": "billing_provider_events + RPC transacional", "sublabel": "idempotência, ordem, hash do e-mail e fila para conciliação" },
     { "id": "assinatura", "lane": "estado", "col": 0, "type": "database", "label": "organization_subscriptions + platform_billing_settings", "sublabel": "status, paid_through e interruptor; nenhuma borda reimplementa datas" },
     { "id": "platformadmin", "lane": "estado", "col": 0, "type": "database", "label": "platform_admins", "sublabel": "bypass explícito somente com revoked_at nulo" },
     { "id": "adapter", "lane": "decisao", "col": 1, "type": "service", "label": "lib/billing/acesso-server.ts", "sublabel": "mesma projeção via Supabase ou pg; erro commercial_access_blocked tipado" },
@@ -39,6 +41,9 @@
     { "id": "billing", "lane": "retorno", "col": 4, "type": "frontend", "label": "/app/settings/billing", "sublabel": "única porta tenant liberada para explicar e regularizar" }
   ],
   "edges": [
+    { "id": "e0", "from": "postback", "to": "ledger", "label": "normaliza e reivindica" },
+    { "id": "e0a", "from": "ledger", "to": "assinatura", "label": "projeta se vínculo é inequívoco" },
+    { "id": "e0b", "from": "ledger", "to": "billing", "label": "expõe pendência e estado" },
     { "id": "e1", "from": "assinatura", "to": "adapter", "label": "projeta" },
     { "id": "e2", "from": "platformadmin", "to": "adapter", "label": "bypass explícito" },
     { "id": "e3", "from": "adapter", "to": "decidir", "label": "chama a função pura" },

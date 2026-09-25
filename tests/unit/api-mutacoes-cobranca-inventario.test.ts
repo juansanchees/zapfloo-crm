@@ -42,6 +42,7 @@ const EXCECOES_EXATAS: Record<string, string> = {
   "app/api/v1/webhooks/channel/[token]/route.ts": "externa inbound: token do canal",
   "app/api/v1/webhooks/in/[token]/route.ts": "externa inbound: token da fonte",
   "app/api/v1/webhooks/meta/[token]/route.ts": "externa inbound: assinatura do canal",
+  "app/api/v1/webhooks/monetizze/route.ts": "externa: chave única da conta, comparação constante e rate limit",
   "app/api/v1/webhooks/nuvemshop/[event]/route.ts": "externa inbound: assinatura Nuvemshop",
   "app/api/v1/webhooks/nuvemshop/customer-data-request/route.ts": "externa inbound: pedido LGPD assinado",
   "app/api/v1/webhooks/nuvemshop/customer-redact/route.ts": "externa inbound: pedido LGPD assinado",

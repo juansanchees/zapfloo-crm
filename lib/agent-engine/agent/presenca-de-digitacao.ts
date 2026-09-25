@@ -16,7 +16,7 @@ export async function comPresencaDeDigitacao<T>(
 ): Promise<T> {
   if (channel.setTyping === undefined) return executar();
 
-  // O veto roda antes de qualquer presença: tenant bloqueado não toca o WAHA.
+  // O veto roda antes de qualquer presença: tenant bloqueado não toca o canal.
   await opts.antesDeDigitar?.();
 
   const setTyping = channel.setTyping.bind(channel);
