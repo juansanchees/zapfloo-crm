@@ -8,6 +8,16 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [2.5.0] — 2026-09-25
+
+### Adicionado
+
+- **Assinaturas Monetizze ativam os planos do Zapfloo** O cliente passa a assinar Básico, Essencial ou Completo pela própria tela, e os postbacks da Monetizze atualizam a situação comercial automaticamente. O bloqueio nasce desligado e só pode ser ativado pelo administrador da plataforma depois da configuração e da compra real de validação. Se a verificação ficar temporariamente indisponível, o cliente continua trabalhando e a plataforma recebe um incidente deduplicado.
+
+### Corrigido
+
+- **Compromissos continuam visíveis nas bordas do mês** A visão mensal da Agenda volta a mostrar compromissos nos dias visíveis do mês anterior e do mês seguinte, sem expor o título de eventos privados do Google.
+
 ## [2.4.3] — 2026-09-23
 
 ### Corrigido
@@ -3464,7 +3474,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.3...HEAD
+[Não lançado]: https://github.com/juansanchees/zapfloo-crm/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.3...v2.5.0
 [2.4.3]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/juansanchees/zapfloo-crm/compare/v2.4.0...v2.4.1
