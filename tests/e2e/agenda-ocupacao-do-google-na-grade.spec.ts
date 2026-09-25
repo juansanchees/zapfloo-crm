@@ -54,7 +54,9 @@ const EMAIL_DA_CONTA = "agenda-pessoal-qa@gmail.com";
 const RELOGIOS_DA_BORDA_DO_MES = [
   { rotulo: "22/09", instante: "2026-09-22T12:00:00-03:00" },
   { rotulo: "25/09", instante: "2026-09-25T12:00:00-03:00" },
-  { rotulo: "29/01", instante: "2027-01-29T12:00:00-03:00" },
+  // Janeiro permanece no ano corrente do ambiente de prova: avançar o relógio
+  // além da validade do JWT testaria expiração da sessão, não a grade mensal.
+  { rotulo: "29/01", instante: "2026-01-29T12:00:00-03:00" },
 ] as const;
 
 interface Creds {
