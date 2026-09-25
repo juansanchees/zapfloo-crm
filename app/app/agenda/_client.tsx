@@ -4,7 +4,7 @@ import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
 import { useT } from "@/hooks/i18n/useT";
 
-import { addDays, endOfMonth, format, startOfDay, startOfMonth, startOfWeek } from "date-fns";
+import { addDays, format, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import * as React from "react";
 
 import { AvisoDaConexaoGoogle } from "./_components/AvisoDaConexaoGoogle";
@@ -199,12 +199,14 @@ export function AgendaClient({
   const recorteDaGrade = React.useMemo(() => {
     const inicio =
       visao === "mes"
-        ? startOfMonth(ancora)
+        ? startOfWeek(startOfMonth(ancora), { weekStartsOn: 0 })
         : visao === "semana"
           ? startOfWeek(ancora, { weekStartsOn: 0 })
           : startOfDay(ancora);
     const fim =
-      visao === "mes" ? addDays(endOfMonth(ancora), 1) : addDays(inicio, visao === "semana" ? 7 : 1);
+      // `VisaoDeMes` desenha sempre seis semanas, inclusive os dias de borda.
+      // Buscar só o mês civil deixava a célula visível e escondia o compromisso.
+      visao === "mes" ? addDays(inicio, 42) : addDays(inicio, visao === "semana" ? 7 : 1);
     return { de: inicio.toISOString(), ate: fim.toISOString() };
   }, [visao, ancora]);
 
