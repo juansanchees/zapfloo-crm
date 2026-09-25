@@ -51,6 +51,14 @@ const RAIZ = path.resolve(__dirname, "../..");
 const TITULO_SIGILOSO = "Sessao de terapia QUARTA 15h consultorio";
 const EMAIL_DA_CONTA = "agenda-pessoal-qa@gmail.com";
 
+const RELOGIOS_DA_BORDA_DO_MES = [
+  { rotulo: "22/09", instante: "2026-09-22T12:00:00-03:00" },
+  { rotulo: "25/09", instante: "2026-09-25T12:00:00-03:00" },
+  // Janeiro permanece no ano corrente do ambiente de prova: avançar o relógio
+  // além da validade do JWT testaria expiração da sessão, não a grade mensal.
+  { rotulo: "29/01", instante: "2026-01-29T12:00:00-03:00" },
+] as const;
+
 interface Creds {
   password: string;
   org_id: string;
@@ -215,73 +223,86 @@ test.describe("a ocupação do Google na grade da agenda", () => {
     });
   });
 
-  test("sobrevive à troca de semana e à visão Mês", async ({ page }) => {
-    const creds = lerCreds();
-    const dono = creds.users.agent!;
-    await entrar(page, creds);
+  for (const relogio of RELOGIOS_DA_BORDA_DO_MES) {
+    test(`sobrevive à troca de semana e à visão Mês com relógio em ${relogio.rotulo}`, async ({
+      page,
+    }) => {
+      // O relógio entra antes da primeira navegação: a âncora da Agenda nasce
+      // desta data e o teste deixa de depender do dia em que o CI foi executado.
+      await page.clock.setFixedTime(new Date(relogio.instante));
 
-    const dias = await irParaASemanaSeguinte(page);
-    const alvo = dias[3]!;
-    const comeca = await instanteNoDia(page, alvo, 15);
-    const termina = await instanteNoDia(page, alvo, 16);
-    const conexaoId = await conexaoDoGoogle(creds.org_id, dono.id);
-    const db = admin();
-    await db
-      .from("calendar_external_events")
-      .delete()
-      .eq("organization_id", creds.org_id)
-      .eq("external_event_id", "qa-visual-ocupacao");
-    const { data: evento, error } = await db
-      .from("calendar_external_events")
-      .insert({
-        organization_id: creds.org_id,
-        connection_id: conexaoId,
-        external_calendar_id: "primary",
-        external_event_id: "qa-visual-ocupacao",
-        title: TITULO_SIGILOSO,
-        starts_at: comeca,
-        ends_at: termina,
-        status: "confirmed",
-        transparency: "opaque",
-      } as never)
-      .select("id")
-      .single();
-    if (error) throw new Error(`calendar_external_events: ${error.message}`);
-    const eventoId = (evento as { id: string }).id;
+      const creds = lerCreds();
+      const dono = creds.users.agent!;
+      await entrar(page, creds);
 
-    await page.reload();
-    await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: 25_000 });
-    await irParaASemanaSeguinte(page);
-    await expect(page.getByTestId(`agendamento-${eventoId}`)).toBeVisible({ timeout: 20_000 });
+      const dias = await irParaASemanaSeguinte(page);
+      const alvo = dias[3]!;
+      const comeca = await instanteNoDia(page, alvo, 15);
+      const termina = await instanteNoDia(page, alvo, 16);
+      const conexaoId = await conexaoDoGoogle(creds.org_id, dono.id);
+      const db = admin();
+      await db
+        .from("calendar_external_events")
+        .delete()
+        .eq("organization_id", creds.org_id)
+        .eq("external_event_id", "qa-visual-ocupacao");
+      const { data: evento, error } = await db
+        .from("calendar_external_events")
+        .insert({
+          organization_id: creds.org_id,
+          connection_id: conexaoId,
+          external_calendar_id: "primary",
+          external_event_id: "qa-visual-ocupacao",
+          title: TITULO_SIGILOSO,
+          starts_at: comeca,
+          ends_at: termina,
+          status: "confirmed",
+          transparency: "opaque",
+        } as never)
+        .select("id")
+        .single();
+      if (error) throw new Error(`calendar_external_events: ${error.message}`);
+      const eventoId = (evento as { id: string }).id;
 
-    // Vai para a semana +2 e VOLTA. O `useAgendamentos` refaz a busca a cada
-    // troca de recorte — é exatamente aqui que a semente do servidor morria.
-    await page.getByTestId("periodo-seguinte").click();
-    await expect(page.getByTestId(`agendamento-${eventoId}`)).toHaveCount(0, { timeout: 15_000 });
-    await page.getByTestId("periodo-anterior").click();
-    await expect(
-      page.getByTestId(`agendamento-${eventoId}`),
-      "o bloco do Google sumiu ao voltar para a semana dele — o refetch o apagou",
-    ).toBeVisible({ timeout: 20_000 });
+      await page.reload();
+      await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: 25_000 });
+      await irParaASemanaSeguinte(page);
+      await expect(page.getByTestId(`agendamento-${eventoId}`)).toBeVisible({ timeout: 20_000 });
 
-    // Visão MÊS: outro recorte, outra busca. Aqui nem a semente do servidor
-    // chegava, porque `naJanelaDoServidor` vira falso.
-    await page.getByTestId("visao-mes").click();
-    await expect(
-      page.getByTestId(`chip-mes-${eventoId}`),
-      "a ocupação do Google não aparece na visão Mês",
-    ).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId(`chip-mes-${eventoId}`)).toContainText(/ocupado/i);
-    expect(
-      await page.content(),
-      "o título do evento do Google VAZOU na visão Mês",
-    ).not.toContain(TITULO_SIGILOSO);
+      // Vai para a semana +2 e VOLTA. O `useAgendamentos` refaz a busca a cada
+      // troca de recorte — é exatamente aqui que a semente do servidor morria.
+      await page.getByTestId("periodo-seguinte").click();
+      await expect(page.getByTestId(`agendamento-${eventoId}`)).toHaveCount(0, {
+        timeout: 15_000,
+      });
+      await page.getByTestId("periodo-anterior").click();
+      await expect(
+        page.getByTestId(`agendamento-${eventoId}`),
+        "o bloco do Google sumiu ao voltar para a semana dele — o refetch o apagou",
+      ).toBeVisible({ timeout: 20_000 });
 
-    await page.screenshot({
-      path: path.join(RAIZ, ".superpowers/evidence/agenda-ocupacao-google-mes.png"),
-      fullPage: false,
+      // Visão MÊS: outro recorte, outra busca. Aqui nem a semente do servidor
+      // chegava, porque `naJanelaDoServidor` vira falso.
+      await page.getByTestId("visao-mes").click();
+      await expect(
+        page.getByTestId(`chip-mes-${eventoId}`),
+        "a ocupação do Google não aparece na visão Mês",
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByTestId(`chip-mes-${eventoId}`)).toContainText(/ocupado/i);
+      expect(
+        await page.content(),
+        "o título do evento do Google VAZOU na visão Mês",
+      ).not.toContain(TITULO_SIGILOSO);
+
+      await page.screenshot({
+        path: path.join(
+          RAIZ,
+          `.superpowers/evidence/agenda-ocupacao-google-mes-${relogio.rotulo.replace("/", "-")}.png`,
+        ),
+        fullPage: false,
+      });
     });
-  });
+  }
 
   test("não estraga o nosso agendamento, que continua vivo na mesma tela", async ({ page }) => {
     const creds = lerCreds();
