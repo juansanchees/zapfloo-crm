@@ -313,7 +313,9 @@ const COMPACT_AREA_SPECS: CompactAreaSpec[] = [
     label: "Plano e pagamentos",
     href: "/app/settings/billing",
     icon: CreditCard,
-    position: "main",
+    // Cobrança precisa continuar visível mesmo quando o menu de administração
+    // ultrapassa a dobra: divide o rodapé persistente com Configurações.
+    position: "footer",
     section: "administracao",
     minRole: "admin",
     tabs: [{ href: "/app/settings/billing", label: "Plano e pagamentos" }],

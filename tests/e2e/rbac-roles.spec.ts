@@ -1,8 +1,8 @@
 /**
  * G2-04 — E2E da matriz role×recurso (spec 13 §4) com usuários seed reais.
  *
- * Papéis: agent bloqueado em /app/settings/api-tokens e /app/settings/billing;
- * admin (com MFA TOTP — secret conhecido do seed) acessa ambas; agent vê inbox
+ * Papéis: agent bloqueado em /app/settings/api-tokens e com billing somente leitura;
+ * admin (com MFA TOTP — secret conhecido do seed) acessa ambas e pode comprar; agent vê inbox
  * e kanban; viewer não consegue enviar mensagem (403 server-side).
  *
  * Pré-requisito: `npx tsx scripts/seed-e2e-credentials.ts` (o spec roda o seed
@@ -101,7 +101,7 @@ async function expectNoBlockingA11y(page: Page, excludeSelector?: string): Promi
 }
 
 test.describe("rbac role matrix (spec 13 §4)", () => {
-  test("agent é bloqueado em api-tokens e billing (403)", async ({ page }) => {
+  test("agent é bloqueado em api-tokens e consulta billing sem poder comprar", async ({ page }) => {
     await login(page, creds.users.agent!.email);
 
     await page.goto("/app/settings/api-tokens");
@@ -109,8 +109,9 @@ test.describe("rbac role matrix (spec 13 §4)", () => {
     await expect(page.getByRole("heading", { name: /403 — Sem permissão/ })).toBeVisible();
 
     await page.goto("/app/settings/billing");
-    await page.waitForURL(/\/403/);
-    await expect(page.getByRole("heading", { name: /403 — Sem permissão/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Plano e pagamentos" })).toBeVisible();
+    await expect(page.getByText("Peça a um administrador da empresa para contratar ou trocar o plano.")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Escolher/ })).toHaveCount(0);
 
     await expectNoBlockingA11y(page);
   });
@@ -124,8 +125,26 @@ test.describe("rbac role matrix (spec 13 §4)", () => {
     await expectNoBlockingA11y(page);
 
     await page.goto("/app/settings/billing");
-    await expect(page.getByRole("heading", { name: "Billing" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Plano e pagamentos" })).toBeVisible();
+    await expect(page.getByText("Compra indisponível nesta instalação")).toHaveCount(3);
     await expectNoBlockingA11y(page);
+
+    for (const width of [1280, 1366]) {
+      await page.setViewportSize({ width, height: 768 });
+      const billing = page.getByRole("link", { name: "Plano e pagamentos" });
+      await expect(billing).toBeVisible();
+      const box = await billing.boundingBox();
+      expect(box, `Plano e pagamentos precisa ficar mensurável em ${width}×768`).not.toBeNull();
+      expect(box!.y + box!.height).toBeLessThanOrEqual(768);
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/settings/billing");
+    const largura = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      conteudo: document.documentElement.scrollWidth,
+    }));
+    expect(largura.conteudo).toBeLessThanOrEqual(largura.viewport);
   });
 
   test("agent vê inbox e kanban", async ({ page }) => {

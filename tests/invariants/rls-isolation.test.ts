@@ -70,6 +70,16 @@ function countAs(userId: string, countQuery: string): number {
   return Number(last);
 }
 
+function leituraFoiNegadaAs(userId: string, countQuery: string): boolean {
+  try {
+    countAs(userId, countQuery);
+    return false;
+  } catch (error) {
+    const stderr = (error as { stderr?: string }).stderr ?? "";
+    return stderr.includes("permission denied");
+  }
+}
+
 function seedOrg(org: string, user: string, sess: string, tag: string): string {
   // No real PII: synthetic emails/names only (LGPD).
   return `
@@ -291,6 +301,26 @@ export const TABLES = [
   // direções MAIS o gate de papel (o `viewer` que não lê o formulário).
 ] as const;
 
+/**
+ * A configuração global e o ledger de cobrança não são tabelas tenant-aware:
+ * até uma linha da própria organização revelaria operação financeira e hash de
+ * e-mail ao browser. A prova delas é negativa por desenho, com linha real para
+ * não aprovar acesso por tabela vazia.
+ */
+export const SERVER_ONLY_TABLES = ["platform_billing_settings", "billing_provider_events"] as const;
+
+beforeAll(() => {
+  sql(`
+    insert into public.billing_provider_events
+      (webhook_id, sale_code, sale_status, event_kind, event_at, product_code,
+       organization_id, outcome)
+    values
+      ('wh-rls-a', 'sale-rls-a', 'approved', 'sale', now(), 'product-rls', '${ORG_A}', 'pending_match'),
+      ('wh-rls-b', 'sale-rls-b', 'approved', 'sale', now(), 'product-rls', '${ORG_B}', 'pending_match')
+    on conflict do nothing;
+  `);
+});
+
 describe("RLS tenant isolation (fn_user_org_ids pattern)", () => {
   for (const table of TABLES) {
     it(`user of org A reads 0 rows of org B in ${table}`, () => {
@@ -317,5 +347,19 @@ describe("RLS tenant isolation (fn_user_org_ids pattern)", () => {
       ),
     );
     expect(total).toBe(2);
+  });
+});
+
+describe("server-only billing surfaces", () => {
+  for (const table of SERVER_ONLY_TABLES) {
+    it(`authenticated cannot read ${table}, including rows tied to their own org`, () => {
+      expect(leituraFoiNegadaAs(USER_A, `select count(*) from public.${table};`)).toBe(true);
+    });
+  }
+
+  it("service_role sees the billing ledger (positive control)", () => {
+    const out = sql(`set role service_role; select count(*) from public.billing_provider_events;`);
+    expect(Number(out.split("\n").at(-1)))
+      .toBeGreaterThanOrEqual(2);
   });
 });

@@ -8696,6 +8696,158 @@ export const DICIONARIO: Traducoes = {
   "Resumo da equipe": { es: "Resumen del equipo" },
   Pessoas: { es: "Personas" },
   "Gerenciar funis": { es: "Gestionar embudos" },
+  // ─── Admin da plataforma: operação de cobrança ───
+  Cobrança: { es: "Cobros" },
+  "Operação financeira": { es: "Operación financiera" },
+  "Revise o impacto, concilie compras e controle o bloqueio comercial.": {
+    es: "Revisa el impacto, concilia compras y controla el bloqueo comercial.",
+  },
+  "Interruptor global": { es: "Interruptor global" },
+  "Aplicar bloqueio comercial": { es: "Aplicar bloqueo comercial" },
+  "Quando ligado, organizações vencidas deixam de produzir saídas. Mensagens recebidas continuam guardadas.": {
+    es: "Cuando está activado, las organizaciones vencidas dejan de producir salidas. Los mensajes recibidos se siguen guardando.",
+  },
+  "Bloqueio ligado": { es: "Bloqueo activado" },
+  "Bloqueio desligado": { es: "Bloqueo desactivado" },
+  "Bloqueio comercial ativado.": { es: "Bloqueo comercial activado." },
+  "Bloqueio comercial desativado.": { es: "Bloqueo comercial desactivado." },
+  Conciliação: { es: "Conciliación" },
+  "Compras sem organização": { es: "Compras sin organización" },
+  "Escolha a organização correta. O vínculo projeta a assinatura em uma única operação.": {
+    es: "Elige la organización correcta. El vínculo proyecta la suscripción en una sola operación.",
+  },
+  "Nenhuma compra pendente.": { es: "No hay compras pendientes." },
+  "Comprador não identificado": { es: "Comprador no identificado" },
+  "Organização para vincular": { es: "Organización para vincular" },
+  "Selecione uma organização": { es: "Selecciona una organización" },
+  "Vinculando…": { es: "Vinculando…" },
+  "Vincular compra": { es: "Vincular compra" },
+  "Organizações e assinaturas": { es: "Organizaciones y suscripciones" },
+  "Datas ausentes ficam visíveis como legado e nunca são tratadas como pagamento confirmado.": {
+    es: "Las fechas ausentes quedan visibles como legado y nunca se tratan como pago confirmado.",
+  },
+  "Último pagamento": { es: "Último pago" },
+  "Acesso até": { es: "Acceso hasta" },
+  "Sem plano registrado": { es: "Sin plan registrado" },
+  "Sem assinatura": { es: "Sin suscripción" },
+  "Revisão necessária": { es: "Revisión necesaria" },
+  Conferida: { es: "Revisada" },
+  "Ativar bloqueio comercial?": { es: "¿Activar el bloqueo comercial?" },
+  "Desativar bloqueio comercial?": { es: "¿Desactivar el bloqueo comercial?" },
+  "Esta confirmação não altera nenhuma assinatura.": {
+    es: "Esta confirmación no modifica ninguna suscripción.",
+  },
+  "organizações vencidas": { es: "organizaciones vencidas" },
+  "organização vencida": { es: "organización vencida" },
+  "organizações legadas": { es: "organizaciones heredadas" },
+  "organização legada": { es: "organización heredada" },
+  "organizações pausadas": { es: "organizaciones pausadas" },
+  "organização pausada": { es: "organización pausada" },
+  "compras pendentes": { es: "compras pendientes" },
+  "compra pendente": { es: "compra pendiente" },
+  "Confirmar e ativar": { es: "Confirmar y activar" },
+  "Confirmar e desativar": { es: "Confirmar y desactivar" },
+  "Não foi possível carregar a operação de cobrança.": {
+    es: "No se pudo cargar la operación de cobros.",
+  },
+  "Não foi possível alterar o bloqueio comercial.": {
+    es: "No se pudo cambiar el bloqueo comercial.",
+  },
+  "Esta compra já foi conciliada por outra ação.": {
+    es: "Esta compra ya fue conciliada por otra acción.",
+  },
+  "Não foi possível vincular esta compra.": {
+    es: "No se pudo vincular esta compra.",
+  },
+  "Compra vinculada e assinatura atualizada.": {
+    es: "Compra vinculada y suscripción actualizada.",
+  },
+  "Compra vinculada; não foi possível atualizar a revisão.": {
+    es: "Compra vinculada; no fue posible actualizar la revisión.",
+  },
+  "Carregando cobrança": { es: "Cargando cobros" },
+  "Cobrança indisponível.": { es: "Cobros no disponibles." },
+  Cadastro: { es: "Registro" },
+  "Pago até": { es: "Pagado hasta" },
+  "Carregar mais compras": { es: "Cargar más compras" },
+  "Carregar mais organizações": { es: "Cargar más organizaciones" },
+  // ─── Plano e pagamentos do cliente ───
+  Assinatura: { es: "Suscripción" },
+  "Veja o plano da sua empresa, a validade do acesso e as opções para contratar ou trocar.": {
+    es: "Consulta el plan de tu empresa, la vigencia del acceso y las opciones para contratar o cambiar.",
+  },
+  "Plano atual": { es: "Plan actual" },
+  "Período pago até": { es: "Período pagado hasta" },
+  "Limites do plano atual": { es: "Límites del plan actual" },
+  "Data limite": { es: "Fecha límite" },
+  "A compra é concluída com segurança no checkout da Monetizze.": {
+    es: "La compra se completa de forma segura en el checkout de Monetizze.",
+  },
+  Escolher: { es: "Elegir" },
+  "Escolher plano": { es: "Elegir plan" },
+  "Checkout do plano": { es: "Checkout del plan" },
+  "Checkout indisponível": { es: "Checkout no disponible" },
+  "Compra indisponível nesta instalação": { es: "Compra no disponible en esta instalación" },
+  "Peça a um administrador da empresa para contratar ou trocar o plano.": {
+    es: "Pide a un administrador de la empresa que contrate o cambie el plan.",
+  },
+  "Não informado": { es: "No informado" },
+  "Sem limite": { es: "Sin límite" },
+  "Em teste": { es: "En prueba" },
+  "Pagamento recusado": { es: "Pago rechazado" },
+  "Acesso de administrador da plataforma": { es: "Acceso de administrador de la plataforma" },
+  "Acesso mantido pela plataforma": { es: "Acceso mantenido por la plataforma" },
+  "Acesso mantido temporariamente": { es: "Acceso mantenido temporalmente" },
+  "Teste ativo": { es: "Prueba activa" },
+  "Acesso bloqueado": { es: "Acceso bloqueado" },
+  "Assinatura em dia": { es: "Suscripción al día" },
+  "Pagamento pendente": { es: "Pago pendiente" },
+  "Assinatura aguardando conferência": { es: "Suscripción pendiente de revisión" },
+  "Situação da assinatura indisponível": { es: "Situación de la suscripción no disponible" },
+  "Administradores da plataforma mantêm acesso para operar o serviço.": {
+    es: "Los administradores de la plataforma mantienen el acceso para operar el servicio.",
+  },
+  "A cobrança ainda não está aplicando bloqueios nesta instalação.": {
+    es: "Los cobros todavía no están aplicando bloqueos en esta instalación.",
+  },
+  "Não foi possível verificar a cobrança agora. Você pode continuar trabalhando; a plataforma já foi avisada.": {
+    es: "No fue posible verificar el cobro ahora. Puedes seguir trabajando; la plataforma ya fue avisada.",
+  },
+  "Todos os recursos do plano Completo estão liberados durante o teste.": {
+    es: "Todos los recursos del plan Completo están disponibles durante la prueba.",
+  },
+  "O período de teste terminou. Escolha um plano para continuar usando o produto.": {
+    es: "El período de prueba terminó. Elige un plan para seguir usando el producto.",
+  },
+  "O pagamento está confirmado e o acesso segue liberado.": {
+    es: "El pago está confirmado y el acceso sigue habilitado.",
+  },
+  "O período pago terminou, mas o acesso continua durante a tolerância.": {
+    es: "El período pagado terminó, pero el acceso continúa durante el período de tolerancia.",
+  },
+  "O período pago e a tolerância terminaram. Escolha um plano para regularizar.": {
+    es: "El período pagado y la tolerancia terminaron. Elige un plan para regularizar.",
+  },
+  "A assinatura foi pausada pela plataforma. Fale com o suporte para regularizar.": {
+    es: "La suscripción fue pausada por la plataforma. Habla con soporte para regularizar.",
+  },
+  "Esta assinatura existente ainda precisa de conferência pela plataforma.": {
+    es: "Esta suscripción existente todavía debe ser revisada por la plataforma.",
+  },
+  "Não foi possível confirmar os dados comerciais agora. Tente novamente mais tarde.": {
+    es: "No fue posible confirmar los datos comerciales ahora. Inténtalo de nuevo más tarde.",
+  },
+  "A plataforma precisa revisar a situação desta assinatura.": {
+    es: "La plataforma debe revisar la situación de esta suscripción.",
+  },
+  WhatsApp: { es: "WhatsApp" },
+  WhatsApps: { es: "WhatsApps" },
+  "atendente de IA": { es: "agente de IA" },
+  "atendentes de IA": { es: "agentes de IA" },
+  "pessoa da equipe": { es: "persona del equipo" },
+  "pessoas da equipe": { es: "personas del equipo" },
+  "funil de vendas": { es: "embudo de ventas" },
+  "funis de vendas": { es: "embudos de ventas" },
 };
 
 /**

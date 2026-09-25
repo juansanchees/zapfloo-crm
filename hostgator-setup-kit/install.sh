@@ -1537,6 +1537,15 @@ esac
   envq SALES_DOMAIN "${SALES_DOMAIN:-}"
   envq SALES_WWW_DOMAIN "${SALES_WWW_DOMAIN:-}"
   envq SALES_WHATSAPP_NUMBER "${SALES_WHATSAPP_NUMBER:-}"
+  # Cobrança é opcional e não entra na entrevista. Ainda assim, uma reexecução
+  # do instalador precisa preservar exatamente o que o operador configurou.
+  envq MONETIZZE_CHAVE_UNICA "${MONETIZZE_CHAVE_UNICA:-}"
+  envq MONETIZZE_PLANO_REFERENCIA_BASICO "${MONETIZZE_PLANO_REFERENCIA_BASICO:-}"
+  envq MONETIZZE_PLANO_REFERENCIA_ESSENCIAL "${MONETIZZE_PLANO_REFERENCIA_ESSENCIAL:-}"
+  envq MONETIZZE_PLANO_REFERENCIA_COMPLETO "${MONETIZZE_PLANO_REFERENCIA_COMPLETO:-}"
+  envq MONETIZZE_CHECKOUT_BASICO "${MONETIZZE_CHECKOUT_BASICO:-}"
+  envq MONETIZZE_CHECKOUT_ESSENCIAL "${MONETIZZE_CHECKOUT_ESSENCIAL:-}"
+  envq MONETIZZE_CHECKOUT_COMPLETO "${MONETIZZE_CHECKOUT_COMPLETO:-}"
   printf '# Marca da instalação (white-label). Preencha APP_LOGO_URL com a URL de uma\n'
   printf '# imagem pública para trocar o texto por logo na sidebar. Ver lib/branding.ts.\n'
   printf '# APP_ACCENT_HEX é a SEMENTE da cor: o banco (platform_branding) manda depois\n'

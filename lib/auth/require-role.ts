@@ -17,6 +17,7 @@
  *  4. Rank insuficiente → audit `authz.denied` (fire-and-forget) + 403.
  */
 import type { NextResponse } from "next/server";
+import { headers } from "next/headers";
 
 import { fail, type ApiError } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
@@ -24,6 +25,13 @@ import { loadAuthUser, mfaEmDivida, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK, type ActiveOrg, type AuthUser, type Role } from "@/lib/auth/types";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
+import {
+  AcessoComercialBloqueadoError,
+  EstadoComercialIndisponivelError,
+  exigirAcessoComercial,
+  rotaApiPermitidaDuranteBloqueioComercial,
+  serializarBloqueioComercial,
+} from "@/lib/billing/acesso-server";
 
 export type RoleCheck =
   | { ok: true; user: AuthUser; org: ActiveOrg }
@@ -43,6 +51,23 @@ interface RequireRoleOpts {
    * NUNCA do body. O role vem de `fn_user_role_in_org(p_org)` nessa org.
    */
   organizationId?: string;
+  /** Override só para testes/chamadores fora do proxy. Em HTTP, o proxy decide pelo método. */
+  commercialAccess?: "auto" | "mutation" | "read";
+}
+
+async function deveCobrarAcessoComercial(modo: RequireRoleOpts["commercialAccess"]): Promise<boolean> {
+  if (modo === "mutation") return true;
+  if (modo === "read") return false;
+  try {
+    const cabecalhos = await headers();
+    const metodo = cabecalhos.get("x-request-method")?.toUpperCase();
+    const pathname = cabecalhos.get("x-pathname") ?? "";
+    return ["POST", "PUT", "PATCH", "DELETE"].includes(metodo ?? "")
+      && !rotaApiPermitidaDuranteBloqueioComercial(pathname, metodo ?? "");
+  } catch {
+    // Chamadores internos sem contexto HTTP preservam o contrato anterior.
+    return false;
+  }
 }
 
 /**
@@ -145,6 +170,32 @@ export async function requireRole(min: Role, opts: RequireRoleOpts = {}): Promis
         requestId,
       }),
     };
+  }
+
+  if (await deveCobrarAcessoComercial(opts.commercialAccess ?? "auto")) {
+    try {
+      await exigirAcessoComercial(org.orgId, {
+        actorUserId: user.id,
+        isPlatformAdmin: user.is_platform_admin,
+      });
+    } catch (erro) {
+      if (erro instanceof AcessoComercialBloqueadoError) {
+        return {
+          ok: false,
+          response: fail("commercial_access_blocked", erro.message, 402, {
+            requestId,
+            details: serializarBloqueioComercial(erro),
+          }),
+        };
+      }
+      if (erro instanceof EstadoComercialIndisponivelError) {
+        return {
+          ok: false,
+          response: fail("commercial_access_unavailable", erro.message, 503, { requestId }),
+        };
+      }
+      throw erro;
+    }
   }
 
   return { ok: true, user, org: { ...org, role: effectiveRole as Role } };

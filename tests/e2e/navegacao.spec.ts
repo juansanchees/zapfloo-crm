@@ -143,7 +143,6 @@ async function capturarSidebarCompleto(page: Page): Promise<void> {
     const instancias = links.find(
       (link) => link.getAttribute("aria-label") === "Instâncias WhatsApp",
     );
-    const plano = links.find((link) => link.getAttribute("aria-label") === "Plano e pagamentos");
     const navRect = nav.getBoundingClientRect();
     const visivel = (link: HTMLAnchorElement | undefined) => {
       const rect = link?.getBoundingClientRect();
@@ -156,7 +155,6 @@ async function capturarSidebarCompleto(page: Page): Promise<void> {
       scrollTop: nav.scrollTop,
       rola: nav.scrollHeight > nav.clientHeight + 1,
       instancias: { existe: Boolean(instancias), dentro_da_area_visivel: visivel(instancias) },
-      plano_e_pagamentos: { existe: Boolean(plano), dentro_da_area_visivel: visivel(plano) },
     };
   });
   const acrescimo = Math.max(0, antes.scrollHeight - antes.clientHeight) + 8;
@@ -167,11 +165,13 @@ async function capturarSidebarCompleto(page: Page): Promise<void> {
     });
   }
 
-  const medida = await sidebar(page).evaluate(
-    (nav, provaInicial) => {
+  const medida = await page.locator("aside").first().evaluate(
+    (aside, provaInicial) => {
+      const nav = aside.querySelector<HTMLElement>('nav[aria-label="Navegação principal"]')!;
+      const footer = aside.querySelector<HTMLElement>('[data-testid="sidebar-persistent-footer"]')!;
       const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
-      const plano = links.find((link) => link.getAttribute("aria-label") === "Plano e pagamentos");
-      const navRect = nav.getBoundingClientRect();
+      const plano = footer.querySelector<HTMLAnchorElement>('a[aria-label="Plano e pagamentos"]');
+      const footerRect = footer.getBoundingClientRect();
       const planoRect = plano?.getBoundingClientRect();
 
       return {
@@ -185,10 +185,10 @@ async function capturarSidebarCompleto(page: Page): Promise<void> {
         portas: links.map((link) => link.getAttribute("aria-label")),
         plano_e_pagamentos: {
           existe: Boolean(plano),
-          dentro_da_area_visivel:
+          dentro_do_rodape_visivel:
             Boolean(planoRect) &&
-            planoRect!.top >= navRect.top &&
-            planoRect!.bottom <= navRect.bottom,
+            planoRect!.top >= footerRect.top &&
+            planoRect!.bottom <= footerRect.bottom,
         },
       };
     },
@@ -196,7 +196,7 @@ async function capturarSidebarCompleto(page: Page): Promise<void> {
   );
 
   expect(medida.rola, "a captura precisa mostrar o menu inteiro, sem parte escondida").toBe(false);
-  expect(medida.plano_e_pagamentos).toEqual({ existe: true, dentro_da_area_visivel: true });
+  expect(medida.plano_e_pagamentos).toEqual({ existe: true, dentro_do_rodape_visivel: true });
 
   mkdirSync(MENU_EVIDENCE, { recursive: true });
   const caminhoPng = path.join(MENU_EVIDENCE, "menu-lateral-completo.png");
@@ -280,12 +280,12 @@ test.describe("navegação compacta", () => {
     await expect(page).toHaveURL(/\/app\/connections$/);
   });
 
-  test("o sidebar mostra onze portas roláveis e Configurações no rodapé fixo", async ({ page }) => {
+  test("o sidebar mostra dez portas roláveis e cobrança/configurações no rodapé fixo", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
     const links = sidebar(page).getByRole("link");
-    await expect(links).toHaveCount(11);
+    await expect(links).toHaveCount(10);
     expect(
       await links.evaluateAll((items) => items.map((item) => item.getAttribute("aria-label"))),
     ).toEqual([
@@ -299,8 +299,8 @@ test.describe("navegação compacta", () => {
       "Relatórios",
       "Instâncias WhatsApp",
       "Usuários e permissões",
-      "Plano e pagamentos",
     ]);
+    await expect(rodapeFixo(page).getByRole("link", { name: "Plano e pagamentos" })).toBeVisible();
     await expect(rodapeFixo(page).getByRole("link", { name: "Configurações" })).toBeVisible();
     await expect(sidebar(page).getByRole("heading", { name: "Operação" })).toBeVisible();
     await expect(sidebar(page).getByRole("heading", { name: "Equipe" })).toBeVisible();
@@ -441,7 +441,7 @@ test.describe("navegação compacta", () => {
    *
    * Medido por ferramenta, nunca a olho.
    */
-  test("as onze portas roláveis cabem sem scroll em 900px", async ({ page }) => {
+  test("as dez portas roláveis cabem sem scroll em 900px", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await loginAdmin(page);
 
@@ -454,18 +454,20 @@ test.describe("navegação compacta", () => {
       };
     });
 
-    expect(m.links).toBe(11);
+    expect(m.links).toBe(10);
     expect(m.rola, "em 900px o menu inteiro tem de caber sem scroll").toBe(false);
   });
 
-  test("em uma tela curta, Plano e pagamentos existe e aparece ao rolar o menu", async ({
+  test("em uma tela curta, Plano e pagamentos permanece no rodapé sem depender do scroll", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 684 });
     await loginAdmin(page);
 
     const medir = () =>
-      sidebar(page).evaluate((nav) => {
+      page.locator("aside").first().evaluate((aside) => {
+        const nav = aside.querySelector<HTMLElement>('nav[aria-label="Navegação principal"]')!;
+        const footer = aside.querySelector<HTMLElement>('[data-testid="sidebar-persistent-footer"]')!;
         const navRect = nav.getBoundingClientRect();
         const links = [...nav.querySelectorAll<HTMLAnchorElement>("a")];
         const dados = (rotulo: string) => {
@@ -477,17 +479,25 @@ test.describe("navegação compacta", () => {
           };
         };
 
+        const pagamentos = footer.querySelector<HTMLAnchorElement>('a[aria-label="Plano e pagamentos"]');
+        const pagamentosRect = pagamentos?.getBoundingClientRect();
+        const footerRect = footer.getBoundingClientRect();
         return {
           rola: nav.scrollHeight > nav.clientHeight + 1,
           instancias: dados("Instâncias WhatsApp"),
-          pagamentos: dados("Plano e pagamentos"),
+          pagamentos: {
+            existe: Boolean(pagamentos),
+            visivel: Boolean(pagamentosRect) &&
+              pagamentosRect!.top >= footerRect.top &&
+              pagamentosRect!.bottom <= footerRect.bottom,
+          },
         };
       });
 
     const antes = await medir();
     expect(antes.rola).toBe(true);
     expect(antes.instancias.existe).toBe(true);
-    expect(antes.pagamentos).toEqual({ existe: true, visivel: false });
+    expect(antes.pagamentos).toEqual({ existe: true, visivel: true });
 
     await sidebar(page).evaluate((nav) => {
       const instancias = [...nav.querySelectorAll<HTMLAnchorElement>("a")].find(
@@ -496,10 +506,7 @@ test.describe("navegação compacta", () => {
       instancias?.scrollIntoView({ block: "nearest" });
     });
     await expect.poll(async () => (await medir()).instancias.visivel).toBe(true);
-    expect((await medir()).pagamentos.visivel).toBe(false);
-
-    await sidebar(page).evaluate((nav) => nav.scrollTo({ top: nav.scrollHeight }));
-    await expect.poll(async () => (await medir()).pagamentos.visivel).toBe(true);
+    expect((await medir()).pagamentos.visivel).toBe(true);
   });
 
   test.describe("mobile", () => {
@@ -534,14 +541,16 @@ test.describe("navegação compacta", () => {
     });
   });
 
-  test("Configurações e Recolher menu ficam fixos no rodapé, fora da área que rola", async ({
+  test("Plano e pagamentos, Configurações e Recolher menu ficam fixos no rodapé", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 768 });
     await loginAdmin(page);
 
     const recolher = page.getByRole("button", { name: "Recolher sidebar" });
+    const pagamentos = rodapeFixo(page).getByRole("link", { name: "Plano e pagamentos" });
     const configuracoes = rodapeFixo(page).getByRole("link", { name: "Configurações" });
+    await expect(pagamentos).toBeVisible();
     await expect(configuracoes).toBeVisible();
     await expect(recolher).toBeVisible();
     await expect(recolher).toContainText("Recolher menu");
@@ -552,10 +561,16 @@ test.describe("navegação compacta", () => {
         (item) => item.getAttribute("aria-label") === "Recolher sidebar",
       );
       const config = document.querySelector('a[aria-label="Configurações"]')!;
-      return { botao: nav.contains(botao!), configuracoes: nav.contains(config) };
+      const pagamentos = document.querySelector('a[aria-label="Plano e pagamentos"]')!;
+      return {
+        botao: nav.contains(botao!),
+        pagamentos: nav.contains(pagamentos),
+        configuracoes: nav.contains(config),
+      };
     });
     expect(dentroDaNav, "o rodapé fixo não pode depender de scroll para aparecer").toEqual({
       botao: false,
+      pagamentos: false,
       configuracoes: false,
     });
   });

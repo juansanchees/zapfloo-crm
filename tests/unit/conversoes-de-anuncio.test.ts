@@ -12,8 +12,16 @@ import type { EventRow } from "@/lib/event-log/dispatcher";
 import { INTERNOS, transporteMeta } from "@/lib/plataformas-de-anuncio/meta/conversions";
 import { PLATAFORMAS, transporteDe } from "@/lib/plataformas-de-anuncio/registry";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/billing/acesso-server", async (importOriginal) => {
+  const real = await importOriginal<Record<string, unknown>>();
+  return { ...real, exigirAcessoComercial: vi.fn(async () => undefined) };
+});
 
 const ORG = "11111111-1111-1111-1111-111111111111";
 const LEAD = "22222222-2222-2222-2222-222222222222";
@@ -92,6 +100,28 @@ function evento(tipo: string, payload: Record<string, unknown> = {}): EventRow {
 beforeEach(() => {
   upserts.length = 0;
   vi.restoreAllMocks();
+  vi.mocked(exigirAcessoComercial).mockResolvedValue(undefined as never);
+});
+
+describe("bloqueio comercial", () => {
+  it("não lê credencial nem chama o transporte Meta quando a organização está bloqueada", async () => {
+    vi.mocked(exigirAcessoComercial).mockRejectedValueOnce(
+      new AcessoComercialBloqueadoError({
+        allowed: false,
+        reason: "paused",
+        accessUntil: null,
+        enforcementEnabled: false,
+      }),
+    );
+    const adminSpy = vi.mocked(createAdminClient);
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const r = await conversaoDeVendaHandler.handle(evento("lead.won"));
+
+    expect(r).toMatchObject({ status: "skipped", detail: "commercial_access_blocked" });
+    expect(adminSpy).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe("as duas portas do fechamento", () => {

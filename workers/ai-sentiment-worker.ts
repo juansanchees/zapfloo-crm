@@ -26,6 +26,10 @@ import { logInvocation } from "@/lib/ai/log-invocation";
 import { SENTIMENT_SYSTEM_PROMPT } from "@/lib/ai/prompts/sentiment";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
 
 const SENTIMENT_MODEL = DEFAULT_CLASSIFIER_MODEL; // "anthropic/claude-haiku-4-5"
 const DEFAULT_SENTIMENT_THRESHOLD = 0.3;
@@ -64,6 +68,14 @@ export interface SentimentResult {
 
 export async function processSentiment(event: EventRow): Promise<SentimentResult> {
   try {
+    try {
+      await exigirAcessoComercial(event.organization_id);
+    } catch (erro) {
+      if (erro instanceof AcessoComercialBloqueadoError) {
+        return { skipped: true, reason: erro.code };
+      }
+      throw erro;
+    }
     // ── Guard: AI Gateway configured ────────────────────────────────────────
     if (!isAiGatewayConfigured()) {
       return { skipped: true, reason: "ai_gateway_key_missing" };

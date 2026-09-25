@@ -49,7 +49,7 @@ export function AppShell({ sidebarCollapsed, children, notice, onboardingNotice 
         {notice}
         <TopBar />
         <AreaNavigation />
-        <main className={isInbox
+        <main tabIndex={isInbox ? undefined : 0} className={isInbox
           ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-workspace p-2 md:p-4"
           : "min-h-0 flex-1 overflow-auto bg-workspace p-4 md:p-6"}>
           {onboardingNotice}

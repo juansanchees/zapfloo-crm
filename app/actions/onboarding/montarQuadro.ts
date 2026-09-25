@@ -27,6 +27,7 @@ import { requireOnboardingCtx, patchOnboardingState, loadOnboardingState, Onboar
 import { lerContextoDoSite } from "@/lib/onboarding/site/servico";
 import { autorizarQuantidade, mensagemDePlano } from "@/lib/billing/assinatura";
 import { posicaoEntre } from "@/lib/pipelines/pipeline-editing";
+import { exigirAcessoComercial } from "@/lib/billing/acesso-server";
 
 /** O funil que o gatilho semeou — o que a pessoa tem antes deste passo. */
 export interface QuadroAtual {
@@ -130,6 +131,7 @@ export interface DadosDoPasso {
  */
 export async function dadosDoPasso(): Promise<DadosDoPasso> {
   const { orgId, orgName: negocio } = await requireOnboardingCtx();
+  await exigirAcessoComercial(orgId);
   const admin = createAdminClient();
   const atual = await carregarQuadroAtual(admin, orgId);
 

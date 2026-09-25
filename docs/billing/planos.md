@@ -18,8 +18,23 @@ tinham linha. Reaplicar o baseline não muda uma escolha já editada.
 - Atividade: toda troca de plano ou situação grava `tenant.subscription_changed` em `api_audit_log`.
 - Tela: lista e detalhe de Tenants mostram plano e situação; as telas do cliente mostram a indisponibilidade no ponto da ação.
 - Porta: o painel já é alcançado por `/admin/tenants`; nenhuma nova página autenticada foi criada.
-- Anti-morte: teste vencido e assinatura pausada mantêm o CRM e as criações previstas no plano acessíveis; somente a IA é interrompida, sem apagar recursos.
+- Anti-morte: o bloqueio comercial preserva todas as mensagens recebidas e mantém Plano e pagamentos acessível; nenhuma linha do cliente é apagada. Com o interruptor global desligado, estados vencidos seguem liberados, mas `pausado` continua sendo bloqueio manual explícito.
 - Configuração: plano e situação são vistos e alterados no detalhe do tenant por administrador de plataforma.
 - Continuidade IA↔humano: uma recusa de orçamento é terminal e o caminho do worker continua encaminhando a demanda ao humano.
 - Laço de retorno: consumo de `llm_calls` alimenta a mesma decisão de orçamento da chamada seguinte; troca de situação é refletida na próxima resolução.
 - Mapa vivo: `docs/architecture/planos-por-organizacao.architecture.json` descreve configuração, persistência e consumo.
+
+## Cobrança automática pela Monetizze
+
+Quando configurada, a Monetizze envia eventos para
+`POST /api/v1/webhooks/monetizze`. A rota valida a chave única da conta,
+aceita JSON ou formulário, limita abuso, resolve a organização pela referência
+assinada do checkout e registra o evento pela RPC transacional do banco.
+
+O ledger não guarda corpo cru, nome, telefone, documento nem e-mail aberto. A
+organização só é atualizada quando o plano é conhecido e o vínculo é inequívoco;
+os demais pagamentos aparecem na fila de conciliação do painel da plataforma.
+O interruptor global nasce desligado e só deve ser ligado depois da compra real
+de validação e da revisão da lista de empresas.
+
+Operação passo a passo: [`../runbooks/monetizze.md`](../runbooks/monetizze.md).

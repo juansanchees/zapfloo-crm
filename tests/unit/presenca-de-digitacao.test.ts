@@ -19,6 +19,20 @@ function canal(chamadas: boolean[]): ChannelAdapter {
 }
 
 describe("presença de digitação", () => {
+  it("não toca o transporte quando a guarda comercial barra antes de digitar", async () => {
+    const chamadas: boolean[] = [];
+    const executar = vi.fn(async () => "nunca");
+
+    await expect(
+      comPresencaDeDigitacao(canal(chamadas), { conversationId: "c", channelSessionId: "s" }, executar, {
+        log,
+        antesDeDigitar: async () => { throw new Error("commercial_access_blocked"); },
+      }),
+    ).rejects.toThrow("commercial_access_blocked");
+
+    expect(chamadas).toEqual([]);
+    expect(executar).not.toHaveBeenCalled();
+  });
   it("começa no turno e para quando a resposta termina", async () => {
     const chamadas: boolean[] = [];
     const resultado = await comPresencaDeDigitacao(

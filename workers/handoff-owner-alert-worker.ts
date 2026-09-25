@@ -8,6 +8,7 @@ import { getAdapter, resolveSessionRef, type ChannelSessionRef } from "@/lib/cha
 import { quemPodeAssumirAgora } from "@/lib/escalacao/disponibilidade";
 import type { EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exigirAcessoComercialViaPg } from "@/lib/billing/acesso-server";
 
 export const HANDOFF_OWNER_ALERT_CONSUMER = "handoff_owner_alert_v1";
 let _pool: pg.Pool | null = null;
@@ -125,6 +126,9 @@ export async function handleHandoffOwnerAlert(row: EventRow): Promise<HandlerRes
     .eq("organization_id", row.organization_id);
 
   try {
+    // O aviso usa o canal do tenant; não é o canal interno da plataforma e,
+    // portanto, também para durante o bloqueio comercial.
+    await exigirAcessoComercialViaPg(db, row.organization_id);
     const adapter = getAdapter(state.channel_session.provider);
     if (!adapter.isConfigured()) throw new Error(adapter.codes.notConfigured);
     const destino = adapter.resolveRecipient({

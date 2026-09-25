@@ -28,6 +28,7 @@ import {
   type ModoDeOrcamento,
 } from './orcamento';
 import type { CacheTtl } from './stable-prefix';
+import { exigirAcessoComercialViaPg } from '@/lib/billing/acesso-server';
 
 /** Config da camada LLM montada do env validado (padrão crmEdgeConfigFromEnv). */
 export interface LlmEdgeConfig {
@@ -272,6 +273,10 @@ export async function resolveOrgLlmConfig(
   organizationId: string,
   override?: LlmResolveOverride,
 ): Promise<OrgLlmConfig> {
+  // Antes de decifrar chave ou escolher provider: tenant bloqueado não pode
+  // sequer chegar ao material que permitiria uma chamada paga.
+  await exigirAcessoComercialViaPg(db, organizationId);
+
   // ⚠️ O RESOLVEDOR NUNCA LANÇA POR SCHEMA DESATUALIZADO.
   //
   // `hostgator-setup-kit/update.sh` aplica o baseline com `|| true` e SEM

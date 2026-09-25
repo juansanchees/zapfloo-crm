@@ -22,10 +22,20 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const embedSpy = vi.fn();
+const { embedSpy, acessoComercialMock } = vi.hoisted(() => ({
+  embedSpy: vi.fn(),
+  acessoComercialMock: vi.fn(async () => ({ allowed: true })),
+}));
 vi.mock("ai", () => ({
   embed: (args: unknown) => embedSpy(args),
 }));
+
+vi.mock("@/lib/billing/acesso-server", async () => {
+  const real = await vi.importActual<Record<string, unknown>>(
+    "@/lib/billing/acesso-server",
+  );
+  return { ...real, exigirAcessoComercial: acessoComercialMock };
+});
 
 let chaveMock: () => unknown;
 vi.mock("@/lib/ai/embeddings/chave", async () => {
@@ -58,9 +68,29 @@ beforeEach(() => {
     rotulo: "Chave principal",
     avisos: [],
   });
+  acessoComercialMock.mockReset().mockResolvedValue({ allowed: true });
 });
 
 describe("embedText", () => {
+  it("bloqueio comercial acontece antes de resolver chave ou chamar embedding", async () => {
+    const { AcessoComercialBloqueadoError } = await import("@/lib/billing/acesso-server");
+    acessoComercialMock.mockRejectedValueOnce(new AcessoComercialBloqueadoError({
+      allowed: false,
+      reason: "paused",
+      accessUntil: null,
+      enforcementEnabled: false,
+    }));
+    let resolveuChave = false;
+    chaveMock = () => {
+      resolveuChave = true;
+      return null;
+    };
+
+    await expect(embedText("oi", { organizationId: "org-1" }))
+      .rejects.toMatchObject({ code: "commercial_access_blocked" });
+    expect(resolveuChave).toBe(false);
+    expect(embedSpy).not.toHaveBeenCalled();
+  });
   it("SEM gateway, usa o provider OpenAI explícito — nunca a string com barra", async () => {
     await embedText("oi", { organizationId: "org-1" });
 

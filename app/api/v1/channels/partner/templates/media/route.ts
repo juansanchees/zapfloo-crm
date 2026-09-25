@@ -30,6 +30,7 @@ import { loadAuthUser, resolveActiveOrg } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recusaComercialDaMutacao } from "@/lib/billing/acesso-server";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   const t = (texto: string) => traduzir(texto, user.idioma);
   const org = await resolveActiveOrg(user);
   if (!org) return fail("forbidden", t("Sem organização ativa."), 403, { requestId });
-
+  const recusaComercial = await recusaComercialDaMutacao(org.orgId, {
+    requestId,
+    actorUserId: user.id,
+    isPlatformAdmin: user.is_platform_admin,
+  });
+  if (recusaComercial) return recusaComercial;
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) {

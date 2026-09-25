@@ -25,6 +25,7 @@ import type pg from 'pg';
 
 import { parseWahaMessageId } from '@/lib/waha/message-id';
 import { lerNumerosDeTeste, numeroPodeTestar, preGoLiveAtivo } from '@/lib/ai/elegibilidade/pre-go-live';
+import { exigirAcessoComercialViaPg } from '@/lib/billing/acesso-server';
 
 import type { Logger } from '../../obs/logger';
 
@@ -243,6 +244,7 @@ export async function redriveQueued(
       continue;
     }
     try {
+      await exigirAcessoComercialViaPg(pool, m.organization_id);
       // A lista pode mudar enquanto a mensagem espera ou entre itens do lote.
       // Este redrive fala direto com o WAHA, portanto também precisa da guarda
       // do sink. Falha de leitura cai no catch e NÃO envia.

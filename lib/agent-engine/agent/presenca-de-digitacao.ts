@@ -12,9 +12,12 @@ export async function comPresencaDeDigitacao<T>(
   channel: ChannelAdapter,
   input: { conversationId: string; channelSessionId: string },
   executar: () => Promise<T>,
-  opts: { log: Logger; tetoMs?: number },
+  opts: { log: Logger; tetoMs?: number; antesDeDigitar?: () => Promise<void> },
 ): Promise<T> {
   if (channel.setTyping === undefined) return executar();
+
+  // O veto roda antes de qualquer presença: tenant bloqueado não toca o canal.
+  await opts.antesDeDigitar?.();
 
   const setTyping = channel.setTyping.bind(channel);
   const alterar = async (active: boolean): Promise<void> => {

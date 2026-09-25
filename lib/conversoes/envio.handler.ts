@@ -45,6 +45,10 @@ import { lerCredencial } from "@/lib/plataformas-de-anuncio/credenciais";
 import { transporteDe } from "@/lib/plataformas-de-anuncio/registry";
 import type { ConversaoOffline, NomeDoEvento } from "@/lib/plataformas-de-anuncio/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+} from "@/lib/billing/acesso-server";
 import { lerAtribuicao } from "./leitura-da-atribuicao";
 import { jaFoiEnviada, registraEnvio } from "./registro-de-envio";
 
@@ -62,6 +66,20 @@ const ok = (status: HandlerResult["status"], detail?: string): HandlerResult => 
 
 async function handle(row: EventRow): Promise<HandlerResult> {
   if (!row.entity_id) return ok("skipped", "sem_entidade");
+
+  try {
+    await exigirAcessoComercial(row.organization_id);
+  } catch (erro) {
+    if (erro instanceof AcessoComercialBloqueadoError) {
+      return ok("skipped", "commercial_access_blocked");
+    }
+    return {
+      consumer_key: CONSUMER_KEY,
+      status: "retry",
+      retry_at: new Date(Date.now() + ESPERA_PADRAO_MS).toISOString(),
+      detail: "commercial_access_unavailable",
+    };
+  }
 
   const admin = createAdminClient();
 

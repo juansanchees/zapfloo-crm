@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const downloadMock = vi.fn();
-const updateEqMock = vi.fn();
+const { downloadMock, updateEqMock, acessoComercialMock } = vi.hoisted(() => ({
+  downloadMock: vi.fn(),
+  updateEqMock: vi.fn(),
+  acessoComercialMock: vi.fn(async () => ({ allowed: true })),
+}));
 const messageRow = {
   id: "msg1",
   organization_id: "org1",
@@ -55,6 +58,13 @@ vi.mock("@/lib/messaging/media/derive", () => ({
   deriveMediaText: vi.fn(async () => "transcrição do áudio real"),
 }));
 
+vi.mock("@/lib/billing/acesso-server", async () => {
+  const real = await vi.importActual<Record<string, unknown>>(
+    "@/lib/billing/acesso-server",
+  );
+  return { ...real, exigirAcessoComercialViaPg: acessoComercialMock };
+});
+
 // resolveOrgLlmConfig e generateText mockados: o worker precisa de credencial p/
 // montar as deps, mas o teste não exercita rede.
 vi.mock("@/lib/agent-engine/edge/llm/credentials", () => ({
@@ -90,6 +100,7 @@ describe("deriveMessageMedia", () => {
   beforeEach(() => {
     downloadMock.mockReset().mockResolvedValue({ data: new Blob([new Uint8Array([1, 2, 3])]), error: null });
     updateEqMock.mockReset();
+    acessoComercialMock.mockReset().mockResolvedValue({ allowed: true });
     messageRow.media_derived_status = null;
     messageRow.type = "audio";
     vi.mocked(deriveMediaText).mockReset().mockResolvedValue("transcrição do áudio real");
@@ -101,6 +112,23 @@ describe("deriveMessageMedia", () => {
     expect(updateEqMock).toHaveBeenCalledWith(
       expect.objectContaining({ media_derived_text: "transcrição do áudio real", media_derived_status: "ready" }),
     );
+  });
+
+  it("organização bloqueada conserva a mídia persistida e não chama derivação paga", async () => {
+    const { AcessoComercialBloqueadoError } = await import("@/lib/billing/acesso-server");
+    acessoComercialMock.mockRejectedValueOnce(new AcessoComercialBloqueadoError({
+      allowed: false,
+      reason: "subscription_expired",
+      accessUntil: "2026-09-01T00:00:00.000Z",
+      enforcementEnabled: true,
+    }));
+
+    const r = await deriveMessageMedia(eventRow());
+
+    expect(r).toMatchObject({ status: "skipped", detail: "commercial_access_blocked" });
+    expect(downloadMock).not.toHaveBeenCalled();
+    expect(deriveMediaText).not.toHaveBeenCalled();
+    expect(updateEqMock).not.toHaveBeenCalled();
   });
 
   it("pula se já derivado (idempotência)", async () => {

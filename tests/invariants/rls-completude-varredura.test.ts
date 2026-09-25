@@ -215,6 +215,14 @@ const PROVA_PROPRIA: readonly Excecao[] = [
       "da organização viraram venda, e quem o lê é o servidor com o admin client " +
       "filtrando organization_id à mão (a tela `/app/settings/conversoes`).",
   },
+  {
+    tabela: "billing_provider_events",
+    razao:
+      "tests/invariants/rls-isolation.test.ts — SERVER_ONLY_TABLES semeia linhas " +
+      "das organizações A e B, prova `permission denied` para authenticated mesmo " +
+      "sobre a própria organização e mantém controle positivo de leitura por " +
+      "service_role. Ledger financeiro é deny-all no PostgREST, não policy tenant.",
+  },
 ];
 
 /**

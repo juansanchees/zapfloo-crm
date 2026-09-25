@@ -33,6 +33,11 @@ import type { ListMessagesQuery, SendMessageInput } from "@/lib/schemas";
 import { sendTemplateForSession } from "@/lib/channels/meta/send-template-for-session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Message } from "@/lib/types/messaging";
+import {
+  AcessoComercialBloqueadoError,
+  exigirAcessoComercial,
+  serializarBloqueioComercial,
+} from "@/lib/billing/acesso-server";
 
 type SB = SupabaseClient;
 
@@ -334,6 +339,28 @@ export async function sendMessageHandler(
       ctx.requestId,
       "media_storage_path fora da conversa.",
     );
+  }
+
+  // A cobrança barra a SAÍDA, nunca a ingestão. Este é o seam comum de humano,
+  // automação, MCP e agente e roda antes de nascer qualquer linha `queued`.
+  try {
+    await exigirAcessoComercial(c.organization_id, {
+      actorUserId: ctx.actor.type === "user" ? ctx.actor.id : null,
+    });
+  } catch (erro) {
+    if (erro instanceof AcessoComercialBloqueadoError) {
+      throw new ApiError(
+        402,
+        erro.code,
+        serializarBloqueioComercial(erro),
+        ctx.requestId,
+        traduzir(
+          "O envio está pausado. Revise o plano e o pagamento para continuar.",
+          ctx.idioma ?? "pt-BR",
+        ),
+      );
+    }
+    throw erro;
   }
 
   let outboundBody = input.body ?? null;

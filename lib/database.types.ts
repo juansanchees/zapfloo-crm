@@ -1913,6 +1913,89 @@ export type Database = {
           },
         ]
       }
+      billing_provider_events: {
+        Row: {
+          access_until: string | null
+          buyer_email_hash: string | null
+          buyer_email_masked: string | null
+          error_code: string | null
+          event_at: string
+          event_kind: string
+          id: string
+          installment_number: number | null
+          organization_id: string | null
+          outcome: string
+          paid_through: string | null
+          payment_confirmed_at: string | null
+          plan_id: string | null
+          processed_at: string | null
+          product_code: string
+          provider: string
+          received_at: string
+          sale_code: string
+          sale_status: string
+          subscription_code: string | null
+          target_status: string | null
+          webhook_id: string
+        }
+        Insert: {
+          access_until?: string | null
+          buyer_email_hash?: string | null
+          buyer_email_masked?: string | null
+          error_code?: string | null
+          event_at: string
+          event_kind: string
+          id?: string
+          installment_number?: number | null
+          organization_id?: string | null
+          outcome?: string
+          paid_through?: string | null
+          payment_confirmed_at?: string | null
+          plan_id?: string | null
+          processed_at?: string | null
+          product_code: string
+          provider?: string
+          received_at?: string
+          sale_code: string
+          sale_status: string
+          subscription_code?: string | null
+          target_status?: string | null
+          webhook_id: string
+        }
+        Update: {
+          access_until?: string | null
+          buyer_email_hash?: string | null
+          buyer_email_masked?: string | null
+          error_code?: string | null
+          event_at?: string
+          event_kind?: string
+          id?: string
+          installment_number?: number | null
+          organization_id?: string | null
+          outcome?: string
+          paid_through?: string | null
+          payment_confirmed_at?: string | null
+          plan_id?: string | null
+          processed_at?: string | null
+          product_code?: string
+          provider?: string
+          received_at?: string
+          sale_code?: string
+          sale_status?: string
+          subscription_code?: string | null
+          target_status?: string | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_provider_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_appointments: {
         Row: {
           cancellation_reason: string | null
@@ -5944,6 +6027,65 @@ export type Database = {
           },
         ]
       }
+      organization_subscriptions: {
+        Row: {
+          access_until: string | null
+          billing_provider: string | null
+          created_at: string
+          external_subscription_id: string | null
+          last_billing_event_at: string | null
+          last_billing_installment: number | null
+          last_payment_at: string | null
+          last_sale_code: string | null
+          organization_id: string
+          paid_through: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          access_until?: string | null
+          billing_provider?: string | null
+          created_at?: string
+          external_subscription_id?: string | null
+          last_billing_event_at?: string | null
+          last_billing_installment?: number | null
+          last_payment_at?: string | null
+          last_sale_code?: string | null
+          organization_id: string
+          paid_through?: string | null
+          plan_id: string
+          status: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          access_until?: string | null
+          billing_provider?: string | null
+          created_at?: string
+          external_subscription_id?: string | null
+          last_billing_event_at?: string | null
+          last_billing_installment?: number | null
+          last_payment_at?: string | null
+          last_sale_code?: string | null
+          organization_id?: string
+          paid_through?: string | null
+          plan_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           ai_budget_cents: number | null
@@ -6136,6 +6278,27 @@ export type Database = {
           revoked_by?: string | null
           scope?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      platform_billing_settings: {
+        Row: {
+          enforcement_enabled: boolean
+          singleton: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enforcement_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enforcement_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -7680,6 +7843,29 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_processar_evento_monetizze: {
+        Args: {
+          p_access_until: string
+          p_buyer_email_hash: string
+          p_buyer_email_masked: string
+          p_error_code: string
+          p_event_at: string
+          p_event_kind: string
+          p_installment_number: number
+          p_organization_id: string
+          p_outcome: string
+          p_paid_through: string
+          p_payment_confirmed_at: string
+          p_plan_id: string
+          p_product_code: string
+          p_sale_code: string
+          p_sale_status: string
+          p_subscription_code: string
+          p_target_status: string
+          p_webhook_id: string
+        }
+        Returns: Json
+      }
       fn_publish_ai_agent_version: {
         Args: { p_agent_id: string; p_org_id: string; p_version_id: string }
         Returns: {
@@ -7758,6 +7944,15 @@ export type Database = {
           p_expected_revision: number
           p_expected_version_id: string
           p_org_id: string
+        }
+        Returns: Json
+      }
+      fn_vincular_evento_monetizze: {
+        Args: {
+          p_actor_user_id: string
+          p_event_id: string
+          p_organization_id: string
+          p_reason: string
         }
         Returns: Json
       }
