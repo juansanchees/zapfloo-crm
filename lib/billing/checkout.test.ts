@@ -7,9 +7,9 @@ const SECRET = "segredo-monetizze-com-tamanho-suficiente";
 
 describe("checkout da Monetizze", () => {
   it.each([
-    ["basico", "https://app.monetizze.com.br:443/checkout/BASICO"],
-    ["essencial", "https://app.monetizze.com.br/checkout/ESSENCIAL"],
-    ["completo", "https://app.monetizze.com.br/checkout/COMPLETO"],
+    ["basico", "https://pay.monetizze.com.br/DCY386459"],
+    ["essencial", "https://pay.monetizze.com.br/DFW386460"],
+    ["completo", "https://pay.monetizze.com.br/DVM386461"],
   ] as const)("monta o link de %s com email e src assinado", (plano, checkout) => {
     const result = construirCheckoutMonetizze({
       plano,
@@ -23,17 +23,32 @@ describe("checkout da Monetizze", () => {
 
     expect(result).not.toBeNull();
     const url = new URL(result!);
-    expect(url.origin).toBe("https://app.monetizze.com.br");
+    expect(url.origin).toBe("https://pay.monetizze.com.br");
     expect(url.searchParams.get("email")).toBe("dona+clinica@example.com");
     expect(url.searchParams.get("src")).toMatch(/^[^.]+\.[^.]+$/);
     expect(result).not.toContain(ORGANIZATION_ID);
     expect(result).not.toContain(SECRET);
   });
 
+  it("mantém compatibilidade com a origem app oficial", () => {
+    const checkout = "https://app.monetizze.com.br/checkout/BASICO";
+    const result = construirCheckoutMonetizze({
+      plano: "basico",
+      email: "dona@example.com",
+      organizationId: ORGANIZATION_ID,
+      secret: SECRET,
+      checkoutUrls: { basico: checkout, essencial: "", completo: "" },
+    });
+
+    expect(result).not.toBeNull();
+    expect(new URL(result!).origin).toBe("https://app.monetizze.com.br");
+  });
+
   it.each([
     "",
     "http://app.monetizze.com.br/checkout/BASICO",
     "https://app.monetizze.com.br:444/checkout/BASICO",
+    "https://mon.net.br/DCY386459",
     "https://monetizze.example/checkout/BASICO",
     "javascript:alert(1)",
     "não-é-url",

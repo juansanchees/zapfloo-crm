@@ -1,7 +1,10 @@
 import { createCheckoutReference } from "@/lib/billing/monetizze/checkout-reference";
 import type { PlanoId } from "@/lib/billing/planos";
 
-const MONETIZZE_CHECKOUT_ORIGIN = "https://app.monetizze.com.br";
+const MONETIZZE_CHECKOUT_ORIGINS = new Set([
+  "https://app.monetizze.com.br",
+  "https://pay.monetizze.com.br",
+]);
 
 export type CheckoutUrlsPorPlano = Record<PlanoId, string>;
 
@@ -33,7 +36,7 @@ export function construirCheckoutMonetizze(input: ConstruirCheckoutInput): strin
   }
 
   if (
-    checkout.origin !== MONETIZZE_CHECKOUT_ORIGIN ||
+    !MONETIZZE_CHECKOUT_ORIGINS.has(checkout.origin) ||
     checkout.username !== "" ||
     checkout.password !== ""
   ) {

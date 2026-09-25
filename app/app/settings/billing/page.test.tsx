@@ -22,9 +22,9 @@ vi.mock("@/lib/billing/acesso-server", () => ({ avaliarAcessoComercial: avaliar 
 vi.mock("@/lib/env", () => ({
   env: {
     MONETIZZE_CHAVE_UNICA: "segredo-de-teste-longo-e-server-only",
-    MONETIZZE_CHECKOUT_BASICO: "https://app.monetizze.com.br/checkout/BASICO",
-    MONETIZZE_CHECKOUT_ESSENCIAL: "https://app.monetizze.com.br/checkout/ESSENCIAL",
-    MONETIZZE_CHECKOUT_COMPLETO: "https://app.monetizze.com.br/checkout/COMPLETO",
+    MONETIZZE_CHECKOUT_BASICO: "https://pay.monetizze.com.br/DCY386459",
+    MONETIZZE_CHECKOUT_ESSENCIAL: "https://pay.monetizze.com.br/DFW386460",
+    MONETIZZE_CHECKOUT_COMPLETO: "https://pay.monetizze.com.br/DVM386461",
   },
 }));
 vi.mock("./_client", () => ({
@@ -76,6 +76,7 @@ describe("porta do cliente para cobrança", () => {
     };
     expect(props.podeComprar).toBe(true);
     expect(props.assinatura).toMatchObject({ plan_id: "essencial", status: "ativo" });
+    expect(new URL(props.checkouts.basico!).origin).toBe("https://pay.monetizze.com.br");
     expect(new URL(props.checkouts.basico!).searchParams.get("email")).toBe("dona@example.com");
     expect(new URL(props.checkouts.completo!).searchParams.get("src")).toBeTruthy();
     expect(JSON.stringify(props)).not.toContain("segredo-de-teste-longo-e-server-only");
