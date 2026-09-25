@@ -339,6 +339,9 @@ const schema = z.object({
   // Cobrança Monetizze — todas server-only e opcionais no boot. Sem o par
   // segredo + checkout válido, a tela continua informativa e não produz link.
   MONETIZZE_CHAVE_UNICA: z.string().optional().default(""),
+  MONETIZZE_PLANO_REFERENCIA_BASICO: z.string().optional().default(""),
+  MONETIZZE_PLANO_REFERENCIA_ESSENCIAL: z.string().optional().default(""),
+  MONETIZZE_PLANO_REFERENCIA_COMPLETO: z.string().optional().default(""),
   MONETIZZE_CHECKOUT_BASICO: z.string().optional().default(""),
   MONETIZZE_CHECKOUT_ESSENCIAL: z.string().optional().default(""),
   MONETIZZE_CHECKOUT_COMPLETO: z.string().optional().default(""),

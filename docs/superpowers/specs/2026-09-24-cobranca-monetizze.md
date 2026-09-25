@@ -37,7 +37,8 @@ Fonte primária: <https://apidoc.monetizze.com.br/postback/index.html>.
 - `id` identifica o disparo do webhook.
 - `codigo_venda` / `venda.codigo` identifica a venda.
 - `codigo_status` e `postback_evento` identificam estado/evento.
-- `produto.codigo` identifica o produto.
+- `produto.codigo` identifica o produto, mas não distingue planos do mesmo produto.
+- `plano.referencia` identifica o plano contratado e governa o `plan_id` no Zapfloo.
 - `assinatura.codigo`, `assinatura.status`, `assinatura.data_assinatura` e
   `assinatura.parcela` descrevem a assinatura recorrente.
 - `comprador.email` existe, mas é apenas fallback de conciliação.
@@ -46,8 +47,16 @@ Fonte primária: <https://apidoc.monetizze.com.br/postback/index.html>.
   5 (bloqueada), 9 (reembolso solicitado), 101 (assinatura ativa), 102
   (inadimplente), 103 (assinatura cancelada) e 104 (aguardando pagamento).
 
-O checkout aceita preenchimento de e-mail pelo parâmetro `email`, conforme
+A documentação do checkout em `app.monetizze.com.br` declara preenchimento de
+e-mail pelo parâmetro `email`, conforme
 <https://help.monetizze.com.br/books/funil-de-conversao/page/parametros-de-url-no-checkout>.
+
+Medição em 2026-09-24 no checkout real
+`https://pay.monetizze.com.br/DCY386459`: a página preservou `email` e `src` na
+URL, mas o campo de e-mail permaneceu vazio mesmo com `?email=teste@example.com`.
+Como o teste autorizado foi somente abrir a página, a propagação de `src` até o
+postback ainda não foi medida por uma compra. O código continua enviando ambos,
+mas nenhuma entrega pode afirmar preenchimento no domínio `pay` sem nova prova.
 
 ## Regra de correlação
 
@@ -70,7 +79,7 @@ chave de conta nunca é exposta no link.
 - Avisos duplicados retornam sucesso sem repetir transição ou auditoria.
 - O timestamp `data` e a parcela da assinatura impedem regressão por evento
   antigo. Evento fora de ordem é registrado como ignorado.
-- Produto desconhecido é registrado como ignorado e nunca muda assinatura.
+- Referência de plano desconhecida é registrada como ignorada e nunca muda assinatura.
 
 ## Persistência mínima
 
@@ -94,9 +103,9 @@ linha no MANIFEST e atualização de `lib/database.types.ts`.
 ## Variáveis de ambiente
 
 - `MONETIZZE_CHAVE_UNICA`
-- `MONETIZZE_PRODUTO_BASICO`
-- `MONETIZZE_PRODUTO_ESSENCIAL`
-- `MONETIZZE_PRODUTO_COMPLETO`
+- `MONETIZZE_PLANO_REFERENCIA_BASICO`
+- `MONETIZZE_PLANO_REFERENCIA_ESSENCIAL`
+- `MONETIZZE_PLANO_REFERENCIA_COMPLETO`
 - `MONETIZZE_CHECKOUT_BASICO`
 - `MONETIZZE_CHECKOUT_ESSENCIAL`
 - `MONETIZZE_CHECKOUT_COMPLETO`
@@ -118,4 +127,3 @@ confirmação do dono imediatamente antes do clique que dispara o teste.
 - Ligar o bloqueio no deploy.
 - Apagar inbound, canal, conversa ou mídia por inadimplência.
 - Gerar versão, mesclar ou publicar.
-
